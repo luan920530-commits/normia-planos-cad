@@ -422,10 +422,11 @@
       if (next) popover.querySelector('.tool-choice')?.focus?.();
     }
 
-    closeToolsPalette() {
+    closeToolsPalette(restoreFocus = false) {
       const popover = q('[data-tools-popover]');
       if (!popover || popover.hidden) return;
       this.toggleToolsPalette(false);
+      if (restoreFocus) q('[data-tools-toggle]')?.focus?.();
     }
 
     /**
@@ -1339,7 +1340,7 @@
       if (event.key === 'Escape') {
         const palette = q('[data-tools-popover]');
         if (palette && !palette.hidden) {
-          this.closeToolsPalette();
+          this.closeToolsPalette(true);
           return;
         }
         if (this.activeDrawer) {
