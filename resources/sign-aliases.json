@@ -1,0 +1,60 @@
+{
+ "legacyTools": {
+  "exit": "E002",
+  "extinguisher": "F001",
+  "first_aid": "E003",
+  "alarm": "F005",
+  "assembly": "E007"
+ },
+ "search": {
+  "E001": [
+   "salida",
+   "evacuacion",
+   "izquierda"
+  ],
+  "E002": [
+   "salida",
+   "evacuacion",
+   "derecha"
+  ],
+  "E003": [
+   "botiquin",
+   "primeros auxilios",
+   "cruz"
+  ],
+  "E004": [
+   "telefono",
+   "emergencia"
+  ],
+  "E007": [
+   "punto de encuentro",
+   "reunion",
+   "evacuacion"
+  ],
+  "F001": [
+   "extintor",
+   "fuego",
+   "incendio"
+  ],
+  "F002": [
+   "manguera",
+   "hidrante",
+   "incendio"
+  ],
+  "F005": [
+   "pulsador",
+   "alarma",
+   "incendio"
+  ],
+  "W001": [
+   "advertencia",
+   "peligro"
+  ],
+  "P001": [
+   "prohibido"
+  ],
+  "M001": [
+   "obligatorio"
+  ]
+ }
+}

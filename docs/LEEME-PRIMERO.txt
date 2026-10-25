@@ -1,0 +1,35 @@
+Normia Planos CAD · instalación rápida
+======================================
+
+1. Requisitos
+   - PHP 8.1 o superior con pdo_sqlite y session (lo habitual en cualquier hosting).
+   - Apache/LiteSpeed con .htaccess, o Nginx con la regla indicada en el README.
+   - Permiso de escritura en las carpetas config/ y storage/ (y sus subcarpetas).
+
+2. Publicar
+   - Descomprime el ZIP y sube la carpeta al directorio público del sitio
+     (por ejemplo public_html/ o /var/www/html).
+   - Si tu hosting sirve el sitio en una subcarpeta, no hay que configurar nada:
+     los enlaces se calculan solos desde index.php.
+
+3. Instalar desde el navegador
+   - Abre https://tu-dominio/ y serás redirigido al instalador.
+   - Crea la cuenta administradora (correo y contraseña de 10 caracteres o más).
+   - El instalador escribe config/config.php, crea la base SQLite y, si lo marcas,
+     carga el proyecto de demostración.
+   - Al terminar, entra con la cuenta que acabas de crear.
+
+4. Datos y copias de seguridad
+   - La base de datos vive en storage/ con un nombre aleatorio (normia-*.sqlite).
+   - Para respaldar: copia config/config.php y el archivo .sqlite de storage/.
+   - No publiques config/, storage/ ni resources/: el .htaccess incluido los bloquea.
+   - Para reinstalar, borra config/config.php y los archivos .sqlite de storage/
+     y vuelve a abrir el sitio.
+
+5. Aviso
+   - Los planos son esquemáticos. No sustituyen planos de obra, memorias de cálculo
+     ni certificaciones. Verifica dimensiones, rutas y escala en el sitio.
+   - Normia Planos CAD es software libre con licencia GPL-3.0. Los pictogramas ISO 7010
+     incluidos conservan su licencia y atribución en resources/licenses/ y en el README.
+
+Más detalle: README.md del paquete.

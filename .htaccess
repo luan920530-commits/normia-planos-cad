@@ -1,0 +1,20 @@
+# Normia Planos CAD · Apache / LiteSpeed
+Options -Indexes
+DirectoryIndex index.php
+
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "DENY"
+    Header always set Referrer-Policy "same-origin"
+</IfModule>
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    # No reescribir archivos existentes (assets locales).
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+</IfModule>
+
+# Carpetas internas: nunca deben servirse directamente.
+RedirectMatch 404 ^/(app|config|resources|storage|tests|tools|docs)(/|$)

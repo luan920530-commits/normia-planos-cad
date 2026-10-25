@@ -1,0 +1,1745 @@
+{
+  "project": {
+    "name": "Planta de ejemplo · Bodega y oficinas",
+    "site": "Sede principal",
+    "workplace": "Bodega de despacho",
+    "responsible": "Coordinación SST",
+    "notes": "Proyecto de demostración con pictogramas ISO 7010 y equipamiento esquemático. Las dimensiones y la escala son de referencia: verifica en sitio antes de usar el plano para obra."
+  },
+  "floors": [
+    {
+      "name": "Planta baja",
+      "level": "1",
+      "design": {
+        "format": 2,
+        "canvas": {
+          "width": 1600,
+          "height": 1000,
+          "grid": 20,
+          "unit": "cm",
+          "scale": "1:100",
+          "background": "#ffffff"
+        },
+        "layers": [
+          {
+            "id": "capa_planta",
+            "name": "Planta y muros",
+            "visible": true,
+            "locked": false
+          },
+          {
+            "id": "capa_equipos",
+            "name": "Equipamiento",
+            "visible": true,
+            "locked": false
+          },
+          {
+            "id": "capa_senalizacion",
+            "name": "Señalización",
+            "visible": true,
+            "locked": false
+          },
+          {
+            "id": "capa_rutas",
+            "name": "Rutas de evacuación",
+            "visible": true,
+            "locked": false
+          }
+        ],
+        "elements": [
+          {
+            "id": "el_001",
+            "type": "wall",
+            "layerId": "capa_planta",
+            "x": 60,
+            "y": 60,
+            "w": 1480,
+            "h": 12,
+            "rotation": 0,
+            "color": "#0f172a",
+            "stroke": 12,
+            "opacity": 1,
+            "label": "",
+            "locked": false,
+            "points": [
+              {
+                "x": 0,
+                "y": 6.0
+              },
+              {
+                "x": 1480,
+                "y": 6.0
+              }
+            ]
+          },
+          {
+            "id": "el_002",
+            "type": "wall",
+            "layerId": "capa_planta",
+            "x": 60,
+            "y": 940,
+            "w": 1480,
+            "h": 12,
+            "rotation": 0,
+            "color": "#0f172a",
+            "stroke": 12,
+            "opacity": 1,
+            "label": "",
+            "locked": false,
+            "points": [
+              {
+                "x": 0,
+                "y": 6.0
+              },
+              {
+                "x": 1480,
+                "y": 6.0
+              }
+            ]
+          },
+          {
+            "id": "el_003",
+            "type": "wall",
+            "layerId": "capa_planta",
+            "x": 60,
+            "y": 60,
+            "w": 12,
+            "h": 880,
+            "rotation": 0,
+            "color": "#0f172a",
+            "stroke": 12,
+            "opacity": 1,
+            "label": "",
+            "locked": false,
+            "points": [
+              {
+                "x": 6.0,
+                "y": 0
+              },
+              {
+                "x": 6.0,
+                "y": 880
+              }
+            ]
+          },
+          {
+            "id": "el_004",
+            "type": "wall",
+            "layerId": "capa_planta",
+            "x": 1528,
+            "y": 60,
+            "w": 12,
+            "h": 880,
+            "rotation": 0,
+            "color": "#0f172a",
+            "stroke": 12,
+            "opacity": 1,
+            "label": "",
+            "locked": false,
+            "points": [
+              {
+                "x": 6.0,
+                "y": 0
+              },
+              {
+                "x": 6.0,
+                "y": 880
+              }
+            ]
+          },
+          {
+            "id": "el_005",
+            "type": "wall",
+            "layerId": "capa_planta",
+            "x": 620,
+            "y": 60,
+            "w": 12,
+            "h": 240,
+            "rotation": 0,
+            "color": "#0f172a",
+            "stroke": 12,
+            "opacity": 1,
+            "label": "",
+            "locked": false,
+            "points": [
+              {
+                "x": 6.0,
+                "y": 0
+              },
+              {
+                "x": 6.0,
+                "y": 240
+              }
+            ]
+          },
+          {
+            "id": "el_006",
+            "type": "wall",
+            "layerId": "capa_planta",
+            "x": 620,
+            "y": 380,
+            "w": 12,
+            "h": 560,
+            "rotation": 0,
+            "color": "#0f172a",
+            "stroke": 12,
+            "opacity": 1,
+            "label": "",
+            "locked": false,
+            "points": [
+              {
+                "x": 6.0,
+                "y": 0
+              },
+              {
+                "x": 6.0,
+                "y": 560
+              }
+            ]
+          },
+          {
+            "id": "el_007",
+            "type": "wall",
+            "layerId": "capa_planta",
+            "x": 760,
+            "y": 60,
+            "w": 12,
+            "h": 540,
+            "rotation": 0,
+            "color": "#0f172a",
+            "stroke": 12,
+            "opacity": 1,
+            "label": "",
+            "locked": false,
+            "points": [
+              {
+                "x": 6.0,
+                "y": 0
+              },
+              {
+                "x": 6.0,
+                "y": 540
+              }
+            ]
+          },
+          {
+            "id": "el_008",
+            "type": "wall",
+            "layerId": "capa_planta",
+            "x": 760,
+            "y": 680,
+            "w": 12,
+            "h": 260,
+            "rotation": 0,
+            "color": "#0f172a",
+            "stroke": 12,
+            "opacity": 1,
+            "label": "",
+            "locked": false,
+            "points": [
+              {
+                "x": 6.0,
+                "y": 0
+              },
+              {
+                "x": 6.0,
+                "y": 260
+              }
+            ]
+          },
+          {
+            "id": "el_009",
+            "type": "wall",
+            "layerId": "capa_planta",
+            "x": 60,
+            "y": 420,
+            "w": 240,
+            "h": 12,
+            "rotation": 0,
+            "color": "#0f172a",
+            "stroke": 12,
+            "opacity": 1,
+            "label": "",
+            "locked": false,
+            "points": [
+              {
+                "x": 0,
+                "y": 6.0
+              },
+              {
+                "x": 240,
+                "y": 6.0
+              }
+            ]
+          },
+          {
+            "id": "el_010",
+            "type": "wall",
+            "layerId": "capa_planta",
+            "x": 380,
+            "y": 420,
+            "w": 240,
+            "h": 12,
+            "rotation": 0,
+            "color": "#0f172a",
+            "stroke": 12,
+            "opacity": 1,
+            "label": "",
+            "locked": false,
+            "points": [
+              {
+                "x": 0,
+                "y": 6.0
+              },
+              {
+                "x": 240,
+                "y": 6.0
+              }
+            ]
+          },
+          {
+            "id": "el_011",
+            "type": "door",
+            "layerId": "capa_planta",
+            "x": 606,
+            "y": 332,
+            "w": 80,
+            "h": 16,
+            "rotation": 90,
+            "color": "#475569",
+            "stroke": 2,
+            "opacity": 1,
+            "label": "",
+            "locked": false,
+            "flipX": false
+          },
+          {
+            "id": "el_012",
+            "type": "door",
+            "layerId": "capa_planta",
+            "x": 720,
+            "y": 632,
+            "w": 80,
+            "h": 16,
+            "rotation": 90,
+            "color": "#475569",
+            "stroke": 2,
+            "opacity": 1,
+            "label": "",
+            "locked": false,
+            "flipX": false
+          },
+          {
+            "id": "el_013",
+            "type": "door",
+            "layerId": "capa_planta",
+            "x": 300,
+            "y": 412,
+            "w": 80,
+            "h": 16,
+            "rotation": 0,
+            "color": "#475569",
+            "stroke": 2,
+            "opacity": 1,
+            "label": "",
+            "locked": false,
+            "flipX": false
+          },
+          {
+            "id": "el_014",
+            "type": "door",
+            "layerId": "capa_planta",
+            "x": 1180,
+            "y": 926,
+            "w": 80,
+            "h": 16,
+            "rotation": 0,
+            "color": "#475569",
+            "stroke": 2,
+            "opacity": 1,
+            "label": "",
+            "locked": false,
+            "flipX": false
+          },
+          {
+            "id": "el_015",
+            "type": "door",
+            "layerId": "capa_planta",
+            "x": 1250,
+            "y": 926,
+            "w": 80,
+            "h": 16,
+            "rotation": 0,
+            "color": "#475569",
+            "stroke": 2,
+            "opacity": 1,
+            "label": "",
+            "locked": false,
+            "flipX": true
+          },
+          {
+            "id": "el_016",
+            "type": "text",
+            "layerId": "capa_planta",
+            "x": 90,
+            "y": 90,
+            "w": 360,
+            "h": 34,
+            "rotation": 0,
+            "color": "#0f172a",
+            "stroke": 0,
+            "opacity": 1,
+            "label": "OFICINA\nDE OBRA",
+            "locked": false,
+            "fontSize": 24
+          },
+          {
+            "id": "el_017",
+            "type": "text",
+            "layerId": "capa_planta",
+            "x": 90,
+            "y": 450,
+            "w": 300,
+            "h": 30,
+            "rotation": 0,
+            "color": "#0f172a",
+            "stroke": 0,
+            "opacity": 1,
+            "label": "VESTIERES",
+            "locked": false,
+            "fontSize": 22
+          },
+          {
+            "id": "el_018",
+            "type": "text",
+            "layerId": "capa_planta",
+            "x": 636,
+            "y": 120,
+            "w": 100,
+            "h": 26,
+            "rotation": 90,
+            "color": "#334155",
+            "stroke": 0,
+            "opacity": 1,
+            "label": "PASILLO",
+            "locked": false,
+            "fontSize": 16
+          },
+          {
+            "id": "el_019",
+            "type": "text",
+            "layerId": "capa_planta",
+            "x": 790,
+            "y": 90,
+            "w": 320,
+            "h": 32,
+            "rotation": 0,
+            "color": "#0f172a",
+            "stroke": 0,
+            "opacity": 1,
+            "label": "ALMACÉN",
+            "locked": false,
+            "fontSize": 24
+          },
+          {
+            "id": "el_020",
+            "type": "text",
+            "layerId": "capa_planta",
+            "x": 790,
+            "y": 520,
+            "w": 360,
+            "h": 28,
+            "rotation": 0,
+            "color": "#0f172a",
+            "stroke": 0,
+            "opacity": 1,
+            "label": "ZONA DE MÁQUINAS",
+            "locked": false,
+            "fontSize": 18
+          },
+          {
+            "id": "el_021",
+            "type": "text",
+            "layerId": "capa_planta",
+            "x": 1120,
+            "y": 760,
+            "w": 380,
+            "h": 28,
+            "rotation": 0,
+            "color": "#237f52",
+            "stroke": 0,
+            "opacity": 1,
+            "label": "SALIDA DE EMERGENCIA",
+            "locked": false,
+            "fontSize": 16
+          },
+          {
+            "id": "el_022",
+            "type": "dimension",
+            "layerId": "capa_planta",
+            "x": 60,
+            "y": 24,
+            "w": 1480,
+            "h": 20,
+            "rotation": 0,
+            "color": "#475569",
+            "stroke": 1.5,
+            "opacity": 1,
+            "label": "",
+            "locked": false,
+            "points": [
+              {
+                "x": 0,
+                "y": 10
+              },
+              {
+                "x": 1480,
+                "y": 10
+              }
+            ],
+            "fontSize": 14
+          },
+          {
+            "id": "el_023",
+            "type": "dimension",
+            "layerId": "capa_planta",
+            "x": 790,
+            "y": 960,
+            "w": 738,
+            "h": 20,
+            "rotation": 0,
+            "color": "#475569",
+            "stroke": 1.5,
+            "opacity": 1,
+            "label": "",
+            "locked": false,
+            "points": [
+              {
+                "x": 0,
+                "y": 10
+              },
+              {
+                "x": 738,
+                "y": 10
+              }
+            ],
+            "fontSize": 14
+          },
+          {
+            "id": "el_024",
+            "type": "cad_desk",
+            "layerId": "capa_equipos",
+            "x": 150,
+            "y": 170,
+            "w": 140,
+            "h": 70,
+            "rotation": 0,
+            "color": "#334155",
+            "stroke": 1.5,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_025",
+            "type": "cad_chair",
+            "layerId": "capa_equipos",
+            "x": 190,
+            "y": 250,
+            "w": 50,
+            "h": 50,
+            "rotation": 0,
+            "color": "#334155",
+            "stroke": 1.5,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_026",
+            "type": "cad_desk",
+            "layerId": "capa_equipos",
+            "x": 360,
+            "y": 170,
+            "w": 140,
+            "h": 70,
+            "rotation": 0,
+            "color": "#334155",
+            "stroke": 1.5,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_027",
+            "type": "cad_chair",
+            "layerId": "capa_equipos",
+            "x": 400,
+            "y": 250,
+            "w": 50,
+            "h": 50,
+            "rotation": 0,
+            "color": "#334155",
+            "stroke": 1.5,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_028",
+            "type": "cad_table",
+            "layerId": "capa_equipos",
+            "x": 170,
+            "y": 300,
+            "w": 180,
+            "h": 80,
+            "rotation": 0,
+            "color": "#334155",
+            "stroke": 1.5,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_029",
+            "type": "cad_shelf",
+            "layerId": "capa_equipos",
+            "x": 520,
+            "y": 90,
+            "w": 60,
+            "h": 180,
+            "rotation": 0,
+            "color": "#334155",
+            "stroke": 1.5,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_030",
+            "type": "cad_locker",
+            "layerId": "capa_equipos",
+            "x": 90,
+            "y": 520,
+            "w": 120,
+            "h": 54,
+            "rotation": 0,
+            "color": "#334155",
+            "stroke": 1.5,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_031",
+            "type": "cad_locker",
+            "layerId": "capa_equipos",
+            "x": 90,
+            "y": 590,
+            "w": 120,
+            "h": 54,
+            "rotation": 0,
+            "color": "#334155",
+            "stroke": 1.5,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_032",
+            "type": "cad_bench",
+            "layerId": "capa_equipos",
+            "x": 300,
+            "y": 640,
+            "w": 200,
+            "h": 60,
+            "rotation": 0,
+            "color": "#334155",
+            "stroke": 1.5,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_033",
+            "type": "cad_washbasin",
+            "layerId": "capa_equipos",
+            "x": 520,
+            "y": 500,
+            "w": 60,
+            "h": 50,
+            "rotation": 0,
+            "color": "#334155",
+            "stroke": 1.5,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_034",
+            "type": "cad_toilet",
+            "layerId": "capa_equipos",
+            "x": 520,
+            "y": 580,
+            "w": 60,
+            "h": 70,
+            "rotation": 0,
+            "color": "#334155",
+            "stroke": 1.5,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_035",
+            "type": "cad_shelf",
+            "layerId": "capa_equipos",
+            "x": 820,
+            "y": 160,
+            "w": 300,
+            "h": 44,
+            "rotation": 0,
+            "color": "#334155",
+            "stroke": 1.5,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_036",
+            "type": "cad_shelf",
+            "layerId": "capa_equipos",
+            "x": 820,
+            "y": 270,
+            "w": 300,
+            "h": 44,
+            "rotation": 0,
+            "color": "#334155",
+            "stroke": 1.5,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_037",
+            "type": "cad_shelf",
+            "layerId": "capa_equipos",
+            "x": 820,
+            "y": 380,
+            "w": 300,
+            "h": 44,
+            "rotation": 0,
+            "color": "#334155",
+            "stroke": 1.5,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_038",
+            "type": "cad_shelf",
+            "layerId": "capa_equipos",
+            "x": 1180,
+            "y": 160,
+            "w": 300,
+            "h": 44,
+            "rotation": 0,
+            "color": "#334155",
+            "stroke": 1.5,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_039",
+            "type": "cad_shelf",
+            "layerId": "capa_equipos",
+            "x": 1180,
+            "y": 270,
+            "w": 300,
+            "h": 44,
+            "rotation": 0,
+            "color": "#334155",
+            "stroke": 1.5,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_040",
+            "type": "cad_forklift",
+            "layerId": "capa_equipos",
+            "x": 900,
+            "y": 700,
+            "w": 120,
+            "h": 90,
+            "rotation": 0,
+            "color": "#334155",
+            "stroke": 1.5,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_041",
+            "type": "cad_table",
+            "layerId": "capa_equipos",
+            "x": 1200,
+            "y": 700,
+            "w": 160,
+            "h": 70,
+            "rotation": 0,
+            "color": "#334155",
+            "stroke": 1.5,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_042",
+            "type": "cad_truck",
+            "layerId": "capa_equipos",
+            "x": 1240,
+            "y": 300,
+            "w": 220,
+            "h": 120,
+            "rotation": 0,
+            "color": "#334155",
+            "stroke": 1.5,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_043",
+            "type": "cad_drill_press",
+            "layerId": "capa_equipos",
+            "x": 820,
+            "y": 560,
+            "w": 80,
+            "h": 90,
+            "rotation": 0,
+            "color": "#334155",
+            "stroke": 1.5,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_044",
+            "type": "cad_lathe",
+            "layerId": "capa_equipos",
+            "x": 950,
+            "y": 560,
+            "w": 140,
+            "h": 80,
+            "rotation": 0,
+            "color": "#334155",
+            "stroke": 1.5,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_045",
+            "type": "cad_compressor",
+            "layerId": "capa_equipos",
+            "x": 1140,
+            "y": 560,
+            "w": 90,
+            "h": 80,
+            "rotation": 0,
+            "color": "#334155",
+            "stroke": 1.5,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_046",
+            "type": "cad_welding",
+            "layerId": "capa_equipos",
+            "x": 1280,
+            "y": 560,
+            "w": 90,
+            "h": 80,
+            "rotation": 0,
+            "color": "#334155",
+            "stroke": 1.5,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_047",
+            "type": "cad_circular_saw",
+            "layerId": "capa_equipos",
+            "x": 1400,
+            "y": 560,
+            "w": 90,
+            "h": 80,
+            "rotation": 0,
+            "color": "#334155",
+            "stroke": 1.5,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_048",
+            "type": "cad_stairs_straight",
+            "layerId": "capa_equipos",
+            "x": 660,
+            "y": 120,
+            "w": 70,
+            "h": 140,
+            "rotation": 0,
+            "color": "#334155",
+            "stroke": 1.5,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_049",
+            "type": "cad_ramp",
+            "layerId": "capa_equipos",
+            "x": 1390,
+            "y": 850,
+            "w": 120,
+            "h": 70,
+            "rotation": 0,
+            "color": "#334155",
+            "stroke": 1.5,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_050",
+            "type": "iso_e002",
+            "layerId": "capa_senalizacion",
+            "x": 1160,
+            "y": 850,
+            "w": 64,
+            "h": 64,
+            "rotation": 0,
+            "color": "#237f52",
+            "stroke": 0,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_051",
+            "type": "iso_e001",
+            "layerId": "capa_senalizacion",
+            "x": 640,
+            "y": 700,
+            "w": 56,
+            "h": 56,
+            "rotation": 0,
+            "color": "#237f52",
+            "stroke": 0,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_052",
+            "type": "iso_f001",
+            "layerId": "capa_senalizacion",
+            "x": 520,
+            "y": 350,
+            "w": 56,
+            "h": 56,
+            "rotation": 0,
+            "color": "#b71f2e",
+            "stroke": 0,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_053",
+            "type": "iso_f005",
+            "layerId": "capa_senalizacion",
+            "x": 120,
+            "y": 330,
+            "w": 56,
+            "h": 56,
+            "rotation": 0,
+            "color": "#b71f2e",
+            "stroke": 0,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_054",
+            "type": "iso_e003",
+            "layerId": "capa_senalizacion",
+            "x": 380,
+            "y": 470,
+            "w": 56,
+            "h": 56,
+            "rotation": 0,
+            "color": "#237f52",
+            "stroke": 0,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_055",
+            "type": "iso_e004",
+            "layerId": "capa_senalizacion",
+            "x": 500,
+            "y": 160,
+            "w": 48,
+            "h": 48,
+            "rotation": 0,
+            "color": "#237f52",
+            "stroke": 0,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_056",
+            "type": "iso_f002",
+            "layerId": "capa_senalizacion",
+            "x": 900,
+            "y": 420,
+            "w": 56,
+            "h": 56,
+            "rotation": 0,
+            "color": "#b71f2e",
+            "stroke": 0,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_057",
+            "type": "iso_w001",
+            "layerId": "capa_senalizacion",
+            "x": 780,
+            "y": 640,
+            "w": 56,
+            "h": 56,
+            "rotation": 0,
+            "color": "#f9a800",
+            "stroke": 0,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_058",
+            "type": "iso_p001",
+            "layerId": "capa_senalizacion",
+            "x": 1370,
+            "y": 640,
+            "w": 48,
+            "h": 48,
+            "rotation": 0,
+            "color": "#b71f2e",
+            "stroke": 0,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_059",
+            "type": "iso_m001",
+            "layerId": "capa_senalizacion",
+            "x": 800,
+            "y": 460,
+            "w": 48,
+            "h": 48,
+            "rotation": 0,
+            "color": "#005387",
+            "stroke": 0,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_060",
+            "type": "iso_e007",
+            "layerId": "capa_senalizacion",
+            "x": 1300,
+            "y": 870,
+            "w": 60,
+            "h": 60,
+            "rotation": 0,
+            "color": "#237f52",
+            "stroke": 0,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_061",
+            "type": "route",
+            "layerId": "capa_rutas",
+            "x": 340,
+            "y": 380,
+            "w": 880,
+            "h": 548,
+            "rotation": 0,
+            "color": "#237f52",
+            "stroke": 3,
+            "opacity": 1,
+            "label": "",
+            "locked": false,
+            "points": [
+              {
+                "x": 0,
+                "y": 0
+              },
+              {
+                "x": 0,
+                "y": 320
+              },
+              {
+                "x": 340,
+                "y": 320
+              },
+              {
+                "x": 340,
+                "y": 500
+              },
+              {
+                "x": 880,
+                "y": 500
+              },
+              {
+                "x": 880,
+                "y": 548
+              }
+            ]
+          }
+        ],
+        "groups": [
+          {
+            "id": "grupo_puesto",
+            "name": "Puesto de trabajo",
+            "members": [
+              "el_024",
+              "el_025"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "Mezzanine",
+      "level": "2",
+      "design": {
+        "format": 2,
+        "canvas": {
+          "width": 1200,
+          "height": 700,
+          "grid": 20,
+          "unit": "cm",
+          "scale": "1:100",
+          "background": "#f8fafc"
+        },
+        "layers": [
+          {
+            "id": "capa_planta",
+            "name": "Planta y muros",
+            "visible": true,
+            "locked": false
+          },
+          {
+            "id": "capa_equipos",
+            "name": "Equipamiento",
+            "visible": true,
+            "locked": false
+          },
+          {
+            "id": "capa_senalizacion",
+            "name": "Señalización",
+            "visible": true,
+            "locked": false
+          },
+          {
+            "id": "capa_rutas",
+            "name": "Rutas de evacuación",
+            "visible": true,
+            "locked": false
+          }
+        ],
+        "elements": [
+          {
+            "id": "el_001",
+            "type": "wall",
+            "layerId": "capa_planta",
+            "x": 80,
+            "y": 80,
+            "w": 1040,
+            "h": 12,
+            "rotation": 0,
+            "color": "#0f172a",
+            "stroke": 12,
+            "opacity": 1,
+            "label": "",
+            "locked": false,
+            "points": [
+              {
+                "x": 0,
+                "y": 6.0
+              },
+              {
+                "x": 1040,
+                "y": 6.0
+              }
+            ]
+          },
+          {
+            "id": "el_002",
+            "type": "wall",
+            "layerId": "capa_planta",
+            "x": 80,
+            "y": 620,
+            "w": 1040,
+            "h": 12,
+            "rotation": 0,
+            "color": "#0f172a",
+            "stroke": 12,
+            "opacity": 1,
+            "label": "",
+            "locked": false,
+            "points": [
+              {
+                "x": 0,
+                "y": 6.0
+              },
+              {
+                "x": 1040,
+                "y": 6.0
+              }
+            ]
+          },
+          {
+            "id": "el_003",
+            "type": "wall",
+            "layerId": "capa_planta",
+            "x": 80,
+            "y": 80,
+            "w": 12,
+            "h": 540,
+            "rotation": 0,
+            "color": "#0f172a",
+            "stroke": 12,
+            "opacity": 1,
+            "label": "",
+            "locked": false,
+            "points": [
+              {
+                "x": 6.0,
+                "y": 0
+              },
+              {
+                "x": 6.0,
+                "y": 540
+              }
+            ]
+          },
+          {
+            "id": "el_004",
+            "type": "wall",
+            "layerId": "capa_planta",
+            "x": 1108,
+            "y": 80,
+            "w": 12,
+            "h": 540,
+            "rotation": 0,
+            "color": "#0f172a",
+            "stroke": 12,
+            "opacity": 1,
+            "label": "",
+            "locked": false,
+            "points": [
+              {
+                "x": 6.0,
+                "y": 0
+              },
+              {
+                "x": 6.0,
+                "y": 540
+              }
+            ]
+          },
+          {
+            "id": "el_005",
+            "type": "wall",
+            "layerId": "capa_planta",
+            "x": 520,
+            "y": 80,
+            "w": 12,
+            "h": 220,
+            "rotation": 0,
+            "color": "#0f172a",
+            "stroke": 12,
+            "opacity": 1,
+            "label": "",
+            "locked": false,
+            "points": [
+              {
+                "x": 6.0,
+                "y": 0
+              },
+              {
+                "x": 6.0,
+                "y": 220
+              }
+            ]
+          },
+          {
+            "id": "el_006",
+            "type": "wall",
+            "layerId": "capa_planta",
+            "x": 520,
+            "y": 380,
+            "w": 12,
+            "h": 240,
+            "rotation": 0,
+            "color": "#0f172a",
+            "stroke": 12,
+            "opacity": 1,
+            "label": "",
+            "locked": false,
+            "points": [
+              {
+                "x": 6.0,
+                "y": 0
+              },
+              {
+                "x": 6.0,
+                "y": 240
+              }
+            ]
+          },
+          {
+            "id": "el_007",
+            "type": "door",
+            "layerId": "capa_planta",
+            "x": 506,
+            "y": 322,
+            "w": 80,
+            "h": 16,
+            "rotation": 90,
+            "color": "#475569",
+            "stroke": 2,
+            "opacity": 1,
+            "label": "",
+            "locked": false,
+            "flipX": false
+          },
+          {
+            "id": "el_008",
+            "type": "door",
+            "layerId": "capa_planta",
+            "x": 700,
+            "y": 592,
+            "w": 90,
+            "h": 16,
+            "rotation": 0,
+            "color": "#475569",
+            "stroke": 2,
+            "opacity": 1,
+            "label": "",
+            "locked": false,
+            "flipX": false
+          },
+          {
+            "id": "el_009",
+            "type": "text",
+            "layerId": "capa_planta",
+            "x": 110,
+            "y": 110,
+            "w": 320,
+            "h": 34,
+            "rotation": 0,
+            "color": "#0f172a",
+            "stroke": 0,
+            "opacity": 1,
+            "label": "SALA DE\nCAPACITACIÓN",
+            "locked": false,
+            "fontSize": 22
+          },
+          {
+            "id": "el_010",
+            "type": "text",
+            "layerId": "capa_planta",
+            "x": 560,
+            "y": 110,
+            "w": 280,
+            "h": 28,
+            "rotation": 0,
+            "color": "#0f172a",
+            "stroke": 0,
+            "opacity": 1,
+            "label": "ARCHIVO",
+            "locked": false,
+            "fontSize": 20
+          },
+          {
+            "id": "el_011",
+            "type": "text",
+            "layerId": "capa_planta",
+            "x": 560,
+            "y": 470,
+            "w": 420,
+            "h": 28,
+            "rotation": 0,
+            "color": "#0f172a",
+            "stroke": 0,
+            "opacity": 1,
+            "label": "ÁREA TÉCNICA",
+            "locked": false,
+            "fontSize": 18
+          },
+          {
+            "id": "el_012",
+            "type": "dimension",
+            "layerId": "capa_planta",
+            "x": 80,
+            "y": 40,
+            "w": 1040,
+            "h": 20,
+            "rotation": 0,
+            "color": "#475569",
+            "stroke": 1.5,
+            "opacity": 1,
+            "label": "",
+            "locked": false,
+            "points": [
+              {
+                "x": 0,
+                "y": 10
+              },
+              {
+                "x": 1040,
+                "y": 10
+              }
+            ],
+            "fontSize": 14
+          },
+          {
+            "id": "el_013",
+            "type": "cad_chair",
+            "layerId": "capa_equipos",
+            "x": 150,
+            "y": 180,
+            "w": 44,
+            "h": 44,
+            "rotation": 0,
+            "color": "#334155",
+            "stroke": 1.5,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_014",
+            "type": "cad_chair",
+            "layerId": "capa_equipos",
+            "x": 150,
+            "y": 290,
+            "w": 44,
+            "h": 44,
+            "rotation": 0,
+            "color": "#334155",
+            "stroke": 1.5,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_015",
+            "type": "cad_chair",
+            "layerId": "capa_equipos",
+            "x": 240,
+            "y": 180,
+            "w": 44,
+            "h": 44,
+            "rotation": 0,
+            "color": "#334155",
+            "stroke": 1.5,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_016",
+            "type": "cad_chair",
+            "layerId": "capa_equipos",
+            "x": 240,
+            "y": 290,
+            "w": 44,
+            "h": 44,
+            "rotation": 0,
+            "color": "#334155",
+            "stroke": 1.5,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_017",
+            "type": "cad_chair",
+            "layerId": "capa_equipos",
+            "x": 330,
+            "y": 180,
+            "w": 44,
+            "h": 44,
+            "rotation": 0,
+            "color": "#334155",
+            "stroke": 1.5,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_018",
+            "type": "cad_chair",
+            "layerId": "capa_equipos",
+            "x": 330,
+            "y": 290,
+            "w": 44,
+            "h": 44,
+            "rotation": 0,
+            "color": "#334155",
+            "stroke": 1.5,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_019",
+            "type": "cad_chair",
+            "layerId": "capa_equipos",
+            "x": 420,
+            "y": 180,
+            "w": 44,
+            "h": 44,
+            "rotation": 0,
+            "color": "#334155",
+            "stroke": 1.5,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_020",
+            "type": "cad_chair",
+            "layerId": "capa_equipos",
+            "x": 420,
+            "y": 290,
+            "w": 44,
+            "h": 44,
+            "rotation": 0,
+            "color": "#334155",
+            "stroke": 1.5,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_021",
+            "type": "cad_table",
+            "layerId": "capa_equipos",
+            "x": 140,
+            "y": 300,
+            "w": 300,
+            "h": 70,
+            "rotation": 0,
+            "color": "#334155",
+            "stroke": 1.5,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_022",
+            "type": "cad_shelf",
+            "layerId": "capa_equipos",
+            "x": 560,
+            "y": 140,
+            "w": 60,
+            "h": 160,
+            "rotation": 0,
+            "color": "#334155",
+            "stroke": 1.5,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_023",
+            "type": "cad_shelf",
+            "layerId": "capa_equipos",
+            "x": 640,
+            "y": 140,
+            "w": 60,
+            "h": 160,
+            "rotation": 0,
+            "color": "#334155",
+            "stroke": 1.5,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_024",
+            "type": "cad_desk",
+            "layerId": "capa_equipos",
+            "x": 900,
+            "y": 180,
+            "w": 140,
+            "h": 70,
+            "rotation": 0,
+            "color": "#334155",
+            "stroke": 1.5,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_025",
+            "type": "cad_locker",
+            "layerId": "capa_equipos",
+            "x": 560,
+            "y": 500,
+            "w": 120,
+            "h": 54,
+            "rotation": 0,
+            "color": "#334155",
+            "stroke": 1.5,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_026",
+            "type": "cad_elevator",
+            "layerId": "capa_equipos",
+            "x": 980,
+            "y": 500,
+            "w": 100,
+            "h": 90,
+            "rotation": 0,
+            "color": "#334155",
+            "stroke": 1.5,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_027",
+            "type": "cad_stairs_l",
+            "layerId": "capa_equipos",
+            "x": 900,
+            "y": 500,
+            "w": 70,
+            "h": 90,
+            "rotation": 0,
+            "color": "#334155",
+            "stroke": 1.5,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_028",
+            "type": "iso_e001",
+            "layerId": "capa_senalizacion",
+            "x": 1000,
+            "y": 540,
+            "w": 56,
+            "h": 56,
+            "rotation": 0,
+            "color": "#237f52",
+            "stroke": 0,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_029",
+            "type": "iso_f001",
+            "layerId": "capa_senalizacion",
+            "x": 980,
+            "y": 140,
+            "w": 56,
+            "h": 56,
+            "rotation": 0,
+            "color": "#b71f2e",
+            "stroke": 0,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_030",
+            "type": "iso_e003",
+            "layerId": "capa_senalizacion",
+            "x": 620,
+            "y": 380,
+            "w": 56,
+            "h": 56,
+            "rotation": 0,
+            "color": "#237f52",
+            "stroke": 0,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_031",
+            "type": "route",
+            "layerId": "capa_rutas",
+            "x": 300,
+            "y": 430,
+            "w": 700,
+            "h": 160,
+            "rotation": 0,
+            "color": "#237f52",
+            "stroke": 3,
+            "opacity": 1,
+            "label": "",
+            "locked": false,
+            "points": [
+              {
+                "x": 0,
+                "y": 0
+              },
+              {
+                "x": 0,
+                "y": 160
+              },
+              {
+                "x": 460,
+                "y": 160
+              },
+              {
+                "x": 460,
+                "y": 110
+              },
+              {
+                "x": 700,
+                "y": 110
+              }
+            ]
+          }
+        ],
+        "groups": []
+      }
+    }
+  ]
+}

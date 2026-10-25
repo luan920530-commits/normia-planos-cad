@@ -1,0 +1,287 @@
+{
+  "version": 1,
+  "categories": {
+    "furniture": {
+      "label": "Mobiliario y estanterías",
+      "short": "Mobiliario"
+    },
+    "sanitary": {
+      "label": "Baños",
+      "short": "Baños"
+    },
+    "kitchen": {
+      "label": "Cocinas",
+      "short": "Cocinas"
+    },
+    "industrial": {
+      "label": "Equipos industriales",
+      "short": "Industrial"
+    },
+    "vehicles": {
+      "label": "Vehículos y maquinaria",
+      "short": "Vehículos"
+    },
+    "vertical": {
+      "label": "Conexiones entre pisos",
+      "short": "Entre pisos"
+    }
+  },
+  "objects": {
+    "cad_table": {
+      "category": "furniture",
+      "name": "Mesa de trabajo",
+      "description": "Mesa rectangular para puestos, reuniones o áreas comunes. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"15\" y=\"30\" width=\"70\" height=\"38\" rx=\"2\" fill=\"currentColor\" fill-opacity=\".09\"/><line x1=\"20\" y1=\"68\" x2=\"20\" y2=\"85\" fill=\"none\"/><line x1=\"80\" y1=\"68\" x2=\"80\" y2=\"85\" fill=\"none\"/><line x1=\"25\" y1=\"45\" x2=\"75\" y2=\"45\" fill=\"none\" stroke-dasharray=\"5 4\"/></svg>"
+    },
+    "cad_desk": {
+      "category": "furniture",
+      "name": "Escritorio en L",
+      "description": "Puesto de trabajo con retorno lateral. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M15 20H82V43H42V82H15Z\" fill=\"currentColor\" fill-opacity=\".09\"/><line x1=\"28\" y1=\"43\" x2=\"28\" y2=\"82\" fill=\"none\"/><line x1=\"42\" y1=\"55\" x2=\"70\" y2=\"55\" fill=\"none\"/><circle cx=\"62\" cy=\"31\" r=\"4\" fill=\"none\"/></svg>"
+    },
+    "cad_chair": {
+      "category": "furniture",
+      "name": "Silla",
+      "description": "Silla individual representada en planta. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"30\" y=\"34\" width=\"40\" height=\"36\" rx=\"6\" fill=\"currentColor\" fill-opacity=\".09\"/><path d=\"M26 34V20Q50 12 74 20V34\" fill=\"none\"/><line x1=\"34\" y1=\"70\" x2=\"30\" y2=\"86\" fill=\"none\"/><line x1=\"66\" y1=\"70\" x2=\"70\" y2=\"86\" fill=\"none\"/><line x1=\"38\" y1=\"45\" x2=\"62\" y2=\"45\" fill=\"none\"/></svg>"
+    },
+    "cad_bench": {
+      "category": "furniture",
+      "name": "Banca",
+      "description": "Banca lineal para salas de espera o circulaciones. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"10\" y=\"34\" width=\"80\" height=\"28\" rx=\"3\" fill=\"currentColor\" fill-opacity=\".09\"/><line x1=\"35\" y1=\"34\" x2=\"35\" y2=\"62\" fill=\"none\"/><line x1=\"65\" y1=\"34\" x2=\"65\" y2=\"62\" fill=\"none\"/><line x1=\"18\" y1=\"62\" x2=\"18\" y2=\"82\" fill=\"none\"/><line x1=\"82\" y1=\"62\" x2=\"82\" y2=\"82\" fill=\"none\"/></svg>"
+    },
+    "cad_shelf": {
+      "category": "furniture",
+      "name": "Estantería",
+      "description": "Estantería de almacenamiento con niveles visibles. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"10\" y=\"12\" width=\"80\" height=\"76\" rx=\"1\" fill=\"currentColor\" fill-opacity=\".09\"/><line x1=\"10\" y1=\"30\" x2=\"90\" y2=\"30\" fill=\"none\"/><line x1=\"10\" y1=\"49\" x2=\"90\" y2=\"49\" fill=\"none\"/><line x1=\"10\" y1=\"68\" x2=\"90\" y2=\"68\" fill=\"none\"/><line x1=\"24\" y1=\"12\" x2=\"24\" y2=\"88\" fill=\"none\"/><line x1=\"76\" y1=\"12\" x2=\"76\" y2=\"88\" fill=\"none\"/></svg>"
+    },
+    "cad_locker": {
+      "category": "furniture",
+      "name": "Lockers o casilleros",
+      "description": "Batería de casilleros para personal o visitantes. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"14\" y=\"8\" width=\"72\" height=\"84\" rx=\"1\" fill=\"currentColor\" fill-opacity=\".09\"/><line x1=\"38\" y1=\"8\" x2=\"38\" y2=\"92\" fill=\"none\"/><line x1=\"62\" y1=\"8\" x2=\"62\" y2=\"92\" fill=\"none\"/><line x1=\"20\" y1=\"20\" x2=\"32\" y2=\"20\" fill=\"none\"/><line x1=\"44\" y1=\"20\" x2=\"56\" y2=\"20\" fill=\"none\"/><line x1=\"68\" y1=\"20\" x2=\"80\" y2=\"20\" fill=\"none\"/><circle cx=\"32\" cy=\"52\" r=\"1.8\" fill=\"none\"/><circle cx=\"56\" cy=\"52\" r=\"1.8\" fill=\"none\"/><circle cx=\"80\" cy=\"52\" r=\"1.8\" fill=\"none\"/></svg>"
+    },
+    "cad_toilet": {
+      "category": "sanitary",
+      "name": "Sanitario",
+      "description": "Inodoro con tanque y taza en vista de planta. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"32\" y=\"8\" width=\"36\" height=\"20\" rx=\"2\" fill=\"currentColor\" fill-opacity=\".09\"/><ellipse cx=\"50\" cy=\"58\" rx=\"24\" ry=\"31\" fill=\"currentColor\" fill-opacity=\".09\"/><ellipse cx=\"50\" cy=\"58\" rx=\"14\" ry=\"21\" fill=\"none\"/><line x1=\"34\" y1=\"34\" x2=\"66\" y2=\"34\" fill=\"none\"/><circle cx=\"50\" cy=\"18\" r=\"2\" fill=\"none\"/></svg>"
+    },
+    "cad_washbasin": {
+      "category": "sanitary",
+      "name": "Lavamanos",
+      "description": "Lavamanos con cuenca, desagüe y grifería. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><ellipse cx=\"50\" cy=\"54\" rx=\"34\" ry=\"29\" fill=\"currentColor\" fill-opacity=\".09\"/><ellipse cx=\"50\" cy=\"54\" rx=\"21\" ry=\"16\" fill=\"none\"/><circle cx=\"50\" cy=\"56\" r=\"3\" fill=\"none\"/><circle cx=\"50\" cy=\"17\" r=\"5\" fill=\"none\"/><line x1=\"50\" y1=\"22\" x2=\"50\" y2=\"32\" fill=\"none\"/><line x1=\"34\" y1=\"18\" x2=\"42\" y2=\"18\" fill=\"none\"/><line x1=\"58\" y1=\"18\" x2=\"66\" y2=\"18\" fill=\"none\"/></svg>"
+    },
+    "cad_urinal": {
+      "category": "sanitary",
+      "name": "Urinario",
+      "description": "Urinario individual en representación de planta. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M25 14H75V58Q73 84 50 89Q27 84 25 58Z\" fill=\"currentColor\" fill-opacity=\".09\"/><path d=\"M35 30V57Q37 72 50 76Q63 72 65 57V30\" fill=\"none\"/><circle cx=\"50\" cy=\"20\" r=\"3\" fill=\"none\"/><line x1=\"40\" y1=\"14\" x2=\"40\" y2=\"6\" fill=\"none\"/><line x1=\"60\" y1=\"14\" x2=\"60\" y2=\"6\" fill=\"none\"/></svg>"
+    },
+    "cad_shower": {
+      "category": "sanitary",
+      "name": "Ducha",
+      "description": "Zona de ducha con desagüe y punto de suministro. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"12\" y=\"12\" width=\"76\" height=\"76\" rx=\"1\" fill=\"currentColor\" fill-opacity=\".09\"/><line x1=\"12\" y1=\"12\" x2=\"88\" y2=\"88\" fill=\"none\" stroke-dasharray=\"5 4\"/><circle cx=\"50\" cy=\"50\" r=\"5\" fill=\"none\"/><circle cx=\"26\" cy=\"26\" r=\"7\" fill=\"none\"/><line x1=\"31\" y1=\"31\" x2=\"38\" y2=\"38\" fill=\"none\"/><line x1=\"22\" y1=\"37\" x2=\"18\" y2=\"44\" fill=\"none\"/><line x1=\"30\" y1=\"39\" x2=\"28\" y2=\"47\" fill=\"none\"/></svg>"
+    },
+    "cad_kitchen_sink": {
+      "category": "kitchen",
+      "name": "Lavaplatos doble",
+      "description": "Lavaplatos de dos cubetas con grifería. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"10\" y=\"25\" width=\"80\" height=\"52\" rx=\"2\" fill=\"currentColor\" fill-opacity=\".09\"/><rect x=\"16\" y=\"33\" width=\"31\" height=\"35\" rx=\"4\" fill=\"none\"/><rect x=\"53\" y=\"33\" width=\"31\" height=\"35\" rx=\"4\" fill=\"none\"/><circle cx=\"31\" cy=\"51\" r=\"3\" fill=\"none\"/><circle cx=\"69\" cy=\"51\" r=\"3\" fill=\"none\"/><path d=\"M42 25V15Q50 5 58 15V25\" fill=\"none\"/><circle cx=\"50\" cy=\"15\" r=\"3\" fill=\"none\"/></svg>"
+    },
+    "cad_stove": {
+      "category": "kitchen",
+      "name": "Estufa de cuatro puestos",
+      "description": "Estufa con cuatro quemadores y controles. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"15\" y=\"12\" width=\"70\" height=\"76\" rx=\"2\" fill=\"currentColor\" fill-opacity=\".09\"/><circle cx=\"35\" cy=\"34\" r=\"12\" fill=\"none\"/><circle cx=\"65\" cy=\"34\" r=\"12\" fill=\"none\"/><circle cx=\"35\" cy=\"61\" r=\"12\" fill=\"none\"/><circle cx=\"65\" cy=\"61\" r=\"12\" fill=\"none\"/><circle cx=\"35\" cy=\"34\" r=\"7\" fill=\"none\"/><circle cx=\"65\" cy=\"34\" r=\"7\" fill=\"none\"/><circle cx=\"35\" cy=\"61\" r=\"7\" fill=\"none\"/><circle cx=\"65\" cy=\"61\" r=\"7\" fill=\"none\"/><circle cx=\"30\" cy=\"81\" r=\"2\" fill=\"none\"/><circle cx=\"43\" cy=\"81\" r=\"2\" fill=\"none\"/><circle cx=\"57\" cy=\"81\" r=\"2\" fill=\"none\"/><circle cx=\"70\" cy=\"81\" r=\"2\" fill=\"none\"/></svg>"
+    },
+    "cad_refrigerator": {
+      "category": "kitchen",
+      "name": "Refrigerador",
+      "description": "Refrigerador de dos compartimentos en planta. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"25\" y=\"7\" width=\"50\" height=\"86\" rx=\"2\" fill=\"currentColor\" fill-opacity=\".09\"/><line x1=\"25\" y1=\"42\" x2=\"75\" y2=\"42\" fill=\"none\"/><line x1=\"35\" y1=\"18\" x2=\"35\" y2=\"33\" fill=\"none\"/><line x1=\"35\" y1=\"53\" x2=\"35\" y2=\"75\" fill=\"none\"/><line x1=\"65\" y1=\"18\" x2=\"65\" y2=\"33\" fill=\"none\"/><line x1=\"65\" y1=\"53\" x2=\"65\" y2=\"75\" fill=\"none\"/></svg>"
+    },
+    "cad_counter": {
+      "category": "kitchen",
+      "name": "Mesón en L",
+      "description": "Mesón de preparación con retorno y módulos. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M10 18H88V42H42V86H10Z\" fill=\"currentColor\" fill-opacity=\".09\"/><path d=\"M20 27H78V33H32V76H20Z\" fill=\"none\"/><line x1=\"42\" y1=\"57\" x2=\"70\" y2=\"57\" fill=\"none\"/><line x1=\"25\" y1=\"42\" x2=\"25\" y2=\"86\" fill=\"none\"/></svg>"
+    },
+    "cad_drill_press": {
+      "category": "industrial",
+      "name": "Taladro de banco",
+      "description": "Taladro vertical con columna, mesa y base. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"20\" y=\"82\" width=\"60\" height=\"10\" rx=\"2\" fill=\"currentColor\" fill-opacity=\".09\"/><rect x=\"40\" y=\"14\" width=\"45\" height=\"18\" rx=\"3\" fill=\"currentColor\" fill-opacity=\".09\"/><rect x=\"25\" y=\"54\" width=\"45\" height=\"8\" rx=\"1\" fill=\"currentColor\" fill-opacity=\".09\"/><line x1=\"65\" y1=\"32\" x2=\"65\" y2=\"82\" fill=\"none\"/><line x1=\"50\" y1=\"32\" x2=\"50\" y2=\"54\" fill=\"none\"/><polygon points=\"46,54,54,54,50,62\" fill=\"none\"/><circle cx=\"78\" cy=\"23\" r=\"5\" fill=\"none\"/><line x1=\"78\" y1=\"28\" x2=\"78\" y2=\"38\" fill=\"none\"/></svg>"
+    },
+    "cad_lathe": {
+      "category": "industrial",
+      "name": "Torno",
+      "description": "Torno paralelo con cabezal, carro y contrapunto. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"10\" y=\"72\" width=\"80\" height=\"14\" rx=\"2\" fill=\"currentColor\" fill-opacity=\".09\"/><rect x=\"12\" y=\"34\" width=\"23\" height=\"32\" rx=\"2\" fill=\"currentColor\" fill-opacity=\".09\"/><rect x=\"67\" y=\"45\" width=\"19\" height=\"21\" rx=\"2\" fill=\"currentColor\" fill-opacity=\".09\"/><rect x=\"41\" y=\"55\" width=\"21\" height=\"13\" rx=\"1\" fill=\"currentColor\" fill-opacity=\".09\"/><line x1=\"35\" y1=\"50\" x2=\"67\" y2=\"50\" fill=\"none\"/><circle cx=\"39\" cy=\"50\" r=\"8\" fill=\"none\"/><circle cx=\"64\" cy=\"50\" r=\"6\" fill=\"none\"/><line x1=\"18\" y1=\"86\" x2=\"18\" y2=\"94\" fill=\"none\"/><line x1=\"82\" y1=\"86\" x2=\"82\" y2=\"94\" fill=\"none\"/></svg>"
+    },
+    "cad_welding": {
+      "category": "industrial",
+      "name": "Equipo de soldadura",
+      "description": "Fuente de soldadura con controles y cable de salida. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"18\" y=\"18\" width=\"48\" height=\"58\" rx=\"3\" fill=\"currentColor\" fill-opacity=\".09\"/><circle cx=\"30\" cy=\"31\" r=\"4\" fill=\"none\"/><circle cx=\"46\" cy=\"31\" r=\"4\" fill=\"none\"/><line x1=\"26\" y1=\"45\" x2=\"58\" y2=\"45\" fill=\"none\"/><line x1=\"26\" y1=\"52\" x2=\"58\" y2=\"52\" fill=\"none\"/><line x1=\"26\" y1=\"59\" x2=\"58\" y2=\"59\" fill=\"none\"/><circle cx=\"24\" cy=\"80\" r=\"5\" fill=\"none\"/><circle cx=\"60\" cy=\"80\" r=\"5\" fill=\"none\"/><path d=\"M66 61C90 61 92 88 66 88H48\" fill=\"none\"/><polyline points=\"48,88 40,82 34,88 42,94\" fill=\"none\"/></svg>"
+    },
+    "cad_compressor": {
+      "category": "industrial",
+      "name": "Compresor de aire",
+      "description": "Compresor con tanque, motor, manómetro y ruedas. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"15\" y=\"42\" width=\"68\" height=\"30\" rx=\"15\" fill=\"currentColor\" fill-opacity=\".09\"/><rect x=\"25\" y=\"20\" width=\"31\" height=\"21\" rx=\"2\" fill=\"currentColor\" fill-opacity=\".09\"/><circle cx=\"68\" cy=\"27\" r=\"7\" fill=\"none\"/><line x1=\"68\" y1=\"34\" x2=\"68\" y2=\"42\" fill=\"none\"/><circle cx=\"26\" cy=\"77\" r=\"9\" fill=\"none\"/><circle cx=\"72\" cy=\"77\" r=\"9\" fill=\"none\"/><path d=\"M82 47L91 24H96\" fill=\"none\"/><line x1=\"34\" y1=\"20\" x2=\"34\" y2=\"12\" fill=\"none\"/><line x1=\"46\" y1=\"20\" x2=\"46\" y2=\"12\" fill=\"none\"/></svg>"
+    },
+    "cad_circular_saw": {
+      "category": "industrial",
+      "name": "Sierra circular de banco",
+      "description": "Mesa de corte con disco y guía longitudinal. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"10\" y=\"40\" width=\"80\" height=\"36\" rx=\"2\" fill=\"currentColor\" fill-opacity=\".09\"/><circle cx=\"50\" cy=\"45\" r=\"23\" fill=\"none\"/><circle cx=\"50\" cy=\"45\" r=\"3\" fill=\"none\"/><line x1=\"50\" y1=\"22\" x2=\"50\" y2=\"68\" fill=\"none\"/><line x1=\"27\" y1=\"45\" x2=\"73\" y2=\"45\" fill=\"none\"/><line x1=\"34\" y1=\"29\" x2=\"66\" y2=\"61\" fill=\"none\"/><line x1=\"34\" y1=\"61\" x2=\"66\" y2=\"29\" fill=\"none\"/><line x1=\"20\" y1=\"40\" x2=\"20\" y2=\"76\" fill=\"none\"/><line x1=\"20\" y1=\"76\" x2=\"20\" y2=\"92\" fill=\"none\"/><line x1=\"80\" y1=\"76\" x2=\"80\" y2=\"92\" fill=\"none\"/><line x1=\"15\" y1=\"55\" x2=\"85\" y2=\"55\" fill=\"none\" stroke-dasharray=\"5 4\"/></svg>"
+    },
+    "cad_car": {
+      "category": "vehicles",
+      "name": "Automóvil",
+      "description": "Vehículo liviano en vista superior. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M31 7H69Q82 19 85 50Q82 81 69 93H31Q18 81 15 50Q18 19 31 7Z\" fill=\"currentColor\" fill-opacity=\".09\"/><path d=\"M28 27H72L78 41H22Z\" fill=\"none\"/><path d=\"M23 62H77L71 78H29Z\" fill=\"none\"/><line x1=\"22\" y1=\"41\" x2=\"22\" y2=\"62\" fill=\"none\"/><line x1=\"78\" y1=\"41\" x2=\"78\" y2=\"62\" fill=\"none\"/><rect x=\"10\" y=\"25\" width=\"7\" height=\"18\" rx=\"2\" fill=\"none\"/><rect x=\"83\" y=\"25\" width=\"7\" height=\"18\" rx=\"2\" fill=\"none\"/><rect x=\"10\" y=\"60\" width=\"7\" height=\"18\" rx=\"2\" fill=\"none\"/><rect x=\"83\" y=\"60\" width=\"7\" height=\"18\" rx=\"2\" fill=\"none\"/></svg>"
+    },
+    "cad_truck": {
+      "category": "vehicles",
+      "name": "Camión de carga",
+      "description": "Camión con cabina y área de carga en planta. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"34\" y=\"5\" width=\"32\" height=\"26\" rx=\"4\" fill=\"currentColor\" fill-opacity=\".09\"/><rect x=\"14\" y=\"31\" width=\"72\" height=\"61\" rx=\"2\" fill=\"currentColor\" fill-opacity=\".09\"/><line x1=\"37\" y1=\"20\" x2=\"63\" y2=\"20\" fill=\"none\"/><line x1=\"14\" y1=\"40\" x2=\"86\" y2=\"40\" fill=\"none\"/><line x1=\"50\" y1=\"40\" x2=\"50\" y2=\"92\" fill=\"none\" stroke-dasharray=\"5 4\"/><rect x=\"24\" y=\"11\" width=\"7\" height=\"15\" rx=\"2\" fill=\"none\"/><rect x=\"69\" y=\"11\" width=\"7\" height=\"15\" rx=\"2\" fill=\"none\"/><rect x=\"8\" y=\"48\" width=\"7\" height=\"18\" rx=\"2\" fill=\"none\"/><rect x=\"85\" y=\"48\" width=\"7\" height=\"18\" rx=\"2\" fill=\"none\"/><rect x=\"8\" y=\"72\" width=\"7\" height=\"16\" rx=\"2\" fill=\"none\"/><rect x=\"85\" y=\"72\" width=\"7\" height=\"16\" rx=\"2\" fill=\"none\"/></svg>"
+    },
+    "cad_forklift": {
+      "category": "vehicles",
+      "name": "Montacargas",
+      "description": "Equipo de elevación con mástil, horquillas y ruedas. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#ca8a04",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"18\" y=\"36\" width=\"48\" height=\"34\" rx=\"3\" fill=\"currentColor\" fill-opacity=\".09\"/><rect x=\"25\" y=\"15\" width=\"34\" height=\"22\" rx=\"2\" fill=\"none\"/><line x1=\"25\" y1=\"15\" x2=\"18\" y2=\"36\" fill=\"none\"/><line x1=\"59\" y1=\"15\" x2=\"66\" y2=\"36\" fill=\"none\"/><circle cx=\"30\" cy=\"75\" r=\"11\" fill=\"none\"/><circle cx=\"60\" cy=\"75\" r=\"11\" fill=\"none\"/><line x1=\"74\" y1=\"10\" x2=\"74\" y2=\"86\" fill=\"none\"/><line x1=\"83\" y1=\"10\" x2=\"83\" y2=\"86\" fill=\"none\"/><line x1=\"83\" y1=\"74\" x2=\"98\" y2=\"74\" fill=\"none\"/><line x1=\"83\" y1=\"85\" x2=\"98\" y2=\"85\" fill=\"none\"/><line x1=\"68\" y1=\"24\" x2=\"88\" y2=\"24\" fill=\"none\"/></svg>"
+    },
+    "cad_excavator": {
+      "category": "vehicles",
+      "name": "Excavadora",
+      "description": "Maquinaria con orugas, cabina, brazo y cucharón. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#ca8a04",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"14\" y=\"72\" width=\"58\" height=\"17\" rx=\"8\" fill=\"currentColor\" fill-opacity=\".09\"/><circle cx=\"26\" cy=\"80\" r=\"5\" fill=\"none\"/><circle cx=\"42\" cy=\"80\" r=\"5\" fill=\"none\"/><circle cx=\"59\" cy=\"80\" r=\"5\" fill=\"none\"/><rect x=\"24\" y=\"47\" width=\"38\" height=\"25\" rx=\"3\" fill=\"currentColor\" fill-opacity=\".09\"/><rect x=\"43\" y=\"29\" width=\"21\" height=\"21\" rx=\"2\" fill=\"currentColor\" fill-opacity=\".09\"/><polyline points=\"55,34 67,14 84,29 91,55\" fill=\"none\"/><path d=\"M84 54L97 61L89 73L79 65Z\" fill=\"currentColor\" fill-opacity=\".09\"/><line x1=\"67\" y1=\"14\" x2=\"73\" y2=\"10\" fill=\"none\"/></svg>"
+    },
+    "cad_backhoe": {
+      "category": "vehicles",
+      "name": "Retroexcavadora",
+      "description": "Equipo con cucharones frontal y posterior. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#ca8a04",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"29\" cy=\"74\" r=\"12\" fill=\"none\"/><circle cx=\"70\" cy=\"74\" r=\"15\" fill=\"none\"/><rect x=\"25\" y=\"45\" width=\"46\" height=\"23\" rx=\"3\" fill=\"currentColor\" fill-opacity=\".09\"/><rect x=\"41\" y=\"25\" width=\"22\" height=\"23\" rx=\"2\" fill=\"currentColor\" fill-opacity=\".09\"/><polyline points=\"26,51 12,35 6,50\" fill=\"none\"/><path d=\"M5 45L14 48L12 63L2 60Z\" fill=\"currentColor\" fill-opacity=\".09\"/><polyline points=\"69,48 84,24 92,48\" fill=\"none\"/><path d=\"M88 43L97 48L92 62L83 56Z\" fill=\"currentColor\" fill-opacity=\".09\"/></svg>"
+    },
+    "cad_crane": {
+      "category": "vehicles",
+      "name": "Grúa móvil",
+      "description": "Grúa con pluma, cable y gancho en representación lateral. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#ca8a04",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"15\" y=\"55\" width=\"57\" height=\"21\" rx=\"3\" fill=\"currentColor\" fill-opacity=\".09\"/><rect x=\"20\" y=\"35\" width=\"23\" height=\"21\" rx=\"2\" fill=\"currentColor\" fill-opacity=\".09\"/><circle cx=\"26\" cy=\"80\" r=\"9\" fill=\"none\"/><circle cx=\"61\" cy=\"80\" r=\"9\" fill=\"none\"/><line x1=\"40\" y1=\"39\" x2=\"87\" y2=\"8\" fill=\"none\"/><line x1=\"46\" y1=\"44\" x2=\"92\" y2=\"14\" fill=\"none\"/><line x1=\"87\" y1=\"8\" x2=\"87\" y2=\"36\" fill=\"none\"/><path d=\"M87 36Q87 46 81 42\" fill=\"none\"/><line x1=\"44\" y1=\"55\" x2=\"52\" y2=\"35\" fill=\"none\"/></svg>"
+    },
+    "cad_bulldozer": {
+      "category": "vehicles",
+      "name": "Bulldozer",
+      "description": "Tractor de orugas con hoja de empuje frontal. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#ca8a04",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"21\" y=\"62\" width=\"59\" height=\"24\" rx=\"12\" fill=\"currentColor\" fill-opacity=\".09\"/><circle cx=\"33\" cy=\"74\" r=\"7\" fill=\"none\"/><circle cx=\"50\" cy=\"74\" r=\"7\" fill=\"none\"/><circle cx=\"68\" cy=\"74\" r=\"7\" fill=\"none\"/><rect x=\"30\" y=\"36\" width=\"40\" height=\"29\" rx=\"3\" fill=\"currentColor\" fill-opacity=\".09\"/><rect x=\"42\" y=\"19\" width=\"24\" height=\"20\" rx=\"2\" fill=\"currentColor\" fill-opacity=\".09\"/><path d=\"M10 43L21 49V85L8 79Z\" fill=\"currentColor\" fill-opacity=\".09\"/><line x1=\"20\" y1=\"55\" x2=\"36\" y2=\"65\" fill=\"none\"/><line x1=\"20\" y1=\"75\" x2=\"35\" y2=\"72\" fill=\"none\"/></svg>"
+    },
+    "cad_stairs_straight": {
+      "category": "vertical",
+      "name": "Escalera recta",
+      "description": "Tramo recto con huellas y sentido de ascenso. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"20\" y=\"7\" width=\"60\" height=\"86\" rx=\"0\" fill=\"none\"/><line x1=\"20\" y1=\"17\" x2=\"80\" y2=\"17\" fill=\"none\"/><line x1=\"20\" y1=\"27\" x2=\"80\" y2=\"27\" fill=\"none\"/><line x1=\"20\" y1=\"37\" x2=\"80\" y2=\"37\" fill=\"none\"/><line x1=\"20\" y1=\"47\" x2=\"80\" y2=\"47\" fill=\"none\"/><line x1=\"20\" y1=\"57\" x2=\"80\" y2=\"57\" fill=\"none\"/><line x1=\"20\" y1=\"67\" x2=\"80\" y2=\"67\" fill=\"none\"/><line x1=\"20\" y1=\"77\" x2=\"80\" y2=\"77\" fill=\"none\"/><line x1=\"20\" y1=\"87\" x2=\"80\" y2=\"87\" fill=\"none\"/><line x1=\"50\" y1=\"77\" x2=\"50\" y2=\"24\" fill=\"none\"/><polygon points=\"44,30,50,18,56,30\" fill=\"none\"/></svg>"
+    },
+    "cad_stairs_l": {
+      "category": "vertical",
+      "name": "Escalera en L",
+      "description": "Dos tramos con cambio de dirección y descanso. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M14 8H46V53H90V91H14Z\" fill=\"none\"/><line x1=\"24\" y1=\"8\" x2=\"24\" y2=\"53\" fill=\"none\"/><line x1=\"35\" y1=\"8\" x2=\"35\" y2=\"53\" fill=\"none\"/><line x1=\"46\" y1=\"62\" x2=\"90\" y2=\"62\" fill=\"none\"/><line x1=\"46\" y1=\"72\" x2=\"90\" y2=\"72\" fill=\"none\"/><line x1=\"46\" y1=\"82\" x2=\"90\" y2=\"82\" fill=\"none\"/><rect x=\"14\" y=\"53\" width=\"32\" height=\"38\" rx=\"0\" fill=\"none\"/><polyline points=\"30,43 30,25 30,43 70,43\" fill=\"none\"/><polygon points=\"64,37,78,43,64,49\" fill=\"none\"/></svg>"
+    },
+    "cad_stairs_spiral": {
+      "category": "vertical",
+      "name": "Escalera de caracol",
+      "description": "Escalera circular con huellas radiales. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"50\" cy=\"50\" r=\"43\" fill=\"none\"/><circle cx=\"50\" cy=\"50\" r=\"6\" fill=\"none\"/><line x1=\"50\" y1=\"44\" x2=\"50\" y2=\"7\" fill=\"none\"/><line x1=\"54\" y1=\"46\" x2=\"80\" y2=\"20\" fill=\"none\"/><line x1=\"56\" y1=\"50\" x2=\"93\" y2=\"50\" fill=\"none\"/><line x1=\"54\" y1=\"54\" x2=\"80\" y2=\"80\" fill=\"none\"/><line x1=\"50\" y1=\"56\" x2=\"50\" y2=\"93\" fill=\"none\"/><line x1=\"46\" y1=\"54\" x2=\"20\" y2=\"80\" fill=\"none\"/><line x1=\"44\" y1=\"50\" x2=\"7\" y2=\"50\" fill=\"none\"/><line x1=\"46\" y1=\"46\" x2=\"20\" y2=\"20\" fill=\"none\"/><polygon points=\"47,15,50,7,53,15\" fill=\"none\"/></svg>"
+    },
+    "cad_elevator": {
+      "category": "vertical",
+      "name": "Ascensor",
+      "description": "Caja de ascensor con cabina y sentidos de desplazamiento. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"14\" y=\"8\" width=\"72\" height=\"84\" rx=\"1\" fill=\"currentColor\" fill-opacity=\".09\"/><rect x=\"24\" y=\"18\" width=\"52\" height=\"64\" rx=\"0\" fill=\"none\"/><line x1=\"50\" y1=\"18\" x2=\"50\" y2=\"82\" fill=\"none\"/><line x1=\"36\" y1=\"65\" x2=\"36\" y2=\"38\" fill=\"none\"/><polygon points=\"30,44,36,32,42,44\" fill=\"none\"/><line x1=\"64\" y1=\"35\" x2=\"64\" y2=\"62\" fill=\"none\"/><polygon points=\"58,56,64,68,70,56\" fill=\"none\"/><line x1=\"14\" y1=\"8\" x2=\"24\" y2=\"18\" fill=\"none\"/><line x1=\"86\" y1=\"8\" x2=\"76\" y2=\"18\" fill=\"none\"/></svg>"
+    },
+    "cad_escalator": {
+      "category": "vertical",
+      "name": "Escalera eléctrica",
+      "description": "Tramo inclinado con peldaños y flecha de ascenso. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"14\" y=\"8\" width=\"72\" height=\"84\" rx=\"0\" fill=\"none\"/><line x1=\"25\" y1=\"77\" x2=\"75\" y2=\"27\" fill=\"none\"/><line x1=\"31\" y1=\"83\" x2=\"81\" y2=\"33\" fill=\"none\"/><line x1=\"30\" y1=\"67\" x2=\"38\" y2=\"75\" fill=\"none\"/><line x1=\"39\" y1=\"56\" x2=\"47\" y2=\"64\" fill=\"none\"/><line x1=\"48\" y1=\"45\" x2=\"56\" y2=\"53\" fill=\"none\"/><line x1=\"57\" y1=\"34\" x2=\"65\" y2=\"42\" fill=\"none\"/><line x1=\"34\" y1=\"70\" x2=\"69\" y2=\"35\" fill=\"none\"/><polygon points=\"60,35,72,32,69,44\" fill=\"none\"/></svg>"
+    },
+    "cad_ramp": {
+      "category": "vertical",
+      "name": "Rampa entre niveles",
+      "description": "Rampa con pendiente y sentido de ascenso. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"12\" y=\"24\" width=\"76\" height=\"52\" rx=\"1\" fill=\"currentColor\" fill-opacity=\".09\"/><line x1=\"20\" y1=\"24\" x2=\"20\" y2=\"76\" fill=\"none\"/><line x1=\"80\" y1=\"24\" x2=\"80\" y2=\"76\" fill=\"none\"/><line x1=\"25\" y1=\"65\" x2=\"72\" y2=\"36\" fill=\"none\"/><polygon points=\"61,36,75,33,70,46\" fill=\"none\"/><line x1=\"25\" y1=\"70\" x2=\"75\" y2=\"70\" fill=\"none\" stroke-dasharray=\"5 4\"/></svg>"
+    }
+  }
+}
