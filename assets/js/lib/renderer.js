@@ -4,6 +4,7 @@
   const root = (window.Normia = window.Normia || {});
   const G = root.Geometry;
   const NS = 'http://www.w3.org/2000/svg';
+  const XLINK_NS = 'http://www.w3.org/1999/xlink';
 
   const node = (name, attrs = {}, text = null) => {
     const element = document.createElementNS(NS, name);
@@ -73,19 +74,32 @@
     /**
      * Evita colisiones de ids al incrustar varias copias del mismo pictograma:
      * prefija ids y referencias internas (#id) por instancia.
+     *
+     * No se usan selectores con `xlink:href`: el espacio de nombres hace que
+     * motores reales rechacen "[xlink:href]" como selector inválido. Se recorren
+     * los elementos y se leen los atributos de forma tolerante a ambos formatos.
      */
     namespaceIds(clone) {
       this.assetSequence += 1;
       const prefix = `${this.instance}-a${this.assetSequence}-`;
-      clone.querySelectorAll('[id]').forEach((element) => {
-        element.setAttribute('id', prefix + element.getAttribute('id'));
-      });
-      clone.querySelectorAll('[href], [xlink\:href]').forEach((element) => {
-        for (const attribute of ['href', 'xlink:href']) {
-          const value = element.getAttribute(attribute);
-          if (value && value.startsWith('#')) element.setAttribute(attribute, '#' + prefix + value.slice(1));
+      const renamed = (value) => '#' + prefix + value.slice(1);
+      const renameReferences = (element) => {
+        const id = element.getAttribute('id');
+        if (id && !id.startsWith(this.instance)) element.setAttribute('id', prefix + id);
+        const plain = element.getAttribute('href');
+        if (plain && plain.startsWith('#') && !plain.startsWith('#' + this.instance)) {
+          element.setAttribute('href', renamed(plain));
         }
-      });
+        // El atributo xlink:href vive en el espacio de nombres XLink: se
+        // actualiza con setAttributeNS para no crear un duplicado literal
+        // (setAttribute('xlink:href', …) lo ignoraría el motor de render).
+        const namespaced = element.getAttributeNS ? element.getAttributeNS(XLINK_NS, 'href') : null;
+        if (namespaced && namespaced.startsWith('#') && !namespaced.startsWith('#' + this.instance)) {
+          element.setAttributeNS(XLINK_NS, 'xlink:href', renamed(namespaced));
+        }
+      };
+      renameReferences(clone);
+      for (const element of Array.from(clone.querySelectorAll('*'))) renameReferences(element);
     }
 
     /** Miniatura reutilizable para la biblioteca visual. */
@@ -164,6 +178,64 @@
       this.svg.style.cursor = ui.cursor || 'default';
     }
 
+    /**
+     * Puntos absolutos del trazo: el modelo guarda los puntos en coordenadas
+     * locales a la caja (0..w, 0..h) y el SVG se dibuja en coordenadas del
+     * lienzo, así que hay que sumar x/y. Sin esto el trazo se pintaba en el
+     * origen y la caja de selección aparecía lejos de la línea.
+     */
+    elementPoints(element) {
+      let local;
+      if (Array.isArray(element.points) && element.points.length >= 2) {
+        local = element.points;
+      } else if (element.type === 'line' || element.type === 'route') {
+        local = [{ x: 0, y: 0 }, { x: element.w, y: element.h }];
+      } else {
+        local = [{ x: 0, y: (element.h || 0) / 2 }, { x: element.w, y: (element.h || 0) / 2 }];
+      }
+      return local.map((point) => ({
+        x: element.x + (Number(point.x) || 0),
+        y: element.y + (Number(point.y) || 0),
+      }));
+    }
+
+    /**
+     * Marco visible de la selección: crece hasta un mínimo en píxeles para que
+     * los tiradores no tapen los trazos finos (muros y líneas de 2 unidades).
+     * No modifica la geometría guardada.
+     */
+    displayFrame(frame) {
+      const zoom = this.view.zoom || 1;
+      const min = 22 / zoom;
+      const w = Math.max(frame.w, min);
+      const h = Math.max(frame.h, min);
+      return {
+        x: frame.x - (w - frame.w) / 2,
+        y: frame.y - (h - frame.h) / 2,
+        w,
+        h,
+        rotation: frame.rotation || 0,
+      };
+    }
+
+    /** Posición absoluta (con rotación aplicada) de un tirador o del asa de giro. */
+    handlePoint(frame, handle) {
+      const left = frame.x;
+      const top = frame.y;
+      const right = frame.x + frame.w;
+      const bottom = frame.y + frame.h;
+      const middleX = frame.x + frame.w / 2;
+      const middleY = frame.y + frame.h / 2;
+      const positions = {
+        nw: { x: left, y: top }, n: { x: middleX, y: top }, ne: { x: right, y: top },
+        e: { x: right, y: middleY }, se: { x: right, y: bottom }, s: { x: middleX, y: bottom },
+        sw: { x: left, y: bottom }, w: { x: left, y: middleY },
+      };
+      const point = handle === 'rotate' ? { x: middleX, y: top - 26 / (this.view.zoom || 1) } : positions[handle];
+      if (!point) return null;
+      return frame.rotation ? G.rotatePoint(point, { x: middleX, y: middleY }, frame.rotation) : point;
+    }
+
     elementNode(element, canvas, options = {}) {
       const zoom = this.view.zoom || 1;
       const cx = element.x + element.w / 2;
@@ -200,20 +272,30 @@
         }
         return group;
       }
-      if (type === 'wall' || type === 'route') {
-        const points = (element.points || []).map((point) => `${point.x} ${point.y}`).join(' ');
+      if (type === 'wall' || type === 'route' || type === 'line') {
+        const points = this.elementPoints(element);
+        const pointText = points.map((point) => `${G.round(point.x, 2)} ${G.round(point.y, 2)}`).join(' ');
         group.appendChild(node('polyline', {
-          points,
+          points: pointText,
           fill: 'none',
           stroke: color,
-          'stroke-width': stroke,
+          'stroke-width': type === 'wall' ? Math.max(1, stroke) : Math.max(1.5, stroke),
           'stroke-linecap': 'round',
           'stroke-linejoin': 'round',
-          ...(type === 'route' ? { 'stroke-dasharray': `${stroke * 2} ${stroke * 1.5}` } : {}),
+          ...(type === 'route' ? { 'stroke-dasharray': `${Math.max(2, stroke * 2)} ${Math.max(1.5, stroke * 1.5)}` } : {}),
         }));
-        if (type === 'route' && element.points?.length > 1) {
-          const last = element.points[element.points.length - 1];
-          const prev = element.points[element.points.length - 2];
+        group.appendChild(node('polyline', {
+          points: pointText,
+          fill: 'none',
+          stroke: 'transparent',
+          'stroke-width': Math.max(16 / zoom, (Number(stroke) || 2) + 12 / zoom),
+          'stroke-linecap': 'round',
+          'stroke-linejoin': 'round',
+          class: 'hit-area',
+        }));
+        if (type === 'route' && points.length > 1) {
+          const last = points[points.length - 1];
+          const prev = points[points.length - 2];
           const angle = Math.atan2(last.y - prev.y, last.x - prev.x);
           const size = Math.max(8, stroke * 3);
           const bx = last.x - Math.cos(angle) * size;
@@ -226,7 +308,7 @@
         }
         if (element.label) {
           group.appendChild(node('text', {
-            x: (element.points?.[0]?.x || 0) + 8, y: (element.points?.[0]?.y || 0) - 8,
+            x: points[0].x + 8, y: points[0].y - 8,
             'font-size': 10 / zoom, fill: color, class: 'element-label',
           }, clean(element.label.split('\n')[0])));
         }
@@ -258,22 +340,19 @@
         return group;
       }
       if (type === 'dimension') {
-        const points = element.points || [{ x: 0, y: 0 }, { x: element.w, y: element.h }];
+        const points = this.elementPoints(element);
         const a = points[0];
         const b = points[points.length - 1];
-        group.appendChild(node('line', { x1: element.x + a.x, y1: element.y + a.y, x2: element.x + b.x, y2: element.y + b.y, stroke: color, 'stroke-width': Math.max(1, stroke) }));
-        group.appendChild(node('line', { x1: element.x + a.x, y1: element.y + a.y - 6 / zoom, x2: element.x + a.x, y2: element.y + a.y + 6 / zoom, stroke: color, 'stroke-width': 1 / zoom }));
-        group.appendChild(node('line', { x1: element.x + b.x, y1: element.y + b.y - 6 / zoom, x2: element.x + b.x, y2: element.y + b.y + 6 / zoom, stroke: color, 'stroke-width': 1 / zoom }));
+        group.appendChild(node('line', { x1: a.x, y1: a.y, x2: b.x, y2: b.y, stroke: color, 'stroke-width': Math.max(1, stroke) }));
+        group.appendChild(node('line', { x1: a.x, y1: a.y, x2: b.x, y2: b.y, stroke: 'transparent', 'stroke-width': Math.max(16 / zoom, stroke + 12 / zoom), class: 'hit-area' }));
+        group.appendChild(node('line', { x1: a.x, y1: a.y - 6 / zoom, x2: a.x, y2: a.y + 6 / zoom, stroke: color, 'stroke-width': 1 / zoom }));
+        group.appendChild(node('line', { x1: b.x, y1: b.y - 6 / zoom, x2: b.x, y2: b.y + 6 / zoom, stroke: color, 'stroke-width': 1 / zoom }));
         const measured = Math.hypot(b.x - a.x, b.y - a.y);
         const caption = element.label || G.formatMeasurement(measured, canvas.unit);
         group.appendChild(node('text', {
-          x: element.x + (a.x + b.x) / 2, y: element.y + (a.y + b.y) / 2 - 7 / zoom, 'text-anchor': 'middle',
+          x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 - 7 / zoom, 'text-anchor': 'middle',
           fill: color, 'font-size': element.fontSize || 12, class: 'element-dimension',
         }, clean(caption)));
-        return group;
-      }
-      if (type === 'line') {
-        group.appendChild(node('line', { x1: element.x, y1: element.y, x2: element.x + element.w, y2: element.y + element.h, stroke: color, 'stroke-width': Math.max(1, stroke), 'stroke-linecap': 'round' }));
         return group;
       }
       if (type === 'rect') {
@@ -290,7 +369,7 @@
     selectionNode(overlay, ids, ui) {
       const elements = this.design.elements.filter((element) => ids.includes(element.id));
       if (!elements.length) return;
-      const frame = G.selectionFrame(elements);
+      const frame = this.displayFrame(G.selectionFrame(elements));
       const zoom = this.view.zoom || 1;
       const cx = frame.x + frame.w / 2;
       const cy = frame.y + frame.h / 2;
@@ -306,7 +385,7 @@
         'stroke-dasharray': editable ? 'none' : `${6 / zoom} ${4 / zoom}`, 'pointer-events': 'none',
       }));
       if (editable && ui.activeTool === 'select') {
-        const handleSize = 8 / zoom;
+        const handleSize = 9 / zoom;
         const handles = [
           ['nw', frame.x, frame.y], ['n', frame.x + frame.w / 2, frame.y], ['ne', frame.x + frame.w, frame.y],
           ['e', frame.x + frame.w, frame.y + frame.h / 2], ['se', frame.x + frame.w, frame.y + frame.h],
@@ -361,6 +440,13 @@
       }
       if (draft.tool === 'route') {
         group.appendChild(node('polyline', { points: draft.points.map((point) => `${point.x} ${point.y}`).join(' '), fill: 'none', stroke: '#237f52', 'stroke-width': 2 / zoom, 'stroke-dasharray': `${5 / zoom} ${4 / zoom}` }));
+        for (const [index, point] of draft.points.slice(0, -1).entries()) {
+          group.appendChild(node('circle', {
+            cx: point.x, cy: point.y, r: (index === 0 ? 7 : 3) / zoom,
+            fill: index === 0 ? 'rgba(35, 127, 82, .16)' : '#237f52',
+            stroke: index === 0 ? '#237f52' : 'none', 'stroke-width': 1.5 / zoom,
+          }));
+        }
         return group;
       }
       const points = draft.points;

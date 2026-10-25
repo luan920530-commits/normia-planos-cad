@@ -308,7 +308,7 @@
     <div><kbd>Shift + flechas</kbd><span>Mover 10 unidades</span></div><div><kbd>Rueda</kbd><span>Zoom al cursor</span></div>
     <div><kbd>Espacio + arrastrar</kbd><span>Desplazar lienzo</span></div><div><kbd>Botón central</kbd><span>Desplazar lienzo</span></div>
     <div><kbd>+ / −</kbd><span>Acercar / alejar</span></div><div><kbd>0</kbd><span>Ajustar a pantalla</span></div>
-    <div><kbd>Esc</kbd><span>Cancelar o cerrar</span></div><div><kbd>Enter</kbd><span>Terminar ruta</span></div>
+    <div><kbd>Esc</kbd><span>Cancelar o cerrar</span></div><div><kbd>Enter</kbd><span>Terminar ruta</span></div><div><kbd>Retroceso</kbd><span>Quitar el último punto de la ruta</span></div><div><kbd>Clic inicial</kbd><span>Cerrar el circuito de la ruta</span></div>
   </div>
   <footer class="drawer-foot"><p>Los atajos se desactivan mientras escribes en un campo de formulario. Los dibujos son esquemáticos.</p></footer>
 </section>

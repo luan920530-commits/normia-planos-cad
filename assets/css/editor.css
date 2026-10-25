@@ -124,6 +124,8 @@ body.editor-body { overflow: hidden; background: #eef2f8; }
 .canvas-paper { filter: drop-shadow(0 6px 18px rgba(15, 23, 42, .08)); }
 .plan-element { cursor: pointer; }
 .plan-element.is-locked { cursor: not-allowed; }
+.plan-element .hit-area { pointer-events: stroke; }
+.plan-element .hit-area { cursor: pointer; }
 .plan-element .asset-svg { pointer-events: none; }
 .plan-element .element-label, .plan-element .element-text, .plan-element .element-dimension { pointer-events: none; user-select: none; }
 .selection-frame .handle { cursor: nwse-resize; }
@@ -209,6 +211,9 @@ body.editor-body { overflow: hidden; background: #eef2f8; }
 
 /* ------------------------------ cajones ------------------------------ */
 .drawer-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, .34); z-index: 90; backdrop-filter: blur(1.5px); }
+.canvas-shell.is-drop-target { outline: 2px dashed var(--primary); outline-offset: 3px; }
+.canvas-shell.is-drop-target .plan-canvas { cursor: copy; }
+body.is-dragging-resource .library-card { cursor: grabbing; }
 .drawer-backdrop[hidden] { display: none; }
 .drawer {
   position: fixed; top: 0; right: 0; bottom: 0; z-index: 100;

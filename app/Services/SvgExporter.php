@@ -161,7 +161,12 @@ final class SvgExporter
                 }
                 break;
             case 'line':
-                $out .= '<line x1="' . self::n($x) . '" y1="' . self::n($y) . '" x2="' . self::n($x + $w) . '" y2="' . self::n($y + $h) . '" stroke="' . self::x($color) . '" stroke-width="' . self::n(max(1, $stroke)) . '" stroke-linecap="round"/>' . "\n";
+                $points = self::pointList($element);
+                $start = $points[0];
+                $end = $points[count($points) - 1];
+                $out .= '<line x1="' . self::n($x + (float) $start['x']) . '" y1="' . self::n($y + (float) $start['y'])
+                    . '" x2="' . self::n($x + (float) $end['x']) . '" y2="' . self::n($y + (float) $end['y'])
+                    . '" stroke="' . self::x($color) . '" stroke-width="' . self::n(max(1, $stroke)) . '" stroke-linecap="round"/>' . "\n";
                 break;
             case 'rect':
                 $out .= '<rect x="' . self::n($x) . '" y="' . self::n($y) . '" width="' . self::n($w) . '" height="' . self::n($h) . '" rx="2" fill="' . self::x($color) . '" fill-opacity=".08" stroke="' . self::x($color) . '" stroke-width="' . self::n(max(1, $stroke)) . '"/>' . "\n";
