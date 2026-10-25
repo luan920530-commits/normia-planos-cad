@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Models\Floor;
+use App\Services\LibraryRepository;
 use App\Models\Project;
 
 final class EditorController extends BaseController
@@ -25,6 +26,7 @@ final class EditorController extends BaseController
             'floor' => $floor,
             'designJson' => $designJson,
             'siblings' => $siblings,
+            'networks' => LibraryRepository::networks(),
             'boot' => [
                 'floorId' => (int) $floorId,
                 'projectId' => (int) $projectId,
@@ -42,6 +44,8 @@ final class EditorController extends BaseController
                 'printUrl' => url('projects/' . $projectId . '/floors/' . $floorId . '/print'),
                 'signsUrl' => url('catalogs/signs'),
                 'cadUrl' => url('catalogs/cad'),
+                'mepUrl' => url('catalogs/mep'),
+                'mepSummaryUrl' => url('api/floors/' . $floorId . '/mep'),
                 'projectUrl' => url('projects/' . $projectId),
                 'autosaveInterval' => 30,
                 'draftAt' => $floor['draft']['updated_at'] ?? null,

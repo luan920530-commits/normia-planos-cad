@@ -24,14 +24,15 @@ final class LibraryRepository
     private const ISO_SIGNS = 332;
     private const ISO_CATEGORIES = 5;
     private const SERVICE_SIGNS = 22;
-    private const CAD_OBJECTS = 121;
-    private const CAD_CATEGORIES = 16;
+    private const CAD_OBJECTS = 145;
+    private const CAD_CATEGORIES = 18;
 
     private static ?array $signs = null;
     private static ?array $signCategories = null;
     private static ?array $cad = null;
     private static ?array $cadCategories = null;
     private static ?array $aliases = null;
+    private static ?array $mep = null;
 
     public static function signs(): array
     {
@@ -55,6 +56,88 @@ final class LibraryRepository
     {
         self::loadCad();
         return self::$cadCategories;
+    }
+
+    /**
+     * Catálogo técnico de redes (hidrosanitarias, gas, incendio y eléctricas).
+     * Son valores de referencia configurables, no una certificación normativa.
+     */
+    public static function mep(): array
+    {
+        if (self::$mep !== null) {
+            return self::$mep;
+        }
+        $path = BASE_PATH . '/resources/mep-networks.json';
+        if (!is_file($path)) {
+            throw new RuntimeException('Falta el catálogo local de redes.');
+        }
+        try {
+            $catalog = json_decode((string) file_get_contents($path), true, 16, JSON_THROW_ON_ERROR);
+        } catch (JsonException $exception) {
+            throw new RuntimeException('El catálogo de redes no es válido.', 0, $exception);
+        }
+        if (!is_array($catalog) || !isset($catalog['hydraulic'], $catalog['diameters'], $catalog['materials'], $catalog['electrical'])
+            || !is_array($catalog['hydraulic']) || !is_array($catalog['diameters']) || !is_array($catalog['materials']) || !is_array($catalog['electrical'])
+            || count($catalog['hydraulic']) < 4 || count($catalog['diameters']) < 6) {
+            throw new RuntimeException('El catálogo de redes debe declarar al menos 4 redes y 6 diámetros.');
+        }
+        foreach ($catalog['hydraulic'] as $key => $network) {
+            if (preg_match('/^[a-z][a-z0-9_]{2,30}$/D', (string) $key) !== 1 || !is_array($network)
+                || !isset($network['label'], $network['short'], $network['color'], $network['diameter'], $network['material'])
+                || !is_string($network['label']) || !is_string($network['short'])
+                || !in_array($network['color'], DesignValidator::COLORS, true)
+                || !in_array($network['diameter'], $catalog['diameters'], true)
+                || !isset($catalog['materials'][$network['material']])) {
+                throw new RuntimeException('El catálogo de redes contiene una red inválida: ' . (string) $key);
+            }
+        }
+        $electrical = $catalog['electrical'];
+        foreach (['voltages', 'gauges', 'colors', 'ampacity', 'section', 'breakers'] as $field) {
+            if (!isset($electrical[$field]) || !is_array($electrical[$field])) {
+                throw new RuntimeException('La configuración eléctrica está incompleta: ' . $field . '.');
+            }
+        }
+        foreach ($electrical['colors'] as $color) {
+            if (!in_array($color, DesignValidator::COLORS, true)) {
+                throw new RuntimeException('La paleta de circuitos usa un color fuera de la paleta permitida.');
+            }
+        }
+        self::$mep = $catalog;
+        return $catalog;
+    }
+
+    /** @return array<string,array<string,mixed>> */
+    public static function networks(): array
+    {
+        return self::mep()['hydraulic'];
+    }
+
+    /** @return list<string> */
+    public static function diameters(): array
+    {
+        return array_values(self::mep()['diameters']);
+    }
+
+    /** @return array<string,string> */
+    public static function materials(): array
+    {
+        return self::mep()['materials'];
+    }
+
+    /** @return array<string,mixed> */
+    public static function electrical(): array
+    {
+        return self::mep()['electrical'];
+    }
+
+    public static function isElectricalObject(string $type): bool
+    {
+        $cad = self::cadObject($type);
+        if ($cad === null) {
+            return false;
+        }
+        $category = self::cadCategories()[$cad['category']] ?? null;
+        return $category !== null && preg_match('/el[eé]ctric/iu', (string) ($category['label'] ?? '')) === 1;
     }
 
     public static function aliases(): array
@@ -121,7 +204,7 @@ final class LibraryRepository
 
     public static function allowedTypes(): array
     {
-        $types = ['wall', 'door', 'door_double', 'door_garage', 'route', 'text', 'dimension', 'line', 'rect', 'ellipse'];
+        $types = ['wall', 'door', 'door_double', 'door_garage', 'route', 'text', 'dimension', 'line', 'rect', 'ellipse', 'pipe', 'conduit'];
         foreach (array_keys(self::signs()) as $code) {
             $types[] = self::typeForCode($code);
         }
@@ -243,7 +326,7 @@ final class LibraryRepository
         if (!is_array($catalog) || !isset($catalog['objects'], $catalog['categories'])
             || !is_array($catalog['objects']) || !is_array($catalog['categories'])
             || count($catalog['objects']) < self::CAD_OBJECTS || count($catalog['categories']) < self::CAD_CATEGORIES) {
-            throw new RuntimeException('El catálogo local debe contener al menos 121 objetos CAD y 16 familias.');
+            throw new RuntimeException('El catálogo local debe contener al menos 145 objetos CAD y 18 familias.');
         }
         foreach ($catalog['objects'] as $key => $object) {
             if (preg_match('/^cad_[a-z][a-z0-9_]{2,40}$/D', (string) $key) !== 1 || !is_array($object)

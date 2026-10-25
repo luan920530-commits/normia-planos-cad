@@ -65,6 +65,14 @@
       "label": "Exteriores y urbanismo",
       "short": "Exteriores",
       "description": "Árboles, luminarias, hidrantes y mobiliario urbano para patios, jardines y parqueaderos."
+    },
+    "electrico": {
+      "label": "Instalaciones eléctricas",
+      "short": "Eléctrico"
+    },
+    "hidraulico": {
+      "label": "Redes hidrosanitarias",
+      "short": "Hidráulico"
     }
   },
   "objects": {
@@ -1035,6 +1043,210 @@
       "reference": "CAD",
       "color": "#334155",
       "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"16\" y=\"26\" width=\"68\" height=\"44\" rx=\"4\" fill=\"currentColor\" fill-opacity=\".09\"/><circle cx=\"26\" cy=\"80\" r=\"3\"/><circle cx=\"74\" cy=\"80\" r=\"3\"/><rect x=\"68\" y=\"12\" width=\"22\" height=\"12\" rx=\"2\"/><path d=\"M79 24v2\" opacity=\".6\"/><path d=\"M28 38h30\" opacity=\".35\"/></svg>"
+    },
+    "cad_elec_outlet": {
+      "category": "electrico",
+      "name": "Tomacorriente doble",
+      "description": "Tomacorriente doble polarizado para muro. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
+      "reference": "Instalaciones · símbolo propio Normia",
+      "color": "#334155",
+      "load": 180,
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"34\" y=\"22\" width=\"32\" height=\"56\" rx=\"6\" fill=\"currentColor\" fill-opacity=\".09\"/><rect x=\"41\" y=\"31\" width=\"18\" height=\"15\" rx=\"2\"/><circle cx=\"46\" cy=\"37\" r=\"1.7\" fill=\"currentColor\"/><circle cx=\"54\" cy=\"37\" r=\"1.7\" fill=\"currentColor\"/><path d=\"M50 41v3\"/><rect x=\"41\" y=\"54\" width=\"18\" height=\"15\" rx=\"2\"/><circle cx=\"46\" cy=\"60\" r=\"1.7\" fill=\"currentColor\"/><circle cx=\"54\" cy=\"60\" r=\"1.7\" fill=\"currentColor\"/><path d=\"M50 64v3\"/></svg>"
+    },
+    "cad_elec_outlet_220": {
+      "category": "electrico",
+      "name": "Tomacorriente 220 V",
+      "description": "Salida especial bifásica para equipos de mayor consumo. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
+      "reference": "Instalaciones · símbolo propio Normia",
+      "color": "#334155",
+      "load": 2400,
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"34\" y=\"24\" width=\"32\" height=\"52\" rx=\"6\" fill=\"currentColor\" fill-opacity=\".09\"/><circle cx=\"50\" cy=\"50\" r=\"16\"/><path d=\"M50 34v8M42 50h-5M63 50h5\"/><path d=\"M42 60l-3 5M58 60l3 5\"/></svg>"
+    },
+    "cad_elec_switch": {
+      "category": "electrico",
+      "name": "Interruptor sencillo",
+      "description": "Interruptor de pared de un polo. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
+      "reference": "Instalaciones · símbolo propio Normia",
+      "color": "#334155",
+      "load": 0,
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"38\" y=\"22\" width=\"24\" height=\"56\" rx=\"5\" fill=\"currentColor\" fill-opacity=\".09\"/><rect x=\"45\" y=\"34\" width=\"10\" height=\"32\" rx=\"2\" fill=\"currentColor\" fill-opacity=\".18\"/><path d=\"M45 50h10\"/></svg>"
+    },
+    "cad_elec_switch_double": {
+      "category": "electrico",
+      "name": "Interruptor doble",
+      "description": "Interruptor de pared de dos polos o de dos teclas. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
+      "reference": "Instalaciones · símbolo propio Normia",
+      "color": "#334155",
+      "load": 0,
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"34\" y=\"22\" width=\"32\" height=\"56\" rx=\"5\" fill=\"currentColor\" fill-opacity=\".09\"/><rect x=\"39\" y=\"33\" width=\"10\" height=\"34\" rx=\"2\" fill=\"currentColor\" fill-opacity=\".18\"/><rect x=\"51\" y=\"33\" width=\"10\" height=\"34\" rx=\"2\" fill=\"currentColor\" fill-opacity=\".18\"/></svg>"
+    },
+    "cad_elec_panel": {
+      "category": "electrico",
+      "name": "Tablero de distribución",
+      "description": "Tablero de breakers con puerta y circuitos. Agrupa los tramos de la red eléctrica. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
+      "reference": "Instalaciones · símbolo propio Normia",
+      "color": "#334155",
+      "load": 0,
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"24\" y=\"14\" width=\"52\" height=\"72\" rx=\"4\" fill=\"currentColor\" fill-opacity=\".09\"/><rect x=\"32\" y=\"22\" width=\"36\" height=\"24\" rx=\"2\"/><path d=\"M38 22v24M46 22v24M54 22v24M62 22v24\"/><path d=\"M32 54h36M32 62h36M32 70h36\" opacity=\".65\"/><circle cx=\"43\" cy=\"58\" r=\"1.6\" fill=\"currentColor\"/><circle cx=\"57\" cy=\"58\" r=\"1.6\" fill=\"currentColor\"/></svg>"
+    },
+    "cad_elec_luminaire": {
+      "category": "electrico",
+      "name": "Luminaria LED",
+      "description": "Salida de iluminación en techo. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
+      "reference": "Instalaciones · símbolo propio Normia",
+      "color": "#334155",
+      "load": 60,
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"50\" cy=\"50\" r=\"24\" fill=\"currentColor\" fill-opacity=\".09\"/><path d=\"M33 33l34 34M67 33L33 67\"/><circle cx=\"50\" cy=\"50\" r=\"4\" fill=\"currentColor\"/></svg>"
+    },
+    "cad_elec_ceiling": {
+      "category": "electrico",
+      "name": "Salida de techo",
+      "description": "Punto de techo para lámpara colgante o roseta. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
+      "reference": "Instalaciones · símbolo propio Normia",
+      "color": "#334155",
+      "load": 100,
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"50\" cy=\"50\" r=\"18\"/><circle cx=\"50\" cy=\"50\" r=\"5\" fill=\"currentColor\"/><path d=\"M50 20v10M50 70v10M20 50h10M70 50h10\"/></svg>"
+    },
+    "cad_elec_emergency": {
+      "category": "electrico",
+      "name": "Luminaria de emergencia",
+      "description": "Luminaria autónoma con dos cabezales orientables. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
+      "reference": "Instalaciones · símbolo propio Normia",
+      "color": "#334155",
+      "load": 30,
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"16\" y=\"44\" width=\"68\" height=\"24\" rx=\"5\" fill=\"currentColor\" fill-opacity=\".09\"/><circle cx=\"30\" cy=\"56\" r=\"7\"/><circle cx=\"70\" cy=\"56\" r=\"7\"/><path d=\"M24 44l-5-9M76 44l5-9M38 44l-3-9M62 44l3-9\"/><circle cx=\"50\" cy=\"56\" r=\"2\" fill=\"currentColor\"/></svg>"
+    },
+    "cad_elec_data": {
+      "category": "electrico",
+      "name": "Salida de datos",
+      "description": "Punto de red RJ45 para datos o voz. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
+      "reference": "Instalaciones · símbolo propio Normia",
+      "color": "#334155",
+      "load": 0,
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"26\" y=\"32\" width=\"48\" height=\"36\" rx=\"5\" fill=\"currentColor\" fill-opacity=\".09\"/><rect x=\"38\" y=\"42\" width=\"24\" height=\"16\" rx=\"2\"/><path d=\"M42 42v-4h16v4\" opacity=\".7\"/><path d=\"M42 50h16M42 54h16\" opacity=\".6\"/></svg>"
+    },
+    "cad_elec_ac": {
+      "category": "electrico",
+      "name": "Aire acondicionado",
+      "description": "Unidad interior tipo split con rejilla y flujo de aire. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
+      "reference": "Instalaciones · símbolo propio Normia",
+      "color": "#334155",
+      "load": 3500,
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"14\" y=\"30\" width=\"72\" height=\"26\" rx=\"6\" fill=\"currentColor\" fill-opacity=\".09\"/><path d=\"M22 42h56M22 48h56\" opacity=\".7\"/><path d=\"M26 62c4 6 12 6 16 0M50 62c4 6 12 6 16 0M66 62c4 6 10 6 14 0\" opacity=\".8\"/></svg>"
+    },
+    "cad_elec_extractor": {
+      "category": "electrico",
+      "name": "Extractor de aire",
+      "description": "Extractor axial de muro o ducto. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
+      "reference": "Instalaciones · símbolo propio Normia",
+      "color": "#334155",
+      "load": 250,
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"50\" cy=\"50\" r=\"26\" fill=\"currentColor\" fill-opacity=\".09\"/><circle cx=\"50\" cy=\"50\" r=\"5\" fill=\"currentColor\"/><path d=\"M50 45C38 42 34 30 44 25c8-4 12 6 6 20zM55 51c3 11 15 16 20 6 4-8-6-12-20-6zM44 54c-10 5-11 18 0 20 9 2 10-9 0-20z\"/></svg>"
+    },
+    "cad_elec_floorbox": {
+      "category": "electrico",
+      "name": "Caja de piso",
+      "description": "Caja de piso con tomacorriente y tapa. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
+      "reference": "Instalaciones · símbolo propio Normia",
+      "color": "#334155",
+      "load": 180,
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"26\" y=\"26\" width=\"48\" height=\"48\" rx=\"4\" fill=\"currentColor\" fill-opacity=\".09\"/><circle cx=\"50\" cy=\"50\" r=\"14\"/><circle cx=\"45\" cy=\"46\" r=\"1.8\" fill=\"currentColor\"/><circle cx=\"55\" cy=\"46\" r=\"1.8\" fill=\"currentColor\"/><path d=\"M50 52v6\"/></svg>"
+    },
+    "cad_hyd_valve": {
+      "category": "hidraulico",
+      "name": "Válvula de bola",
+      "description": "Válvula de corte de bola en la red de tubería. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
+      "reference": "Instalaciones · símbolo propio Normia",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M26 34l24 16-24 16z\" fill=\"currentColor\" fill-opacity=\".09\"/><path d=\"M74 34L50 50l24 16z\" fill=\"currentColor\" fill-opacity=\".09\"/><circle cx=\"50\" cy=\"50\" r=\"5\"/><path d=\"M50 45V30M42 30h16\"/></svg>"
+    },
+    "cad_hyd_gate": {
+      "category": "hidraulico",
+      "name": "Válvula de compuerta",
+      "description": "Válvula de compuerta de accionamiento manual. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
+      "reference": "Instalaciones · símbolo propio Normia",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M28 36l22 14-22 14z\"/><path d=\"M72 36L50 50l22 14z\"/><path d=\"M50 36V22M41 22h18\"/><path d=\"M46 30h8\" opacity=\".7\"/></svg>"
+    },
+    "cad_hyd_check": {
+      "category": "hidraulico",
+      "name": "Válvula de retención",
+      "description": "Válvula de chequeo para evitar el retorno del flujo. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
+      "reference": "Instalaciones · símbolo propio Normia",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M26 34l24 16-24 16z\"/><path d=\"M74 34L50 50l24 16z\"/><path d=\"M50 50l8-5v10z\" fill=\"currentColor\" fill-opacity=\".2\"/><path d=\"M50 34v32\" opacity=\".5\"/></svg>"
+    },
+    "cad_hyd_meter": {
+      "category": "hidraulico",
+      "name": "Medidor de agua",
+      "description": "Contador de agua potable con carátula y conexiones. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
+      "reference": "Instalaciones · símbolo propio Normia",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"50\" cy=\"50\" r=\"20\" fill=\"currentColor\" fill-opacity=\".09\"/><path d=\"M30 50H16M70 50h14\"/><path d=\"M50 50l9-8\"/><circle cx=\"50\" cy=\"50\" r=\"3\" fill=\"currentColor\"/><path d=\"M40 38a14 14 0 0 1 20 0\" opacity=\".6\"/></svg>"
+    },
+    "cad_hyd_gas_meter": {
+      "category": "hidraulico",
+      "name": "Medidor de gas",
+      "description": "Medidor de gas combustible con conexión y regulador. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
+      "reference": "Instalaciones · símbolo propio Normia",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"26\" y=\"28\" width=\"48\" height=\"44\" rx=\"6\" fill=\"currentColor\" fill-opacity=\".09\"/><circle cx=\"50\" cy=\"48\" r=\"12\"/><path d=\"M50 48l7-6\"/><path d=\"M34 72v8M66 72v8M22 56h4M74 56h4\"/></svg>"
+    },
+    "cad_hyd_booster": {
+      "category": "hidraulico",
+      "name": "Equipo hidroneumático",
+      "description": "Bomba con tanque de presión para impulsión de agua. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
+      "reference": "Instalaciones · símbolo propio Normia",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"22\" y=\"30\" width=\"26\" height=\"42\" rx=\"9\" fill=\"currentColor\" fill-opacity=\".09\"/><rect x=\"56\" y=\"38\" width=\"24\" height=\"18\" rx=\"3\"/><circle cx=\"68\" cy=\"47\" r=\"5\"/><path d=\"M48 46h8M22 72h60M36 30V18M56 24v14\"/></svg>"
+    },
+    "cad_hyd_tank": {
+      "category": "hidraulico",
+      "name": "Tanque de almacenamiento",
+      "description": "Tanque de reserva de agua con nivel y salida. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
+      "reference": "Instalaciones · símbolo propio Normia",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"24\" y=\"24\" width=\"52\" height=\"52\" rx=\"4\" fill=\"currentColor\" fill-opacity=\".09\"/><path d=\"M24 46c9 6 17-6 26 0s17-6 26 0\" opacity=\".8\"/><path d=\"M24 58c9 6 17-6 26 0s17-6 26 0\" opacity=\".5\"/><path d=\"M50 24V12M40 76h20\"/></svg>"
+    },
+    "cad_hyd_floor_drain": {
+      "category": "hidraulico",
+      "name": "Rejilla de piso",
+      "description": "Desagüe de piso con rejilla removible. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
+      "reference": "Instalaciones · símbolo propio Normia",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"26\" y=\"26\" width=\"48\" height=\"48\" rx=\"4\" fill=\"currentColor\" fill-opacity=\".09\"/><circle cx=\"50\" cy=\"50\" r=\"14\"/><path d=\"M40 44h20M40 50h20M40 56h20\" opacity=\".8\"/></svg>"
+    },
+    "cad_hyd_roof_drain": {
+      "category": "hidraulico",
+      "name": "Bajante de cubierta",
+      "description": "Desagüe de cubierta con domo y rejilla. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
+      "reference": "Instalaciones · símbolo propio Normia",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"50\" cy=\"46\" r=\"24\" fill=\"currentColor\" fill-opacity=\".09\"/><path d=\"M32 46a18 18 0 0 1 36 0\" /><path d=\"M40 34h20M36 42h28M36 50h28M44 58h12\" opacity=\".7\"/><path d=\"M50 70v14\"/></svg>"
+    },
+    "cad_hyd_cabinet": {
+      "category": "hidraulico",
+      "name": "Gabinete contra incendios",
+      "description": "Gabinete con manguera y válvula para la red contra incendios. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
+      "reference": "Instalaciones · símbolo propio Normia",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"22\" y=\"16\" width=\"56\" height=\"68\" rx=\"4\" fill=\"currentColor\" fill-opacity=\".09\"/><circle cx=\"50\" cy=\"46\" r=\"16\"/><circle cx=\"50\" cy=\"46\" r=\"6\"/><path d=\"M50 62v10M38 80h24M34 30h32\" opacity=\".7\"/></svg>"
+    },
+    "cad_hyd_sprinkler": {
+      "category": "hidraulico",
+      "name": "Rociador contra incendios",
+      "description": "Rociador colgante de la red de supresión. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
+      "reference": "Instalaciones · símbolo propio Normia",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M50 14v26\" /><path d=\"M34 44h32\" /><path d=\"M40 52l-8 12M50 54v12M60 52l8 12\" opacity=\".85\"/><circle cx=\"50\" cy=\"42\" r=\"4\" fill=\"currentColor\" fill-opacity=\".2\"/></svg>"
+    },
+    "cad_hyd_cleanout": {
+      "category": "hidraulico",
+      "name": "Caja de inspección",
+      "description": "Caja o registro de inspección para la red de desagüe. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
+      "reference": "Instalaciones · símbolo propio Normia",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"22\" y=\"22\" width=\"56\" height=\"56\" rx=\"4\" fill=\"currentColor\" fill-opacity=\".09\"/><path d=\"M22 34h56M22 66h56\" opacity=\".55\"/><circle cx=\"50\" cy=\"50\" r=\"11\"/><path d=\"M42 50h16\"/></svg>"
     }
   }
 }

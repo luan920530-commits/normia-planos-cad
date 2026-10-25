@@ -8,6 +8,7 @@ use App\Core\Response;
 use App\Core\View;
 use App\Models\Floor;
 use App\Services\DesignValidator;
+use App\Services\MepCalculator;
 use App\Services\SvgExporter;
 
 final class ExportController extends BaseController
@@ -69,12 +70,14 @@ final class ExportController extends BaseController
         $meta = $this->meta($floor);
         $svg = SvgExporter::render($design, $meta, true);
         $svg = preg_replace('/<\?xml[^>]*\?>\s*/i', '', $svg) ?? $svg;
+        $mep = MepCalculator::summary($design);
         View::render('editor/print', [
             'title' => 'Imprimir · ' . $floor['name'],
             'project' => $floor,
             'floor' => $floor,
             'svg' => $svg,
             'meta' => $meta,
+            'mep' => $mep,
             'version' => (int) $floor['version'],
             'backUrl' => url('projects/' . $projectId . '/floors/' . $floorId . '/editor'),
             'user' => $this->user(),

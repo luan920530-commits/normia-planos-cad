@@ -17,11 +17,14 @@
     line: 'Línea: arrastra entre dos puntos.',
     rect: 'Rectángulo: arrastra desde una esquina hasta la opuesta.',
     ellipse: 'Elipse: arrastra para definir ancho y alto.',
+    pipe: 'Tubería: arrastra o haz clic para trazar la red. Elige la red (agua, gas, desagües o incendio) en la flecha del botón y ajusta diámetro, material y pendiente en el inspector.',
+    conduit: 'Tubería eléctrica: arrastra o haz clic para trazar el circuito. Asigna código, tensión y calibre en el inspector; el panel Redes calcula carga y caída de tensión.',
     place: 'Colocación: haz clic para insertar el recurso elegido. Mantén Shift para insertar varios. Esc cancela.',
   };
   const TYPE_NAMES = {
     wall: 'Muro', door: 'Puerta sencilla', door_double: 'Puerta doble', door_garage: 'Portón de garaje', route: 'Ruta de evacuación', text: 'Texto', dimension: 'Medida',
     line: 'Línea', rect: 'Rectángulo', ellipse: 'Elipse',
+    pipe: 'Tubería', conduit: 'Tubería eléctrica',
   };
   const q = (selector, context = document) => context.querySelector(selector);
   const qa = (selector, context = document) => Array.from(context.querySelectorAll(selector));
@@ -62,6 +65,9 @@
       this.conflictVersion = null;
       this.activeDrawer = null;
       this.drawerOpener = null;
+      this.pipeNetwork = (Object.keys(catalogs.mep?.hydraulic || {})[0]) || 'agua_fria';
+      this.networkSummary = null;
+      this.networkBusy = false;
       this.store.onDraft = (at) => this.onDraftSaved(at);
       this.model.subscribe((reason) => this.onModelChange(reason));
       this.bind();
@@ -107,6 +113,22 @@
           const tool = button.dataset.tool;
           this.closeShapeFlyout();
           this.applyTool(tool);
+        });
+      });
+      q('[data-pipe-menu]')?.addEventListener('click', (event) => {
+        event.stopPropagation();
+        const flyout = q('[data-pipe-flyout]');
+        const button = q('[data-pipe-menu]');
+        if (!flyout) return;
+        const open = flyout.hidden;
+        flyout.hidden = !open;
+        button?.setAttribute('aria-expanded', open ? 'true' : 'false');
+      });
+      qa('[data-pipe-flyout] [data-network]').forEach((button) => {
+        button.addEventListener('click', () => {
+          this.pipeNetwork = button.dataset.network;
+          this.closePipeFlyout();
+          this.applyTool('pipe');
         });
       });
       q('[data-shape-menu]')?.addEventListener('click', (event) => {
@@ -275,6 +297,7 @@
       if (reason === 'edit' || reason === 'change') this.updateSaveStatus();
       this.scheduleRender();
       if (this.activeDrawer === 'layers') this.renderLayers();
+      if (this.activeDrawer === 'networks') this.renderNetworks();
     }
 
     /* -------------------------------- estado -------------------------------- */
@@ -286,9 +309,10 @@
         return;
       }
       if (tool !== 'place') this.placement = null;
-      // Una ruta a medio trazar no se descarta en silencio: se cierra con los
-      // puntos ya confirmados antes de cambiar de herramienta.
+      // Una ruta o red a medio trazar no se descarta en silencio: se cierra con
+      // los puntos ya confirmados antes de cambiar de herramienta.
       if (this.draft?.tool === 'route' && this.draft.points.length > 2) this.finishRoute();
+      if (['pipe', 'conduit'].includes(this.draft?.tool) && this.draft.points.length > 2) this.finishPipe();
       this.tool = tool;
       this.draft = null;
       this.ghost = null;
@@ -301,8 +325,11 @@
         button.setAttribute('aria-pressed', active ? 'true' : 'false');
       });
       const hint = q('[data-stage-hint]');
-      if (hint) hint.textContent = TYPE_HINTS[tool] || TYPE_HINTS.select;
+      if (hint) hint.textContent = (tool === 'pipe' && this.pipeNetwork && this.model.networkInfo(this.pipeNetwork))
+        ? `Tubería · ${this.model.networkInfo(this.pipeNetwork).label}: arrastra o haz clic para trazar. Enter o doble clic termina; Esc cancela.`
+        : TYPE_HINTS[tool] || TYPE_HINTS.select;
       this.closeDoorFlyout();
+      this.closePipeFlyout();
       this.svg.style.cursor = this.cursorFor(tool);
       if (!options.silent) this.scheduleRender();
     }
@@ -569,6 +596,16 @@
         this.placeAt(point, event.shiftKey);
         return;
       }
+      if (this.tool === 'pipe' || this.tool === 'conduit') {
+        if (!this.draft) {
+          this.draft = { tool: this.tool, points: [point, point] };
+        } else {
+          this.draft.points.splice(this.draft.points.length - 1, 0, point);
+        }
+        this.updateRouteHint();
+        this.scheduleRender();
+        return;
+      }
       if (this.tool === 'route') {
         if (!this.draft) {
           this.draft = { tool: 'route', points: [point, point] };
@@ -759,7 +796,7 @@
         this.scheduleRender();
         return;
       }
-      if (this.tool === 'route' && this.draft) {
+      if ((this.tool === 'route' || this.tool === 'pipe' || this.tool === 'conduit') && this.draft) {
         const snapped = this.snapPoint(point, event);
         this.draft.points[this.draft.points.length - 1] = snapped;
         this.scheduleRender();
@@ -815,6 +852,11 @@
     }
 
     onDoubleClick(event) {
+      if (['pipe', 'conduit'].includes(this.draft?.tool)) {
+        event.preventDefault();
+        this.finishPipe();
+        return;
+      }
       if (this.tool === 'route' && this.draft) {
         this.finishRoute();
         return;
@@ -981,12 +1023,46 @@
       this.scheduleRender();
     }
 
+    /** Cierra el trazo de tubería o de circuito eléctrico en curso. */
+    finishPipe() {
+      if (!this.draft || !['pipe', 'conduit'].includes(this.draft.tool)) return;
+      const tool = this.draft.tool;
+      const committed = this.draft.points.slice(0, -1);
+      const points = committed.filter((point, index, list) => index === 0 || G.distance(point, list[index - 1]) > 2);
+      this.draft = null;
+      if (points.length < 2) {
+        this.toast('Una red necesita al menos dos puntos. Haz clic para trazar el tramo.', 'info');
+        this.updateRouteHint();
+        this.scheduleRender();
+        return;
+      }
+      try {
+        const overrides = tool === 'pipe' ? { network: this.pipeNetwork } : {};
+        this.model.addPath(tool, points, overrides);
+        const created = this.model.design.elements.at(-1);
+        this.applyTool('select');
+        if (created) this.model.select([created.id]);
+        this.toast(tool === 'pipe'
+          ? `Tramo de ${this.model.networkInfo(this.pipeNetwork)?.label || 'tubería'} creado. Ajusta diámetro y material en el inspector.`
+          : 'Circuito eléctrico creado. Asigna código, tensión y calibre en el inspector.', 'success', { duration: 3200 });
+      } catch (error) {
+        this.toast(error.message, 'error');
+      }
+      this.scheduleRender();
+    }
+
     /** Pista contextual de la ruta en curso (puntos, cierre y atajos). */
     updateRouteHint() {
       const hint = q('[data-stage-hint]');
       if (!hint) return;
       if (!this.draft) {
-        hint.textContent = TYPE_HINTS.route;
+        hint.textContent = TYPE_HINTS[this.tool] || TYPE_HINTS.route;
+        return;
+      }
+      if (this.draft.tool === 'pipe' || this.draft.tool === 'conduit') {
+        const count = Math.max(0, this.draft.points.length - 1);
+        const label = this.draft.tool === 'pipe' ? (this.model.networkInfo(this.pipeNetwork)?.label || 'Tubería') : 'Circuito eléctrico';
+        hint.textContent = `${label} · ${count} punto${count === 1 ? '' : 's'} · Enter o doble clic termina · Retroceso quita el último · Esc cancela`;
         return;
       }
       const count = Math.max(0, this.draft.points.length - 1);
@@ -1100,6 +1176,13 @@
       if (button) button.setAttribute('aria-expanded', 'false');
     }
 
+    closePipeFlyout() {
+      const flyout = q('[data-pipe-flyout]');
+      const button = q('[data-pipe-menu]');
+      if (flyout) flyout.hidden = true;
+      if (button) button.setAttribute('aria-expanded', 'false');
+    }
+
     closeDoorFlyout() {
       const flyout = q('[data-door-flyout]');
       const button = q('[data-door-menu]');
@@ -1173,6 +1256,14 @@
         return;
       }
       if (typing) return;
+      if (['pipe', 'conduit'].includes(this.draft?.tool) && (event.key === 'Backspace' || event.key === 'Delete')) {
+        event.preventDefault();
+        const committed = this.draft.points.length - 1;
+        if (committed > 1) this.draft.points.splice(this.draft.points.length - 2, 1);
+        this.updateRouteHint();
+        this.scheduleRender();
+        return;
+      }
       if (this.draft?.tool === 'route' && (event.key === 'Backspace' || event.key === 'Delete')) {
         event.preventDefault();
         const committed = this.draft.points.length - 1;
@@ -1241,6 +1332,9 @@
         if (this.draft?.tool === 'route') {
           event.preventDefault();
           this.finishRoute();
+        } else if (['pipe', 'conduit'].includes(this.draft?.tool)) {
+          event.preventDefault();
+          this.finishPipe();
         }
         return;
       }
@@ -1277,12 +1371,17 @@
         event.preventDefault();
         return;
       }
+      if (event.shiftKey && event.key.toLowerCase() === 'p') {
+        event.preventDefault();
+        this.applyTool('conduit');
+        return;
+      }
       if (event.shiftKey && event.key.toLowerCase() === 'u') {
         event.preventDefault();
         this.applyTool('door_double');
         return;
       }
-      const shortcuts = { v: 'select', m: 'wall', u: 'door', r: 'door_garage', e: 'route', t: 'text', d: 'dimension', l: 'line', b: 'rect', o: 'ellipse' };
+      const shortcuts = { v: 'select', m: 'wall', u: 'door', r: 'door_garage', e: 'route', t: 'text', d: 'dimension', l: 'line', b: 'rect', o: 'ellipse', p: 'pipe' };
       const tool = shortcuts[event.key.toLowerCase()];
       if (tool) {
         event.preventDefault();
@@ -1408,6 +1507,59 @@
     }
 
     /* -------------------------------- capas -------------------------------- */
+    /* ------------------------------ redes y circuitos ------------------------------ */
+
+    /**
+     * Cálculo en vivo con el modelo actual (no con lo guardado), para que el
+     * panel acompañe al dibujo. La comparación con el servidor viene aparte.
+     */
+    computeNetworks() {
+      if (!root.Mep) return null;
+      return root.Mep.summary(this.model.design, this.catalogs);
+    }
+
+    renderNetworks() {
+      const host = q('[data-networks-content]');
+      if (!host || !root.Mep) return;
+      const summary = this.computeNetworks();
+      if (!summary) return;
+      const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+      const meters = (value) => `${root.Mep.formatNumber(value, 1)} m`;
+      const hydraulicRows = summary.hydraulic.map((entry) => `
+        <article class="network-card">
+          <header><span class="network-dot" style="--swatch:${esc(entry.color)}"></span><strong>${esc(entry.label)}</strong><span class="network-tag">${esc(entry.short)}</span></header>
+          <p class="network-metrics"><span>${entry.count} tramo${entry.count === 1 ? '' : 's'}</span><span>${meters(entry.lengthM)}</span></p>
+          <p class="network-detail">Ø ${entry.diameters.map((item) => `${esc(item.diameter)} (${meters(item.lengthM)})`).join(' · ') || '—'}</p>
+          ${entry.warnings.length ? `<ul class="network-warnings">${entry.warnings.slice(0, 3).map((message) => `<li>${esc(message)}</li>`).join('')}</ul>` : '<p class="network-ok">Sin avisos de pendiente.</p>'}
+        </article>`).join('');
+      const circuitRows = summary.electrical.map((entry) => `
+        <article class="network-card">
+          <header><span class="network-dot" style="--swatch:${esc(entry.color)}"></span><strong>Circuito ${esc(entry.code)}</strong><span class="network-tag">${entry.voltage} V · ${entry.phases}F</span></header>
+          <p class="network-metrics"><span>${entry.deviceCount} equipo${entry.deviceCount === 1 ? '' : 's'}</span><span>${root.Mep.formatNumber(entry.loadVA, 0)} VA</span><span>${root.Mep.formatNumber(entry.current, 1)} A</span></p>
+          <p class="network-detail">Breaker ${entry.breaker || '—'} A · Calibre ${esc(entry.gauge || '—')} AWG · ${meters(entry.lengthM)} de tubería</p>
+          <p class="network-detail">Fases declaradas: ${entry.phases}F · ${entry.phases === 3 ? 'carga repartida entre fases' : 'fase y neutro'}</p>
+          <p class="network-detail">Caída estimada ${root.Mep.formatNumber(entry.drop, 1)} %</p>
+          ${entry.warnings.length ? `<ul class="network-warnings">${entry.warnings.slice(0, 3).map((message) => `<li>${esc(message)}</li>`).join('')}</ul>` : '<p class="network-ok">Dentro de los límites de referencia.</p>'}
+        </article>`).join('');
+      const empty = !summary.hydraulic.length && !summary.electrical.length;
+      host.innerHTML = `
+        <section class="network-section">
+          <h3>Totales del piso</h3>
+          <dl class="network-totals">
+            <div><dt>Tuberías</dt><dd>${summary.pipes}</dd></div>
+            <div><dt>Metros de tubería</dt><dd>${meters(summary.totalPipeLength)}</dd></div>
+            <div><dt>Circuitos</dt><dd>${summary.electrical.length}</dd></div>
+            <div><dt>Metros eléctricos</dt><dd>${meters(summary.totalConduitLength)}</dd></div>
+            <div><dt>Carga instalada</dt><dd>${root.Mep.formatNumber(summary.totalLoadVA, 0)} VA</dd></div>
+          </dl>
+        </section>
+        ${empty ? '<div class="network-empty"><p>Aún no hay redes dibujadas. Usa <strong>P</strong> para tubería o <strong>Shift + P</strong> para tubería eléctrica, y dibuja los tramos sobre el plano.</p></div>' : ''}
+        ${summary.hydraulic.length ? `<section class="network-section"><h3>Redes hidrosanitarias y de gas</h3><div class="network-cards">${hydraulicRows}</div></section>` : ''}
+        ${summary.electrical.length ? `<section class="network-section"><h3>Circuitos eléctricos</h3><div class="network-cards">${circuitRows}</div></section>` : ''}
+        ${summary.warnings.length ? `<section class="network-section"><h3>Avisos (${summary.warnings.length})</h3><ul class="network-warnings wide">${summary.warnings.slice(0, 12).map((message) => `<li>${esc(message)}</li>`).join('')}</ul></section>` : ''}
+        <p class="network-footnote">Cálculo estimado con los valores de referencia locales. No sustituye memoria de cálculo ni revisión profesional.</p>`;
+    }
+
     renderLayers() {
       const list = q('[data-layer-list]');
       if (!list) return;
@@ -1677,6 +1829,7 @@
       document.body.classList.add('has-drawer');
       if (name === 'versions') this.loadVersions();
       if (name === 'layers') this.renderLayers();
+      if (name === 'networks') this.renderNetworks();
       const focusable = drawer.querySelector('input, button, select, textarea, a[href]');
       window.setTimeout(() => focusable?.focus(), 40);
     }
@@ -1791,7 +1944,11 @@
     const overlay = showLoading('Cargando bibliotecas visuales…');
     let catalogs;
     try {
-      const [signs, cad] = await Promise.all([fetchJson(boot.signsUrl), fetchJson(boot.cadUrl)]);
+      const [signs, cad, mep] = await Promise.all([
+        fetchJson(boot.signsUrl),
+        fetchJson(boot.cadUrl),
+        boot.mepUrl ? fetchJson(boot.mepUrl).catch(() => null) : Promise.resolve(null),
+      ]);
       catalogs = {
         signs: signs.signs || {},
         signCategories: signs.categories || {},
@@ -1799,6 +1956,7 @@
         aliases: signs.aliases || {},
         cad: cad.objects || {},
         cadCategories: cad.categories || {},
+        mep: mep && mep.ok ? mep : null,
       };
     } catch (error) {
       if (overlay) {

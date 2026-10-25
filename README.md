@@ -2,7 +2,8 @@
 
 Editor de planos de emergencia y evacuación, en español, pensado para pequeñas y medianas organizaciones que necesitan documentar plantas, rutas, señalización y equipamiento sin depender de software CAD de escritorio ni de servicios externos.
 
-- **Editor completo**: instalador web, cuentas, proyectos y pisos, editor SVG real, biblioteca de **354 pictogramas** (332 ISO 7010 + 22 señales de servicios como baños, vestidores y cafetería), **121 objetos CAD esquemáticos de 16 familias** (restaurante, bodega, comercio, hospital, costura, asadero, supermercado, vivienda, deportes y exteriores, entre otras), puertas de uno y dos batientes y portones, **rutas con vértices editables**, guardado con versiones, borradores automáticos, deshacer/rehacer y exportación SVG/JSON/PNG/impresión.
+- **Editor completo**: instalador web, cuentas, proyectos y pisos, editor SVG real, biblioteca de **354 pictogramas** (332 ISO 7010 + 22 señales de servicios como baños, vestidores y cafetería), **145 objetos CAD esquemáticos de 18 familias** (restaurante, bodega, comercio, hospital, costura, asadero, supermercado, vivienda, deportes, exteriores, instalaciones eléctricas y redes hidrosanitarias, entre otras), puertas de uno y dos batientes y portones, **rutas con vértices editables**, **redes de tubería (agua, gas, desagües e incendio) y circuitos eléctricos**, guardado con versiones, borradores automáticos, deshacer/rehacer y exportación SVG/JSON/PNG/impresión.
+- **Instalaciones**: tuberías de agua, gas, desagües e incendio y red eléctrica con longitudes, diámetros, circuitos, cargas y caída de tensión estimada.
 - **PHP ≥ 8.1 + SQLite/PDO**, arquitectura MVC propia, sin Composer, sin `node_modules` en producción y sin CDN.
 - **100 % local**: las fuentes, los estilos, los iconos, los pictogramas y los catálogos viven en el paquete. La aplicación no hace llamadas a servicios de terceros.
 - **Licencia GPL-3.0**. Los pictogramas ISO 7010 conservan su licencia MIT y su atribución (ver [Créditos](#créditos-licencias-y-atribución)).
@@ -25,7 +26,7 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 10. [Arquitectura](#arquitectura)
 11. [Seguridad](#seguridad)
 12. [Pruebas](#pruebas)
-13. [Cambios de la versión 1.0.3](#cambios-de-la-versión-103)
+13. [Cambios de la versión 1.0.4](#cambios-de-la-versión-104)
 14. [Paquetes y verificación](#paquetes-y-verificación)
 15. [Limitaciones](#limitaciones)
 16. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
@@ -41,10 +42,11 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 | Proyectos | Nombre, sede, área de trabajo, responsable y notas. Duplicar, editar y eliminar con confirmación. |
 | Pisos | Varios pisos por proyecto, orden, duplicación y protección del último piso. |
 | Editor | Lienzo SVG con rejilla, reglas, ajuste, zoom, paneo, selección múltiple, marquesina, capas y grupos. |
-| Herramientas | Muro, puerta sencilla, puerta doble, portón o reja, ruta de evacuación, texto, medida, línea, rectángulo y elipse. |
-| Bibliotecas | 354 señales (332 ISO 7010 + 22 de orientación y servicios) en 6 familias y 121 objetos CAD en 16 familias, con búsqueda y filtros por familia. |
-| Propiedades | Posición, tamaño, rotación, sentido de apertura, color (paleta de 29), grosor, opacidad, texto, capa, bloqueo y cambio de tipo. |
+| Herramientas | Muro, puerta sencilla, puerta doble, portón o reja, ruta de evacuación, texto, medida, línea, rectángulo, elipse, **tubería** y **tubería eléctrica**. |
+| Bibliotecas | 354 señales (332 ISO 7010 + 22 de orientación y servicios) en 6 familias y 145 objetos CAD en 18 familias, con búsqueda y filtros por familia. |
+| Propiedades | Posición, tamaño, rotación, sentido de apertura, color (paleta de 29), grosor, opacidad, texto, capa, bloqueo, cambio de tipo y, en redes, **sistema, diámetro, material, pendiente, presión, circuito, tensión, calibre, fases y carga**. |
 | Historial | Deshacer/rehacer con 120 pasos, duplicar, pegar, agrupar, alinear, distribuir y orden de dibujo. |
+| Redes | Panel **Redes y circuitos** con longitudes por sistema, diámetros usados, pendientes, cargas por circuito, breaker y calibre sugeridos y caída de tensión estimada. |
 | Persistencia | Guardado manual con nota, versiones inmutables, restaurar versión, borrador automático cada 30 s y detección de conflictos. |
 | Exportación | SVG, JSON, PNG (generado en el navegador) e impresión lista para PDF desde el navegador. |
 | Datos | Base SQLite con claves foráneas, consultas preparadas y copia de seguridad = 2 archivos. |
@@ -166,9 +168,9 @@ Luego importa `resources/schema.sql` en el archivo SQLite y crea el usuario admi
 ### Barra lateral izquierda
 
 - **Seleccionar (V)**.
-- **Muro (M)**, **Puerta (U)**, **Ruta de evacuación (E)**, **Texto (T)**, **Medida (D)**, **Línea (L)**, **Rectángulo (B)** y **Elipse (O)**, agrupados en el menú de formas.
+- **Muro (M)**, **Puerta (U)**, **Ruta de evacuación (E)**, **Tubería (P)** —con desplegable de red—, **Eléctrico (Shift + P)**, **Texto (T)**, **Medida (D)**, **Línea (L)**, **Rectángulo (B)** y **Elipse (O)**, agrupados en el menú de formas.
 - **Señalización ISO 7010** y **Equipamiento CAD**: abren el cajón de biblioteca con búsqueda, familias y vista previa.
-- **Capas**, **Versiones** e **Imprimir** en la parte inferior.
+- **Redes y circuitos**, **Capas**, **Versiones**, **Ajustes**, **Atajos** e **Imprimir** en la parte inferior.
 
 ### Gestos y puntero
 
@@ -178,6 +180,7 @@ Luego importa `resources/schema.sql` en el archivo SQLite y crea el usuario admi
 - Los tiradores de la caja de selección escalan; el tirador superior rota (`Shift` fija pasos de 15°). Los tiradores se dibujan un poco más grandes que el trazo para poder agarrar muros finos, pero un clic sin arrastre nunca mueve ni deforma nada.
 - **Rutas de evacuación**: clic para añadir puntos, clic sobre el primer punto para cerrar el circuito, `Retroceso` quita el último punto, `Enter` o doble clic termina y `Esc` cancela.
 - **Biblioteca**: arrastra una tarjeta al lienzo o pulsa **Insertar en el plano**; el cajón se cierra y el recurso se coloca con el siguiente clic (o `Enter` sobre la tarjeta).
+- **Tuberías y circuitos**: igual que una ruta (clic para añadir puntos, `Enter` o doble clic para cerrar, `Esc` para cancelar). Después puedes arrastrar sus vértices como cualquier trazo.
 - Rueda = zoom en el puntero; `Shift` + rueda = desplazamiento vertical; barra espaciadora + arrastrar = paneo.
 - Doble clic en un texto o etiqueta abre y enfoca el campo de texto del inspector.
 
@@ -186,6 +189,7 @@ Luego importa `resources/schema.sql` en el archivo SQLite y crea el usuario admi
 | Acción | Atajo |
 | --- | --- |
 | Herramientas | `V` `M` `U` `E` `T` `D` `L` `B` `O` |
+| Redes | `P` (tubería) · `Shift + P` (tubería eléctrica) |
 | Guardar versión | `Ctrl/⌘ + S` |
 | Deshacer / rehacer | `Ctrl/⌘ + Z` / `Ctrl/⌘ + Y` o `Ctrl/⌘ + Shift + Z` |
 | Seleccionar todo | `Ctrl/⌘ + A` |
@@ -206,7 +210,7 @@ Luego importa `resources/schema.sql` en el archivo SQLite y crea el usuario admi
 
 ### Propiedades
 
-El inspector permite editar geometría (X, Y, ancho, alto, rotación), apariencia (29 colores, grosor, opacidad), sentido de apertura en puertas, texto y tamaño de letra, capa, bloqueo, cambio de tipo entre formas básicas, duplicado, eliminación, agrupación, alineación, distribución y orden de dibujo. Los controles que no aplican al elemento seleccionado no se muestran o quedan deshabilitados.
+El inspector permite editar geometría (X, Y, ancho, alto, rotación), apariencia (29 colores, grosor, opacidad), sentido de apertura en puertas, texto y tamaño de letra, capa, bloqueo, cambio de tipo entre formas básicas, duplicado, eliminación, agrupación, alineación, distribución y orden de dibujo. En tuberías añade **red, diámetro, material, pendiente y presión**; en circuitos, **código, tensión, calibre y fases**; en equipos eléctricos, **circuito y carga en VA**. Los controles que no aplican al elemento seleccionado no se muestran o quedan deshabilitados.
 
 ### Capas y grupos
 
@@ -241,7 +245,7 @@ El inspector permite editar geometría (X, Y, ancho, alto, rotación), aparienci
 - Al mover un vértice la caja del elemento se recalcula sola, la rotación se disuelve en los puntos y cada paso entra en el historial (deshacer/rehacer).
 - Las rutas de evacuación conservan el cierre en circuito: el primer y el último punto siguen unidos.
 
-### Equipamiento CAD (121 objetos en 16 familias)
+### Equipamiento CAD (145 objetos en 18 familias)
 
 | Familia | Objetos | Ejemplos |
 | --- | --- | --- |
@@ -261,6 +265,8 @@ El inspector permite editar geometría (X, Y, ancho, alto, rotación), aparienci
 | Vivienda y edificios residenciales | 9 | sofá, cama doble, cocina integral, lavadora, baño completo |
 | Deportes, canchas y piscinas | 11 | cancha de fútbol, de baloncesto, de tenis, piscina, trampolín, caminadora |
 | Exteriores y urbanismo | 15 | árbol, arbusto, luminaria, hidrante, fuente, bicicletero, bolardo, matera, plaza de parqueo, contenedor, pérgola |
+| Instalaciones eléctricas | 12 | tomacorriente, tomacorriente 220 V, interruptor, interruptor doble, tablero, luminaria, salida de techo, luminaria de emergencia, salida de datos, aire acondicionado, extractor, caja de piso |
+| Redes hidrosanitarias | 12 | válvula de bola, válvula de compuerta, válvula de retención, medidor de agua, medidor de gas, equipo hidroneumático, tanque, rejilla de piso, bajante de cubierta, gabinete contra incendios, rociador, caja de inspección |
 
 - Identificador `cad_*` (por ejemplo `cad_desk`, `cad_rest_bar`, `cad_sport_pool`).
 - Los objetos de agua (piscina, trampolín) usan un color propio del catálogo (`#0891b2`); el resto hereda el color del elemento.
@@ -278,13 +284,39 @@ El inspector permite editar geometría (X, Y, ancho, alto, rotación), aparienci
 - `flipX` invierte el lado de apertura y `flipY` el sentido de la hoja (útil en muros verticales).
 - Los planos antiguos con puertas de 80 × 16 se migran automáticamente al esquema actual.
 
+### Redes de tubería y circuitos eléctricos
+
+Dos herramientas nuevas permiten dibujar instalaciones sobre la misma planta:
+
+| Herramienta | Atajo | Qué dibuja |
+| --- | --- | --- |
+| **Tubería** | `P` | Tramos de agua fría, agua caliente, gas combustible, aguas negras, aguas lluvias y red contra incendios. El desplegable del botón cambia de sistema. |
+| **Tubería eléctrica** | `Shift + P` | Tramos de circuito (tubería/conduit) que agrupan cargas por código. |
+
+- Cada sistema tiene **color, estilo de línea, diámetro y material de referencia** propios; al cambiar de red se aplican esos valores y después puedes sobrescribirlos.
+- Cada tramo guarda **sistema, diámetro, material, pendiente (física, en %), presión de referencia (kPa)** si es tubería, o **circuito, tensión, calibre y fases** si es eléctrica. Los equipos de la familia *Instalaciones eléctricas* guardan **circuito y carga (VA)**.
+- Los tramos se dibujan con nodos en los extremos y un rótulo técnico sobre el trazo (por ejemplo `AN Ø 4" · 8,2 m · i=2 %` o `C2 · 12 AWG · 220 V`).
+- El trazo es editable por vértice igual que las rutas: arrastrar, doble clic para añadir y `Alt`+clic para quitar.
+- Todo se guarda en el diseño, se valida en el servidor y se exporta a SVG, PNG y PDF/impresión.
+
+El panel **Redes y circuitos** (barra lateral inferior) resume el piso:
+
+- Longitud por sistema, diámetros usados y materiales.
+- Avisos de pendiente cuando un tramo de desagüe queda por debajo de la referencia de su diámetro o asciende en lugar de descender.
+- Carga instalada por circuito, corriente calculada, **breaker sugerido** (con reserva del 125 %) y **calibre sugerido** por capacidad de conducción.
+- **Caída de tensión estimada** por circuito y aviso cuando supera el 3 % de referencia.
+- Los mismos datos están disponibles en la API: `GET /index.php?r=api/floors/{id}/mep` y el catálogo en `GET /index.php?r=catalogs/mep`.
+
+> **Estos cálculos son de referencia.** Las tablas de capacidad, las pendientes mínimas y las caídas de tensión admisibles dependen de la norma aplicable, del material, de la temperatura y del proyecto. Confírmalos con la memoria de cálculo y con un profesional competente antes de construir. La aplicación no emite certificados ni dictámenes.
+
 ### Catálogos en disco
 
 | Archivo | Contenido |
 | --- | --- |
 | `resources/iso7010-catalog.json` | `{format, standard, source, license, categories, signs{CODE:{name,category,description,svg}}}` |
-| `resources/cad-objects.json` | `{version, categories{furniture,...}, objects{cad_*:{category,name,description,reference,color,svg}}}` — 121 objetos en 16 familias |
+| `resources/cad-objects.json` | `{version, categories{furniture,...}, objects{cad_*:{category,name,description,reference,color,load?,svg}}}` — 145 objetos en 18 familias |
 | `resources/service-signs.json` | `{format, standard, license, categories{services}, signs{SVC_*:{name,category,description,aliases,svg}}}` — 22 señales propias |
+| `resources/mep-networks.json` | `{hydraulic{clave:{label,short,color,dash,stroke,diameter,material,gravity,pressureKpa,reference}},diameters[],materials{},slopes{},electrical{...}}` — valores de referencia de redes y circuitos |
 | `resources/sign-aliases.json` | Alias heredados → códigos ISO 7010 |
 | `resources/schema.sql` | Esquema SQLite |
 | `resources/demo/demo-project.json` | Proyecto de demostración (4 pisos) |
@@ -435,7 +467,7 @@ npm run test:php:81    # suite funcional en PHP 8.1
 npm run test:php:83    # suite funcional en PHP 8.3
 npm run test:js        # editor real en JSDOM (PHP 8.3)
 npm run test:package   # construye los ZIP y hace la instalación limpia de la demo
-npm run lint:php       # sintaxis de 51 archivos PHP en 8.1 y 8.3
+npm run lint:php       # sintaxis de 52 archivos PHP en 8.1 y 8.3
 npm run lint:js        # sintaxis de todos los JS/MJS
 npm run test:offline   # verifica que no haya ningún recurso ni dato externo
 npm run preview        # vista previa real en http://localhost:8080 (PHP en WebAssembly)
@@ -454,7 +486,7 @@ La aplicación está pensada para redes aisladas y equipos sin internet:
 - **La política de seguridad del navegador** (`Content-Security-Policy`) limita `script-src`, `style-src`, `img-src`, `font-src` y `connect-src` a `'self'`; cualquier intento de cargar algo externo queda bloqueado por el propio navegador.
 - **El servidor no hace llamadas salientes**: no usa `curl`, `fsockopen`, `get_headers` ni `file_get_contents()` sobre URLs.
 - **Las exportaciones se generan en local**: el SVG y el JSON los produce PHP; el PNG lo dibuja el navegador sobre el propio SVG. La impresión usa `print.css` local.
-- **`npm run test:offline`** recorre los 75 archivos que se sirven al navegador y falla si aparece una petición externa. Forma parte de `node tests/run-all.mjs`.
+- **`npm run test:offline`** recorre los 78 archivos que se sirven al navegador y falla si aparece una petición externa. Forma parte de `node tests/run-all.mjs`.
 
 Lo único que no funciona sin red es la **vista previa de desarrollo** (`npm run preview`), que solo existe para revisar el editor en el equipo de desarrollo; nunca se incluye en los paquetes.
 
@@ -463,29 +495,41 @@ Lo único que no funciona sin red es la **vista previa de desarrollo** (`npm run
 | Bloque | Comprobaciones |
 | --- | --- |
 | `tests/php/lint.mjs` | `php -l` sobre todo `app/`, `bootstrap.php` e `index.php` en 8.1 y 8.3. |
-| `tests/php/functional.mjs` | 137 comprobaciones: instalador, requisitos, contraseñas débiles, CSRF, sesión, autorización entre cuentas, CRUD de proyectos/pisos, duplicados, importación v1/v2, catálogos (354 señales y 121 objetos), señales de baño y de servicios (guardado, color de familia y exportación SVG), puertas y portones (geometría, sentidos de apertura, exportación con trazo), validaciones de la API, guardado/versiones/borradores/conflictos, exportaciones, ciclo de vida y logout. |
-| `tests/js/editor.mjs` | 137 comprobaciones de interfaz sobre la app real: arranque, 354 señales y 121 objetos, puertas dobles y portones, **vértices de ruta editables (arrastrar, doble clic, Alt+clic)**, **señal de baño insertada desde la biblioteca**, **posiciones reales del trazo**, **clic sobre muros finos**, **rotación**, **rutas cerradas**, **arrastrar y soltar desde la biblioteca sin que el cajón lo bloquee**, reglas, herramientas, inserción con puntero, selección, mover, escalar, rotar, color, cambio de tipo, deshacer/rehacer, duplicar, agrupar, bloquear, desplazar, texto y saneado, guardar, reabrir, borradores, conflictos, exportación SVG/JSON/PNG, tooltips sin acumulación, capas, versiones y límites. |
-| `tests/php/package.mjs` | 34 comprobaciones: construye ambos ZIP, verifica que no haya bases, sesiones, credenciales, logs ni carpetas de desarrollo, valida los SHA-256 y hace una instalación limpia de la demo comprobando assets (11), catálogos (354/121), los cuatro pisos del proyecto de ejemplo, señales de servicios en la demo, editor, SVG, JSON e impresión. |
+| `tests/php/functional.mjs` | 144 comprobaciones: instalador, requisitos, contraseñas débiles, CSRF, sesión, autorización entre cuentas, CRUD de proyectos/pisos, duplicados, importación v1/v2, catálogos (354 señales y 145 objetos), catálogo y guardado de redes, señales de baño y de servicios (guardado, color de familia y exportación SVG), puertas y portones (geometría, sentidos de apertura, exportación con trazo), validaciones de la API, guardado/versiones/borradores/conflictos, exportaciones, ciclo de vida y logout. |
+| `tests/js/editor.mjs` | 153 comprobaciones de interfaz sobre la app real: arranque, 354 señales y 145 objetos, **trazado de tuberías y circuitos, inspector de red y panel de redes**, puertas dobles y portones, **vértices de ruta editables (arrastrar, doble clic, Alt+clic)**, **señal de baño insertada desde la biblioteca**, **posiciones reales del trazo**, **clic sobre muros finos**, **rotación**, **rutas cerradas**, **arrastrar y soltar desde la biblioteca sin que el cajón lo bloquee**, reglas, herramientas, inserción con puntero, selección, mover, escalar, rotar, color, cambio de tipo, deshacer/rehacer, duplicar, agrupar, bloquear, desplazar, texto y saneado, guardar, reabrir, borradores, conflictos, exportación SVG/JSON/PNG, tooltips sin acumulación, capas, versiones y límites. |
+| `tests/php/package.mjs` | 37 comprobaciones: construye ambos ZIP, verifica que no haya bases, sesiones, credenciales, logs ni carpetas de desarrollo, valida los SHA-256 y hace una instalación limpia de la demo comprobando assets (11), catálogos (354/145), los cuatro pisos del proyecto de ejemplo, señales de servicios y redes en la demo, editor, SVG, JSON e impresión. |
 | `tests/js/offline.mjs` | 0 dependencias de red: revisa las vistas, los estilos, los scripts y los catálogos y falla si aparece un `fetch`, un `WebSocket`, un `src`/`href`/`url()` externo, una llamada de red desde PHP o un dominio no declarado. |
 
 Resultados esperados de la última ejecución completa:
 
 ```text
-✓ Sintaxis PHP 8.1 · 51 archivos, sin errores
-✓ Sintaxis PHP 8.3 · 51 archivos, sin errores
-✓ Sintaxis JavaScript · 16 archivos, sin errores
-✓ Funcionamiento sin conexión · 75 archivos, sin referencias externas
-✓ Funcional PHP 8.1 · 137/137
-✓ Funcional PHP 8.3 · 137/137
-✓ Interfaz (JSDOM) PHP 8.1 · 137/137
-✓ Interfaz (JSDOM) PHP 8.3 · 137/137
-✓ Paquetes y demo · 35/35
+✓ Sintaxis PHP 8.1 · 52 archivos, sin errores
+✓ Sintaxis PHP 8.3 · 52 archivos, sin errores
+✓ Sintaxis JavaScript · 20 archivos, sin errores
+✓ Funcionamiento sin conexión · 78 archivos, sin referencias externas
+✓ Funcional PHP 8.1 · 144/144
+✓ Funcional PHP 8.3 · 144/144
+✓ Interfaz (JSDOM) PHP 8.1 · 153/153
+✓ Interfaz (JSDOM) PHP 8.3 · 153/153
+✓ Paquetes y demo · 37/37
 9/9 pasos correctos
 ```
 
 Las pruebas trabajan sobre copias temporales: no escriben configuración ni bases en el repositorio. `node_modules` solo contiene dependencias de desarrollo y se excluye de los paquetes.
 
 ---
+
+## Cambios de la versión 1.0.4
+
+Ampliación de contenido sobre la 1.0.3. Los planos guardados siguen abriendo sin cambios.
+
+- **Tuberías por sistema.** Nueva herramienta `pipe` con seis redes: agua fría, agua caliente, gas combustible, aguas negras, aguas lluvias y red contra incendios. Cada sistema trae color, estilo de línea, diámetro y material de referencia. El inspector permite cambiar sistema, diámetro, material, pendiente y presión.
+- **Red eléctrica.** Nueva herramienta `conduit` para tramos de circuito con código, tensión, calibre y número de fases; los equipos de la familia *Instalaciones eléctricas* guardan circuito y carga en VA. El color del tramo sigue al circuito para leerlo agrupado.
+- **Panel Redes y circuitos.** Resume longitudes por sistema, diámetros, cargas por circuito, corriente, breaker sugerido con reserva del 125 %, calibre sugerido y caída de tensión estimada, con avisos de pendiente en desagües y de caída superior al 3 %.
+- **API de redes.** `GET /index.php?r=api/floors/{id}/mep` devuelve el resumen calculado sobre el diseño guardado; `GET /index.php?r=catalogs/mep` entrega el catálogo técnico local.
+- **Catálogo CAD de 121 a 145 objetos** con dos familias nuevas: **Instalaciones eléctricas** (12 símbolos: tomacorrientes, interruptores, tablero, luminarias, salida de datos, aire acondicionado, extractor, caja de piso) y **Redes hidrosanitarias** (12 símbolos: válvulas, medidores, hidroneumático, tanque, rejillas, bajante, gabinete contra incendios, rociador, caja de inspección).
+- **Demo con instalaciones.** La planta baja estrena cuatro redes (AF, AN, ALL, RCI) y tres circuitos (C1 monofásico, C2 y C3 trifásico) con sus equipos; el local comercial suma agua fría y caliente, gas, desagüe y dos circuitos.
+- **Aviso explícito de alcance.** Los valores de `resources/mep-networks.json` son referencias configurables: la interfaz y la documentación repiten que no sustituyen memoria de cálculo ni revisión profesional.
 
 ## Cambios de la versión 1.0.3
 
@@ -525,12 +569,12 @@ Versión de corrección sobre la 1.0.0. Reemplaza los paquetes anteriores: la 1.
 
 ## Paquetes y verificación
 
-La entrega v1.0.3 incluye los ZIP ya construidos en **`paquetes/v1.0.3/`** (misma composición que genera el script, verificada por `tests/php/package.mjs`):
+La entrega v1.0.4 incluye los ZIP ya construidos en **`paquetes/v1.0.4/`** (misma composición que genera el script, verificada por `tests/php/package.mjs`):
 
 ```text
-paquetes/v1.0.3/
-├── normia-planos-cad-1.0.3.zip
-├── normia-planos-cad-demo-1.0.3.zip
+paquetes/v1.0.4/
+├── normia-planos-cad-1.0.4.zip
+├── normia-planos-cad-demo-1.0.4.zip
 ├── SHA256SUMS.txt
 └── BUILD.txt
 ```
@@ -544,8 +588,8 @@ npm run build          # o: bash tools/build-packages.sh
 El script deja los artefactos en `dist/`:
 
 ```text
-normia-planos-cad-1.0.3.zip
-normia-planos-cad-demo-1.0.3.zip
+normia-planos-cad-1.0.4.zip
+normia-planos-cad-demo-1.0.4.zip
 SHA256SUMS.txt
 BUILD.txt
 ```
@@ -555,17 +599,18 @@ BUILD.txt
 - Verifica las sumas:
 
 ```bash
-cd paquetes/v1.0.3
+cd paquetes/v1.0.4
 sha256sum -c SHA256SUMS.txt
 ```
 
-Los hashes exactos de los ZIP publicados están en `paquetes/v1.0.3/SHA256SUMS.txt`; `dist/` es solo la salida de trabajo y está ignorada por Git.
+Los hashes exactos de los ZIP publicados están en `paquetes/v1.0.4/SHA256SUMS.txt`; `dist/` es solo la salida de trabajo y está ignorada por Git.
 
 ---
 
 ## Limitaciones
 
-- Planos **esquemáticos**: no hay cálculo de áreas, estructuras, cargas ni normativa automática. La escala es una referencia declarada, no una medición certificada.
+- Planos **esquemáticos**: no hay cálculo de áreas, estructuras ni normativa automática. La escala es una referencia declarada, no una medición certificada.
+- **Las redes son un apoyo de diseño, no un cálculo firmado.** El panel estima longitudes, cargas, breaker, calibre y caída de tensión con tablas de referencia locales; no reemplaza la memoria de cálculo, el estudio de cargas, el diseño hidrosanitario ni la revisión de un profesional competente, y no verifica cumplimiento de NTC 1500, NTC 2505, NTC 2050, NFPA ni de la norma local aplicable.
 - Sin DWG/DXF ni importación de CAD de escritorio. La importación acepta el JSON propio (v2 y heredado v1); no se importan SVG ni archivos de CAD.
 - El trabajo es por cuenta: no hay colaboración simultánea. El control de versiones evita sobrescrituras accidentales, pero dos personas deben coordinar quién guarda.
 - El PNG se rasteriza en el cliente; en navegadores muy antiguos o sin Canvas puede no generarse (el SVG y el JSON siguen disponibles).

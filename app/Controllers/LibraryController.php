@@ -50,4 +50,22 @@ final class LibraryController extends BaseController
             'attribution' => 'Objetos CAD esquemáticos de Normia. Verifica dimensiones y escala en sitio.',
         ]);
     }
+
+    /**
+     * Catálogo técnico de redes. Son valores de referencia configurables:
+     * la interfaz y la documentación lo repiten para no sugerir certificación.
+     */
+    public function mep(): void
+    {
+        $mep = LibraryRepository::mep();
+        Response::json([
+            'ok' => true,
+            'hydraulic' => LibraryRepository::networks(),
+            'diameters' => LibraryRepository::diameters(),
+            'materials' => LibraryRepository::materials(),
+            'slopes' => $mep['slopes'] ?? [],
+            'electrical' => LibraryRepository::electrical(),
+            'notice' => (string) ($mep['notice'] ?? ''),
+        ]);
+    }
 }

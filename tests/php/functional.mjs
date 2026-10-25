@@ -133,7 +133,7 @@ try {
   const designMatch = /<textarea id="editor-design" hidden>([\s\S]*?)<\/textarea>/.exec(editorHtml);
   let design = null;
   try { design = JSON.parse(decodeEntities(designMatch?.[1] || '')); } catch { design = null; }
-  report.check('Editor recibe el diseño guardado', design?.format === 2 && design?.elements?.length === 66, `${design?.elements?.length} elementos`);
+  report.check('Editor recibe el diseño guardado', design?.format === 2 && design?.elements?.length === 85, `${design?.elements?.length} elementos`);
 
   res = await client.get('/assets/js/editor.js');
   report.check('JS del editor se sirve completo', res.status === 200 && res.text.length > 20000, `${res.text.length} bytes`);
@@ -151,17 +151,29 @@ try {
   report.check('Familias de señalización completas', Object.keys(catalog.categories || {}).length === 6 && catalog.colors?.emergency === '#237f52' && catalog.colors?.services === '#0f766e');
   report.check('Alias heredados disponibles', catalog.legacyTools?.extinguisher === 'F001' && catalog.legacyTools?.exit === 'E002');
   ({ response: catalogResponse, body: catalog } = await json('catalogs/cad'));
-  report.check('Catálogo CAD con 121 objetos', catalogResponse.status === 200 && catalog.count === 121 && Object.keys(catalog.objects || {}).length === 121);
-  report.check('Catálogo CAD con 16 familias sectoriales', Object.keys(catalog.categories || {}).length === 16
-    && ['restaurant', 'warehouse', 'retail', 'hospital', 'textile', 'grill', 'supermarket', 'residential', 'sports', 'outdoor'].every((key) => catalog.categories?.[key]?.label),
+  report.check('Catálogo CAD con 145 objetos', catalogResponse.status === 200 && catalog.count === 145 && Object.keys(catalog.objects || {}).length === 145);
+  report.check('Catálogo CAD con 18 familias sectoriales', Object.keys(catalog.categories || {}).length === 18
+    && ['restaurant', 'warehouse', 'retail', 'hospital', 'textile', 'grill', 'supermarket', 'residential', 'sports', 'outdoor', 'electrico', 'hidraulico'].every((key) => catalog.categories?.[key]?.label),
     Object.keys(catalog.categories || {}).join(','));
   report.check('Cada familia CAD tiene objetos', Object.keys(catalog.categories || {}).every((key) => Object.values(catalog.objects || {}).some((object) => object.category === key)));
   report.check('Objetos CAD con SVG', Object.values(catalog.objects || {}).every((object) => String(object.svg || '').startsWith('<svg')));
+  report.check('Símbolos de instalación eléctrica e hidráulica disponibles',
+    ['cad_elec_outlet', 'cad_elec_panel', 'cad_elec_luminaire', 'cad_hyd_valve', 'cad_hyd_cabinet', 'cad_hyd_meter'].every((key) => catalog.objects?.[key]?.svg?.startsWith('<svg'))
+    && catalog.objects?.cad_elec_luminaire?.load === 60);
+
+  /* ------------------------------ redes técnicas ------------------------------ */
+  let mepCatalog = {};
+  ({ response: catalogResponse, body: mepCatalog } = await json('catalogs/mep'));
+  report.check('Catálogo de redes con 6 sistemas', catalogResponse.status === 200
+    && ['agua_fria', 'agua_caliente', 'gas', 'aguas_negras', 'aguas_lluvias', 'incendio'].every((key) => mepCatalog.hydraulic?.[key]?.label)
+    && mepCatalog.diameters?.length === 11 && mepCatalog.electrical?.voltages?.includes(220),
+    Object.keys(mepCatalog.hydraulic || {}).join(','));
+  report.check('Las redes declaran que son valores de referencia', /no sustituyen/i.test(mepCatalog.notice || '') && /referencia/i.test(mepCatalog.hydraulic?.agua_fria?.reference || ''));
 
   /* ---------------------------- guardado y versiones ---------------------------- */
   ({ body: catalog } = await json(`api/floors/${floorId}`));
   let floor = catalog;
-  report.check('API del piso devuelve diseño y versión', floor.floor?.version === 1 && floor.design?.elements?.length === 66, `v${floor.floor?.version}`);
+  report.check('API del piso devuelve diseño y versión', floor.floor?.version === 1 && floor.design?.elements?.length === 85, `v${floor.floor?.version}`);
   const original = floor.design;
   const changed = JSON.parse(JSON.stringify(original));
   changed.elements[0].label = 'Prueba funcional';
@@ -172,6 +184,58 @@ try {
   report.check('Guardar crea la versión 2', res.status === 200 && saved.version === 2, `${res.status} v${saved.version}`);
   ({ body: catalog } = await json(`api/floors/${floorId}`));
   report.check('Guardado conserva el diseño', catalog.design?.elements?.[0]?.label === 'Prueba funcional' && catalog.floor?.version === 2, `v${catalog.floor?.version}`);
+
+  /* --------------------------- guardado de redes --------------------------- */
+  // Se prueba en un proyecto aparte para no alterar el número de versión del
+  // piso de demostración, que las comprobaciones siguientes usan.
+  const newProjectPage = await client.get('projects/new');
+  client.csrf = extractToken(newProjectPage.text);
+  const mepProject = await client.postForm('projects', {
+    _token: client.csrf, name: 'Proyecto de redes', site: 'Sede', workplace: 'Planta',
+    responsible: 'Equipo QA', notes: 'Redes hidrosanitarias y eléctricas', preset: 'planta',
+  });
+  const mepProjectId = Number(/projects\/(\d+)/.exec(decodeURIComponent(mepProject.location))?.[1] || 0);
+  const mepProjectPage = await client.get(`projects/${mepProjectId}`);
+  const mepFloorHref = [...mepProjectPage.text.matchAll(/href="([^"]+)"/g)]
+    .map((match) => { try { return decodeURIComponent(match[1]); } catch { return match[1]; } })
+    .find((href) => /\/floors\/\d+\/editor/.test(href)) || '';
+  const mepFloorId = Number(/floors\/(\d+)\/editor/.exec(mepFloorHref)?.[1] || 0);
+  const mepFloor = (await json(`api/floors/${mepFloorId}`)).body;
+  const withMep = JSON.parse(JSON.stringify(mepFloor.design));
+  const mepLayer = withMep.layers[0].id;
+  withMep.elements.push({
+    id: 'red_agua_1', type: 'pipe', layerId: mepLayer, x: 200, y: 300, w: 400, h: 100,
+    rotation: 0, color: '#0891b2', stroke: 3.5, opacity: 1, label: '', locked: false,
+    network: 'agua_fria', diameter: '3/4"', material: 'pvc', slope: 0, pressure: 280,
+    points: [{ x: 0, y: 0 }, { x: 400, y: 100 }],
+  });
+  withMep.elements.push({
+    id: 'red_elec_1', type: 'conduit', layerId: mepLayer, x: 200, y: 620, w: 400, h: 2,
+    rotation: 0, color: '#2563eb', stroke: 2.5, opacity: 1, label: '', locked: false,
+    circuit: 'C1', voltage: 220, gauge: '10', phases: 1,
+    points: [{ x: 0, y: 1 }, { x: 400, y: 1 }],
+  });
+  withMep.elements.push({
+    id: 'red_carga_1', type: 'cad_elec_ac', layerId: mepLayer, x: 640, y: 600, w: 90, h: 90,
+    rotation: 0, color: '#334155', stroke: 1.5, opacity: 1, label: '', locked: false,
+    circuit: 'C1', load: 3500,
+  });
+  res = await client.postJson(`api/floors/${mepFloorId}/save`, { design: withMep, expected_version: 1, note: 'Redes' });
+  let savedMep = {};
+  try { savedMep = JSON.parse(res.text); } catch {}
+  report.check('Guardar un diseño con tuberías y circuitos', res.status === 200 && savedMep.version === 2, `${res.status} v${savedMep.version}`);
+  let summary = {};
+  ({ response: catalogResponse, body: summary } = await json(`api/floors/${mepFloorId}/mep`));
+  report.check('La API de redes resume tuberías y circuitos', catalogResponse.status === 200
+    && summary.summary?.pipes === 1 && summary.summary?.conduits === 1
+    && Math.abs((summary.summary?.hydraulic?.[0]?.lengthM ?? 0) - 4.12) < 0.02
+    && summary.summary?.electrical?.[0]?.loadVA === 3500,
+    `${summary.summary?.pipes} tuberías · ${summary.summary?.electrical?.[0]?.loadVA} VA`);
+  report.check('El resumen calcula breaker y calibre con reserva', summary.summary?.electrical?.[0]?.breaker === 20
+    && summary.summary?.electrical?.[0]?.gauge === '12'
+    && Math.abs((summary.summary?.electrical?.[0]?.current ?? 0) - 15.91) < 0.05,
+    `${summary.summary?.electrical?.[0]?.breaker} A · ${summary.summary?.electrical?.[0]?.gauge} AWG · ${summary.summary?.electrical?.[0]?.current} A`);
+  report.check('El resumen avisa que es esquemático', /no sustituye/i.test(summary.notice || '') && Array.isArray(summary.summary?.warnings));
 
   res = await client.postJson(`api/floors/${floorId}/save`, { design: changed, expected_version: 1 });
   report.check('Conflicto de versión responde 409', res.status === 409 && /version_conflict/.test(res.text), `${res.status}`);

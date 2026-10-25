@@ -183,6 +183,12 @@ async function main() {
       report.check('La exportación JSON de la demo funciona', exported.schema_version === 2 && exported.design.elements.length >= 30);
       const print = await client.get(`projects/1/floors/${floorIds[0]}/print`);
       report.check('La vista de impresión de la demo funciona', print.status === 200 && /editor-print|print/i.test(print.text));
+      report.check('La impresión incluye redes y circuitos',
+        /Redes e instalaciones del piso/.test(print.text) && /Circuitos eléctricos/.test(print.text) && /Redes de tubería/.test(print.text),
+        `${(print.text.match(/print-swatch/g) || []).length} marcas de color`);
+      report.check('La exportación SVG trae la leyenda de redes',
+        (svg.text.match(/data-mep-legend=/g) || []).length >= 3,
+        `${(svg.text.match(/data-mep-legend=/g) || []).length} entradas`);
     }
     const account = await client.get('account/password');
     report.check('Las vistas internas responden con sesión', account.status === 200);

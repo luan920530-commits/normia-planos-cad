@@ -7,6 +7,9 @@ use App\Core\Request;
 use App\Core\Response;
 use App\Core\VersionConflictException;
 use App\Models\Floor;
+use App\Services\DesignValidator;
+use App\Services\LibraryRepository;
+use App\Services\MepCalculator;
 
 final class FloorApiController extends BaseController
 {
@@ -27,6 +30,32 @@ final class FloorApiController extends BaseController
                 'draft' => $preview['draft'],
             ],
             'design' => $preview['design'],
+        ]);
+    }
+
+    /**
+     * Resumen de redes del último diseño guardado: longitudes, diámetros,
+     * circuitos, cargas y caídas de tensión estimadas.
+     */
+    public function mep(int $floorId): void
+    {
+        $floor = $this->floor($floorId);
+        $design = DesignValidator::normalizeJson((string) $floor['design_json']);
+        Response::json([
+            'ok' => true,
+            'floor' => [
+                'id' => (int) $floor['id'],
+                'name' => $floor['name'],
+                'version' => (int) $floor['version'],
+            ],
+            'summary' => MepCalculator::summary($design),
+            'references' => [
+                'hydraulic' => LibraryRepository::networks(),
+                'diameters' => LibraryRepository::diameters(),
+                'materials' => LibraryRepository::materials(),
+                'electrical' => LibraryRepository::electrical(),
+            ],
+            'notice' => 'Resumen esquemático de referencia. No sustituye memoria de cálculo ni revisión profesional.',
         ]);
     }
 

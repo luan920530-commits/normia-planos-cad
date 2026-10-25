@@ -1,0 +1,113 @@
+{
+  "version": 1,
+  "notice": "Redes hidrosanitarias, de gas e incendio y red eléctrica esquemáticas. Los valores de esta tabla son referencias configurables de diseño; no sustituyen la memoria de cálculo ni la revisión de un profesional competente.",
+  "hydraulic": {
+    "agua_fria": {
+      "label": "Agua fría",
+      "short": "AF",
+      "color": "#0891b2",
+      "dash": [],
+      "stroke": 3.5,
+      "diameter": "1/2\"",
+      "material": "pvc",
+      "gravity": false,
+      "pressureKpa": 300,
+      "reference": "NTC 1500 · valor de referencia"
+    },
+    "agua_caliente": {
+      "label": "Agua caliente",
+      "short": "AC",
+      "color": "#dc2626",
+      "dash": [12, 5],
+      "stroke": 3.5,
+      "diameter": "1/2\"",
+      "material": "cpvc",
+      "gravity": false,
+      "pressureKpa": 300,
+      "reference": "NTC 1500 · valor de referencia"
+    },
+    "gas": {
+      "label": "Gas combustible",
+      "short": "GAS",
+      "color": "#ca8a04",
+      "dash": [2, 6],
+      "stroke": 3.5,
+      "diameter": "3/4\"",
+      "material": "acero",
+      "gravity": false,
+      "pressureKpa": 20,
+      "reference": "NTC 2505 · valor de referencia"
+    },
+    "aguas_negras": {
+      "label": "Aguas negras",
+      "short": "AN",
+      "color": "#7c3aed",
+      "dash": [],
+      "stroke": 5,
+      "diameter": "4\"",
+      "material": "pvc",
+      "gravity": true,
+      "pressureKpa": 0,
+      "reference": "NTC 1500 · valor de referencia"
+    },
+    "aguas_lluvias": {
+      "label": "Aguas lluvias",
+      "short": "ALL",
+      "color": "#2563eb",
+      "dash": [16, 6],
+      "stroke": 4.5,
+      "diameter": "3\"",
+      "material": "pvc",
+      "gravity": true,
+      "pressureKpa": 0,
+      "reference": "NTC 1500 · valor de referencia"
+    },
+    "incendio": {
+      "label": "Red contra incendios",
+      "short": "RCI",
+      "color": "#b71f2e",
+      "dash": [],
+      "stroke": 4,
+      "diameter": "2\"",
+      "material": "galvanizado",
+      "gravity": false,
+      "pressureKpa": 700,
+      "reference": "NFPA 13 / 14 · valor de referencia"
+    }
+  },
+  "diameters": ["1/2\"", "3/4\"", "1\"", "1 1/4\"", "1 1/2\"", "2\"", "2 1/2\"", "3\"", "4\"", "6\"", "8\""],
+  "materials": {
+    "pvc": "PVC",
+    "cpvc": "CPVC",
+    "ppr": "PPR (termofusión)",
+    "cobre": "Cobre",
+    "acero": "Acero",
+    "galvanizado": "Acero galvanizado",
+    "hierro": "Hierro fundido",
+    "pead": "PEAD"
+  },
+  "slopes": {
+    "2\"": 2,
+    "3\"": 1,
+    "4\"": 1,
+    "6\"": 1,
+    "8\"": 0.5
+  },
+  "electrical": {
+    "label": "Red eléctrica",
+    "defaultCircuit": "C1",
+    "voltages": [110, 208, 220, 440],
+    "phases": [1, 3],
+    "defaultPhases": 1,
+    "gauges": ["14", "12", "10", "8", "6", "4", "2", "1/0"],
+    "colors": ["#2563eb", "#dc2626", "#15803d", "#7c3aed", "#ea580c", "#0891b2", "#ca8a04", "#be185d"],
+    "ampacity": { "14": 15, "12": 20, "10": 30, "8": 50, "6": 65, "4": 85, "2": 115, "1/0": 150 },
+    "section": { "14": 2.08, "12": 3.31, "10": 5.26, "8": 8.37, "6": 13.3, "4": 21.2, "2": 33.6, "1/0": 53.5 },
+    "breakers": [15, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 125, 150, 175, 200],
+    "resistivity": 0.0217,
+    "maxDropBranch": 3,
+    "maxDropTotal": 5,
+    "reserve": 1.25,
+    "reference": "NTC 2050 · valores de referencia para cobre a 75 °C"
+  }
+}

@@ -93,6 +93,22 @@
         <button class="rail-button" type="button" data-tool="route" aria-pressed="false" data-tooltip="Ruta de evacuación · E" aria-label="Trazar ruta de evacuación">
           <svg class="icon"><use href="#i-route"></use></svg><span>Ruta</span>
         </button>
+        <div class="rail-flyout-wrap">
+          <button class="rail-button" type="button" data-tool="pipe" aria-pressed="false" data-tooltip="Tubería · P" aria-label="Trazar tubería">
+            <svg class="icon"><use href="#i-pipe"></use></svg><span>Tubería</span>
+          </button>
+          <button class="rail-caret" type="button" data-pipe-menu aria-expanded="false" aria-label="Elegir red de tubería" data-tooltip="Agua, gas, desagües e incendio">
+            <svg class="icon"><use href="#i-chevron-down"></use></svg>
+          </button>
+          <div class="rail-flyout" data-pipe-flyout hidden>
+            <?php foreach ($networks as $key => $network): ?>
+              <button type="button" data-tool="pipe" data-network="<?= e($key) ?>"><span class="swatch-dot" style="--swatch:<?= e($network['color']) ?>"></span><?= e($network['label']) ?> · <?= e($network['short']) ?></button>
+            <?php endforeach; ?>
+          </div>
+        </div>
+        <button class="rail-button" type="button" data-tool="conduit" aria-pressed="false" data-tooltip="Tubería eléctrica · Shift+P" aria-label="Trazar tubería eléctrica">
+          <svg class="icon"><use href="#i-conduit"></use></svg><span>Eléctrico</span>
+        </button>
         <button class="rail-button" type="button" data-tool="text" aria-pressed="false" data-tooltip="Texto · T" aria-label="Añadir texto">
           <svg class="icon"><use href="#i-text"></use></svg><span>Texto</span>
         </button>
@@ -116,10 +132,13 @@
         </button>
         <button class="rail-button rail-library" type="button" data-open-library="cad" data-tooltip="Biblioteca de equipamiento CAD" aria-label="Biblioteca de equipamiento CAD">
           <svg class="icon"><use href="#i-cad"></use></svg><span>Equipos</span>
-          <em class="rail-count" data-cad-count>121</em>
+          <em class="rail-count" data-cad-count>145</em>
         </button>
       </div>
       <div class="rail-bottom">
+        <button class="rail-button" type="button" data-open-drawer="networks" data-tooltip="Redes y circuitos" aria-label="Redes y circuitos">
+          <svg class="icon"><use href="#i-network"></use></svg><span>Redes</span>
+        </button>
         <button class="rail-button" type="button" data-open-drawer="layers" data-tooltip="Capas" aria-label="Capas">
           <svg class="icon"><use href="#i-layers"></use></svg><span>Capas</span>
         </button>
@@ -218,6 +237,23 @@
   </footer>
 </section>
 
+<section class="drawer" data-drawer="networks" hidden aria-labelledby="networks-title">
+  <header class="drawer-head">
+    <div><span class="eyebrow">Instalaciones</span><h2 id="networks-title">Redes y circuitos</h2></div>
+    <button class="icon-button" type="button" data-close-drawer aria-label="Cerrar redes"><svg class="icon"><use href="#i-close"></use></svg></button>
+  </header>
+  <div class="drawer-body networks-body" data-networks-panel>
+    <div class="notice notice-info compact-notice">
+      <svg class="icon"><use href="#i-info"></use></svg>
+      <p>Resumen de referencia calculado sobre el <strong>último diseño guardado</strong>. No sustituye memoria de cálculo ni revisión de un profesional competente.</p>
+    </div>
+    <div class="networks-grid" data-networks-content>
+      <p class="muted">Cargando resumen de redes…</p>
+    </div>
+  </div>
+  <footer class="drawer-foot"><p>Diámetros, pendientes, calibres y caídas de tensión son valores de referencia configurables en <code>resources/mep-networks.json</code>.</p></footer>
+</section>
+
 <section class="drawer drawer-narrow" data-drawer="layers" hidden aria-labelledby="layers-title">
   <header class="drawer-head">
     <div><span class="eyebrow">Organización</span><h2 id="layers-title">Capas</h2></div>
@@ -307,6 +343,7 @@
   <div class="drawer-body shortcut-grid">
     <div><kbd>V</kbd><span>Seleccionar</span></div><div><kbd>M</kbd><span>Muro</span></div>
     <div><kbd>U</kbd><span>Puerta</span></div><div><kbd>E</kbd><span>Ruta de evacuación</span></div>
+    <div><kbd>P</kbd><span>Tubería</span></div><div><kbd>Shift + P</kbd><span>Tubería eléctrica</span></div>
     <div><kbd>T</kbd><span>Texto</span></div><div><kbd>D</kbd><span>Medida</span></div>
     <div><kbd>L</kbd><span>Línea</span></div><div><kbd>B</kbd><span>Rectángulo</span></div>
     <div><kbd>O</kbd><span>Elipse</span></div><div><kbd>Ctrl + Z</kbd><span>Deshacer</span></div>
@@ -328,6 +365,7 @@
 <noscript><div class="noscript-warning">El editor necesita JavaScript activado. El servidor valida y guarda el diseño, pero el lienzo interactivo no estará disponible.</div></noscript>
 <script src="<?= e(asset('js/ui.js')) ?>" defer></script>
 <script src="<?= e(asset('js/lib/geometry.js')) ?>" defer></script>
+<script src="<?= e(asset('js/lib/mep.js')) ?>" defer></script>
 <script src="<?= e(asset('js/lib/model.js')) ?>" defer></script>
 <script src="<?= e(asset('js/lib/renderer.js')) ?>" defer></script>
 <script src="<?= e(asset('js/editor/store.js')) ?>" defer></script>

@@ -24,7 +24,9 @@ final class SvgExporter
         $canvas = $design['canvas'];
         $width = (float) $canvas['width'];
         $height = (float) $canvas['height'];
-        $frameHeight = $withFrame ? 64.0 : 0.0;
+        /* La leyenda de redes se dibuja sólo en la exportación con marco (no en la vista previa). */
+        $mepRows = $withFrame ? self::mepLegend($design) : [];
+        $frameHeight = $withFrame ? 64.0 + 15.0 * count($mepRows) : 0.0;
         $totalHeight = $height + $frameHeight;
         $title = trim((string) ($meta['floor_name'] ?? 'Plano de emergencia'));
         $project = trim((string) ($meta['project_name'] ?? ''));
@@ -71,6 +73,17 @@ final class SvgExporter
             $svg .= '<text x="18" y="' . self::n($height + 44) . '" font-size="10" fill="#64748b">' . self::x($project !== '' ? $project : 'Normia Planos CAD') . ' · Escala de referencia ' . self::x($scale) . ' · Unidad ' . self::x($unit) . '</text>' . "\n";
             $svg .= '<text x="' . self::n($width - 18) . '" y="' . self::n($height + 26) . '" text-anchor="end" font-size="9" fill="#64748b">Representación esquemática · verifica dimensiones y escala en sitio</text>' . "\n";
             $svg .= '<text x="' . self::n($width - 18) . '" y="' . self::n($height + 44) . '" text-anchor="end" font-size="9" fill="#94a3b8">Pictogramas ISO 7010 · Normia Planos CAD</text>' . "\n";
+            foreach ($mepRows as $rowIndex => $row) {
+                $rowY = $height + 62 + 15 * $rowIndex;
+                foreach ($row as $columnIndex => $item) {
+                    $itemX = 18 + 168 * $columnIndex;
+                    $svg .= '<g data-mep-legend="' . self::x($item['key']) . '">';
+                    $svg .= '<line x1="' . self::n($itemX) . '" y1="' . self::n($rowY - 3) . '" x2="' . self::n($itemX + 20) . '" y2="' . self::n($rowY - 3) . '" stroke="' . self::x($item['color']) . '" stroke-width="2.4" stroke-linecap="round"'
+                        . ($item['dash'] !== '' ? ' stroke-dasharray="' . self::x($item['dash']) . '"' : '') . '/>';
+                    $svg .= '<text x="' . self::n($itemX + 26) . '" y="' . self::n($rowY) . '" font-size="9" fill="#475569">' . self::x($item['text']) . '</text>';
+                    $svg .= '</g>' . "\n";
+                }
+            }
             $svg .= '</g>' . "\n";
         }
 
@@ -163,6 +176,29 @@ final class SvgExporter
                     $out .= '<text x="' . self::n(($ax + $bx) / 2) . '" y="' . self::n(($ay + $by) / 2 - 7) . '" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="' . self::n((float) ($element['fontSize'] ?? 12)) . '" fill="' . self::x($color) . '">' . self::x($caption) . '</text>' . "\n";
                 }
                 break;
+            case 'pipe':
+            case 'conduit':
+                $points = self::pointList($element);
+                $isPipe = $type === 'pipe';
+                $definition = $isPipe ? (LibraryRepository::networks()[$element['network'] ?? ''] ?? null) : null;
+                $width = max(1.5, $stroke);
+                $dash = $isPipe && is_array($definition['dash'] ?? null) && $definition['dash'] !== []
+                    ? ' stroke-dasharray="' . implode(' ', array_map(static fn ($value): string => self::n((float) $value), $definition['dash'])) . '"'
+                    : '';
+                $out .= '<polyline fill="none" stroke="' . self::x($color) . '" stroke-width="' . self::n($width) . '" stroke-linecap="round" stroke-linejoin="round" opacity="0.92"' . $dash . ' points="'
+                    . self::points($element, $x, $y) . '"/>' . "\n";
+                $joint = max(2.0, min(5.0, $width * 0.95));
+                foreach ($points as $point) {
+                    $out .= '<circle cx="' . self::n($x + (float) $point['x']) . '" cy="' . self::n($y + (float) $point['y']) . '" r="' . self::n($joint) . '" fill="#ffffff" stroke="' . self::x($color) . '" stroke-width="' . self::n(max(1, $width * 0.45)) . '"/>' . "\n";
+                }
+                $caption = self::mepCaption($element, $canvas);
+                if ($caption !== '') {
+                    $middle = $points[(int) floor((count($points) - 1) / 2)];
+                    $next = $points[(int) floor((count($points) - 1) / 2) + 1] ?? $middle;
+                    $out .= '<text x="' . self::n($x + ((float) $middle['x'] + (float) $next['x']) / 2 + 6) . '" y="' . self::n($y + ((float) $middle['y'] + (float) $next['y']) / 2 - 6)
+                        . '" font-size="10" font-family="Helvetica, Arial, sans-serif" fill="' . self::x($color) . '" stroke="#ffffff" stroke-width="3" stroke-linejoin="round" paint-order="stroke">' . self::x($caption) . '</text>' . "\n";
+                }
+                break;
             case 'line':
                 $points = self::pointList($element);
                 $start = $points[0];
@@ -179,6 +215,48 @@ final class SvgExporter
                 break;
         }
         return $out . '</g>' . "\n";
+    }
+
+    /**
+     * Rótulo de un tramo de red. Es informativo y esquemático: no sustituye
+     * la memoria de cálculo ni la revisión de un profesional competente.
+     */
+    private static function mepCaption(array $element, array $canvas): string
+    {
+        if ((string) ($element['label'] ?? '') !== '') {
+            return self::firstLine((string) $element['label']);
+        }
+        if ($element['type'] === 'conduit') {
+            $circuit = (string) ($element['circuit'] ?? 'C1');
+            $gauge = (string) ($element['gauge'] ?? '');
+            $voltage = (string) ($element['voltage'] ?? '');
+            return trim($circuit . ' · ' . ($gauge !== '' ? $gauge . ' AWG' : '') . ' · ' . ($voltage !== '' ? $voltage . ' V' : ''), ' ·');
+        }
+        $networks = LibraryRepository::networks();
+        $network = $networks[(string) ($element['network'] ?? '')] ?? null;
+        if ($network === null) {
+            return '';
+        }
+        $parts = [$network['short'] . ' Ø ' . (string) ($element['diameter'] ?? $network['diameter'])];
+        $points = self::pointList($element);
+        if (count($points) >= 2) {
+            $length = 0.0;
+            for ($index = 1; $index < count($points); $index++) {
+                $length += hypot((float) $points[$index]['x'] - (float) $points[$index - 1]['x'], (float) $points[$index]['y'] - (float) $points[$index - 1]['y']);
+            }
+            $factor = MepCalculator::unitsToMeters((string) $canvas['unit'], (string) $canvas['scale']);
+            $parts[] = self::meters($length * $factor);
+        }
+        if (!empty($network['gravity'])) {
+            $parts[] = 'i=' . self::n((float) ($element['slope'] ?? 0)) . ' %';
+        }
+        return implode(' · ', $parts);
+    }
+
+    private static function meters(float $value): string
+    {
+        $digits = $value >= 100 ? 0 : 1;
+        return number_format($value, $digits, ',', '.') . ' m';
     }
 
     private static function nestedSvg(string $asset, float $x, float $y, float $w, float $h, string $color): string
@@ -331,6 +409,49 @@ final class SvgExporter
         $distance = hypot((float) $b['x'] - (float) $a['x'], (float) $b['y'] - (float) $a['y']);
         $unit = (string) ($canvas['unit'] ?? 'cm');
         return number_format($distance, 1, ',', '.') . ' ' . $unit;
+    }
+
+    /**
+     * Filas de leyenda (máximo 6 por fila) con los sistemas de tubería y los
+     * circuitos presentes en el plano. El resultado es visual: los detalles
+     * numéricos se muestran en la vista de impresión y en el panel de redes.
+     *
+     * @return list<list<array{key:string,color:string,dash:string,text:string}>>
+     */
+    private static function mepLegend(array $design): array
+    {
+        $items = [];
+        $seen = [];
+        foreach ($design['elements'] ?? [] as $element) {
+            $type = $element['type'] ?? '';
+            if ($type === 'pipe') {
+                $key = (string) ($element['network'] ?? '');
+                $network = LibraryRepository::networks()[$key] ?? null;
+                if ($network === null || isset($seen['pipe:' . $key])) {
+                    continue;
+                }
+                $seen['pipe:' . $key] = true;
+                $items[] = [
+                    'key' => 'pipe:' . $key,
+                    'color' => (string) $network['color'],
+                    'dash' => implode(' ', array_map(static fn ($value): string => self::n((float) $value), is_array($network['dash'] ?? null) ? $network['dash'] : [])),
+                    'text' => $network['short'] . ' · ' . $network['label'],
+                ];
+            } elseif ($type === 'conduit') {
+                $key = (string) ($element['circuit'] ?? '');
+                if ($key === '' || isset($seen['conduit:' . $key])) {
+                    continue;
+                }
+                $seen['conduit:' . $key] = true;
+                $items[] = [
+                    'key' => 'conduit:' . $key,
+                    'color' => (string) $element['color'],
+                    'dash' => '',
+                    'text' => 'Circuito ' . $key . ' · ' . (int) ($element['voltage'] ?? 0) . ' V',
+                ];
+            }
+        }
+        return array_chunk($items, 6);
     }
 
     private static function firstLine(string $value): string

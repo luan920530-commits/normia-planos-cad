@@ -371,3 +371,53 @@ body.is-dragging-resource .library-card { cursor: grabbing; }
   .editor-app, .editor-workbench, .canvas-stage { display: block; height: auto; }
   .canvas-shell { margin: 0; box-shadow: none; }
 }
+
+/* ------------------------- Redes: tuberías y circuitos ------------------------- */
+.rail-flyout .swatch-dot {
+  width: 10px; height: 10px; border-radius: 50%; flex: 0 0 auto;
+  background: var(--swatch, #0891b2); box-shadow: 0 0 0 1px rgba(255, 255, 255, .25) inset;
+}
+.mep-label { paint-order: stroke; pointer-events: none; }
+.plan-element.type-pipe .hit-area,
+.plan-element.type-conduit .hit-area { cursor: crosshair; }
+
+.networks-body { display: flex; flex-direction: column; gap: 14px; }
+.networks-grid { display: flex; flex-direction: column; gap: 18px; }
+.network-section h3 { margin: 0 0 8px; font-size: .78rem; letter-spacing: .09em; text-transform: uppercase; color: #64748b; }
+.network-totals {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin: 0;
+}
+.network-totals div {
+  background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px 12px;
+}
+.network-totals dt { font-size: .7rem; color: #64748b; text-transform: uppercase; letter-spacing: .06em; }
+.network-totals dd { margin: 2px 0 0; font-weight: 700; color: #0f172a; font-size: .98rem; }
+.network-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px; }
+.network-card {
+  border: 1px solid #e2e8f0; border-radius: 14px; padding: 12px 14px; background: #fff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+}
+.network-card header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.network-card header strong { font-size: .92rem; color: #0f172a; }
+.network-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--swatch, #0891b2); flex: 0 0 auto; }
+.network-tag {
+  margin-left: auto; font-size: .66rem; letter-spacing: .05em; text-transform: uppercase;
+  background: #eef2f7; color: #475569; border-radius: 999px; padding: 2px 8px;
+}
+.network-metrics { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 4px; font-size: .82rem; color: #334155; font-weight: 600; }
+.network-detail { margin: 2px 0; font-size: .78rem; color: #64748b; }
+.network-warnings { margin: 8px 0 0; padding-left: 18px; font-size: .76rem; color: #b45309; }
+.network-warnings li + li { margin-top: 3px; }
+.network-warnings.wide { columns: 2; column-gap: 26px; }
+.network-ok { margin: 6px 0 0; font-size: .76rem; color: #15803d; }
+.network-empty {
+  border: 1px dashed #cbd5e1; border-radius: 14px; padding: 18px; background: #f8fafc; color: #475569; font-size: .86rem;
+}
+.network-empty p { margin: 0; }
+.network-footnote { margin: 0; font-size: .74rem; color: #94a3b8; }
+
+.inspector-mep { display: grid; gap: 8px; }
+
+@media (max-width: 720px) {
+  .network-warnings.wide { columns: 1; }
+}

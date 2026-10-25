@@ -143,12 +143,12 @@ async function main() {
     report.check('Señales de baño disponibles', ['SVC_WC_MEN', 'SVC_WC_WOMEN', 'SVC_WC_MIXED', 'SVC_WC_ACCESSIBLE', 'SVC_BABY'].every((code) => app.catalogs.signs[code]?.name),
       ['SVC_WC_MEN', 'SVC_WC_WOMEN', 'SVC_WC_MIXED', 'SVC_WC_ACCESSIBLE', 'SVC_BABY'].filter((code) => !app.catalogs.signs[code]).join(',') || 'todas');
     report.check('La familia de servicios está disponible', app.catalogs.signCategories.services?.label === 'Orientación y servicios', app.catalogs.signCategories.services?.label);
-    report.check('Catálogo CAD ampliado a 121 objetos', Object.keys(app.catalogs.cad).length === 121, String(Object.keys(app.catalogs.cad).length));
-    report.check('Familias CAD ampliadas a 16', Object.keys(app.catalogs.cadCategories).length === 16, Object.keys(app.catalogs.cadCategories).join(','));
-    const expectedFamilies = ['restaurant', 'warehouse', 'retail', 'hospital', 'textile', 'grill', 'supermarket', 'residential', 'sports', 'outdoor'];
+    report.check('Catálogo CAD ampliado a 145 objetos', Object.keys(app.catalogs.cad).length === 145, String(Object.keys(app.catalogs.cad).length));
+    report.check('Familias CAD ampliadas a 18', Object.keys(app.catalogs.cadCategories).length === 18, Object.keys(app.catalogs.cadCategories).join(','));
+    const expectedFamilies = ['restaurant', 'warehouse', 'retail', 'hospital', 'textile', 'grill', 'supermarket', 'residential', 'sports', 'outdoor', 'electrico', 'hidraulico'];
     report.check('Nuevas familias sectoriales disponibles', expectedFamilies.every((key) => app.catalogs.cadCategories[key]?.label), expectedFamilies.filter((key) => !app.catalogs.cadCategories[key]).join(',') || 'todas');
     report.check('Paleta de colores expuesta', window.Normia.COLORS.length === 29, String(window.Normia.COLORS.length));
-    report.check('La barra lateral cuenta los equipos del catálogo', q(window, '[data-cad-count]')?.textContent === '121', q(window, '[data-cad-count]')?.textContent);
+    report.check('La barra lateral cuenta los equipos del catálogo', q(window, '[data-cad-count]')?.textContent === '145', q(window, '[data-cad-count]')?.textContent);
     report.check('La barra lateral cuenta las señales del catálogo', q(window, '[data-sign-count]')?.textContent === '354', q(window, '[data-sign-count]')?.textContent);
     report.check('Lienzo con el preset A4 horizontal', app.model.design.canvas.width === 1123 && app.model.design.canvas.height === 794, `${app.model.design.canvas.width}×${app.model.design.canvas.height}`);
     report.check('Barra de estado muestra el tamaño', q(window, '[data-canvas-size]').textContent.includes('794'), q(window, '[data-canvas-size]').textContent);
@@ -402,6 +402,107 @@ async function main() {
     pointer(window, app.svg, 'pointerup', clientPoint(app, 640, 320));
     app.renderNow();
     report.check('Insertar una puerta con un clic', app.model.design.elements.length === beforeDoor + 1 && app.model.design.elements.at(-1).type === 'door');
+
+    /* --------------------------- redes: tubería y circuitos --------------------------- */
+    report.check('El editor recibe el catálogo de redes',
+      Boolean(app.catalogs.mep?.hydraulic?.aguas_negras) && Object.keys(app.catalogs.mep.hydraulic).length === 6,
+      Object.keys(app.catalogs.mep?.hydraulic || {}).join(','));
+
+    // Tubería: se elige la red en el desplegable del raíl y se traza con clics.
+    const pipeMenu = q(window, '[data-pipe-menu]');
+    pipeMenu?.click();
+    const pipeOption = qa(window, '[data-pipe-flyout] [data-network]').find((button) => button.dataset.network === 'aguas_negras');
+    report.check('El desplegable de tubería ofrece las seis redes', qa(window, '[data-pipe-flyout] [data-network]').length === 6);
+    pipeOption?.click();
+    report.check('Elegir una red activa la herramienta de tubería', app.tool === 'pipe' && app.pipeNetwork === 'aguas_negras',
+      `${app.tool} · ${app.pipeNetwork}`);
+    const beforePipe = app.model.design.elements.length;
+    pointer(window, app.svg, 'pointerdown', clientPoint(app, 200, 600));
+    pointer(window, app.svg, 'pointerup', clientPoint(app, 200, 600));
+    pointer(window, app.svg, 'pointerdown', clientPoint(app, 400, 640));
+    pointer(window, app.svg, 'pointerup', clientPoint(app, 400, 640));
+    app.renderNow();
+    pointer(window, app.svg, 'pointerdown', clientPoint(app, 600, 600));
+    pointer(window, app.svg, 'pointerup', clientPoint(app, 600, 600));
+    app.renderNow();
+    app.finishPipe();
+    app.renderNow();
+    const pipe = app.model.design.elements.at(-1);
+    report.check('Trazar una tubería con varios puntos',
+      app.model.design.elements.length === beforePipe + 1 && pipe?.type === 'pipe' && pipe.points.length === 3,
+      `${pipe?.type} · ${pipe?.points?.length} puntos`);
+    report.check('La tubería hereda red, color, diámetro y material',
+      pipe?.network === 'aguas_negras' && pipe?.color === '#7c3aed' && pipe?.diameter === '4"' && pipe?.material === 'pvc',
+      `${pipe?.network} · ${pipe?.color} · ${pipe?.diameter}`);
+    const pipeNode = app.svg.querySelector(`.plan-element[data-id="${pipe.id}"]`);
+    report.check('La tubería se dibuja con nodos y rótulo técnico',
+      Boolean(pipeNode?.querySelector('polyline')) && Boolean(pipeNode?.querySelector('.mep-label'))
+      && /AN Ø 4"/.test(pipeNode?.textContent || ''),
+      pipeNode?.querySelector('.mep-label')?.textContent);
+
+    // Inspector: cambiar red y diámetro.
+    selectElement(app, pipe.id);
+    const networkSelect = q(window, '[data-prop="network"]');
+    report.check('El inspector muestra la red de la tubería seleccionada', networkSelect?.value === 'aguas_negras', networkSelect?.value);
+    networkSelect.value = 'incendio';
+    networkSelect.dispatchEvent(new window.Event('change', { bubbles: true }));
+    app.renderNow();
+    const pipeAfter = elementById(app, pipe.id);
+    report.check('Cambiar de red aplica color y diámetro de referencia',
+      pipeAfter.network === 'incendio' && pipeAfter.color === '#b71f2e' && pipeAfter.diameter === '2"' && pipeAfter.material === 'galvanizado',
+      `${pipeAfter.network} · ${pipeAfter.color} · ${pipeAfter.diameter}`);
+
+    // Tubería eléctrica.
+    app.applyTool('conduit');
+    const beforeConduit = app.model.design.elements.length;
+    pointer(window, app.svg, 'pointerdown', clientPoint(app, 200, 700));
+    pointer(window, app.svg, 'pointerup', clientPoint(app, 200, 700));
+    pointer(window, app.svg, 'pointerdown', clientPoint(app, 620, 700));
+    pointer(window, app.svg, 'pointerup', clientPoint(app, 620, 700));
+    app.finishPipe();
+    app.renderNow();
+    const conduit = app.model.design.elements.at(-1);
+    report.check('Trazar una tubería eléctrica',
+      app.model.design.elements.length === beforeConduit + 1 && conduit?.type === 'conduit'
+      && conduit.circuit === 'C1' && conduit.gauge === '12' && Number(conduit.phases) >= 1,
+      `${conduit?.type} · ${conduit?.circuit} · ${conduit?.gauge} AWG`);
+    selectElement(app, conduit.id);
+    const conduitColorBefore = conduit.color;
+    const circuitField = q(window, '[data-prop="circuit"]');
+    circuitField.value = 'C7';
+    circuitField.dispatchEvent(new window.Event('change', { bubbles: true }));
+    app.renderNow();
+    report.check('El circuito se puede renombrar y colorea el tramo',
+      elementById(app, conduit.id).circuit === 'C7' && elementById(app, conduit.id).color !== conduitColorBefore,
+      elementById(app, conduit.id).color);
+
+    // Equipo eléctrico con carga.
+    const beforeDevice = app.model.design.elements.length;
+    app.model.addElement('cad_elec_ac', { x: 700, y: 640, circuit: 'C7' });
+    app.renderNow();
+    const device = app.model.design.elements.at(-1);
+    report.check('Los equipos eléctricos admiten circuito y carga',
+      app.model.design.elements.length === beforeDevice + 1 && device.circuit === 'C7' && device.load === 3500,
+      `${device?.circuit} · ${device?.load} VA`);
+
+    // Resumen y panel de redes.
+    const summary = app.computeNetworks();
+    const circuit7 = summary.electrical.find((entry) => entry.code === 'C7');
+    report.check('El resumen de redes agrupa la carga por circuito',
+      summary.pipes >= 1 && summary.conduits >= 1 && circuit7?.deviceCount === 1 && circuit7?.loadVA === 3500,
+      `${summary.pipes} tuberías · ${summary.electrical.map((entry) => entry.code).join(',')}`);
+    report.check('El resumen calcula corriente, breaker y calibre',
+      circuit7?.breaker === 20 && /^1[024]$/.test(circuit7?.gauge || '') && circuit7.current > 15,
+      `${circuit7?.current?.toFixed(1)} A · ${circuit7?.breaker} A · ${circuit7?.gauge} AWG`);
+    app.openDrawer('networks');
+    await sleep(30);
+    report.check('El panel de redes resume el piso',
+      /Tuberías/.test(q(window, '[data-networks-content]')?.textContent || '')
+      && /Circuito C7/.test(q(window, '[data-networks-content]')?.textContent || ''),
+      q(window, '[data-networks-content] h3')?.textContent);
+    report.check('El panel de redes repite que es un cálculo de referencia',
+      /no sustituye/i.test(q(window, '[data-networks-content]')?.textContent || ''));
+    app.closeDrawer();
 
     /* --------------------------- biblioteca y colocación --------------------------- */
     const signButton = q(window, '[data-open-library="sign"]');
@@ -778,8 +879,8 @@ async function main() {
         assetFailures.push(`${key}: ${error.message}`);
       }
     }
-    report.check('Los 354 pictogramas y 121 equipos se instancian sin errores', assetsOk === 475 && assetFailures.length === 0,
-      `${assetsOk}/475 · ${assetFailures.slice(0, 3).join(', ')}`);
+    report.check('Los 354 pictogramas y 145 equipos se instancian sin errores', assetsOk === 499 && assetFailures.length === 0,
+      `${assetsOk}/499 · ${assetFailures.slice(0, 3).join(', ')}`);
 
     const xlink = new window.DOMParser().parseFromString(
       '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 10 10"><defs><g id="marca"><rect width="10" height="10"/></g></defs><use xlink:href="#marca"/></svg>',
@@ -796,6 +897,18 @@ async function main() {
       namespaceError === '' && prefixed.startsWith('#') && prefixed !== '#marca' && /-a\d+-marca$/.test(prefixed)
       && !/a\d+-[^#]*-a\d+-marca$/.test(prefixed),
       namespaceError || prefixed);
+
+    /* ----------------------- redes guardadas en el servidor ----------------------- */
+    app.model.addElement('cad_elec_ac', { x: 740, y: 660, circuit: 'C9', load: 4000 });
+    await app.saveNow('Redes de prueba', { force: true });
+    await sleep(500);
+    const persisted = JSON.parse((await client.get(`api/floors/${floorId}/mep`, { accept: 'application/json' })).text);
+    const circuit9 = (persisted.summary?.electrical || []).find((entry) => entry.code === 'C9');
+    report.check('El servidor resume las redes guardadas',
+      persisted.summary?.pipes >= 1 && persisted.summary?.conduits >= 1
+      && circuit9?.loadVA === 4000 && circuit9?.breaker === 50
+      && circuit9?.warnings?.some((message) => /Sin tramos/.test(message)),
+      `${persisted.summary?.pipes} tuberías · ${(persisted.summary?.electrical || []).map((entry) => `${entry.code}:${entry.loadVA}VA/${entry.breaker}A`).join(' ')}`);
 
     report.check('Sin errores de JavaScript durante la sesión', window.__errors.length === 0, window.__errors.join(' | ').slice(0, 200));
   } finally {

@@ -6,6 +6,7 @@
   const TYPE_NAMES = {
     wall: 'Muro', door: 'Puerta sencilla', door_double: 'Puerta doble', door_garage: 'Portón de garaje', route: 'Ruta de evacuación', text: 'Texto', dimension: 'Medida',
     line: 'Línea', rect: 'Rectángulo', ellipse: 'Elipse', sign: 'Señal ISO 7010', cad: 'Equipo CAD',
+    pipe: 'Tubería', conduit: 'Tubería eléctrica',
   };
   const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 
@@ -34,6 +35,12 @@
         try {
           if (prop === 'label') {
             this.model.setProps({ label: field.value });
+          } else if (prop === 'slope' || prop === 'pressure' || prop === 'load') {
+            this.model.setProps({ [prop]: Number(field.value) });
+          } else if (prop === 'voltage' || prop === 'phases') {
+            this.model.setProps({ [prop]: Number(field.value) });
+          } else if (['network', 'diameter', 'material', 'circuit', 'gauge'].includes(prop)) {
+            this.model.setProps({ [prop]: field.value });
           } else if (prop === 'fontSize' || prop === 'stroke' || prop === 'opacity') {
             this.model.setProps({ [prop]: Number(field.value) });
           } else if (prop === 'flipX' || prop === 'flipY' || prop === 'locked') {
@@ -113,6 +120,11 @@
         const label = String(code).startsWith('SVC_') ? 'Señal de servicios' : TYPE_NAMES.sign;
         return `${label} · ${code}`;
       }
+      if (element.type === 'pipe') {
+        const info = this.model.networkInfo(element.network);
+        return info ? `Tubería · ${info.label}` : TYPE_NAMES.pipe;
+      }
+      if (element.type === 'conduit') return `Circuito ${element.circuit || 'C1'}`;
       if (this.model.cadForType(element.type)) return TYPE_NAMES.cad;
       return TYPE_NAMES[element.type] || 'Elemento';
     }
@@ -162,6 +174,30 @@
       const hasPath = elements.some((element) => Array.isArray(element.points));
       const hasText = elements.some((element) => element.type === 'text' || element.type === 'dimension');
       const hasDoor = elements.some((element) => (root.DOOR_TYPES || ['door']).includes(element.type));
+      const hasPipe = Boolean(single && single.type === 'pipe');
+      const hasConduit = Boolean(single && single.type === 'conduit');
+      const hasDevice = Boolean(single && this.model.isElectricalDeviceType(single.type));
+      const Mep = root.Mep;
+      const mep = this.model.mepData() || {};
+      const networkOptions = hasPipe
+        ? Object.entries(mep.hydraulic || {}).map(([key, info]) => `<option value="${esc(key)}" ${single.network === key ? 'selected' : ''}>${esc(info.label)} · ${esc(info.short)}</option>`).join('')
+        : '';
+      const diameterOptions = hasPipe
+        ? (Array.isArray(mep.diameters) ? mep.diameters : []).map((value) => `<option value="${esc(value)}" ${single.diameter === value ? 'selected' : ''}>${esc(value)}</option>`).join('')
+        : '';
+      const materialOptions = hasPipe
+        ? Object.entries(mep.materials || {}).map(([key, label]) => `<option value="${esc(key)}" ${single.material === key ? 'selected' : ''}>${esc(label)}</option>`).join('')
+        : '';
+      const electrical = this.model.electricalConfig();
+      const voltageOptions = hasConduit
+        ? electrical.voltages.map((value) => `<option value="${value}" ${Number(single.voltage) === Number(value) ? 'selected' : ''}>${value} V</option>`).join('')
+        : '';
+      const phaseOptions = hasConduit
+        ? electrical.phases.map((value) => `<option value="${value}" ${Number(single.phases) === Number(value) ? 'selected' : ''}>${value === 3 ? 'Trifásico (3F)' : 'Monofásico (1F)'}</option>`).join('')
+        : '';
+      const gaugeOptions = hasConduit
+        ? electrical.gauges.map((value) => `<option value="${esc(value)}" ${String(single.gauge) === String(value) ? 'selected' : ''}>${esc(value)} AWG</option>`).join('')
+        : '';
       const colors = root.COLORS || [];
       const canEdit = this.model.canEdit();
       const layerOptions = design.layers.map((layer) => `<option value="${esc(layer.id)}" ${elements.every((element) => element.layerId === layer.id) ? 'selected' : ''}>${esc(layer.name)}</option>`).join('');
@@ -170,6 +206,37 @@
       const lockedAll = elements.every((element) => element.locked);
       const sign = single ? this.model.signCodeForType(single.type) : null;
       const cad = single ? this.model.cadForType(single.type) : null;
+      const mepSection = (hasPipe || hasConduit || hasDevice) && Mep ? `
+        <section class="inspector-section">
+          <h3>${hasPipe ? 'Red de tubería' : hasConduit ? 'Circuito eléctrico' : 'Conexión eléctrica'}</h3>
+          <div class="inspector-mep">
+            ${hasPipe ? `
+              <label class="field compact"><span>Red</span><select data-prop="network" ${canEdit ? '' : 'disabled'}>${networkOptions}</select><small>Al cambiar de red se aplican color, diámetro y material de referencia.</small></label>
+              <div class="inspector-grid two">
+                <label class="field compact"><span>Diámetro</span><select data-prop="diameter" ${canEdit ? '' : 'disabled'}>${diameterOptions}</select></label>
+                <label class="field compact"><span>Material</span><select data-prop="material" ${canEdit ? '' : 'disabled'}>${materialOptions}</select></label>
+              </div>
+              <div class="inspector-grid two">
+                <label class="field compact"><span>Pendiente (física)</span><input type="number" min="0" max="15" step="0.5" data-prop="slope" value="${Number(single.slope) || 0}" ${canEdit ? '' : 'disabled'}><small>Referencia de diseño; el desagüe real se verifica en obra.</small></label>
+                <label class="field compact"><span>Presión (kPa)</span><input type="number" min="0" max="5000" step="5" data-prop="pressure" value="${Number(single.pressure) || 0}" ${canEdit ? '' : 'disabled'}></label>
+              </div>
+              <p class="help-text">Tramo de ${esc(Mep.formatMeters(Mep.elementLengthMeters(single, design.canvas)))} entre ${Array.isArray(single.points) ? single.points.length : 2} puntos. Arrastra los vértices azules para ajustar el recorrido.</p>` : ''}
+            ${hasConduit ? `
+              <div class="inspector-grid two">
+                <label class="field compact"><span>Circuito</span><input type="text" maxlength="12" data-prop="circuit" value="${esc(single.circuit || 'C1')}" ${canEdit ? '' : 'disabled'}></label>
+                <label class="field compact"><span>Tensión</span><select data-prop="voltage" ${canEdit ? '' : 'disabled'}>${voltageOptions}</select></label>
+              </div>
+              <div class="inspector-grid two">
+                <label class="field compact"><span>Calibre</span><select data-prop="gauge" ${canEdit ? '' : 'disabled'}>${gaugeOptions}</select></label>
+                <label class="field compact"><span>Fases</span><select data-prop="phases" ${canEdit ? '' : 'disabled'}>${phaseOptions}</select></label>
+              </div>
+              <p class="help-text">Los tramos con el mismo código forman un circuito. El número de fases se declara aquí, no se deduce de la tensión.</p>
+              <p class="help-text">Tramo de ${esc(Mep.formatMeters(Mep.elementLengthMeters(single, design.canvas)))}. El panel <strong>Redes</strong> suma cargas y estima la caída de tensión.</p>` : ''}
+            ${hasDevice ? `
+              <label class="field compact"><span>Circuito</span><input type="text" maxlength="12" data-prop="circuit" value="${esc(single.circuit || 'C1')}" ${canEdit ? '' : 'disabled'}><small>Agrupa esta carga con su circuito.</small></label>
+              <label class="field compact"><span>Carga (VA)</span><input type="number" min="0" max="100000" step="10" data-prop="load" value="${Number(single.load) || 0}" ${canEdit ? '' : 'disabled'}></label>` : ''}
+          </div>
+        </section>` : '';
       return `
         ${sign ? `<div class="inspector-asset"><span class="inspector-asset-thumb" data-asset-preview="${esc(single.type)}"></span><div><strong>${esc(this.model.catalogs.signs[sign]?.name || sign)}</strong><small>${esc(sign)} · ${esc(this.model.catalogs.signCategories[this.model.catalogs.signs[sign]?.category]?.label || (String(sign).startsWith('SVC_') ? 'Orientación y servicios' : 'ISO 7010'))}</small></div></div>` : ''}
         ${cad ? `<div class="inspector-asset"><span class="inspector-asset-thumb" data-asset-preview="${esc(single.type)}"></span><div><strong>${esc(cad.name)}</strong><small>Equipo CAD esquemático</small></div></div>` : ''}
@@ -199,6 +266,7 @@
           ${hasDoor ? `<label class="switch-row compact"><span><strong>Cambiar bisagra</strong><small>Voltea la puerta hacia el otro lado del vano.</small></span><input type="checkbox" data-prop="flipX" ${single?.flipX ? 'checked' : ''} ${canEdit ? '' : 'disabled'}></label>
           <label class="switch-row compact"><span><strong>Abrir al otro lado</strong><small>Invierte el sentido de abatimiento respecto al muro.</small></span><input type="checkbox" data-prop="flipY" ${single?.flipY ? 'checked' : ''} ${canEdit ? '' : 'disabled'}></label>` : ''}
         </section>
+        ${mepSection}
         <section class="inspector-section">
           <h3>Organización</h3>
           <label class="field compact"><span>Capa</span><select data-prop="layerId">${layerOptions}</select></label>

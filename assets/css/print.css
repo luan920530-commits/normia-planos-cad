@@ -46,3 +46,21 @@ body.print-body {
   .print-svg svg { max-height: 170mm; }
   a { color: inherit; text-decoration: none; }
 }
+
+/* Redes e instalaciones: leyenda y tablas del piso. */
+.print-mep { display: flex; flex-direction: column; gap: 8px; break-inside: avoid; }
+.print-mep h2 { font-size: .86rem; margin: 0; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.print-table { width: 100%; border-collapse: collapse; font-size: .72rem; }
+.print-table caption { text-align: left; font-weight: 600; font-size: .74rem; padding-bottom: 4px; color: var(--ink); }
+.print-table th, .print-table td { border-bottom: 1px solid var(--line); padding: 4px 6px; text-align: left; vertical-align: top; }
+.print-table thead th { color: var(--muted); font-weight: 600; font-size: .68rem; text-transform: uppercase; letter-spacing: .03em; }
+.print-table tbody th { font-weight: 600; }
+.print-table small { color: var(--muted); font-weight: 400; }
+.print-swatch { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 5px; vertical-align: baseline; }
+.print-warnings { margin: 0; padding-left: 16px; font-size: .7rem; color: #9a3412; display: flex; flex-direction: column; gap: 2px; }
+.print-note { margin: 0; font-size: .68rem; color: var(--muted); }
+
+@media print {
+  .print-mep { font-size: 9pt; }
+  .print-table { font-size: 8pt; }
+}

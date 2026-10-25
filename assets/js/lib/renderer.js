@@ -6,7 +6,7 @@
   const NS = 'http://www.w3.org/2000/svg';
   const XLINK_NS = 'http://www.w3.org/1999/xlink';
   const DOOR_TYPES = ['door', 'door_double', 'door_garage'];
-  const PATH_TYPES = ['wall', 'route', 'line', 'dimension'];
+  const PATH_TYPES = ['wall', 'route', 'line', 'dimension', 'pipe', 'conduit'];
 
   const node = (name, attrs = {}, text = null) => {
     const element = document.createElementNS(NS, name);
@@ -353,6 +353,60 @@
         }
         return group;
       }
+      if (type === 'pipe' || type === 'conduit') {
+        const Mep = root.Mep;
+        const mep = this.catalogs.mep;
+        const networkInfo = type === 'pipe' && mep && mep.hydraulic ? mep.hydraulic[element.network] || null : null;
+        const points = this.elementPoints(element);
+        const pointText = points.map((point) => `${G.round(point.x, 2)} ${G.round(point.y, 2)}`).join(' ');
+        const width = Math.max(1.5, Number(stroke) || (type === 'pipe' ? 3.5 : 2.5));
+        const dash = type === 'pipe' && Array.isArray(networkInfo?.dash) && networkInfo.dash.length
+          ? networkInfo.dash.map((value) => Math.max(1, Number(value) || 1)).join(' ')
+          : null;
+        group.appendChild(node('polyline', {
+          points: pointText,
+          fill: 'none',
+          stroke: color,
+          'stroke-width': width,
+          'stroke-linecap': 'round',
+          'stroke-linejoin': 'round',
+          opacity: 0.92,
+          ...(dash ? { 'stroke-dasharray': dash } : {}),
+        }));
+        // Nodos del tramo: ayudan a leer acometidas, cambios de diámetro y uniones.
+        const joint = Math.max(2, Math.min(5, width * 0.95));
+        for (const point of points) {
+          group.appendChild(node('circle', {
+            cx: point.x, cy: point.y, r: joint,
+            fill: '#ffffff', stroke: color, 'stroke-width': Math.max(1, width * 0.45),
+          }));
+        }
+        group.appendChild(node('polyline', {
+          points: pointText,
+          fill: 'none',
+          stroke: 'transparent',
+          'stroke-width': Math.max(16 / zoom, width + 12 / zoom),
+          'stroke-linecap': 'round',
+          'stroke-linejoin': 'round',
+          class: 'hit-area',
+        }));
+        const caption = element.label
+          ? element.label.split('\n')[0]
+          : (Mep && type === 'pipe' ? Mep.pipeCaption(element, this.catalogs, canvas) : (Mep ? Mep.conduitCaption(element) : ''));
+        if (caption) {
+          const middle = points[Math.floor((points.length - 1) / 2)];
+          const next = points[Math.floor((points.length - 1) / 2) + 1] || middle;
+          const cx = (middle.x + next.x) / 2;
+          const cy = (middle.y + next.y) / 2;
+          group.appendChild(node('text', {
+            x: cx + 6 / zoom, y: cy - 6 / zoom,
+            'font-size': 10 / zoom, fill: color, class: 'element-label mep-label',
+            'font-family': 'system-ui, -apple-system, Segoe UI, sans-serif',
+            'paint-order': 'stroke', stroke: '#ffffff', 'stroke-width': 3 / zoom, 'stroke-linejoin': 'round',
+          }, clean(caption)));
+        }
+        return group;
+      }
       if (type === 'wall' || type === 'route' || type === 'line') {
         const points = this.elementPoints(element);
         const pointText = points.map((point) => `${G.round(point.x, 2)} ${G.round(point.y, 2)}`).join(' ');
@@ -538,13 +592,16 @@
         }
         return group;
       }
-      if (draft.tool === 'route') {
-        group.appendChild(node('polyline', { points: draft.points.map((point) => `${point.x} ${point.y}`).join(' '), fill: 'none', stroke: '#237f52', 'stroke-width': 2 / zoom, 'stroke-dasharray': `${5 / zoom} ${4 / zoom}` }));
+      if (draft.tool === 'route' || draft.tool === 'pipe' || draft.tool === 'conduit') {
+        const mep = this.catalogs.mep;
+        const color = draft.color || (draft.tool === 'route' ? '#237f52' : draft.tool === 'conduit' ? '#2563eb' : (mep?.hydraulic?.[draft.network]?.color || '#0891b2'));
+        const width = draft.tool === 'route' ? 2 / zoom : Math.max(2, (draft.stroke || 3.5)) / zoom;
+        group.appendChild(node('polyline', { points: draft.points.map((point) => `${point.x} ${point.y}`).join(' '), fill: 'none', stroke: color, 'stroke-width': width, 'stroke-dasharray': draft.tool === 'route' ? `${5 / zoom} ${4 / zoom}` : `${9 / zoom} ${5 / zoom}` }));
         for (const [index, point] of draft.points.slice(0, -1).entries()) {
           group.appendChild(node('circle', {
             cx: point.x, cy: point.y, r: (index === 0 ? 7 : 3) / zoom,
-            fill: index === 0 ? 'rgba(35, 127, 82, .16)' : '#237f52',
-            stroke: index === 0 ? '#237f52' : 'none', 'stroke-width': 1.5 / zoom,
+            fill: index === 0 ? 'rgba(35, 127, 82, .16)' : color,
+            stroke: index === 0 ? color : 'none', 'stroke-width': 1.5 / zoom,
           }));
         }
         return group;
