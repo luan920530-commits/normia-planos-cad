@@ -1,0 +1,12 @@
+Normia Planos CAD · paquete de demostración
+==========================================
+
+Este paquete incluye el proyecto de ejemplo "Planta de ejemplo · Bodega y oficinas"
+(planta baja + mezzanina) con muros, puertas, mobiliario, señalización ISO 7010 y
+rutas de evacuación.
+
+Al instalar, deja marcada la casilla "Cargar proyecto de demostración" para crear
+la cuenta administradora y el proyecto de ejemplo en la misma instalación.
+
+El proyecto de demostración es material de referencia y no certifica cumplimiento
+normativo. Verifica dimensiones, rutas y escala en sitio antes de usar los planos.

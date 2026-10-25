@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Normia Planos CAD">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2f7dfa"/>
+      <stop offset="1" stop-color="#0a4fbf"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="url(#g)"/>
+  <path d="M17 46V18h6.4l16.2 19.2V18H46v28h-6.4L23.4 26.8V46z" fill="#fff"/>
+  <path d="M14 52h36" stroke="#9dc2ff" stroke-width="3" stroke-linecap="round" opacity=".8"/>
+</svg>
