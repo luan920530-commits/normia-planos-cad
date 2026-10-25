@@ -31,8 +31,9 @@ Normia Planos CAD · instalación rápida
      ni certificaciones. Verifica dimensiones, rutas y escala en el sitio.
    - Normia Planos CAD es software libre con licencia GPL-3.0. Los pictogramas ISO 7010
      incluidos conservan su licencia y atribución en resources/licenses/ y en el README.
-   - Las 22 señales de orientación y servicios (baños, vestidores, cafetería, etc.) son
-     pictogramas propios de Normia: complementan la señalización pero no son ISO 7010.
+   - Las 23 señales de orientación y servicios (baños, vestidores, cafetería, «Usted está
+     aquí», etc.) son pictogramas propios de Normia: complementan la señalización pero
+     no son ISO 7010.
 
 6. Sin conexión
    - La aplicación funciona en una red aislada: no descarga fuentes, iconos, scripts ni
