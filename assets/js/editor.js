@@ -8,7 +8,9 @@
   const TYPE_HINTS = {
     select: 'Selecciona y arrastra para mover. Shift añade a la selección; arrastra el fondo para seleccionar un área.',
     wall: 'Muro: arrastra para trazar. Mantén Shift para alinear horizontal o vertical. Esc vuelve a seleccionar.',
-    door: 'Puerta: haz clic en el lienzo para insertarla en la posición indicada.',
+    door: 'Puerta sencilla: haz clic sobre el muro; la hoja abre hacia arriba. Flip en el inspector para cambiar bisagra o lado.',
+    door_double: 'Puerta doble: haz clic sobre el muro. Dos hojas encontradas; ajusta el ancho de la caja para el vano.',
+    door_garage: 'Portón o reja de garaje: haz clic sobre el muro y ajusta el ancho de la caja al vano real.',
     route: 'Ruta de evacuación: haz clic para añadir puntos. Enter o doble clic termina; Esc cancela.',
     text: 'Texto: haz clic para insertar una etiqueta y edítala en el inspector.',
     dimension: 'Medida: arrastra entre dos puntos para acotar la distancia.',
@@ -18,7 +20,7 @@
     place: 'Colocación: haz clic para insertar el recurso elegido. Mantén Shift para insertar varios. Esc cancela.',
   };
   const TYPE_NAMES = {
-    wall: 'Muro', door: 'Puerta', route: 'Ruta de evacuación', text: 'Texto', dimension: 'Medida',
+    wall: 'Muro', door: 'Puerta sencilla', door_double: 'Puerta doble', door_garage: 'Portón de garaje', route: 'Ruta de evacuación', text: 'Texto', dimension: 'Medida',
     line: 'Línea', rect: 'Rectángulo', ellipse: 'Elipse',
   };
   const q = (selector, context = document) => context.querySelector(selector);
@@ -122,8 +124,27 @@
         this.closeShapeFlyout();
       });
       q('[data-shape-flyout]')?.addEventListener('click', (event) => event.stopPropagation());
+      q('[data-door-menu]')?.addEventListener('click', (event) => {
+        event.stopPropagation();
+        const flyout = q('[data-door-flyout]');
+        const button = q('[data-door-menu]');
+        if (!flyout) return;
+        this.closeShapeFlyout();
+        const open = flyout.hidden;
+        flyout.hidden = !open;
+        button.setAttribute('aria-expanded', open ? 'true' : 'false');
+      });
+      q('[data-door-flyout]')?.addEventListener('click', (event) => {
+        const tool = event.target.closest('[data-tool]')?.dataset.tool;
+        if (tool) this.applyTool(tool);
+        this.closeDoorFlyout();
+      });
+      q('[data-door-flyout]')?.addEventListener('click', (event) => event.stopPropagation());
       document.addEventListener('click', (event) => {
-        if (!event.target.closest?.('.rail-flyout-wrap')) this.closeShapeFlyout();
+        if (!event.target.closest?.('.rail-flyout-wrap')) {
+          this.closeShapeFlyout();
+          this.closeDoorFlyout();
+        }
       });
 
       qa('[data-open-library]').forEach((button) => {
@@ -281,6 +302,7 @@
       });
       const hint = q('[data-stage-hint]');
       if (hint) hint.textContent = TYPE_HINTS[tool] || TYPE_HINTS.select;
+      this.closeDoorFlyout();
       this.svg.style.cursor = this.cursorFor(tool);
       if (!options.silent) this.scheduleRender();
     }
@@ -540,7 +562,7 @@
         this.scheduleRender();
         return;
       }
-      if (this.tool === 'door' || this.tool === 'text') {
+      if ((root.DOOR_TYPES || []).includes(this.tool) || this.tool === 'text') {
         this.insertAtPoint(this.tool, point);
         return;
       }
@@ -874,10 +896,12 @@
 
     insertAtPoint(tool, point) {
       const base = this.model.defaultFor(tool);
+      const isDoor = (root.DOOR_TYPES || []).includes(tool);
       try {
         this.model.addElement(tool, {
           x: point.x - base.w / 2,
-          y: point.y - base.h / 2,
+          // El clic marca la línea del muro: las puertas abren hacia arriba.
+          y: isDoor ? point.y - base.h : point.y - base.h / 2,
           ...(tool === 'text' ? { label: 'Texto', fontSize: 18 } : {}),
         });
         this.applyTool('select');
@@ -973,6 +997,13 @@
     closeShapeFlyout() {
       const flyout = q('[data-shape-flyout]');
       const button = q('[data-shape-menu]');
+      if (flyout) flyout.hidden = true;
+      if (button) button.setAttribute('aria-expanded', 'false');
+    }
+
+    closeDoorFlyout() {
+      const flyout = q('[data-door-flyout]');
+      const button = q('[data-door-menu]');
       if (flyout) flyout.hidden = true;
       if (button) button.setAttribute('aria-expanded', 'false');
     }
@@ -1147,7 +1178,12 @@
         event.preventDefault();
         return;
       }
-      const shortcuts = { v: 'select', m: 'wall', u: 'door', e: 'route', t: 'text', d: 'dimension', l: 'line', b: 'rect', o: 'ellipse' };
+      if (event.shiftKey && event.key.toLowerCase() === 'u') {
+        event.preventDefault();
+        this.applyTool('door_double');
+        return;
+      }
+      const shortcuts = { v: 'select', m: 'wall', u: 'door', r: 'door_garage', e: 'route', t: 'text', d: 'dimension', l: 'line', b: 'rect', o: 'ellipse' };
       const tool = shortcuts[event.key.toLowerCase()];
       if (tool) {
         event.preventDefault();
@@ -1675,6 +1711,10 @@
     overlay?.remove();
     designField.remove();
     bootField.remove();
+    // Contadores de la barra lateral: se leen del catálogo real, así no quedan
+    // cifras fijas cuando se amplían las bibliotecas.
+    const cadCount = q('[data-cad-count]');
+    if (cadCount) cadCount.textContent = String(Object.keys(catalogs.cad || {}).length);
     try {
       const app = new EditorApp(boot, design, catalogs);
       window.NormiaEditor = app;

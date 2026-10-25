@@ -60,6 +60,10 @@ function renderedPoints(app, id) {
   return polyline ? numbers(polyline.getAttribute('points')) : [];
 }
 
+function rendererOfDoor(app, id) {
+  return app.svg.querySelector(`.plan-element[data-id="${id}"] .door`);
+}
+
 function near(actual, expected, tolerance = 1.5) {
   return Math.abs(Number(actual) - Number(expected)) <= tolerance;
 }
@@ -134,9 +138,12 @@ async function main() {
     /* ------------------------------- arranque ------------------------------- */
     report.check('El editor arranca con la aplicación real', Boolean(app && app.model && app.renderer), window.document.title);
     report.check('Catálogo de señalización completo', Object.keys(app.catalogs.signs).length === 332, String(Object.keys(app.catalogs.signs).length));
-    report.check('Catálogo CAD completo', Object.keys(app.catalogs.cad).length === 32, String(Object.keys(app.catalogs.cad).length));
-    report.check('Familias CAD cargadas', Object.keys(app.catalogs.cadCategories).length === 6, Object.keys(app.catalogs.cadCategories).join(','));
-    report.check('Paleta de colores expuesta', window.Normia.COLORS.length === 28, String(window.Normia.COLORS.length));
+    report.check('Catálogo CAD ampliado a 90 objetos', Object.keys(app.catalogs.cad).length === 90, String(Object.keys(app.catalogs.cad).length));
+    report.check('Familias CAD ampliadas a 15', Object.keys(app.catalogs.cadCategories).length === 15, Object.keys(app.catalogs.cadCategories).join(','));
+    const expectedFamilies = ['restaurant', 'warehouse', 'retail', 'hospital', 'textile', 'grill', 'supermarket', 'residential', 'sports'];
+    report.check('Nuevas familias sectoriales disponibles', expectedFamilies.every((key) => app.catalogs.cadCategories[key]?.label), expectedFamilies.filter((key) => !app.catalogs.cadCategories[key]).join(',') || 'todas');
+    report.check('Paleta de colores expuesta', window.Normia.COLORS.length === 29, String(window.Normia.COLORS.length));
+    report.check('La barra lateral cuenta los equipos del catálogo', q(window, '[data-cad-count]')?.textContent === '90', q(window, '[data-cad-count]')?.textContent);
     report.check('Lienzo con el preset A4 horizontal', app.model.design.canvas.width === 1123 && app.model.design.canvas.height === 794, `${app.model.design.canvas.width}×${app.model.design.canvas.height}`);
     report.check('Barra de estado muestra el tamaño', q(window, '[data-canvas-size]').textContent.includes('794'), q(window, '[data-canvas-size]').textContent);
     report.check('Escala visible en la barra de estado', q(window, '[data-scale-label]').textContent.includes('1:100'), q(window, '[data-scale-label]').textContent);
@@ -147,7 +154,7 @@ async function main() {
 
     /* --------------------------- herramientas/base --------------------------- */
     const toolNames = qa(window, '[data-tool]').map((button) => button.dataset.tool).filter(Boolean);
-    report.check('La barra lateral expone las herramientas básicas', ['select', 'wall', 'door', 'route', 'text', 'dimension', 'line', 'rect', 'ellipse'].every((tool) => toolNames.includes(tool)), toolNames.join(','));
+    report.check('La barra lateral expone las herramientas básicas', ['select', 'wall', 'door', 'door_double', 'door_garage', 'route', 'text', 'dimension', 'line', 'rect', 'ellipse'].every((tool) => toolNames.includes(tool)), toolNames.join(','));
     q(window, '[data-tool="wall"]').click();
     report.check('Elegir herramienta actualiza el estado y la pista', app.tool === 'wall' && q(window, '[data-stage-hint]').textContent.includes('Muro'), q(window, '[data-stage-hint]').textContent.slice(0, 40));
     app.applyTool('herramienta_inventada');
@@ -168,6 +175,68 @@ async function main() {
     const wallNode = () => app.svg.querySelector(`.plan-element[data-id="${wall.id}"]`);
     const wallStroke = () => wallNode()?.querySelector('polyline:not(.hit-area)');
     let drawn = renderedPoints(app, wall.id);
+    /* ---------------------------- símbolos de puerta ---------------------------- */
+    const addDoor = (type, x, y, extra = {}) => app.model.addElement(type, { x, y, ...extra });
+    const plainDoor = addDoor('door', 60, 260);
+    app.renderNow();
+    const plainNode = rendererOfDoor(app, plainDoor.id);
+    report.check('La puerta usa un símbolo de abatimiento (hoja, bisagra y arco)',
+      Boolean(plainNode) && plainNode.querySelectorAll('line').length >= 3 && plainNode.querySelectorAll('circle').length >= 1 && Boolean(plainNode.querySelector('path')),
+      `${plainNode?.querySelectorAll('line').length || 0} líneas · ${plainNode?.querySelectorAll('circle').length || 0} bisagras`);
+    const plainArcNode = plainNode?.querySelector('path');
+    const plainArc = plainArcNode?.getAttribute('d') || '';
+    report.check('El arco de la puerta es continuo y no punteado',
+      Boolean(plainArc) && !plainArcNode.hasAttribute('stroke-dasharray') && /A\s/.test(plainArc), plainArc.slice(0, 42));
+    report.check('La puerta sencilla mide 90 de vano y 90 de abatimiento', plainDoor.w === 90 && plainDoor.h === 90, `${plainDoor.w}×${plainDoor.h}`);
+    app.model.select([plainDoor.id]);
+    app.model.deleteSelected();
+
+    // Una puerta guardada con el formato anterior (solo el hueco del muro)
+    // debe migrar sin moverse de la línea del muro.
+    const legacyDoor = app.model.createElement('door', { x: 60, y: 210, w: 80, h: 16 });
+    report.check('La puerta antigua 80×16 migra conservando la línea del muro',
+      legacyDoor.h === 80 && Math.abs((legacyDoor.y + legacyDoor.h) - 226) < 0.6,
+      `${legacyDoor.w}×${legacyDoor.h} en y=${legacyDoor.y}`);
+
+    app.model.clearSelection();
+    const doubleDoor = addDoor('door_double', 120, 380);
+    app.renderNow();
+    const doubleNode = rendererOfDoor(app, doubleDoor.id);
+    report.check('La puerta doble dibuja dos hojas encontradas',
+      doubleNode?.querySelectorAll('path').length === 2 && doubleNode.querySelectorAll('circle').length === 2,
+      `${doubleNode?.querySelectorAll('path').length} arcos`);
+    report.check('La puerta doble mide 120 de vano y 60 de abatimiento', doubleDoor.w === 120 && doubleDoor.h === 60, `${doubleDoor.w}×${doubleDoor.h}`);
+
+    const garage = addDoor('door_garage', 300, 380);
+    app.renderNow();
+    const garageNode = rendererOfDoor(app, garage.id);
+    report.check('El portón de garaje dibuja panel con barrotes',
+      Boolean(garageNode?.querySelector('rect')) && garageNode.querySelectorAll('line').length >= 5,
+      `${garageNode?.querySelectorAll('line').length} líneas`);
+    report.check('El portón mide 160 de vano', garage.w === 160 && garage.h === 50, `${garage.w}×${garage.h}`);
+
+    app.model.select([garage.id]);
+    app.model.setProps({ flipX: true, flipY: true });
+    app.renderNow();
+    const flipped = rendererOfDoor(app, garage.id);
+    report.check('Voltear la puerta invierte bisagra y sentido con una transformación',
+      (flipped?.getAttribute('transform') || '').includes('scale(-1 -1)'), flipped?.getAttribute('transform'));
+
+    app.model.setProps({ flipX: false, flipY: false });
+    app.model.select([doubleDoor.id]);
+    q(window, '[data-prop="flipY"]')?.click();
+    app.renderNow();
+    report.check('El inspector ofrece cambiar bisagra y lado de apertura',
+      Boolean(q(window, '[data-prop="flipX"]')) && Boolean(q(window, '[data-prop="flipY"]')) && Boolean(q(window, '[data-prop="flipY"]').checked));
+    app.model.setProps({ flipY: false });
+
+    const garageGhost = app.renderer.ghostNode({ x: 500, y: 500, w: 160, h: 50, type: 'door_garage' });
+    report.check('La vista previa de colocación dibuja el portón', Boolean(garageGhost.querySelector('.door')));
+
+    app.model.select([garage.id, doubleDoor.id]);
+    app.model.deleteSelected();
+    app.renderNow();
+
     report.check('El muro se dibuja en su posición real, no en el origen',
       near(drawn[0], wall.x + wall.points[0].x) && near(drawn[1], wall.y + wall.points[0].y)
       && near(drawn[2], wall.x + wall.points[1].x) && near(drawn[3], wall.y + wall.points[1].y),
@@ -399,7 +468,7 @@ async function main() {
 
     /* ---------------------------------- color ---------------------------------- */
     const swatch = q(window, '[data-action="color"][data-value="#2563eb"]');
-    report.check('El inspector pinta la paleta de 28 colores', qa(window, '[data-action="color"]').length === 28, String(qa(window, '[data-action="color"]').length));
+    report.check('El inspector pinta la paleta de 29 colores', qa(window, '[data-action="color"]').length === 29, String(qa(window, '[data-action="color"]').length));
     swatch?.click();
     app.renderNow();
     report.check('Aplicar color desde la paleta', elementById(app, wall.id).color === '#2563eb', elementById(app, wall.id).color);
@@ -628,8 +697,8 @@ async function main() {
         assetFailures.push(`${key}: ${error.message}`);
       }
     }
-    report.check('Los 332 pictogramas y 32 equipos se instancian sin errores', assetsOk === 364 && assetFailures.length === 0,
-      `${assetsOk}/364 · ${assetFailures.slice(0, 3).join(', ')}`);
+    report.check('Los 332 pictogramas y 90 equipos se instancian sin errores', assetsOk === 422 && assetFailures.length === 0,
+      `${assetsOk}/422 · ${assetFailures.slice(0, 3).join(', ')}`);
 
     const xlink = new window.DOMParser().parseFromString(
       '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 10 10"><defs><g id="marca"><rect width="10" height="10"/></g></defs><use xlink:href="#marca"/></svg>',

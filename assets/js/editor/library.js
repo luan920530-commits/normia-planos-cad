@@ -111,7 +111,12 @@
       this.selectedKey = null;
       if (this.search) this.search.value = '';
       if (this.title) this.title.textContent = this.kind === 'sign' ? 'Señalización ISO 7010' : 'Equipamiento CAD';
-      if (this.eyebrow) this.eyebrow.textContent = this.kind === 'sign' ? 'Biblioteca visual · 332 señalizaciones' : 'Biblioteca visual · 32 equipos';
+      if (this.eyebrow) {
+        const total = this.kind === 'sign' ? Object.keys(this.app.catalogs.signs || {}).length : Object.keys(this.app.catalogs.cad || {}).length;
+        this.eyebrow.textContent = this.kind === 'sign'
+          ? `Biblioteca visual · ${total} señalizaciones`
+          : `Biblioteca visual · ${total} equipos`;
+      }
       if (this.attribution) {
         this.attribution.textContent = this.kind === 'sign'
           ? 'Pictogramas ISO 7010 incluidos localmente. Licencia MIT de @iso-safety-signs/core © Karl Norling; atribución de Wikimedia Commons en NOTICE. Las señales son referencias gráficas: no sustituyen la señalización física normalizada.'
@@ -133,10 +138,10 @@
           name: sign.name || code,
           code,
           family: sign.category,
-          familyName: this.families[sign.category]?.name || sign.category,
+          familyName: this.families[sign.category]?.label || this.families[sign.category]?.name || sign.category,
           color: catalogs.signColors?.[sign.category] || '#334155',
           description: sign.description || '',
-          search: normalize([code, sign.name, sign.description, sign.category, this.families[sign.category]?.name, ...(catalogs.aliases?.[code] || [])].join(' ')),
+          search: normalize([code, sign.name, sign.description, sign.category, this.families[sign.category]?.label, ...(catalogs.aliases?.[code] || [])].join(' ')),
         })).sort((a, b) => a.code.localeCompare(b.code));
       } else {
         this.families = catalogs.cadCategories || {};
@@ -146,10 +151,10 @@
           name: object.name || key,
           code: '',
           family: object.category,
-          familyName: this.families[object.category]?.name || object.category,
+          familyName: this.families[object.category]?.label || this.families[object.category]?.name || object.category,
           color: object.color || '#334155',
           description: object.description || '',
-          search: normalize([key, object.name, object.description, object.category, this.families[object.category]?.name].join(' ')),
+          search: normalize([key, object.name, object.description, object.category, this.families[object.category]?.label].join(' ')),
         })).sort((a, b) => a.name.localeCompare(b.name, 'es'));
       }
     }
@@ -172,7 +177,8 @@
       for (const [key, family] of Object.entries(families)) {
         const count = this.items.filter((item) => item.family === key).length;
         if (!count) continue;
-        parts.push(`<button class="chip ${this.family === key ? 'is-active' : ''}" type="button" data-family="${key}" style="--chip-color:${family.color || '#334155'}"><span class="chip-dot"></span>${family.name || key} <em>${count}</em></button>`);
+        const familyLabel = family.short || family.label || family.name || key;
+        parts.push(`<button class="chip ${this.family === key ? 'is-active' : ''}" type="button" data-family="${key}" title="${esc(family.label || familyLabel)}" style="--chip-color:${family.color || '#334155'}"><span class="chip-dot"></span>${esc(familyLabel)} <em>${count}</em></button>`);
       }
       this.chips.innerHTML = parts.join('');
     }

@@ -77,9 +77,19 @@
         <button class="rail-button" type="button" data-tool="wall" aria-pressed="false" data-tooltip="Muro · M" aria-label="Dibujar muro">
           <svg class="icon"><use href="#i-wall"></use></svg><span>Muro</span>
         </button>
-        <button class="rail-button" type="button" data-tool="door" aria-pressed="false" data-tooltip="Puerta · U" aria-label="Insertar puerta">
-          <svg class="icon"><use href="#i-door"></use></svg><span>Puerta</span>
-        </button>
+        <div class="rail-flyout-wrap">
+          <button class="rail-button" type="button" data-tool="door" aria-pressed="false" data-tooltip="Puerta sencilla · U" aria-label="Insertar puerta sencilla">
+            <svg class="icon"><use href="#i-door"></use></svg><span>Puertas</span>
+          </button>
+          <button class="rail-caret" type="button" data-door-menu aria-expanded="false" aria-label="Más tipos de puerta" data-tooltip="Puertas dobles y portones">
+            <svg class="icon"><use href="#i-chevron-down"></use></svg>
+          </button>
+          <div class="rail-flyout" data-door-flyout hidden>
+            <button type="button" data-tool="door"><svg class="icon"><use href="#i-door"></use></svg>Puerta sencilla · U</button>
+            <button type="button" data-tool="door_double"><svg class="icon"><use href="#i-door-double"></use></svg>Puerta doble · Shift+U</button>
+            <button type="button" data-tool="door_garage"><svg class="icon"><use href="#i-door-garage"></use></svg>Portón o reja · R</button>
+          </div>
+        </div>
         <button class="rail-button" type="button" data-tool="route" aria-pressed="false" data-tooltip="Ruta de evacuación · E" aria-label="Trazar ruta de evacuación">
           <svg class="icon"><use href="#i-route"></use></svg><span>Ruta</span>
         </button>
@@ -106,7 +116,7 @@
         </button>
         <button class="rail-button rail-library" type="button" data-open-library="cad" data-tooltip="Biblioteca de equipamiento CAD" aria-label="Biblioteca de equipamiento CAD">
           <svg class="icon"><use href="#i-cad"></use></svg><span>Equipos</span>
-          <em class="rail-count">32</em>
+          <em class="rail-count" data-cad-count>32</em>
         </button>
       </div>
       <div class="rail-bottom">

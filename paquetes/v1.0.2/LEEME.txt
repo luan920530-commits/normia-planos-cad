@@ -1,0 +1,27 @@
+Normia Planos CAD v1.0.2 · paquetes listos para desplegar
+=========================================================
+
+- normia-planos-cad-1.0.2.zip       aplicación completa (instalador web)
+- normia-planos-cad-demo-1.0.2.zip  igual, con el proyecto de demostración premarcado
+- SHA256SUMS.txt                    sumas de ambos ZIP
+- BUILD.txt                         resumen de la construcción
+
+Verificación de integridad:
+    sha256sum -c SHA256SUMS.txt
+
+Esta versión amplía la 1.0.1 con más contenido y mejora el dibujo de puertas:
+  · puerta sencilla rediseñada (marco, hoja y arco de abatimiento continuo);
+  · puertas dobles (120×60) y portones o rejas de garaje (160×50);
+  · sentido de apertura invertible (flipX/flipY) desde el inspector;
+  · catálogo CAD ampliado de 32 a 90 objetos en 15 familias: restaurante,
+    bodega, centro comercial, hospital, costura, asadero, supermercado,
+    vivienda residencial y deportes (canchas, piscinas y gradas);
+  · los equipos CAD ya se exportan con su trazo y relleno originales;
+  · demo de cuatro pisos (planta baja, mezzanine, local comercial y zona
+    recreativa) con puertas dobles, portón de carga y piscina.
+
+Contenido y requisitos: README.md del repositorio.
+Instalación rápida: LEEME-PRIMERO.txt dentro de cada ZIP.
+
+Los ZIP no incluyen bases de datos, sesiones, credenciales, logs ni carpetas de
+desarrollo. Los planos son esquemáticos: verifica dimensiones y escala en sitio.

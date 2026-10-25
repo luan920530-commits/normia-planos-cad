@@ -94,6 +94,13 @@ body.editor-body { overflow: hidden; background: #eef2f8; }
 .rail-flyout button { display: flex; align-items: center; gap: 9px; border: 0; background: transparent; color: #dbe3ef; font: inherit; font-size: .82rem; padding: 7px 9px; border-radius: 8px; cursor: pointer; text-align: left; }
 .rail-flyout button:hover { background: rgba(255, 255, 255, .08); }
 .rail-flyout .icon { width: 17px; height: 17px; }
+.rail-caret {
+  position: absolute; top: 4px; right: 4px; z-index: 2; width: 15px; height: 15px; padding: 0;
+  display: grid; place-items: center; border-radius: 50%; cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, .28); background: rgba(15, 23, 42, .85); color: #cbd5e1;
+}
+.rail-caret .icon { width: 10px; height: 10px; }
+.rail-caret:hover, .rail-caret[aria-expanded="true"] { background: var(--blue); border-color: var(--blue); color: #fff; }
 
 /* ------------------------------ escenario ------------------------------ */
 .canvas-stage { display: flex; flex-direction: column; min-width: 0; min-height: 0; background: #eef2f8; }

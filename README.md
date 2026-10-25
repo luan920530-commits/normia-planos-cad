@@ -2,7 +2,7 @@
 
 Editor de planos de emergencia y evacuación, en español, pensado para pequeñas y medianas organizaciones que necesitan documentar plantas, rutas, señalización y equipamiento sin depender de software CAD de escritorio ni de servicios externos.
 
-- **Fase 1 completa**: instalador web, cuentas, proyectos y pisos, editor SVG real, biblioteca ISO 7010 de 332 pictogramas, 32 objetos CAD esquemáticos, guardado con versiones, borradores automáticos, deshacer/rehacer y exportación SVG/JSON/PNG/impresión.
+- **Editor completo**: instalador web, cuentas, proyectos y pisos, editor SVG real, biblioteca ISO 7010 de 332 pictogramas, **90 objetos CAD esquemáticos de 15 familias** (restaurante, bodega, comercio, hospital, costura, asadero, supermercado, vivienda y deportes, entre otras), puertas de uno y dos batientes y portones, guardado con versiones, borradores automáticos, deshacer/rehacer y exportación SVG/JSON/PNG/impresión.
 - **PHP ≥ 8.1 + SQLite/PDO**, arquitectura MVC propia, sin Composer, sin `node_modules` en producción y sin CDN.
 - **100 % local**: las fuentes, los estilos, los iconos, los pictogramas y los catálogos viven en el paquete. La aplicación no hace llamadas a servicios de terceros.
 - **Licencia GPL-3.0**. Los pictogramas ISO 7010 conservan su licencia MIT y su atribución (ver [Créditos](#créditos-licencias-y-atribución)).
@@ -25,7 +25,7 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 10. [Arquitectura](#arquitectura)
 11. [Seguridad](#seguridad)
 12. [Pruebas](#pruebas)
-13. [Cambios de la versión 1.0.1](#cambios-de-la-versión-101)
+13. [Cambios de la versión 1.0.2](#cambios-de-la-versión-102)
 14. [Paquetes y verificación](#paquetes-y-verificación)
 15. [Limitaciones](#limitaciones)
 16. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
@@ -41,9 +41,9 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 | Proyectos | Nombre, sede, área de trabajo, responsable y notas. Duplicar, editar y eliminar con confirmación. |
 | Pisos | Varios pisos por proyecto, orden, duplicación y protección del último piso. |
 | Editor | Lienzo SVG con rejilla, reglas, ajuste, zoom, paneo, selección múltiple, marquesina, capas y grupos. |
-| Herramientas | Muro, puerta, ruta de evacuación, texto, medida, línea, rectángulo y elipse. |
-| Bibliotecas | 332 señales ISO 7010 (5 familias) y 32 objetos CAD de 6 familias, con búsqueda y filtros. |
-| Propiedades | Posición, tamaño, rotación, color (paleta de 28), grosor, opacidad, texto, capa, bloqueo y cambio de tipo. |
+| Herramientas | Muro, puerta sencilla, puerta doble, portón o reja, ruta de evacuación, texto, medida, línea, rectángulo y elipse. |
+| Bibliotecas | 332 señales ISO 7010 (5 familias) y 90 objetos CAD de 15 familias, con búsqueda y filtros por familia. |
+| Propiedades | Posición, tamaño, rotación, sentido de apertura, color (paleta de 29), grosor, opacidad, texto, capa, bloqueo y cambio de tipo. |
 | Historial | Deshacer/rehacer con 120 pasos, duplicar, pegar, agrupar, alinear, distribuir y orden de dibujo. |
 | Persistencia | Guardado manual con nota, versiones inmutables, restaurar versión, borrador automático cada 30 s y detección de conflictos. |
 | Exportación | SVG, JSON, PNG (generado en el navegador) e impresión lista para PDF desde el navegador. |
@@ -141,7 +141,7 @@ Luego importa `resources/schema.sql` en el archivo SQLite y crea el usuario admi
 
 ### 5. Paquete de demostración
 
-`normia-planos-cad-demo-<versión>.zip` es la misma aplicación con el marcador `resources/demo/.demo-build`, que **premarca** la casilla de demostración en el instalador. El proyecto de ejemplo incluye dos pisos (“Planta baja” y “Mezzanine”), capas de planta/equipos/señalización/rutas, muros, puertas, mobiliario, señalización ISO 7010 y rutas de evacuación. También puedes cargar la demo desde el paquete de producción marcando la casilla.
+`normia-planos-cad-demo-<versión>.zip` es la misma aplicación con el marcador `resources/demo/.demo-build`, que **premarca** la casilla de demostración en el instalador. El proyecto de ejemplo incluye cuatro pisos (“Planta baja”, “Mezzanine”, “Local comercial y cafetería” y “Zona recreativa”), capas de planta/equipos/señalización/rutas, muros, puertas sencillas y dobles, un portón de carga, mobiliario de restaurante, comercio, supermercado y hospital, una piscina, canchas y rutas de evacuación. También puedes cargar la demo desde el paquete de producción marcando la casilla.
 
 ### 6. Copias de seguridad y reinstalación
 
@@ -206,7 +206,7 @@ Luego importa `resources/schema.sql` en el archivo SQLite y crea el usuario admi
 
 ### Propiedades
 
-El inspector permite editar geometría (X, Y, ancho, alto, rotación), apariencia (28 colores, grosor, opacidad), texto y tamaño de letra, capa, bloqueo, cambio de tipo entre formas básicas, duplicado, eliminación, agrupación, alineación, distribución y orden de dibujo. Los controles que no aplican al elemento seleccionado no se muestran o quedan deshabilitados.
+El inspector permite editar geometría (X, Y, ancho, alto, rotación), apariencia (29 colores, grosor, opacidad), sentido de apertura en puertas, texto y tamaño de letra, capa, bloqueo, cambio de tipo entre formas básicas, duplicado, eliminación, agrupación, alineación, distribución y orden de dibujo. Los controles que no aplican al elemento seleccionado no se muestran o quedan deshabilitados.
 
 ### Capas y grupos
 
@@ -226,21 +226,51 @@ El inspector permite editar geometría (X, Y, ancho, alto, rotación), aparienci
 - El color de las señales se deriva de su familia y no se edita con la paleta.
 - Origen y licencia: `resources/licenses/iso-safety-signs.LICENSE.txt` y `iso-safety-signs.NOTICE.txt`.
 
-### Equipamiento CAD (32 objetos)
+### Equipamiento CAD (90 objetos en 15 familias)
 
-- Familias: mobiliario, sanitarios, cocina, industrial, vehículos y verticales (escaleras/rampas).
-- Identificador `cad_*` (por ejemplo `cad_desk`, `cad_forklift`, `cad_stairs_straight`).
-- Son **esquemáticos**: no representan medidas certificadas; la descripción y la referencia están en `resources/cad-objects.json`.
+| Familia | Objetos | Ejemplos |
+| --- | --- | --- |
+| Mobiliario y estanterías | 6 | escritorio, mesa de reuniones, estantería, archivador |
+| Baños | 4 | inodoro, lavamanos, ducha, cambiador de bebés |
+| Cocinas | 4 | estufa, nevera, lavaplatos, campana |
+| Equipos industriales | 5 | compresor, caldera, tablero eléctrico, tanque |
+| Vehículos y maquinaria | 7 | automóvil, camioneta, montacargas, moto |
+| Conexiones entre pisos | 6 | escalera recta, escalera en L, rampa, ascensor |
+| Restaurante y cafetería | 6 | mesa de cuatro puestos, barra, cocina de línea, nevera de bebidas |
+| Bodega y logística | 6 | estantería de racks, palé, báscula, muelle de carga |
+| Comercio y centro comercial | 6 | vitrina, probador, caja registradora, isla de kiosco |
+| Salud y hospital | 7 | camilla, cama de hospital, sillón odontológico, equipo de rayos X |
+| Costura y confección | 6 | máquina plana, fileteadora, mesa de corte, maniquí |
+| Asadero y parrilla | 5 | parrilla, asador, campana extractora, mesa de preparación |
+| Supermercado | 6 | góndola, nevera mural, congelador, carrito, caja |
+| Vivienda y edificios residenciales | 8 | sofá, cama doble, cocina integral, lavadora, baño completo |
+| Deportes, canchas y piscinas | 8 | cancha de fútbol, cancha de baloncesto, piscina, trampolín, gradas |
+
+- Identificador `cad_*` (por ejemplo `cad_desk`, `cad_rest_bar`, `cad_sport_pool`).
+- Los objetos de agua (piscina, trampolín) usan un color propio del catálogo (`#0891b2`); el resto hereda el color del elemento.
+- Son **esquemáticos**: no representan medidas certificadas; la descripción y la referencia están en `resources/cad-objects.json`. Verifica siempre las dimensiones en el sitio.
+
+### Puertas y portones
+
+| Tipo | Caja por defecto | Uso |
+| --- | --- | --- |
+| `door` | 90 × 90 | Puerta de un batiente, con marco, hoja y arco de abatimiento continuo. |
+| `door_double` | 120 × 60 | Puerta de dos batientes, con dos hojas y dos arcos simétricos. |
+| `door_garage` | 160 × 50 | Portón o reja de garaje: panel con barras verticales, raíles y hueco en el muro. |
+
+- El borde inferior de la caja es el **vano**: dibuja el muro a la altura de `y + h` y deja el hueco del ancho de la puerta.
+- `flipX` invierte el lado de apertura y `flipY` el sentido de la hoja (útil en muros verticales).
+- Los planos antiguos con puertas de 80 × 16 se migran automáticamente al esquema actual.
 
 ### Catálogos en disco
 
 | Archivo | Contenido |
 | --- | --- |
 | `resources/iso7010-catalog.json` | `{format, standard, source, license, categories, signs{CODE:{name,category,description,svg}}}` |
-| `resources/cad-objects.json` | `{version, categories{furniture,...}, objects{cad_*:{category,name,description,reference,color,svg}}}` |
+| `resources/cad-objects.json` | `{version, categories{furniture,...}, objects{cad_*:{category,name,description,reference,color,svg}}}` — 90 objetos en 15 familias |
 | `resources/sign-aliases.json` | Alias heredados → códigos ISO 7010 |
 | `resources/schema.sql` | Esquema SQLite |
-| `resources/demo/demo-project.json` | Proyecto de demostración (2 pisos) |
+| `resources/demo/demo-project.json` | Proyecto de demostración (4 pisos) |
 
 ---
 
@@ -304,7 +334,7 @@ El detalle completo está en [`docs/FORMATO-PLANO.md`](docs/FORMATO-PLANO.md). R
 }
 ```
 
-Límites del validador: lienzo 400–4000 × 300–3000, rejilla 5–100, hasta 1200 elementos, 24 capas y 80 grupos de 2–80 miembros, identificadores `^[A-Za-z][A-Za-z0-9_-]{2,63}$`, etiquetas de hasta 240 caracteres sin `<` ni `>`, 28 colores permitidos, trazos de hasta 40 puntos (línea y medida exactamente 2), JSON de hasta 2.5 MB.
+Límites del validador: lienzo 400–4000 × 300–3000, rejilla 5–100, hasta 1200 elementos, 24 capas y 80 grupos de 2–80 miembros, identificadores `^[A-Za-z][A-Za-z0-9_-]{2,63}$`, etiquetas de hasta 240 caracteres sin `<` ni `>`, 29 colores permitidos, trazos de hasta 40 puntos (línea y medida exactamente 2), JSON de hasta 2.5 MB.
 
 La importación acepta el JSON propio v2 y el formato heredado de la fase de referencia (`format: 1`, `elements[].tool`), y convierte alias (`exit`, `extinguisher`, `first_aid`, `alarm`, `assembly`, `exit_sign`, `fire_extinguisher`, `first_aid_kit`, `emergency_exit`) a señales ISO 7010. Un archivo con herramientas desconocidas, markup arbitrario, colores fuera de paleta o coordenadas inválidas se rechaza entero (no se importa parcialmente). No se importan DWG, DXF ni SVG.
 
@@ -402,9 +432,9 @@ El servidor HTTP se enlaza **antes** de cargar PHP a propósito: php-wasm abre u
 | Bloque | Comprobaciones |
 | --- | --- |
 | `tests/php/lint.mjs` | `php -l` sobre todo `app/`, `bootstrap.php` e `index.php` en 8.1 y 8.3. |
-| `tests/php/functional.mjs` | 120 comprobaciones: instalador, requisitos, contraseñas débiles, CSRF, sesión, autorización entre cuentas, CRUD de proyectos/pisos, duplicados, importación v1/v2, validaciones de la API, guardado/versiones/borradores/conflictos, exportaciones, ciclo de vida y logout. |
-| `tests/js/editor.mjs` | 109 comprobaciones de interfaz sobre la app real: arranque, 332 señales y 32 objetos, **posiciones reales del trazo**, **clic sobre muros finos**, **rotación**, **rutas cerradas**, **arrastrar y soltar desde la biblioteca sin que el cajón lo bloquee**, reglas, herramientas, inserción con puntero, selección, mover, escalar, rotar, color, cambio de tipo, deshacer/rehacer, duplicar, agrupar, bloquear, desplazar, texto y saneado, guardar, reabrir, borradores, conflictos, exportación SVG/JSON/PNG, tooltips sin acumulación, capas, versiones y límites. |
-| `tests/php/package.mjs` | 34 comprobaciones: construye ambos ZIP, verifica que no haya bases, sesiones, credenciales, logs ni carpetas de desarrollo, valida los SHA-256 y hace una instalación limpia de la demo comprobando assets (11), catálogos (332/32), editor, SVG, JSON e impresión. |
+| `tests/php/functional.mjs` | 132 comprobaciones: instalador, requisitos, contraseñas débiles, CSRF, sesión, autorización entre cuentas, CRUD de proyectos/pisos, duplicados, importación v1/v2, catálogos (90 objetos/15 familias), puertas y portones (geometría, sentidos de apertura, exportación con trazo), validaciones de la API, guardado/versiones/borradores/conflictos, exportaciones, ciclo de vida y logout. |
+| `tests/js/editor.mjs` | 122 comprobaciones de interfaz sobre la app real: arranque, 332 señales y 90 objetos, puertas dobles y portones, **posiciones reales del trazo**, **clic sobre muros finos**, **rotación**, **rutas cerradas**, **arrastrar y soltar desde la biblioteca sin que el cajón lo bloquee**, reglas, herramientas, inserción con puntero, selección, mover, escalar, rotar, color, cambio de tipo, deshacer/rehacer, duplicar, agrupar, bloquear, desplazar, texto y saneado, guardar, reabrir, borradores, conflictos, exportación SVG/JSON/PNG, tooltips sin acumulación, capas, versiones y límites. |
+| `tests/php/package.mjs` | 34 comprobaciones: construye ambos ZIP, verifica que no haya bases, sesiones, credenciales, logs ni carpetas de desarrollo, valida los SHA-256 y hace una instalación limpia de la demo comprobando assets (11), catálogos (332/90), los cuatro pisos del proyecto de ejemplo, editor, SVG, JSON e impresión. |
 
 Resultados esperados de la última ejecución completa:
 
@@ -412,10 +442,10 @@ Resultados esperados de la última ejecución completa:
 ✓ Sintaxis PHP 8.1 · 51 archivos, sin errores
 ✓ Sintaxis PHP 8.3 · 51 archivos, sin errores
 ✓ Sintaxis JavaScript · 16 archivos, sin errores
-✓ Funcional PHP 8.1 · 120/120
-✓ Funcional PHP 8.3 · 120/120
-✓ Interfaz (JSDOM) PHP 8.1 · 109/109
-✓ Interfaz (JSDOM) PHP 8.3 · 109/109
+✓ Funcional PHP 8.1 · 132/132
+✓ Funcional PHP 8.3 · 132/132
+✓ Interfaz (JSDOM) PHP 8.1 · 122/122
+✓ Interfaz (JSDOM) PHP 8.3 · 122/122
 ✓ Paquetes y demo · 34/34
 8/8 pasos correctos
 ```
@@ -424,7 +454,19 @@ Las pruebas trabajan sobre copias temporales: no escriben configuración ni base
 
 ---
 
-## Cambios de la versión 1.0.1
+## Cambios de la versión 1.0.2
+
+Ampliación de contenido de la 1.0.1. Los planos y proyectos guardados siguen abriendo sin cambios.
+
+- **Puertas rediseñadas.** La puerta sencilla tiene marco, hoja y un arco de abatimiento continuo (antes punteado y más fino), y se dibuja completa en el editor, el SVG exportado, el PNG y la impresión.
+- **Puertas dobles y portones.** Dos tipos nuevos: puerta de dos batientes (120 × 60) y portón o reja de garaje (160 × 50), con barras, raíles y hueco real en el muro. Se insertan desde el menú de la barra lateral (también con `Shift+U` y `R`) o cambiando el tipo en el inspector.
+- **Sentido de apertura.** El inspector gana `flipX` y `flipY` para girar la hoja y el arco; se guardan, se exportan y se validan en el servidor.
+- **Catálogo CAD de 32 a 90 objetos.** Nueve familias nuevas: restaurante y cafetería, bodega y logística, comercio y centro comercial, salud y hospital, costura y confección, asadero y parrilla, supermercado, vivienda y edificios residenciales, y deportes (canchas, piscinas, gradas).
+- **Biblioteca por familias reales.** El cajón de equipamiento muestra el nombre corto de cada familia y el contador real (90 objetos), y la búsqueda filtra por nombre, familia y descripción.
+- **Los equipos CAD se exportan con su trazo.** El exportador copia las propiedades de presentación heredadas del `<svg>` del catálogo (`fill`, `stroke`, `stroke-width`, `stroke-linecap`), así que los pictogramas de equipos ya no salen como cajas grises en SVG, PNG ni impresión.
+- **Demo de cuatro pisos.** Se añaden “Local comercial y cafetería” (comercio, restaurante y un portón) y “Zona recreativa” (piscina, canchas y portón de mantenimiento); la planta baja estrena puertas dobles, portones con vano real y puertas giradas sobre muros verticales.
+
+### 1.0.1
 
 Versión de corrección sobre la 1.0.0. Reemplaza los paquetes anteriores: la 1.0.0 tenía fallos reales en el editor que no se veían en las pruebas.
 
@@ -440,12 +482,12 @@ Versión de corrección sobre la 1.0.0. Reemplaza los paquetes anteriores: la 1.
 
 ## Paquetes y verificación
 
-La entrega v1.0.1 incluye los ZIP ya construidos en **`paquetes/v1.0.1/`** (misma composición que genera el script, verificada por `tests/php/package.mjs`):
+La entrega v1.0.2 incluye los ZIP ya construidos en **`paquetes/v1.0.2/`** (misma composición que genera el script, verificada por `tests/php/package.mjs`):
 
 ```text
-paquetes/v1.0.1/
-├── normia-planos-cad-1.0.1.zip
-├── normia-planos-cad-demo-1.0.1.zip
+paquetes/v1.0.2/
+├── normia-planos-cad-1.0.2.zip
+├── normia-planos-cad-demo-1.0.2.zip
 ├── SHA256SUMS.txt
 └── BUILD.txt
 ```
@@ -459,8 +501,8 @@ npm run build          # o: bash tools/build-packages.sh
 El script deja los artefactos en `dist/`:
 
 ```text
-normia-planos-cad-1.0.1.zip
-normia-planos-cad-demo-1.0.1.zip
+normia-planos-cad-1.0.2.zip
+normia-planos-cad-demo-1.0.2.zip
 SHA256SUMS.txt
 BUILD.txt
 ```
@@ -470,11 +512,11 @@ BUILD.txt
 - Verifica las sumas:
 
 ```bash
-cd paquetes/v1.0.1
+cd paquetes/v1.0.2
 sha256sum -c SHA256SUMS.txt
 ```
 
-Los hashes exactos de los ZIP publicados están en `paquetes/v1.0.1/SHA256SUMS.txt`; `dist/` es solo la salida de trabajo y está ignorada por Git.
+Los hashes exactos de los ZIP publicados están en `paquetes/v1.0.2/SHA256SUMS.txt`; `dist/` es solo la salida de trabajo y está ignorada por Git.
 
 ---
 

@@ -71,7 +71,9 @@ Todos los elementos comparten:
 | `type` | Geometría | Campos propios |
 | --- | --- | --- |
 | `wall` | Trazo | `points` (2–40), `stroke` grueso. |
-| `door` | Puerta | `flipX` para cambiar el sentido. |
+| `door` | Puerta de un batiente (90 × 90 por defecto) | `flipX` y `flipY` para cambiar el sentido de apertura. |
+| `door_double` | Puerta de dos batientes (120 × 60) | `flipX` y `flipY`. |
+| `door_garage` | Portón o reja de garaje (160 × 50) | `flipX` y `flipY`. |
 | `route` | Ruta de evacuación | `points` (2–40), flechas. Un circuito cerrado repite el primer punto al final. |
 | `text` | Texto | `fontSize` 8–160, `label` obligatoria. |
 | `dimension` | Medida | `points` exactamente 2; `label` opcional. |
@@ -86,6 +88,7 @@ Los tipos con trazo guardan `points` **en coordenadas locales** a la caja (`0..w
 - Señales: `iso_<código en minúsculas>`, por ejemplo `iso_e002` (salida de emergencia) o `iso_f001` (extintor). Se validan contra `resources/iso7010-catalog.json`.
 - Equipos: clave del catálogo `cad_*`, por ejemplo `cad_desk` o `cad_stairs_straight`. Se validan contra `resources/cad-objects.json`.
 - Ambos se dibujan insertando el SVG del catálogo como símbolo saneado, con tamaño cuadrado por defecto (la señal mide 64×64 unidades por defecto).
+- El catálogo de equipos tiene 90 objetos en 15 familias (`furniture`, `sanitary`, `kitchen`, `industrial`, `vehicles`, `vertical`, `restaurant`, `warehouse`, `retail`, `hospital`, `textile`, `grill`, `supermarket`, `residential`, `sports`). Algunos objetos traen su propio `color` (por ejemplo el agua de piscinas, `#0891b2`); el resto hereda el color del elemento.
 
 ### Grupos
 

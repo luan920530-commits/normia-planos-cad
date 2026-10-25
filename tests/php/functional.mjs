@@ -133,7 +133,7 @@ try {
   const designMatch = /<textarea id="editor-design" hidden>([\s\S]*?)<\/textarea>/.exec(editorHtml);
   let design = null;
   try { design = JSON.parse(decodeEntities(designMatch?.[1] || '')); } catch { design = null; }
-  report.check('Editor recibe el diseño guardado', design?.format === 2 && design?.elements?.length === 61, `${design?.elements?.length} elementos`);
+  report.check('Editor recibe el diseño guardado', design?.format === 2 && design?.elements?.length === 62, `${design?.elements?.length} elementos`);
 
   res = await client.get('/assets/js/editor.js');
   report.check('JS del editor se sirve completo', res.status === 200 && res.text.length > 20000, `${res.text.length} bytes`);
@@ -148,13 +148,17 @@ try {
   report.check('Familias de señalización completas', Object.keys(catalog.categories || {}).length === 5 && catalog.colors?.emergency === '#237f52');
   report.check('Alias heredados disponibles', catalog.legacyTools?.extinguisher === 'F001' && catalog.legacyTools?.exit === 'E002');
   ({ response: catalogResponse, body: catalog } = await json('catalogs/cad'));
-  report.check('Catálogo CAD con 32 objetos', catalogResponse.status === 200 && catalog.count === 32 && Object.keys(catalog.objects || {}).length === 32);
+  report.check('Catálogo CAD con 90 objetos', catalogResponse.status === 200 && catalog.count === 90 && Object.keys(catalog.objects || {}).length === 90);
+  report.check('Catálogo CAD con 15 familias sectoriales', Object.keys(catalog.categories || {}).length === 15
+    && ['restaurant', 'warehouse', 'retail', 'hospital', 'textile', 'grill', 'supermarket', 'residential', 'sports'].every((key) => catalog.categories?.[key]?.label),
+    Object.keys(catalog.categories || {}).join(','));
+  report.check('Cada familia CAD tiene objetos', Object.keys(catalog.categories || {}).every((key) => Object.values(catalog.objects || {}).some((object) => object.category === key)));
   report.check('Objetos CAD con SVG', Object.values(catalog.objects || {}).every((object) => String(object.svg || '').startsWith('<svg')));
 
   /* ---------------------------- guardado y versiones ---------------------------- */
   ({ body: catalog } = await json(`api/floors/${floorId}`));
   let floor = catalog;
-  report.check('API del piso devuelve diseño y versión', floor.floor?.version === 1 && floor.design?.elements?.length === 61, `v${floor.floor?.version}`);
+  report.check('API del piso devuelve diseño y versión', floor.floor?.version === 1 && floor.design?.elements?.length === 62, `v${floor.floor?.version}`);
   const original = floor.design;
   const changed = JSON.parse(JSON.stringify(original));
   changed.elements[0].label = 'Prueba funcional';
@@ -191,6 +195,48 @@ try {
   report.check('Ajustes del piso rechazan HTML', res.status === 422, String(res.status));
   ({ body: floor } = await json(`api/floors/${floorId}`));
   report.check('Nombre del piso actualizado', floor.floor?.name === 'Planta baja ajustada', floor.floor?.name);
+
+  /* ------------------------------- puertas ------------------------------- */
+  ({ body: catalog } = await json(`api/floors/${floorId}`));
+  const doorDesign = JSON.parse(JSON.stringify(catalog.design));
+  const doorLayer = doorDesign.layers[0].id;
+  const nowDoors = (catalog.design.elements || []).filter((element) => ['door', 'door_double', 'door_garage'].includes(element.type)).length;
+  doorDesign.elements = doorDesign.elements.filter((element) => !['door', 'door_double', 'door_garage'].includes(element.type));
+  doorDesign.elements.push(
+    { id: 'puerta_prueba', type: 'door', layerId: doorLayer, x: 120, y: 200, w: 90, h: 90, rotation: 0, color: '#475569', stroke: 2, opacity: 1, label: '', locked: false, flipX: true, flipY: false },
+    { id: 'puerta_doble', type: 'door_double', layerId: doorLayer, x: 260, y: 200, w: 120, h: 60, rotation: 0, color: '#475569', stroke: 2, opacity: 1, label: '', locked: false, flipX: false, flipY: true },
+    { id: 'porton', type: 'door_garage', layerId: doorLayer, x: 420, y: 200, w: 160, h: 50, rotation: 0, color: '#475569', stroke: 2, opacity: 1, label: 'Parqueadero', locked: false, flipX: false, flipY: false },
+  );
+  res = await client.postJson(`api/floors/${floorId}/save`, { design: doorDesign, expected_version: catalog.floor.version });
+  report.check('La API acepta puerta sencilla, doble y portón', res.status === 200, `${res.status} · ${res.text.slice(0, 90)}`);
+  ({ body: catalog } = await json(`api/floors/${floorId}`));
+  const savedDoors = (catalog.design?.elements || []).filter((element) => ['door', 'door_double', 'door_garage'].includes(element.type));
+  report.check('Las puertas se guardan con su bisagra y sentido',
+    savedDoors.length === 3 && savedDoors.find((element) => element.id === 'puerta_prueba')?.flipX === true
+    && savedDoors.find((element) => element.id === 'puerta_doble')?.flipY === true
+    && savedDoors.find((element) => element.id === 'porton')?.flipY === false,
+    savedDoors.map((element) => `${element.type}:${element.flipX ? 'X' : '-'}${element.flipY ? 'Y' : '-'}`).join(' '));
+  res = await client.get(`projects/${projectId}/floors/${floorId}/export/svg`);
+  const doorSvg = res.text;
+  report.check('El SVG exportado dibuja las puertas con hoja y arco',
+    (doorSvg.match(/<circle cx="\d+(\.\d+)?" cy="\d+(\.\d+)?" r="/g) || []).length >= 3 && (doorSvg.match(/ A /g) || []).length >= 3,
+    `${(doorSvg.match(/ A /g) || []).length} arcos`);
+  report.check('El portón exportado incluye el panel con barrotes',
+    /<rect x="[\.\d]+" y="[\.\d]+" width="1[45][\d.]*"/.test(doorSvg) && (doorSvg.match(/<line /g) || []).length > 20,
+    `${(doorSvg.match(/<line /g) || []).length} líneas`);
+  report.check('Los equipos CAD conservan trazo y relleno al exportar',
+    /<svg [^>]*color="#334155"[^>]*fill="none"[^>]*stroke="currentColor"/.test(doorSvg)
+    || /<svg [^>]*color="#334155"[^>]*stroke="currentColor"/.test(doorSvg),
+    (/<svg [^>]*color="#334155"[^>]*>/.exec(doorSvg) || ['sin equipos'])[0].slice(0, 120));
+  const cadRoot = (/<svg [^>]*color="#334155"[^>]*>/.exec(doorSvg) || [''])[0];
+  report.check('La exportación conserva el grosor y el relleno del catálogo',
+    /stroke-width="2"/.test(cadRoot) && /fill="none"/.test(cadRoot) && /stroke="currentColor"/.test(cadRoot),
+    cadRoot.slice(0, 140));
+  report.check('La puerta volteada se exporta con scale(-1 1)', /scale\(-1 1\)/.test(doorSvg));
+  report.check('La puerta volteada en vertical se exporta con scale(1 -1)', /scale\(1 -1\)/.test(doorSvg));
+  res = await client.postJson(`api/floors/${floorId}/save`, { design: { ...doorDesign, elements: doorDesign.elements.map((element) => element.id === 'puerta_prueba' ? { ...element, flipY: 'sí' } : element) }, expected_version: catalog.floor.version });
+  report.check('La API rechaza un sentido de apertura inválido', res.status === 422, String(res.status));
+  report.check('El guardado anterior conserva las puertas', nowDoors >= 0 && savedDoors.length === 3);
 
   /* ---------------------------- validación y seguridad ---------------------------- */
   const invalidCases = [

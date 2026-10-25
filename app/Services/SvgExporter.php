@@ -11,6 +11,12 @@ use RuntimeException;
  */
 final class SvgExporter
 {
+    /** Propiedades de presentación que se heredan desde la etiqueta raíz del catálogo. */
+    private const SVG_PRESENTATION = [
+        'fill', 'fill-opacity', 'fill-rule', 'stroke', 'stroke-width', 'stroke-opacity',
+        'stroke-linecap', 'stroke-linejoin', 'stroke-miterlimit', 'stroke-dasharray', 'opacity',
+    ];
+
     private static int $assetSequence = 0;
 
     public static function render(array $design, array $meta = [], bool $withFrame = true): string
@@ -128,12 +134,9 @@ final class SvgExporter
                 }
                 break;
             case 'door':
-                $flip = !empty($element['flipX']) ? ' transform="translate(' . self::n($w) . ' 0) scale(-1 1)"' : '';
-                $out .= '<g' . $flip . '>' . "\n";
-                $out .= '<line x1="' . self::n($x) . '" y1="' . self::n($y + $h) . '" x2="' . self::n($x + $w) . '" y2="' . self::n($y + $h) . '" stroke="' . self::x($color) . '" stroke-width="' . self::n(max(1.5, $stroke)) . '" stroke-linecap="round"/>' . "\n";
-                $out .= '<line x1="' . self::n($x) . '" y1="' . self::n($y + $h) . '" x2="' . self::n($x) . '" y2="' . self::n($y) . '" stroke="' . self::x($color) . '" stroke-width="' . self::n(max(1.5, $stroke)) . '" stroke-linecap="round"/>' . "\n";
-                $out .= '<path d="M ' . self::n($x) . ' ' . self::n($y) . ' A ' . self::n($w) . ' ' . self::n(max(4, $h)) . ' 0 0 1 ' . self::n($x + $w) . ' ' . self::n($y + $h) . '" fill="none" stroke="' . self::x($color) . '" stroke-width="' . self::n(max(1, $stroke * 0.7)) . '" stroke-dasharray="3 4" opacity=".7"/>' . "\n";
-                $out .= '</g>' . "\n";
+            case 'door_double':
+            case 'door_garage':
+                $out .= self::doorMarkup($element, $x, $y, $w, $h, $color, $stroke);
                 break;
             case 'text':
                 $fontSize = (float) ($element['fontSize'] ?? 14);
@@ -203,8 +206,21 @@ final class SvgExporter
         if (preg_match('/<svg\b[^>]*>(.*)<\/svg>\s*$/is', $raw, $match) === 1) {
             $inner = $match[1];
         }
+        // Los SVG del catálogo declaran fill/stroke en la etiqueta raíz. Si no
+        // se copian, el equipo se exporta como una caja gris sin trazo.
+        $rootAttributes = '';
+        if (preg_match('/<svg\b([^>]*)>/i', $raw, $rootMatch) === 1
+            && preg_match_all('/([a-z-]+)\s*=\s*"([^"]*)"/i', $rootMatch[1], $pairs, PREG_SET_ORDER)) {
+            foreach ($pairs as $pair) {
+                $name = strtolower($pair[1]);
+                if (in_array($name, self::SVG_PRESENTATION, true)) {
+                    $rootAttributes .= ' ' . $name . '="' . self::x($pair[2]) . '"';
+                }
+            }
+        }
         return '<svg x="' . self::n($x) . '" y="' . self::n($y) . '" width="' . self::n($w) . '" height="' . self::n($h)
-            . '" viewBox="' . self::x($viewBox) . '" preserveAspectRatio="xMidYMid meet" color="' . self::x($color) . '">'
+            . '" viewBox="' . self::x($viewBox) . '" preserveAspectRatio="xMidYMid meet" color="' . self::x($color) . '"'
+            . $rootAttributes . '>'
             . $inner . '</svg>' . "\n";
     }
 
@@ -219,6 +235,55 @@ final class SvgExporter
     }
 
     /** @return array<int,array{x:float,y:float}> */
+    /** Símbolo de puerta en planta; mismas geometría que el editor. */
+    private static function doorMarkup(array $element, float $x, float $y, float $w, float $h, string $color, float $stroke): string
+    {
+        $type = (string) ($element['type'] ?? 'door');
+        $edge = $y + $h;
+        $flipX = !empty($element['flipX']);
+        $flipY = !empty($element['flipY']);
+        $out = '';
+        if ($flipX || $flipY) {
+            $px = $x + $w / 2;
+            $out .= '<g transform="translate(' . self::n($px) . ' ' . self::n($edge) . ') scale(' . ($flipX ? '-1' : '1') . ' ' . ($flipY ? '-1' : '1') . ') translate(' . self::n(-$px) . ' ' . self::n(-$edge) . ')">' . "\n";
+        } else {
+            $out .= '<g class="door">' . "\n";
+        }
+        $jamb = min(14.0, max(5.0, $h * 0.16));
+        $frame = max(1.8, $stroke * 1.15);
+        $thin = max(1.0, $stroke * 0.65);
+        $out .= '<line x1="' . self::n($x) . '" y1="' . self::n($edge) . '" x2="' . self::n($x) . '" y2="' . self::n($edge - $jamb) . '" stroke="' . self::x($color) . '" stroke-width="' . self::n($frame) . '" stroke-linecap="round"/>' . "\n";
+        $out .= '<line x1="' . self::n($x + $w) . '" y1="' . self::n($edge) . '" x2="' . self::n($x + $w) . '" y2="' . self::n($edge - $jamb) . '" stroke="' . self::x($color) . '" stroke-width="' . self::n($frame) . '" stroke-linecap="round"/>' . "\n";
+        $out .= '<line x1="' . self::n($x) . '" y1="' . self::n($edge) . '" x2="' . self::n($x + $w) . '" y2="' . self::n($edge) . '" stroke="' . self::x($color) . '" stroke-width="' . self::n($thin) . '" stroke-dasharray="4 4" opacity=".5"/>' . "\n";
+        if ($type === 'door_garage') {
+            $panel = min(30.0, max(10.0, $h * 0.55));
+            $panelTop = $edge - $panel;
+            $out .= '<rect x="' . self::n($x + 3) . '" y="' . self::n($panelTop) . '" width="' . self::n(max(6, $w - 6)) . '" height="' . self::n($panel) . '" rx="' . self::n(min(3, $panel / 3)) . '" fill="' . self::x($color) . '" fill-opacity=".1" stroke="' . self::x($color) . '" stroke-width="' . self::n(max(1.2, $stroke * 0.75)) . '"/>' . "\n";
+            $bars = (int) max(3, min(14, round($w / 16)));
+            for ($index = 1; $index < $bars; $index++) {
+                $barX = $x + 3 + (($w - 6) * $index) / $bars;
+                $out .= '<line x1="' . self::n($barX) . '" y1="' . self::n($panelTop + 1.5) . '" x2="' . self::n($barX) . '" y2="' . self::n($edge - 1.5) . '" stroke="' . self::x($color) . '" stroke-width="' . self::n(max(0.9, $stroke * 0.55)) . '" opacity=".75"/>' . "\n";
+            }
+            $railY = $panelTop + $panel / 2;
+            $out .= '<line x1="' . self::n($x + 3) . '" y1="' . self::n($railY) . '" x2="' . self::n($x + $w - 3) . '" y2="' . self::n($railY) . '" stroke="' . self::x($color) . '" stroke-width="' . self::n(max(0.9, $stroke * 0.5)) . '" opacity=".65"/>' . "\n";
+            $out .= '<line x1="' . self::n($x + 3) . '" y1="' . self::n($edge) . '" x2="' . self::n($x + 3) . '" y2="' . self::n($panelTop + $panel + 2) . '" stroke="' . self::x($color) . '" stroke-width="' . self::n($thin) . '" opacity=".75"/>' . "\n";
+            $out .= '<line x1="' . self::n($x + $w - 3) . '" y1="' . self::n($edge) . '" x2="' . self::n($x + $w - 3) . '" y2="' . self::n($panelTop + $panel + 2) . '" stroke="' . self::x($color) . '" stroke-width="' . self::n($thin) . '" opacity=".75"/>' . "\n";
+            $out .= '</g>' . "\n";
+            return $out;
+        }
+        $leaf = max(8.0, min($type === 'door_double' ? $w / 2 : $w, $h));
+        $leafWidth = max(2.2, $stroke * 1.2);
+        $leaves = $type === 'door_double' ? [[$x, $x + $leaf], [$x + $w, $x + $w - $leaf]] : [[$x, $x + $leaf]];
+        foreach ($leaves as [$hingeX, $reachX]) {
+            $out .= '<line x1="' . self::n($hingeX) . '" y1="' . self::n($edge) . '" x2="' . self::n($hingeX) . '" y2="' . self::n($edge - $leaf) . '" stroke="' . self::x($color) . '" stroke-width="' . self::n($leafWidth) . '" stroke-linecap="round"/>' . "\n";
+            $out .= '<circle cx="' . self::n($hingeX) . '" cy="' . self::n($edge) . '" r="' . self::n(max(2, $stroke * 1.1)) . '" fill="' . self::x($color) . '"/>' . "\n";
+            $sweep = $reachX >= $hingeX ? 1 : 0;
+            $out .= '<path d="M ' . self::n($hingeX) . ' ' . self::n($edge - $leaf) . ' A ' . self::n($leaf) . ' ' . self::n($leaf) . ' 0 0 ' . $sweep . ' ' . self::n($reachX) . ' ' . self::n($edge) . '" fill="none" stroke="' . self::x($color) . '" stroke-width="' . self::n(max(1, $stroke * 0.6)) . '" opacity=".55"/>' . "\n";
+        }
+        $out .= '</g>' . "\n";
+        return $out;
+    }
+
     private static function pointList(array $element): array
     {
         $points = $element['points'] ?? [['x' => 0, 'y' => 0], ['x' => $element['w'], 'y' => $element['h']]];

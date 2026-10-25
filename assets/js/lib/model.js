@@ -3,8 +3,21 @@
   'use strict';
   const root = (window.Normia = window.Normia || {});
   const G = root.Geometry;
-  const COLORS = ['#0f172a', '#1e293b', '#334155', '#475569', '#64748b', '#94a3b8', '#ffffff', '#f8fafc', '#2563eb', '#1d4ed8', '#005387', '#0f766e', '#15803d', '#16a34a', '#237f52', '#65a30d', '#b71f2e', '#dc2626', '#991b1b', '#ea580c', '#f97316', '#f59e0b', '#f9a800', '#eab308', '#facc15', '#7c3aed', '#be185d', '#0891b2'];
-  const BASIC = ['wall', 'door', 'route', 'text', 'dimension', 'line', 'rect', 'ellipse'];
+  const COLORS = ['#0f172a', '#1e293b', '#334155', '#475569', '#64748b', '#94a3b8', '#ffffff', '#f8fafc', '#2563eb', '#1d4ed8', '#005387', '#0f766e', '#15803d', '#16a34a', '#237f52', '#65a30d', '#b71f2e', '#dc2626', '#991b1b', '#ea580c', '#f97316', '#f59e0b', '#f9a800', '#eab308', '#facc15', '#7c3aed', '#be185d', '#0891b2', '#ca8a04'];
+  const BASIC = ['wall', 'door', 'door_double', 'door_garage', 'route', 'text', 'dimension', 'line', 'rect', 'ellipse'];
+  const DOOR_TYPES = ['door', 'door_double', 'door_garage'];
+  /**
+   * Las puertas antiguas medían 80 × 16 (solo el hueco del muro) y el símbolo
+   * necesita la profundidad de abatimiento. Se conserva la línea del muro
+   * (borde inferior) al ampliar el alto.
+   */
+  const migrateDoor = (element, canvas) => {
+    if (element.type !== 'door' || element.h >= element.w * 0.5) return element;
+    const edge = element.y + element.h;
+    element.h = Math.min(element.w, canvas.height);
+    element.y = G.clamp(edge - element.h, 0, canvas.height - element.h);
+    return element;
+  };
   const PATH_TYPES = ['wall', 'route', 'line', 'dimension'];
   let idCounter = 0;
 
@@ -86,7 +99,11 @@
         case 'wall':
           return Object.assign(base, { w: 200, h: 16, stroke: 8, color: '#0f172a', points: [{ x: 0, y: 8 }, { x: 200, y: 8 }] });
         case 'door':
-          return Object.assign(base, { w: 80, h: 16, color: '#475569', flipX: false });
+          return Object.assign(base, { w: 90, h: 90, color: '#475569', stroke: 2, flipX: false, flipY: false });
+        case 'door_double':
+          return Object.assign(base, { w: 120, h: 60, color: '#475569', stroke: 2, flipX: false, flipY: false });
+        case 'door_garage':
+          return Object.assign(base, { w: 160, h: 50, color: '#475569', stroke: 2, flipX: false, flipY: false });
         case 'route':
           return Object.assign(base, { w: 220, h: 80, stroke: 3, color: '#237f52', points: [{ x: 0, y: 72 }, { x: 110, y: 40 }, { x: 218, y: 8 }] });
         case 'text':
@@ -145,7 +162,11 @@
         const code = this.signCodeForType(type);
         if (code) normalized.color = this.signCategoryColor(code);
         if (type === 'text' || type === 'dimension') normalized.fontSize = G.clamp(Number(element.fontSize) || base.fontSize || 14, 8, 160);
-        if (type === 'door') normalized.flipX = Boolean(element.flipX);
+        if (DOOR_TYPES.includes(type)) {
+          normalized.flipX = Boolean(element.flipX);
+          normalized.flipY = Boolean(element.flipY);
+          migrateDoor(normalized, canvas);
+        }
         if (PATH_TYPES.includes(type)) {
           const points = Array.isArray(element.points) ? element.points : base.points;
           normalized.points = (points || [{ x: 0, y: 0 }, { x: normalized.w, y: normalized.h }]).slice(0, 40).map((point) => ({
@@ -415,7 +436,11 @@
       element.x = Number(element.x) || 0;
       element.y = Number(element.y) || 0;
       if (type === 'text' || type === 'dimension') element.fontSize = G.clamp(Number(element.fontSize) || base.fontSize || 14, 8, 160);
-      if (type === 'door') element.flipX = Boolean(element.flipX);
+      if (DOOR_TYPES.includes(type)) {
+        element.flipX = Boolean(element.flipX);
+        element.flipY = Boolean(element.flipY);
+        migrateDoor(element, this.design.canvas);
+      }
       if (PATH_TYPES.includes(type)) {
         element.points = (Array.isArray(element.points) ? element.points : base.points).map((point) => ({
           x: G.clamp(Number(point.x), 0, element.w),
@@ -569,7 +594,7 @@
     setProps(patch) {
       const elements = this.selectedElements();
       if (!elements.length) return false;
-      const allowed = ['color', 'stroke', 'opacity', 'label', 'fontSize', 'flipX', 'layerId', 'locked'];
+      const allowed = ['color', 'stroke', 'opacity', 'label', 'fontSize', 'flipX', 'flipY', 'layerId', 'locked'];
       const keys = Object.keys(patch);
       if (!keys.every((key) => allowed.includes(key))) return false;
       const editable = this.canEdit();
@@ -589,7 +614,8 @@
           if (patch.fontSize !== undefined && (element.type === 'text' || element.type === 'dimension')) {
             element.fontSize = G.clamp(Number(patch.fontSize), 8, 160);
           }
-          if (patch.flipX !== undefined && element.type === 'door') element.flipX = Boolean(patch.flipX);
+          if (patch.flipX !== undefined && DOOR_TYPES.includes(element.type)) element.flipX = Boolean(patch.flipX);
+          if (patch.flipY !== undefined && DOOR_TYPES.includes(element.type)) element.flipY = Boolean(patch.flipY);
           if (patch.layerId !== undefined && this.layer(patch.layerId)) element.layerId = patch.layerId;
           if (patch.locked !== undefined) element.locked = Boolean(patch.locked);
         });
@@ -625,8 +651,13 @@
           element.label = type === 'text' && keepLabel.trim() === '' ? 'Texto' : keepLabel;
           if (type === 'text' || type === 'dimension') element.fontSize = defaultElement.fontSize;
           else delete element.fontSize;
-          if (type === 'door') element.flipX = false;
-          else delete element.flipX;
+          if (DOOR_TYPES.includes(type)) {
+            element.flipX = false;
+            element.flipY = false;
+          } else {
+            delete element.flipX;
+            delete element.flipY;
+          }
           if (PATH_TYPES.includes(type)) {
             const isDiagonal = type === 'line' || type === 'route';
             element.points = isDiagonal
@@ -889,6 +920,7 @@
   root.Model = Model;
   root.COLORS = COLORS;
   root.BASIC_TYPES = BASIC;
+  root.DOOR_TYPES = DOOR_TYPES;
   root.PATH_TYPES = PATH_TYPES;
   root.createModel = (design, catalogs, options) => new Model(design, catalogs, options);
 })();

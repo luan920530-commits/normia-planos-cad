@@ -4,7 +4,7 @@
   const root = (window.Normia = window.Normia || {});
   const G = root.Geometry;
   const TYPE_NAMES = {
-    wall: 'Muro', door: 'Puerta', route: 'Ruta de evacuación', text: 'Texto', dimension: 'Medida',
+    wall: 'Muro', door: 'Puerta sencilla', door_double: 'Puerta doble', door_garage: 'Portón de garaje', route: 'Ruta de evacuación', text: 'Texto', dimension: 'Medida',
     line: 'Línea', rect: 'Rectángulo', ellipse: 'Elipse', sign: 'Señal ISO 7010', cad: 'Equipo CAD',
   };
   const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
@@ -36,7 +36,7 @@
             this.model.setProps({ label: field.value });
           } else if (prop === 'fontSize' || prop === 'stroke' || prop === 'opacity') {
             this.model.setProps({ [prop]: Number(field.value) });
-          } else if (prop === 'flipX' || prop === 'locked') {
+          } else if (prop === 'flipX' || prop === 'flipY' || prop === 'locked') {
             this.model.setProps({ [prop]: field.checked });
           } else if (prop === 'layerId') {
             this.model.setProps({ layerId: field.value });
@@ -157,7 +157,7 @@
       const design = this.model.design;
       const hasPath = elements.some((element) => Array.isArray(element.points));
       const hasText = elements.some((element) => element.type === 'text' || element.type === 'dimension');
-      const hasDoor = elements.some((element) => element.type === 'door');
+      const hasDoor = elements.some((element) => (root.DOOR_TYPES || ['door']).includes(element.type));
       const colors = root.COLORS || [];
       const canEdit = this.model.canEdit();
       const layerOptions = design.layers.map((layer) => `<option value="${esc(layer.id)}" ${elements.every((element) => element.layerId === layer.id) ? 'selected' : ''}>${esc(layer.name)}</option>`).join('');
@@ -167,7 +167,7 @@
       const sign = single ? this.model.signCodeForType(single.type) : null;
       const cad = single ? this.model.cadForType(single.type) : null;
       return `
-        ${sign ? `<div class="inspector-asset"><span class="inspector-asset-thumb" data-asset-preview="${esc(single.type)}"></span><div><strong>${esc(this.model.catalogs.signs[sign]?.name || sign)}</strong><small>${esc(sign)} · ${esc(this.model.catalogs.signCategories[this.model.catalogs.signs[sign]?.category]?.name || 'ISO 7010')}</small></div></div>` : ''}
+        ${sign ? `<div class="inspector-asset"><span class="inspector-asset-thumb" data-asset-preview="${esc(single.type)}"></span><div><strong>${esc(this.model.catalogs.signs[sign]?.name || sign)}</strong><small>${esc(sign)} · ${esc(this.model.catalogs.signCategories[this.model.catalogs.signs[sign]?.category]?.label || 'ISO 7010')}</small></div></div>` : ''}
         ${cad ? `<div class="inspector-asset"><span class="inspector-asset-thumb" data-asset-preview="${esc(single.type)}"></span><div><strong>${esc(cad.name)}</strong><small>Equipo CAD esquemático</small></div></div>` : ''}
         ${!canEdit ? '<div class="notice notice-warning compact-notice"><svg class="icon"><use href="#i-lock"></use></svg><p>La selección está bloqueada o pertenece a una capa bloqueada. Desbloquea para editar.</p></div>' : ''}
         <section class="inspector-section">
@@ -192,7 +192,8 @@
           </div>
           ${hasText ? `<label class="field compact"><span>Texto</span><textarea data-prop="label" rows="2" maxlength="240" placeholder="Escribe una etiqueta breve">${esc(single ? single.label : '')}</textarea></label>
           <label class="field compact"><span>Tamaño de letra</span><input type="number" min="8" max="160" step="1" data-prop="fontSize" value="${single?.fontSize || 14}"></label>` : ''}
-          ${hasDoor ? `<label class="switch-row compact"><span><strong>Voltear puerta</strong><small>Cambia el sentido de apertura.</small></span><input type="checkbox" data-prop="flipX" ${single?.flipX ? 'checked' : ''} ${canEdit ? '' : 'disabled'}></label>` : ''}
+          ${hasDoor ? `<label class="switch-row compact"><span><strong>Cambiar bisagra</strong><small>Voltea la puerta hacia el otro lado del vano.</small></span><input type="checkbox" data-prop="flipX" ${single?.flipX ? 'checked' : ''} ${canEdit ? '' : 'disabled'}></label>
+          <label class="switch-row compact"><span><strong>Abrir al otro lado</strong><small>Invierte el sentido de abatimiento respecto al muro.</small></span><input type="checkbox" data-prop="flipY" ${single?.flipY ? 'checked' : ''} ${canEdit ? '' : 'disabled'}></label>` : ''}
         </section>
         <section class="inspector-section">
           <h3>Organización</h3>

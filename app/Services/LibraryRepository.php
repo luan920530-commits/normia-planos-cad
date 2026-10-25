@@ -87,7 +87,7 @@ final class LibraryRepository
 
     public static function allowedTypes(): array
     {
-        $types = ['wall', 'door', 'route', 'text', 'dimension', 'line', 'rect', 'ellipse'];
+        $types = ['wall', 'door', 'door_double', 'door_garage', 'route', 'text', 'dimension', 'line', 'rect', 'ellipse'];
         foreach (array_keys(self::signs()) as $code) {
             $types[] = 'iso_' . strtolower($code);
         }
@@ -168,8 +168,8 @@ final class LibraryRepository
         }
         if (!is_array($catalog) || !isset($catalog['objects'], $catalog['categories'])
             || !is_array($catalog['objects']) || !is_array($catalog['categories'])
-            || count($catalog['objects']) !== 32 || count($catalog['categories']) !== 6) {
-            throw new RuntimeException('El catálogo local debe contener 32 objetos CAD y sus 6 familias.');
+            || count($catalog['objects']) < 90 || count($catalog['categories']) < 15) {
+            throw new RuntimeException('El catálogo local debe contener al menos 90 objetos CAD y 15 familias.');
         }
         foreach ($catalog['objects'] as $key => $object) {
             if (preg_match('/^cad_[a-z][a-z0-9_]{2,40}$/D', (string) $key) !== 1 || !is_array($object)

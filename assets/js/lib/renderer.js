@@ -5,6 +5,7 @@
   const G = root.Geometry;
   const NS = 'http://www.w3.org/2000/svg';
   const XLINK_NS = 'http://www.w3.org/1999/xlink';
+  const DOOR_TYPES = ['door', 'door_double', 'door_garage'];
 
   const node = (name, attrs = {}, text = null) => {
     const element = document.createElementNS(NS, name);
@@ -236,6 +237,82 @@
       return frame.rotation ? G.rotatePoint(point, { x: middleX, y: middleY }, frame.rotation) : point;
     }
 
+    /**
+     * Símbolo de puerta en vista de planta.
+     *
+     * La caja del elemento es el área de abatimiento: el vano se dibuja sobre
+     * el borde inferior y la hoja gira 90° hacia el interior. `flipX` cambia la
+     * bisagra de lado y `flipY` abate hacia el otro lado del muro.
+     */
+    doorNode(element, options = {}) {
+      const zoom = this.view.zoom || 1;
+      const color = options.color || element.color || '#475569';
+      const stroke = Math.max(1.4, Number(element.stroke) || 2);
+      const { x, y, w, h } = element;
+      const type = element.type;
+      const edge = y + h;
+      const flipX = Boolean(element.flipX);
+      const flipY = Boolean(element.flipY);
+      const group = node('g', { class: `door door-${type.replace('door_', '') || 'single'}` });
+      if (flipX || flipY) {
+        const px = G.round(x + w / 2, 2);
+        const py = G.round(edge, 2);
+        group.setAttribute('transform', `translate(${px} ${py}) scale(${flipX ? -1 : 1} ${flipY ? -1 : 1}) translate(${-px} ${-py})`);
+      }
+      const jamb = Math.min(14, Math.max(5, h * 0.16));
+      const frameWidth = Math.max(1.8, stroke * 1.15);
+      const dash = `${4 / zoom} ${4 / zoom}`;
+      const thin = Math.max(1, stroke * 0.65);
+      // Jambas: marcan el ancho real del vano.
+      group.appendChild(node('line', { x1: x, y1: edge, x2: x, y2: edge - jamb, stroke: color, 'stroke-width': frameWidth, 'stroke-linecap': 'round' }));
+      group.appendChild(node('line', { x1: x + w, y1: edge, x2: x + w, y2: edge - jamb, stroke: color, 'stroke-width': frameWidth, 'stroke-linecap': 'round' }));
+      // Línea tenue del vano (se borra sobre el muro al exportar a escala).
+      group.appendChild(node('line', { x1: x, y1: edge, x2: x + w, y2: edge, stroke: color, 'stroke-width': thin, 'stroke-dasharray': dash, opacity: 0.5 }));
+      if (type === 'door_garage') {
+        const panelHeight = Math.max(10, Math.min(30, h * 0.55));
+        const panelTop = edge - panelHeight;
+        group.appendChild(node('rect', {
+          x: x + 3, y: panelTop, width: Math.max(6, w - 6), height: panelHeight, rx: Math.min(3, panelHeight / 3),
+          fill: color, 'fill-opacity': 0.1, stroke: color, 'stroke-width': Math.max(1.2, stroke * 0.75),
+        }));
+        const bars = Math.max(3, Math.min(14, Math.round(w / 16)));
+        for (let index = 1; index < bars; index += 1) {
+          const barX = x + 3 + ((w - 6) * index) / bars;
+          group.appendChild(node('line', {
+            x1: barX, y1: panelTop + 1.5, x2: barX, y2: edge - 1.5,
+            stroke: color, 'stroke-width': Math.max(0.9, stroke * 0.55), opacity: 0.75,
+          }));
+        }
+        const railY = panelTop + panelHeight / 2;
+        group.appendChild(node('line', { x1: x + 3, y1: railY, x2: x + w - 3, y2: railY, stroke: color, 'stroke-width': Math.max(0.9, stroke * 0.5), opacity: 0.65 }));
+        // Guías laterales del portón.
+        group.appendChild(node('line', { x1: x + 3, y1: edge, x2: x + 3, y2: panelTop + panelHeight + 2, stroke: color, 'stroke-width': thin, opacity: 0.75 }));
+        group.appendChild(node('line', { x1: x + w - 3, y1: edge, x2: x + w - 3, y2: panelTop + panelHeight + 2, stroke: color, 'stroke-width': thin, opacity: 0.75 }));
+        return group;
+      }
+      const leafLength = Math.max(8, Math.min(type === 'door_double' ? w / 2 : w, h));
+      const leafWidth = Math.max(2.2, stroke * 1.2);
+      const drawLeaf = (hingeX, reachX) => {
+        group.appendChild(node('line', {
+          x1: hingeX, y1: edge, x2: hingeX, y2: edge - leafLength,
+          stroke: color, 'stroke-width': leafWidth, 'stroke-linecap': 'round',
+        }));
+        group.appendChild(node('circle', { cx: hingeX, cy: edge, r: Math.max(2, stroke * 1.1), fill: color }));
+        // Arco de abatimiento continuo: se lee bien incluso con zoom bajo.
+        group.appendChild(node('path', {
+          d: `M ${hingeX} ${edge - leafLength} A ${leafLength} ${leafLength} 0 0 ${reachX >= hingeX ? 1 : 0} ${reachX} ${edge}`,
+          fill: 'none', stroke: color, 'stroke-width': Math.max(1, stroke * 0.6), opacity: 0.55,
+        }));
+      };
+      if (type === 'door_double') {
+        drawLeaf(x, x + leafLength);
+        drawLeaf(x + w, x + w - leafLength);
+      } else {
+        drawLeaf(x, x + leafLength);
+      }
+      return group;
+    }
+
     elementNode(element, canvas, options = {}) {
       const zoom = this.view.zoom || 1;
       const cx = element.x + element.w / 2;
@@ -314,16 +391,14 @@
         }
         return group;
       }
-      if (type === 'door') {
-        const flip = element.flipX ? `translate(${element.w} 0) scale(-1 1)` : '';
-        const doorGroup = node('g', flip ? { transform: flip } : {});
-        doorGroup.appendChild(node('line', { x1: element.x, y1: element.y + element.h, x2: element.x + element.w, y2: element.y + element.h, stroke: color, 'stroke-width': Math.max(1.5, stroke), 'stroke-linecap': 'round' }));
-        doorGroup.appendChild(node('line', { x1: element.x, y1: element.y + element.h, x2: element.x, y2: element.y, stroke: color, 'stroke-width': Math.max(1.5, stroke), 'stroke-linecap': 'round' }));
-        doorGroup.appendChild(node('path', {
-          d: `M ${element.x} ${element.y} A ${element.w} ${Math.max(4, element.h)} 0 0 1 ${element.x + element.w} ${element.y + element.h}`,
-          fill: 'none', stroke: color, 'stroke-width': Math.max(1, stroke * 0.7), 'stroke-dasharray': `${3 / zoom} ${4 / zoom}`, opacity: 0.7,
-        }));
-        group.appendChild(doorGroup);
+      if (DOOR_TYPES.includes(type)) {
+        group.appendChild(this.doorNode(element));
+        if (element.label) {
+          group.appendChild(node('text', {
+            x: element.x + element.w / 2, y: element.y - 6 / zoom,
+            'text-anchor': 'middle', 'font-size': 10 / zoom, fill: '#334155', class: 'element-label',
+          }, clean(element.label.split('\n')[0])));
+        }
         return group;
       }
       if (type === 'text') {
@@ -412,7 +487,9 @@
       const frame = { x: ghost.x - ghost.w / 2, y: ghost.y - ghost.h / 2, w: ghost.w, h: ghost.h };
       const group = node('g', { class: 'placement-ghost', 'pointer-events': 'none', opacity: 0.72 });
       group.appendChild(node('rect', { ...frame, fill: 'rgba(37,99,235,.08)', stroke: '#2563eb', 'stroke-width': 1.5 / (this.view.zoom || 1), 'stroke-dasharray': `${5 / (this.view.zoom || 1)} ${4 / (this.view.zoom || 1)}` }));
-      if (ghost.type) {
+      if (ghost.type && DOOR_TYPES.includes(ghost.type)) {
+        group.appendChild(this.doorNode({ ...ghost, x: frame.x, y: frame.y, color: '#2563eb', stroke: 2 }, { color: '#2563eb' }));
+      } else if (ghost.type) {
         const asset = this.assetNode(ghost.type);
         if (asset) {
           asset.setAttribute('x', frame.x);

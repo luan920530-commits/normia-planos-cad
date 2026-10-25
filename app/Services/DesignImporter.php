@@ -115,7 +115,7 @@ final class DesignImporter
                 $type = 'iso_' . strtolower($legacyTools[$tool]);
             } elseif (preg_match('/^iso_([efmpw][0-9]{3})$/i', $tool, $m) === 1 && LibraryRepository::sign(strtoupper($m[1])) !== null) {
                 $type = 'iso_' . strtolower($m[1]);
-            } elseif (in_array($tool, ['wall', 'door', 'route', 'text', 'line', 'rect', 'ellipse', 'dimension'], true)) {
+            } elseif (in_array($tool, ['wall', 'door', 'door_double', 'door_garage', 'route', 'text', 'line', 'rect', 'ellipse', 'dimension'], true)) {
                 $type = $tool;
             } elseif (LibraryRepository::cadObject($tool) !== null) {
                 $type = $tool;
@@ -168,11 +168,19 @@ final class DesignImporter
                 $element['fontSize'] = min(160, max(8, $stroke * 2.2));
                 $element['x'] = max(0, min($width - $element['w'], $x));
                 $element['y'] = max(0, min($height - $element['h'], $y));
-            } elseif ($type === 'door') {
-                $element['w'] = max(30, min(160, $stroke * 12));
-                $element['h'] = max(12, min(40, $stroke * 3));
-                $element['x'] = max(0, min($width - $element['w'], $x));
-                $element['y'] = max(0, min($height - $element['h'], $y));
+            } elseif (in_array($type, ['door', 'door_double', 'door_garage'], true)) {
+                $element['w'] = match ($type) {
+                    'door_double' => max(120, min(260, $stroke * 20)),
+                    'door_garage' => max(140, min(300, $stroke * 24)),
+                    default => max(60, min(160, $stroke * 16)),
+                };
+                $element['h'] = match ($type) {
+                    'door_double' => $element['w'] / 2,
+                    'door_garage' => min(60, max(36, $element['w'] / 4)),
+                    default => $element['w'],
+                };
+                $element['x'] = max(0, min($width - $element['w'], $x - $element['w'] / 2));
+                $element['y'] = max(0, min($height - $element['h'], $y - $element['h'] / 2));
             } elseif (in_array($type, ['wall', 'route', 'line', 'dimension'], true)) {
                 $x2 = isset($raw['x2']) && is_numeric($raw['x2']) ? (float) $raw['x2'] : null;
                 $y2 = isset($raw['y2']) && is_numeric($raw['y2']) ? (float) $raw['y2'] : null;

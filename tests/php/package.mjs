@@ -147,7 +147,7 @@ async function main() {
       /* hay páginas con % literales que no forman secuencias válidas */
     }
     const floorIds = [...new Set(Array.from(projectHtml.matchAll(/floors\/(\d+)\/editor/g)).map((match) => Number(match[1])))];
-    report.check('El proyecto de ejemplo tiene dos pisos', project.status === 200 && floorIds.length === 2, `${floorIds.join(',')} · estado ${project.status}`);
+    report.check('El proyecto de ejemplo tiene cuatro pisos', project.status === 200 && floorIds.length === 4, `${floorIds.join(',')} · estado ${project.status}`);
     const editor = floorIds.length ? await client.get(`projects/1/floors/${floorIds[0]}/editor`) : { status: 0, text: '' };
     const editorOk = report.check('El editor de la demo carga', editor.status === 200 && /id="plan-canvas"/.test(editor.text), String(editor.status));
     if (editorOk) {

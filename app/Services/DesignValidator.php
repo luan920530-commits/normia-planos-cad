@@ -17,10 +17,12 @@ final class DesignValidator
         '#ffffff', '#f8fafc', '#2563eb', '#1d4ed8', '#005387', '#0f766e',
         '#15803d', '#16a34a', '#237f52', '#65a30d', '#b71f2e', '#dc2626',
         '#991b1b', '#ea580c', '#f97316', '#f59e0b', '#f9a800', '#eab308',
-        '#facc15', '#7c3aed', '#be185d', '#0891b2',
+        '#facc15', '#7c3aed', '#be185d', '#0891b2', '#ca8a04',
     ];
 
-    private const BASE_TYPES = ['wall', 'door', 'route', 'text', 'dimension', 'line', 'rect', 'ellipse'];
+    public const DOOR_TYPES = ['door', 'door_double', 'door_garage'];
+
+    private const BASE_TYPES = ['wall', 'door', 'door_double', 'door_garage', 'route', 'text', 'dimension', 'line', 'rect', 'ellipse'];
     private const UNITS = ['cm', 'm', 'mm'];
 
     public static function normalizeJson(string $json): array
@@ -146,7 +148,9 @@ final class DesignValidator
         }
         return match ($type) {
             'wall' => array_merge($base, ['w' => 200, 'h' => 16, 'stroke' => 8, 'color' => '#0f172a']),
-            'door' => array_merge($base, ['w' => 80, 'h' => 16, 'stroke' => 2, 'color' => '#475569']),
+            'door' => array_merge($base, ['w' => 90, 'h' => 90, 'stroke' => 2, 'color' => '#475569']),
+            'door_double' => array_merge($base, ['w' => 120, 'h' => 60, 'stroke' => 2, 'color' => '#475569']),
+            'door_garage' => array_merge($base, ['w' => 160, 'h' => 50, 'stroke' => 2, 'color' => '#475569']),
             'route' => array_merge($base, ['w' => 220, 'h' => 80, 'stroke' => 3, 'color' => '#237f52']),
             'text' => array_merge($base, ['w' => 180, 'h' => 32, 'stroke' => 0, 'color' => '#0f172a', 'fontSize' => 18]),
             'dimension' => array_merge($base, ['w' => 200, 'h' => 20, 'stroke' => 1.5, 'color' => '#475569', 'fontSize' => 12]),
@@ -239,7 +243,7 @@ final class DesignValidator
         $ids = [];
         $allowedKeys = [
             'id', 'type', 'layerId', 'x', 'y', 'w', 'h', 'rotation', 'color', 'stroke', 'opacity',
-            'label', 'fontSize', 'points', 'flipX', 'locked',
+            'label', 'fontSize', 'points', 'flipX', 'flipY', 'locked',
         ];
         foreach ($elements as $element) {
             if (!is_array($element)) {
@@ -266,6 +270,14 @@ final class DesignValidator
             $y = self::number($element['y'] ?? null, 0, 10_000, 'coordenada Y');
             $w = self::number($element['w'] ?? null, 2, 10_000, 'ancho');
             $h = self::number($element['h'] ?? null, 2, 10_000, 'alto');
+            // Las puertas antiguas solo guardaban el hueco del muro (80 × 16).
+            // El símbolo actual necesita la profundidad de abatimiento: se
+            // amplía el alto conservando la línea del muro (borde inferior).
+            if ($type === 'door' && $h < $w * 0.5) {
+                $edge = $y + $h;
+                $h = min($w, $canvas['height']);
+                $y = max(0.0, min($edge - $h, $canvas['height'] - $h));
+            }
             if ($x + $w > $canvas['width'] + 0.5 || $y + $h > $canvas['height'] + 0.5) {
                 throw new DomainException('Un elemento queda fuera de los límites del lienzo.');
             }
@@ -293,7 +305,8 @@ final class DesignValidator
                 throw new DomainException('El bloqueo de un elemento no es válido.');
             }
             $flipX = $element['flipX'] ?? false;
-            if (!is_bool($flipX)) {
+            $flipY = $element['flipY'] ?? false;
+            if (!is_bool($flipX) || !is_bool($flipY)) {
                 throw new DomainException('El sentido de apertura no es válido.');
             }
             $points = null;
@@ -330,8 +343,9 @@ final class DesignValidator
             if ($points !== null) {
                 $normalized['points'] = $points;
             }
-            if ($type === 'door') {
+            if (in_array($type, self::DOOR_TYPES, true)) {
                 $normalized['flipX'] = $flipX;
+                $normalized['flipY'] = $flipY;
             }
             $ids[$id] = true;
             $result[] = $normalized;
