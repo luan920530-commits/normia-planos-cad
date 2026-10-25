@@ -390,7 +390,10 @@ npm run test:js        # editor real en JSDOM (PHP 8.3)
 npm run test:package   # construye los ZIP y hace la instalación limpia de la demo
 npm run lint:php       # sintaxis de 51 archivos PHP en 8.1 y 8.3
 npm run lint:js        # sintaxis de todos los JS/MJS
+npm run preview        # vista previa real en http://localhost:8080 (PHP en WebAssembly)
 ```
+
+`npm run preview` levanta la aplicación completa con `@php-wasm/node`: instala la demo en una copia temporal, inicia sesión y sirve el editor para revisarlo en un navegador real sin instalar PHP. Es solo para desarrollo (`tools/` no se incluye en los ZIP). Cuenta de la vista previa: `admin@normia.local` / `ClaveSegura2026`. Para cambiar el puerto, `PORT=9000 npm run preview`.
 
 ### Qué cubre cada bloque
 
