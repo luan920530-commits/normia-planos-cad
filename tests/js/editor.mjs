@@ -1163,6 +1163,136 @@ async function main() {
         return !hasSwap;
       })());
 
+    /* ------------- selección con un clic y cambio de equipo (v1.0.9) ------------- */
+    app.applyTool('select');
+    app.model.clearSelection();
+    app.renderNow();
+    // El pictograma es un SVG incrustado que ignora el puntero: antes, hacer
+    // clic dentro de él no encontraba nodo y abría la caja de selección.
+    const signClick = clientPoint(app, signElement.x + 24, signElement.y + 24);
+    pointer(window, app.svg, 'pointerdown', signClick);
+    pointer(window, app.svg, 'pointerup', signClick);
+    app.renderNow();
+    report.check('Un clic sencillo selecciona un pictograma sin abrir la caja de selección',
+      app.model.selection.size === 1 && app.model.selection.has(signElement.id), [...app.model.selection].join(','));
+    pointer(window, app.svg, 'pointermove', signClick);
+    report.check('El cursor avisa de que el objeto bajo el puntero es seleccionable',
+      app.svg.style.cursor === 'move', app.svg.style.cursor);
+    const emptyCorner = clientPoint(app, app.model.design.canvas.width - 6, app.model.design.canvas.height - 6);
+    pointer(window, app.svg, 'pointermove', emptyCorner);
+    report.check('El cursor vuelve a la flecha sobre el lienzo vacío', app.svg.style.cursor === 'default', app.svg.style.cursor);
+
+    // Pasillo libre calculado sobre el plano: la prueba no depende de que una
+    // coordenada fija siga vacía después de dibujar los demás elementos.
+    const freeLane = (() => {
+      const canvas = app.model.design.canvas;
+      const offsets = [0, 20, 40, 60, 80, 100, 120, 140, 160];
+      for (let y = canvas.height - 40; y >= 80; y -= 20) {
+        for (let x = 80; x <= canvas.width - 240; x += 20) {
+          if (offsets.every((dx) => app.model.hitStack({ x: x + dx, y }, { tolerance: 20 }).length === 0)) return { x, y };
+        }
+      }
+      return { x: 80, y: canvas.height - 40 };
+    })();
+    const clickWall = app.model.addPath('wall', [{ x: freeLane.x, y: freeLane.y }, { x: freeLane.x + 160, y: freeLane.y }], { stroke: 6 });
+    app.renderNow();
+    app.model.clearSelection();
+    app.renderNow();
+    // 7 unidades por encima del eje: fuera del trazo pintado, dentro del alcance.
+    const thinPoint = clientPoint(app, freeLane.x + 80, freeLane.y + 7);
+    pointer(window, app.svg, 'pointerdown', thinPoint);
+    pointer(window, app.svg, 'pointerup', thinPoint);
+    app.renderNow();
+    report.check('Un clic junto a un muro fino (sin acertar el trazo) lo selecciona',
+      app.model.selection.size === 1 && app.model.selection.has(clickWall.id), [...app.model.selection].join(','));
+
+    const gear = app.model.addElement('cad_forklift', { x: freeLane.x + 35, y: freeLane.y - 45 });
+    app.renderNow();
+    app.model.clearSelection();
+    app.renderNow();
+    const gearPoint = clientPoint(app, gear.x + gear.w / 2, gear.y + gear.h / 2);
+    pointer(window, app.svg, 'pointerdown', gearPoint);
+    pointer(window, app.svg, 'pointerup', gearPoint);
+    app.renderNow();
+    report.check('Un clic dentro de un equipo lo selecciona sin la caja de selección',
+      app.model.selection.size === 1 && app.model.selection.has(gear.id), [...app.model.selection].join(','));
+    report.check('El clic prefiere el equipo visible sobre el muro que queda debajo', app.model.selection.has(gear.id));
+    pointer(window, app.svg, 'pointerdown', gearPoint, { ctrlKey: true });
+    app.renderNow();
+    report.check('Ctrl + clic baja al muro que hay debajo del equipo', app.model.selection.has(clickWall.id), [...app.model.selection].join(','));
+    app.model.select([gear.id]);
+    const wallOnlyPoint = clientPoint(app, freeLane.x + 145, freeLane.y + 5);
+    pointer(window, app.svg, 'pointerdown', wallOnlyPoint, { shiftKey: true });
+    pointer(window, app.svg, 'pointerup', wallOnlyPoint, { shiftKey: true });
+    app.renderNow();
+    report.check('Shift + clic añade otro objeto a la selección',
+      app.model.selection.size === 2 && app.model.selection.has(gear.id) && app.model.selection.has(clickWall.id),
+      [...app.model.selection].join(','));
+
+    /* ------------------- cambio de equipo desde el inspector ------------------- */
+    app.model.select([gear.id]);
+    app.renderNow();
+    report.check('Un equipo no ofrece cambiar de señal', !q(window, '[data-section="appearance"] [data-action="swap-sign"]'));
+    const gearButton = q(window, '[data-section="appearance"] [data-action="swap-equipment"]');
+    report.check('El inspector ofrece cambiar el equipo desde Apariencia',
+      Boolean(gearButton) && /Cambiar equipo/.test(gearButton.textContent), gearButton?.textContent.trim());
+    report.check('La apariencia muestra la miniatura y la familia del equipo actual',
+      qa(window, '[data-section="appearance"] .equipment-swap .sign-swap-thumb > svg').length === 1
+      && /Vehículos/.test(q(window, '[data-section="appearance"] .equipment-swap .sign-swap-copy')?.textContent || ''),
+      q(window, '[data-section="appearance"] .equipment-swap .sign-swap-copy')?.textContent.trim());
+    const beforeGear = { x: gear.x, y: gear.y, w: gear.w, h: gear.h, rotation: gear.rotation };
+    gearButton?.click();
+    report.check('Cambiar equipo abre la biblioteca de equipos en modo reemplazo',
+      app.activeDrawer === 'library' && app.library.kind === 'cad' && app.library.mode === 'replace'
+      && /Cambiar equipo/.test(q(window, '[data-library-title]').textContent)
+      && q(window, '[data-drawer="library"]')?.dataset.libraryMode === 'replace',
+      `${app.activeDrawer} · ${app.library.kind} · ${app.library.mode} · ${q(window, '[data-library-title]').textContent}`);
+    const currentGear = q(window, '[data-library-grid] .library-card.is-current');
+    report.check('El equipo actual queda resaltado en la biblioteca',
+      currentGear?.dataset.key === 'cad_forklift' && /Equipo actual/.test(currentGear.textContent),
+      `${currentGear?.dataset.key} · ${currentGear?.textContent.trim().slice(0, 60)}`);
+    report.check('En modo reemplazo las tarjetas de equipo no se arrastran al plano',
+      q(window, '[data-library-grid] .library-card')?.draggable === false);
+    app.library.family = 'electrico';
+    app.library.renderChips();
+    app.library.renderGrid();
+    const acCard = qa(window, '[data-library-grid] .library-card').find((card) => card.dataset.key === 'cad_elec_ac');
+    report.check('La familia eléctrica muestra los equipos del catálogo', Boolean(acCard), String(qa(window, '[data-library-grid] .library-card').length));
+    acCard?.click();
+    report.check('La ficha cambia su acción a «Usar este equipo»',
+      /Usar este equipo/.test(q(window, '[data-library-detail] [data-insert]')?.textContent || ''),
+      q(window, '[data-library-detail] [data-insert]')?.textContent.trim());
+    report.check('La ficha del equipo avisa de verificar dimensiones y escala en sitio',
+      /verificar/i.test(q(window, '[data-library-detail]')?.textContent || '') && /escala/i.test(q(window, '[data-library-detail]')?.textContent || ''));
+    q(window, '[data-library-detail] [data-insert]')?.click();
+    app.renderNow();
+    const swappedGear = elementById(app, gear.id);
+    report.check('Elegir otro equipo lo sustituye sin moverlo de sitio',
+      swappedGear.type === 'cad_elec_ac'
+      && near(swappedGear.x, beforeGear.x, 0.01) && near(swappedGear.y, beforeGear.y, 0.01)
+      && near(swappedGear.w, beforeGear.w, 0.01) && near(swappedGear.h, beforeGear.h, 0.01)
+      && swappedGear.rotation === beforeGear.rotation,
+      `${swappedGear.type} · ${Math.round(swappedGear.x)},${Math.round(swappedGear.y)} · ${Math.round(swappedGear.w)}×${Math.round(swappedGear.h)}`);
+    report.check('El equipo nuevo toma el color de su familia', swappedGear.color === '#334155', swappedGear.color);
+    report.check('El cajón se cierra y el inspector muestra el equipo nuevo',
+      app.activeDrawer === null && app.tool === 'select'
+      && /Aire acondicionado/.test(q(window, '[data-properties-title]').textContent)
+      && /Aire acondicionado/.test(q(window, '[data-section="appearance"] .equipment-swap .sign-swap-copy')?.textContent || ''),
+      q(window, '[data-properties-title]').textContent);
+    app.model.undo();
+    app.renderNow();
+    const restoredGear = elementById(app, gear.id);
+    report.check('Deshacer devuelve el equipo anterior y su color',
+      restoredGear.type === 'cad_forklift' && restoredGear.color === '#ca8a04', `${restoredGear.type} · ${restoredGear.color}`);
+    app.model.clearSelection();
+    app.model.select([clickWall.id]);
+    app.renderNow();
+    report.check('Los elementos que no son equipos no ofrecen cambiar de equipo',
+      !q(window, '[data-section="appearance"] [data-action="swap-equipment"]'));
+    app.model.clearSelection();
+    app.applyTool('select');
+    app.renderNow();
+
     /* ----------------------- redes guardadas en el servidor ----------------------- */
     app.model.addElement('cad_elec_ac', { x: 740, y: 660, circuit: 'C9', load: 4000 });
     await app.saveNow('Redes de prueba', { force: true });

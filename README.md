@@ -2,7 +2,7 @@
 
 Editor de planos de emergencia y evacuación, en español, pensado para pequeñas y medianas organizaciones que necesitan documentar plantas, rutas, señalización y equipamiento sin depender de software CAD de escritorio ni de servicios externos.
 
-- **Editor completo**: instalador web, cuentas, proyectos y pisos, editor SVG real, biblioteca de **355 pictogramas** (332 ISO 7010 + 23 señales de orientación como baños, vestidores, cafetería y **«Usted está aquí»**), **145 objetos CAD esquemáticos de 18 familias** (restaurante, bodega, comercio, hospital, costura, asadero, supermercado, vivienda, deportes, exteriores, instalaciones eléctricas y redes hidrosanitarias, entre otras), puertas de uno y dos batientes y portones, **rutas con vértices editables**, **redes de tubería (agua, gas, desagües e incendio) y circuitos eléctricos**, guardado con versiones, borradores automáticos, deshacer/rehacer y exportación SVG/JSON/PNG/impresión.
+- **Editor completo**: instalador web, cuentas, proyectos y pisos, editor SVG real, biblioteca de **355 pictogramas** (332 ISO 7010 + 23 señales de orientación como baños, vestidores, cafetería y **«Usted está aquí»**), **145 objetos CAD esquemáticos de 18 familias** (restaurante, bodega, comercio, hospital, costura, asadero, supermercado, vivienda, deportes, exteriores, instalaciones eléctricas y redes hidrosanitarias, entre otras), puertas de uno y dos batientes y portones, **rutas con vértices editables**, **redes de tubería (agua, gas, desagües e incendio) y circuitos eléctricos**, cambio de señal y de equipo desde el inspector, guardado con versiones, borradores automáticos, deshacer/rehacer y exportación SVG/JSON/PNG/impresión.
 - **Instalaciones**: tuberías de agua, gas, desagües e incendio y red eléctrica con longitudes, diámetros, circuitos, cargas y caída de tensión estimada.
 - **PHP ≥ 8.1 + SQLite/PDO**, arquitectura MVC propia, sin Composer, sin `node_modules` en producción y sin CDN.
 - **100 % local**: las fuentes, los estilos, los iconos, los pictogramas y los catálogos viven en el paquete. La aplicación no hace llamadas a servicios de terceros.
@@ -26,7 +26,7 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 10. [Arquitectura](#arquitectura)
 11. [Seguridad](#seguridad)
 12. [Pruebas](#pruebas)
-13. [Cambios de la versión 1.0.8](#cambios-de-la-versión-108)
+13. [Cambios de la versión 1.0.9](#cambios-de-la-versión-109)
 14. [Paquetes y verificación](#paquetes-y-verificación)
 15. [Limitaciones](#limitaciones)
 16. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
@@ -176,7 +176,7 @@ Luego importa `resources/schema.sql` en el archivo SQLite y crea el usuario admi
 ### Gestos y puntero
 
 - Arrastrar con una herramienta de dibujo crea el elemento; `Shift` restringe a horizontal/vertical o mantiene proporciones.
-- Con **Seleccionar**, clic selecciona; `Shift` añade a la selección; arrastrar el fondo dibuja una marquesina.
+- Con **Seleccionar**, un clic selecciona el objeto que está bajo el puntero, también el interior de un pictograma o de un equipo CAD aunque su dibujo sea de trazo fino: no hace falta la caja de selección. `Shift` añade a la selección; arrastrar el fondo dibuja una marquesina. El cursor cambia a la cruz de movimiento cuando hay algo seleccionable en ese punto.
 - **Elementos superpuestos**: `Ctrl/⌘ + clic` selecciona el siguiente elemento hacia abajo y `Ctrl/⌘ + Shift + clic` vuelve a subir. La barra de estado indica cuántos hay en ese punto y el inspector lista la pila para cambiarla con un clic.
 - **Mano (H)**: arrastra para desplazar el lienzo; la rueda sigue haciendo zoom y el botón central o `Espacio` + arrastre funcionan en cualquier herramienta.
 - Arrastrar un elemento seleccionado lo mueve con ajuste a la rejilla (`Alt` desactiva el ajuste).
@@ -215,7 +215,7 @@ Luego importa `resources/schema.sql` en el archivo SQLite y crea el usuario admi
 
 ### Propiedades
 
-El inspector se organiza en una ficha superior con la miniatura, el tipo y las acciones rápidas (bloquear, duplicar, eliminar) y en **secciones plegables**: geometría, apariencia, instalación, elementos superpuestos, organización y orden. En **Apariencia**, cualquier señal seleccionada muestra su pictograma y un botón **Cambiar señal** que abre la biblioteca en modo sustitución: eliges otro pictograma y se cambia sin mover el elemento ni perder tamaño, rotación, capa u opacidad. Con varias señales seleccionadas el cambio se aplica a todas. Los campos numéricos muestran la unidad del lienzo y la rotación se ajusta con pasos de 90°. En tuberías añade **red, diámetro, material, pendiente y presión**; en circuitos, **código, tensión, calibre y fases**; en equipos eléctricos, **circuito y carga en VA**. Los controles que no aplican al elemento seleccionado no se muestran o quedan deshabilitados.
+El inspector se organiza en una ficha superior con la miniatura, el tipo y las acciones rápidas (bloquear, duplicar, eliminar) y en **secciones plegables**: geometría, apariencia, instalación, elementos superpuestos, organización y orden. En **Apariencia**, cualquier señal seleccionada muestra su pictograma y un botón **Cambiar señal**, y cualquier equipo CAD muestra su miniatura, su familia y un botón **Cambiar equipo**. Ambos abren la biblioteca en modo sustitución: eliges otro recurso y se cambia sin mover el elemento ni perder tamaño, rotación, capa u opacidad. Con varias señales o varios equipos seleccionados el cambio se aplica a todos. Los campos numéricos muestran la unidad del lienzo y la rotación se ajusta con pasos de 90°. En tuberías añade **red, diámetro, material, pendiente y presión**; en circuitos, **código, tensión, calibre y fases**; en equipos eléctricos, **circuito y carga en VA**. Los controles que no aplican al elemento seleccionado no se muestran o quedan deshabilitados.
 
 ### Capas y grupos
 
@@ -277,6 +277,7 @@ El inspector se organiza en una ficha superior con la miniatura, el tipo y las a
 - Identificador `cad_*` (por ejemplo `cad_desk`, `cad_rest_bar`, `cad_sport_pool`).
 - Los objetos de agua (piscina, trampolín) usan un color propio del catálogo (`#0891b2`); el resto hereda el color del elemento.
 - Son **esquemáticos**: no representan medidas certificadas; la descripción y la referencia están en `resources/cad-objects.json`. Verifica siempre las dimensiones en el sitio.
+- **Cambiar un equipo:** selecciónalo y pulsa **Cambiar equipo** en *Apariencia*. La biblioteca abre en modo sustitución con el equipo actual resaltado; al elegir otro se conservan posición, tamaño, rotación, capa, opacidad y bloqueo, y el nuevo objeto toma el color de su familia. También se puede hacer con varios equipos a la vez y se deshace con `Ctrl/⌘ + Z`.
 
 ### Puertas y portones
 
@@ -321,7 +322,7 @@ El panel **Redes y circuitos** (barra lateral inferior) resume el piso:
 | --- | --- |
 | `resources/iso7010-catalog.json` | `{format, standard, source, license, categories, signs{CODE:{name,category,description,svg}}}` |
 | `resources/cad-objects.json` | `{version, categories{furniture,...}, objects{cad_*:{category,name,description,reference,color,load?,svg}}}` — 145 objetos en 18 familias |
-| `resources/service-signs.json` | `{format, standard, license, categories{services}, signs{SVC_*:{name,category,description,aliases,svg}}}` — 22 señales propias |
+| `resources/service-signs.json` | `{format, standard, license, categories{services,location}, signs{SVC_*:{name,category,description,aliases,svg}}}` — 23 señales propias |
 | `resources/mep-networks.json` | `{hydraulic{clave:{label,short,color,dash,stroke,diameter,material,gravity,pressureKpa,reference}},diameters[],materials{},slopes{},electrical{...}}` — valores de referencia de redes y circuitos |
 | `resources/sign-aliases.json` | Alias heredados → códigos ISO 7010 |
 | `resources/schema.sql` | Esquema SQLite |
@@ -503,7 +504,7 @@ La aplicación está pensada para redes aisladas y equipos sin internet:
 - **La política de seguridad del navegador** (`Content-Security-Policy`) limita `script-src`, `style-src`, `img-src`, `font-src` y `connect-src` a `'self'`; cualquier intento de cargar algo externo queda bloqueado por el propio navegador.
 - **El servidor no hace llamadas salientes**: no usa `curl`, `fsockopen`, `get_headers` ni `file_get_contents()` sobre URLs.
 - **Las exportaciones se generan en local**: el SVG y el JSON los produce PHP; el PNG lo dibuja el navegador sobre el propio SVG. La impresión usa `print.css` local.
-- **`npm run test:offline`** recorre los 78 archivos que se sirven al navegador y falla si aparece una petición externa. Forma parte de `node tests/run-all.mjs`.
+- **`npm run test:offline`** recorre los 80 archivos que se sirven al navegador y falla si aparece una petición externa. Forma parte de `node tests/run-all.mjs`.
 
 Lo único que no funciona sin red es la **vista previa de desarrollo** (`npm run preview`), que solo existe para revisar el editor en el equipo de desarrollo; nunca se incluye en los paquetes.
 
@@ -513,21 +514,21 @@ Lo único que no funciona sin red es la **vista previa de desarrollo** (`npm run
 | --- | --- |
 | `tests/php/lint.mjs` | `php -l` sobre todo `app/`, `bootstrap.php` e `index.php` en 8.1 y 8.3. |
 | `tests/php/functional.mjs` | 152 comprobaciones: instalador, requisitos, contraseñas débiles, CSRF, sesión, autorización entre cuentas, CRUD de proyectos/pisos, duplicados, importación v1/v2, catálogos (355 señales y 145 objetos), catálogo y guardado de redes, señales de baño y de servicios (guardado, color de familia y exportación SVG), puertas y portones (geometría, sentidos de apertura, exportación con trazo), validaciones de la API, guardado/versiones/borradores/conflictos, exportaciones, ciclo de vida y logout. |
-| `tests/js/editor.mjs` | 206 comprobaciones de interfaz sobre la app real: arranque, 355 señales y 145 objetos, **trazado de tuberías y circuitos, inspector de red y panel de redes**, **mano y paneo, selección de superpuestos, inspector plegable y paleta de herramientas**, puertas dobles y portones, **vértices de ruta editables (arrastrar, doble clic, Alt+clic)**, **señal de baño insertada desde la biblioteca**, **posiciones reales del trazo**, **clic sobre muros finos**, **rotación**, **rutas cerradas**, **arrastrar y soltar desde la biblioteca sin que el cajón lo bloquee**, reglas, herramientas, inserción con puntero, selección, mover, escalar, rotar, color, cambio de tipo, deshacer/rehacer, duplicar, agrupar, bloquear, desplazar, texto y saneado, guardar, reabrir, borradores, conflictos, exportación SVG/JSON/PNG, tooltips sin acumulación, capas, versiones y límites. |
+| `tests/js/editor.mjs` | 228 comprobaciones de interfaz sobre la app real: arranque, 355 señales y 145 objetos, **trazado de tuberías y circuitos, inspector de red y panel de redes**, **mano y paneo, selección de superpuestos, inspector plegable y paleta de herramientas**, puertas dobles y portones, **vértices de ruta editables (arrastrar, doble clic, Alt+clic)**, **señal de baño insertada desde la biblioteca**, **posiciones reales del trazo**, **clic sobre muros finos, pictogramas y equipos**, **cambio de señal y de equipo desde el inspector**, **rotación**, **rutas cerradas**, **arrastrar y soltar desde la biblioteca sin que el cajón lo bloquee**, reglas, herramientas, inserción con puntero, selección, mover, escalar, rotar, color, cambio de tipo, deshacer/rehacer, duplicar, agrupar, bloquear, desplazar, texto y saneado, guardar, reabrir, borradores, conflictos, exportación SVG/JSON/PNG, tooltips sin acumulación, capas, versiones y límites. |
 | `tests/php/package.mjs` | 37 comprobaciones: construye ambos ZIP, verifica que no haya bases, sesiones, credenciales, logs ni carpetas de desarrollo, valida los SHA-256 y hace una instalación limpia de la demo comprobando assets (11), catálogos (355/145), los cuatro pisos del proyecto de ejemplo, señales de servicios y redes en la demo, la señal «Usted está aquí», editor, SVG, JSON e impresión. |
 | `tests/js/offline.mjs` | 0 dependencias de red: revisa las vistas, los estilos, los scripts y los catálogos y falla si aparece un `fetch`, un `WebSocket`, un `src`/`href`/`url()` externo, una llamada de red desde PHP o un dominio no declarado. |
 
 Resultados esperados de la última ejecución completa:
 
 ```text
-✓ Sintaxis PHP 8.1 · 52 archivos, sin errores
-✓ Sintaxis PHP 8.3 · 52 archivos, sin errores
+✓ Sintaxis PHP 8.1 · 54 archivos, sin errores
+✓ Sintaxis PHP 8.3 · 54 archivos, sin errores
 ✓ Sintaxis JavaScript · 20 archivos, sin errores
-✓ Funcionamiento sin conexión · 78 archivos, sin referencias externas
+✓ Funcionamiento sin conexión · 80 archivos, sin referencias externas
 ✓ Funcional PHP 8.1 · 152/152
 ✓ Funcional PHP 8.3 · 152/152
-✓ Interfaz (JSDOM) PHP 8.1 · 206/206
-✓ Interfaz (JSDOM) PHP 8.3 · 206/206
+✓ Interfaz (JSDOM) PHP 8.1 · 228/228
+✓ Interfaz (JSDOM) PHP 8.3 · 228/228
 ✓ Paquetes y demo · 37/37
 9/9 pasos correctos
 ```
@@ -535,6 +536,14 @@ Resultados esperados de la última ejecución completa:
 Las pruebas trabajan sobre copias temporales: no escriben configuración ni bases en el repositorio. `node_modules` solo contiene dependencias de desarrollo y se excluye de los paquetes.
 
 ---
+
+## Cambios de la versión 1.0.9
+
+- **Cambiar el equipo CAD desde el inspector.** Igual que las señales, cualquier equipo seleccionado muestra en **Apariencia** su miniatura, su familia y un botón **Cambiar equipo**. Abre la biblioteca de los 145 objetos en modo sustitución, con el equipo actual resaltado y la insignia *Equipo actual*: al elegir otro se conservan posición, tamaño, rotación, capa, opacidad y bloqueo, y el objeto toma el color de su nueva familia. Entra en el historial y funciona con varios equipos a la vez.
+- **Seleccionar un solo objeto con un clic.** El problema real era que los pictogramas y los equipos se dibujan con trazos finos dentro de un SVG incrustado que ignora el puntero: al hacer clic en su interior no había nodo bajo el cursor, el editor lo interpretaba como un clic en el vacío y abría la caja de selección. Ahora el clic se resuelve contra la **pila geométrica real** (`hitStack`) con una tolerancia de 8 píxeles de pantalla, prefiere el objeto visible que queda encima y recurre al nodo SVG cuando el puntero acierta una forma pintada o su etiqueta. Un clic sencillo basta para muros finos, tuberías, textos, pictogramas y equipos; `Ctrl/⌘ + clic` sigue bajando en la pila y `Shift` sigue añadiendo a la selección.
+- **Pista visual antes de hacer clic.** El cursor cambia a la cruz de movimiento cuando hay un elemento seleccionable bajo el puntero y vuelve a la flecha sobre el lienzo vacío. Las etiquetas y los textos de los elementos también reciben el clic, sin seleccionar el objeto equivocado.
+- **Biblioteca con el vocabulario correcto.** En modo sustitución el cajón distingue señal y equipo: título *Cambiar equipo*, insignia *Equipo actual*, botón **Usar este equipo** y una nota propia que recuerda que los objetos CAD son esquemáticos y que las medidas y la escala se verifican en sitio.
+- **228 comprobaciones de interfaz** en PHP 8.1 y 8.3, con pruebas nuevas para el clic sobre pictogramas, equipos y muros finos, la pila con `Ctrl` y `Shift`, el cursor, y el cambio de equipo con deshacer.
 
 ## Cambios de la versión 1.0.8
 
@@ -621,14 +630,15 @@ Versión de corrección sobre la 1.0.0. Reemplaza los paquetes anteriores: la 1.
 
 ## Paquetes y verificación
 
-La entrega v1.0.8 incluye los ZIP ya construidos en **`paquetes/v1.0.8/`** (misma composición que genera el script, verificada por `tests/php/package.mjs`):
+La entrega v1.0.9 incluye los ZIP ya construidos en **`paquetes/v1.0.9/`** (misma composición que genera el script, verificada por `tests/php/package.mjs`):
 
 ```text
-paquetes/v1.0.8/
-├── normia-planos-cad-1.0.8.zip
-├── normia-planos-cad-demo-1.0.8.zip
+paquetes/v1.0.9/
+├── normia-planos-cad-1.0.9.zip
+├── normia-planos-cad-demo-1.0.9.zip
 ├── SHA256SUMS.txt
-└── BUILD.txt
+├── BUILD.txt
+└── LEEME.txt
 ```
 
 Para regenerarlos desde el código (por ejemplo tras cambiar plantillas o catálogos):
@@ -640,8 +650,8 @@ npm run build          # o: bash tools/build-packages.sh
 El script deja los artefactos en `dist/`:
 
 ```text
-normia-planos-cad-1.0.8.zip
-normia-planos-cad-demo-1.0.8.zip
+normia-planos-cad-1.0.9.zip
+normia-planos-cad-demo-1.0.9.zip
 SHA256SUMS.txt
 BUILD.txt
 ```
@@ -651,11 +661,11 @@ BUILD.txt
 - Verifica las sumas:
 
 ```bash
-cd paquetes/v1.0.8
+cd paquetes/v1.0.9
 sha256sum -c SHA256SUMS.txt
 ```
 
-Los hashes exactos de los ZIP publicados están en `paquetes/v1.0.8/SHA256SUMS.txt`; `dist/` es solo la salida de trabajo y está ignorada por Git.
+Los hashes exactos de los ZIP publicados están en `paquetes/v1.0.9/SHA256SUMS.txt`; `dist/` es solo la salida de trabajo y está ignorada por Git.
 
 ---
 

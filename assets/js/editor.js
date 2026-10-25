@@ -428,6 +428,22 @@
     }
 
     /**
+     * Abre la biblioteca en modo «cambiar equipo»: al elegir un objeto CAD se
+     * sustituye el de los elementos seleccionados sin moverlos de sitio.
+     */
+    startEquipmentSwap() {
+      const elements = this.model.selectedElements();
+      const equipment = elements.filter((element) => this.model.cadForType(element.type));
+      if (!equipment.length) {
+        this.toast('Selecciona un equipo del plano para cambiarlo.', 'info');
+        return;
+      }
+      this.library.open('cad', { mode: 'replace', current: equipment[0].type });
+      this.openDrawer('library');
+      this.library.search?.focus?.();
+    }
+
+    /**
      * Cambia el tipo de la selección desde la biblioteca (señales o equipos).
      * Conserva posición, tamaño, rotación, capa y opacidad.
      */
@@ -436,13 +452,20 @@
         this.toast('El recurso no pertenece a las bibliotecas locales.', 'error');
         return false;
       }
-      if (!this.model.selectedElements().length) return false;
+      const total = this.model.selectedElements().length;
+      if (!total) return false;
+      const isEquipment = Boolean(this.model.cadForType(type));
       if (!this.model.changeType(type)) return false;
       this.closeDrawer();
       this.applyTool('select');
       this.renderNow();
       this.afterEdit();
-      this.toast(name !== '' ? `Señal cambiada a “${name}”.` : 'Recurso sustituido.', 'success', { duration: 2600 });
+      let message = 'Recurso sustituido.';
+      if (name !== '') {
+        if (total > 1) message = isEquipment ? `${total} equipos cambiados a “${name}”.` : `${total} señales cambiadas a “${name}”.`;
+        else message = isEquipment ? `Equipo cambiado a “${name}”.` : `Señal cambiada a “${name}”.`;
+      }
+      this.toast(message, 'success', { duration: 2600 });
       return true;
     }
 
@@ -516,6 +539,37 @@
       const target = stack[nextIndex];
       this.model.select([target.id]);
       return true;
+    }
+
+    /**
+     * Elemento que hay realmente bajo el puntero.
+     *
+     * El nodo SVG es la referencia más fiel cuando el puntero acierta una forma
+     * pintada o su etiqueta. Pero los pictogramas y los equipos CAD se dibujan
+     * con trazos finos dentro de un SVG incrustado que ignora el puntero
+     * (`.asset-svg`): al hacer clic en su interior no hay nodo y el clic
+     * terminaba abriendo la caja de selección. Por eso el nodo se combina con
+     * la pila geométrica (`hitStack`) y una tolerancia en píxeles de pantalla.
+     * Así un clic sencillo alcanza siempre lo que se ve, sin la caja.
+     */
+    hitTarget(point, event, tolerancePx = 8) {
+      const tolerance = Math.max(1, Number(tolerancePx) || 8) / (this.view.zoom || 1);
+      let stack = this.model.hitStack(point, { tolerance });
+      const target = event?.target || null;
+      const node = target?.closest?.('.plan-element') || null;
+      const nodeId = node?.dataset?.id || null;
+      if (!stack.length && nodeId) {
+        const element = this.model.element(nodeId);
+        if (element) stack = [element];
+      }
+      // Un `hit-area` es una zona de golpe invisible: no debe imponerse a lo
+      // que realmente se ve encima. Las formas pintadas y las etiquetas sí.
+      const helper = Boolean(target?.closest?.('.hit-area'));
+      let id = null;
+      if (nodeId && !helper) id = nodeId;
+      else if (stack.length) id = stack[0].id;
+      else if (nodeId) id = nodeId;
+      return { id, stack, node };
     }
 
     /* ------------------------------- render ------------------------------- */
@@ -736,19 +790,20 @@
         this.beginPan(event);
         return;
       }
-      const elementNode = event.target.closest?.('.plan-element');
       if (this.tool === 'select') {
         // Pila real bajo el puntero (no solo el nodo superior del SVG): permite
-        // llegar a un elemento tapado por otro con Ctrl/⌘ + clic.
-        const stack = this.model.hitStack(point, { tolerance: 6 / (this.view.zoom || 1) });
+        // llegar a un elemento tapado por otro con Ctrl/⌘ + clic y seleccionar
+        // con un clic los pictogramas y equipos, que no tienen relleno propio.
+        const hit = this.hitTarget(point, event);
+        const stack = hit.stack;
         this.lastHit = { x: point.x, y: point.y, ids: stack.map((element) => element.id) };
         if ((event.ctrlKey || event.metaKey) && stack.length) {
           this.cycleSelection(stack, event.shiftKey ? -1 : 1);
           this.scheduleRender();
           return;
         }
-        if (elementNode) {
-          const id = elementNode.dataset.id;
+        if (hit.id) {
+          const id = hit.id;
           if (event.shiftKey) this.model.select([id], true);
           else if (!this.model.selection.has(id)) this.model.select([id]);
           if (this.model.canEdit() && this.model.selection.size) {
@@ -888,6 +943,13 @@
       const point = this.clampPoint(this.toCanvas(event));
       const cursor = q('[data-cursor-position]');
       if (cursor) cursor.textContent = `X ${Math.round(point.x)} · Y ${Math.round(point.y)}`;
+      // Pista de qué seleccionará el clic: sin esto, los pictogramas y equipos
+      // (trazo fino) no daban ninguna señal visual al pasar por encima.
+      if (!this.drag && !this.pending && !this.pan && this.tool === 'select' && !this.spaceDown) {
+        const hovered = this.model.hitStack(point, { tolerance: 8 / (this.view.zoom || 1) }).length > 0;
+        const next = hovered ? 'move' : 'default';
+        if (this.svg.style.cursor !== next) this.svg.style.cursor = next;
+      }
       if (this.pending) {
         const dx = event.clientX - this.pending.startClient.x;
         const dy = event.clientY - this.pending.startClient.y;
@@ -1040,23 +1102,24 @@
         this.finishRoute();
         return;
       }
-      const node = event.target.closest?.('.plan-element');
-      if (!node || this.tool !== 'select') return;
-      const element = this.model.element(node.dataset.id);
+      if (this.tool !== 'select') return;
+      const point = this.clampPoint(this.toCanvas(event));
+      const hit = this.hitTarget(point, event);
+      const element = hit.id ? this.model.element(hit.id) : null;
       if (!element) return;
       // Doble clic sobre un muro o una ruta añade un vértice en el segmento
       // más cercano: es la forma de crear esquinas nuevas sin salir del plano.
       if ((element.type === 'wall' || element.type === 'route') && this.model.canEdit()) {
-        const point = this.snapPoint(this.clampPoint(this.toCanvas(event)), event);
+        const snapped = this.snapPoint(point, event);
         const points = this.model.visualPoints(element);
         let target = { index: 0, distance: Infinity };
         for (let index = 0; index < points.length - 1; index += 1) {
-          const gap = G.distanceToSegment(point, points[index], points[index + 1]);
+          const gap = G.distanceToSegment(snapped, points[index], points[index + 1]);
           if (gap < target.distance) target = { index, distance: gap };
         }
         if (points.length < 40 && target.distance <= 24 / (this.view.zoom || 1)) {
           this.model.select([element.id]);
-          if (this.model.insertPathPoint(element.id, target.index, point)) {
+          if (this.model.insertPathPoint(element.id, target.index, snapped)) {
             this.toast('Vértice añadido. Arrástralo para ajustar el trazo.', 'info', { duration: 2400 });
             this.scheduleRender();
             return;

@@ -36,6 +36,15 @@
       if (this.grid) this.bind();
     }
 
+    get resourceLabel() {
+      return this.kind === 'cad' ? 'Equipo' : 'Señal';
+    }
+
+    /** Sintagma con artículo y concordancia: «esta señal» / «este equipo». */
+    get resourceThis() {
+      return this.kind === 'cad' ? 'este equipo' : 'esta señal';
+    }
+
     bind() {
       this.search?.addEventListener('input', () => {
         this.query = this.search.value;
@@ -125,7 +134,7 @@
       this.drawer?.setAttribute('data-library-mode', this.mode);
       if (this.title) {
         this.title.textContent = this.mode === 'replace'
-          ? 'Cambiar señal'
+          ? (this.kind === 'cad' ? 'Cambiar equipo' : 'Cambiar señal')
           : this.kind === 'sign' ? 'Señalización y orientación' : 'Equipamiento CAD';
       }
       if (this.eyebrow) {
@@ -247,9 +256,9 @@
           card.dataset.type = item.type;
           card.dataset.kind = this.kind;
           card.draggable = !replace;
-          card.title = current ? 'Señal actual del elemento'
-            : replace ? 'Doble clic para usar esta señal' : 'Arrastra al plano o usa “Insertar en el plano”';
-          card.setAttribute('aria-label', `${item.name} · ${item.code || item.key}.${current ? ' Señal actual.' : replace ? ' Pulsa dos veces para usarla.' : ' Arrastra al plano o pulsa Insertar.'}`);
+          card.title = current ? `${this.resourceLabel} actual del elemento`
+            : replace ? `Doble clic para usar ${this.resourceThis}` : 'Arrastra al plano o usa “Insertar en el plano”';
+          card.setAttribute('aria-label', `${item.name} · ${item.code || item.key}.${current ? ` ${this.resourceLabel} actual.` : replace ? ` Pulsa dos veces para ${this.kind === 'cad' ? 'usarlo' : 'usarla'}.` : ' Arrastra al plano o pulsa Insertar.'}`);
           const thumb = document.createElement('span');
           thumb.className = 'library-thumb';
           thumb.style.setProperty('--thumb-color', item.color);
@@ -260,7 +269,7 @@
           card.appendChild(label);
           const meta = document.createElement('span');
           meta.className = 'library-card-meta';
-          meta.textContent = current ? 'Señal actual' : (item.code ? `${item.code} · ${item.familyName}` : item.familyName);
+          meta.textContent = current ? `${this.resourceLabel} actual` : (item.code ? `${item.code} · ${item.familyName}` : item.familyName);
           card.appendChild(meta);
           if (current) {
             const badge = document.createElement('span');
@@ -293,7 +302,7 @@
       if (!this.detail) return;
       if (!item) {
         const emptyHint = this.mode === 'replace'
-          ? 'Elige la señal que sustituirá a la actual. Doble clic o <strong>Usar esta señal</strong>; la posición, el tamaño y la rotación se conservan.'
+          ? `Elige ${this.resourceThis} que sustituirá ${this.kind === 'cad' ? 'al actual' : 'a la actual'}. Doble clic o <strong>Usar ${this.resourceThis}</strong>; la posición, el tamaño y la rotación se conservan.`
           : 'Elige un pictograma u objeto para ver su vista previa, familia y descripción. Doble clic o <strong>Insertar</strong> para colocarlo en el plano.';
         this.detail.innerHTML = `<div class="library-detail-empty"><span><svg class="icon"><use href="#i-sign"></use></svg></span><p>${emptyHint}</p></div>`;
         return;
@@ -303,13 +312,15 @@
         <h3>${esc(item.name)}</h3>
         <p class="library-detail-code">${item.code ? `${esc(item.code)} · ` : ''}${esc(item.familyName)}</p>
         <div class="library-detail-actions">
-          <button class="button button-primary" type="button" data-insert><svg class="icon"><use href="#i-${this.mode === 'replace' ? 'swap' : 'plus'}"></use></svg>${this.mode === 'replace' ? 'Usar esta señal' : 'Insertar en el plano'}</button>
+          <button class="button button-primary" type="button" data-insert><svg class="icon"><use href="#i-${this.mode === 'replace' ? 'swap' : 'plus'}"></use></svg>${this.mode === 'replace' ? `Usar ${this.resourceThis}` : 'Insertar en el plano'}</button>
           <span class="library-detail-hint">${this.mode === 'replace'
-            ? 'Sustituye la señal del elemento seleccionado sin moverlo. Doble clic o Enter sobre otra tarjeta también la aplica.'
+            ? `Sustituye ${this.resourceThis} del elemento seleccionado sin moverlo. Doble clic o Enter sobre otra tarjeta también ${this.kind === 'cad' ? 'lo' : 'la'} aplica.`
             : 'El cajón se cierra y el recurso sigue al cursor: haz clic en el plano para ubicarlo. También puedes arrastrar la tarjeta hasta el lienzo o pulsar Enter sobre ella.'}</span>
         </div>
         <p class="library-detail-description">${esc(item.description || 'Sin descripción adicional.')}</p>
-        <p class="library-detail-note">Representación esquemática. No sustituye la señalización física ni certifica cumplimiento normativo.</p>`;
+        <p class="library-detail-note">${this.kind === 'cad'
+          ? 'Objeto CAD esquemático: las dimensiones son aproximadas y la escala debe verificarse en sitio.'
+          : 'Representación esquemática. No sustituye la señalización física ni certifica cumplimiento normativo.'}</p>`;
       const preview = this.detail.querySelector('.library-detail-preview');
       preview?.appendChild(this.app.renderer.thumbnail(item.type));
     }

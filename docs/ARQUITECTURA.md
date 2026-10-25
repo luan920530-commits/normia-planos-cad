@@ -151,7 +151,7 @@ assets/js/editor.js          EditorApp: arranque, herramientas, puntero, teclado
 
 - El HTML entrega `#editor-design` y `#editor-boot` como JSON embebido; el editor los lee, los elimina del DOM y arranca.
 - `Model` mantiene `design`, `selection`, `history`, `future`, `clipboard` y `_pendingSnapshot`. `begin()/end()` agrupa arrastres y transformaciones en un solo paso de historial.
-- `Model.hitStack(point)` devuelve los elementos bajo un punto en el mismo orden de pintado del lienzo (capas y luego orden interno) usando geometría real: cajas rotadas, elipses y distancia a los segmentos de los trazos. Es la base de `Ctrl/⌘ + clic` para llegar al elemento que queda debajo de una superposición y de la sección **Elementos superpuestos** del inspector.
+- `Model.hitStack(point)` devuelve los elementos bajo un punto en el mismo orden de pintado del lienzo (capas y luego orden interno) usando geometría real: cajas rotadas, elipses y distancia a los segmentos de los trazos. Es la base de la selección con un clic (ver *Selección con el puntero*), de `Ctrl/⌘ + clic` para llegar al elemento que queda debajo de una superposición y de la sección **Elementos superpuestos** del inspector.
 - `EditorApp` mantiene la herramienta activa (`select`, `hand`, `place` o una de dibujo), el cursor que corresponde a cada una y el estado del paneo; el cursor se pasa al `Renderer` en cada repintado para que no se pierda.
 - `Renderer` no usa frameworks ni medidas del DOM para dibujar: recibe `view {zoom, panX, panY}` y genera SVG con `createElementNS`. Las vistas previas de biblioteca e inspector se construyen con el mismo renderizador.
 - Las reglas se dibujan en contenedores propios a partir del zoom y el desplazamiento; se actualizan al redimensionar y al hacer zoom.
@@ -190,9 +190,20 @@ El editor ocupa la ventana completa (`body { overflow: hidden }`), así que cada
 `Library` trabaja en dos modos, con el mismo estado y el mismo buscador:
 
 - `insert` (por defecto): la tarjeta se arrastra al lienzo o se pulsa **Insertar**; el recurso sigue al cursor (`EditorApp.startPlacement`).
-- `replace`: la tarjeta no se arrastra. Al elegirla, `EditorApp.replaceSelection(type)` llama a `Model.changeType()`, que conserva posición, tamaño, rotación, capa y opacidad, y aplica el color de la nueva familia. La señal actual se marca con la insignia *Actual* y el detalle cambia su botón a **Usar esta señal**.
+- `replace`: la tarjeta no se arrastra. Al elegirla, `EditorApp.replaceSelection(type)` llama a `Model.changeType()`, que conserva posición, tamaño, rotación, capa, opacidad y bloqueo, y aplica el color de la nueva familia. El recurso actual se marca con la insignia *Actual* y el detalle cambia su botón a **Usar esta señal** o **Usar este equipo** según el tipo.
 
-El inspector abre el cajón con `EditorApp.startSignSwap()` desde la sección **Apariencia** (`[data-action="swap-sign"]`), que sólo aparece cuando todos los elementos seleccionados son señales. El cajón expone el modo en `data-library-mode` para que el CSS y las pruebas puedan comprobarlo.
+El inspector abre el cajón desde la sección **Apariencia**: `[data-action="swap-sign"]` llama a `EditorApp.startSignSwap()` y `[data-action="swap-equipment"]` a `EditorApp.startEquipmentSwap()`. Cada botón sólo aparece cuando todos los elementos seleccionados son señales o equipos CAD, respectivamente. `Library` adapta título, insignia, botón, pistas y nota al sustantivo del recurso, y expone el modo en `data-library-mode` para que el CSS y las pruebas puedan comprobarlo.
+
+## Selección con el puntero
+
+El lienzo es un SVG con una zona invisible (`hit-area`) para muros, tuberías, líneas y medidas, pero los pictogramas y los equipos CAD son trazos finos dentro de un SVG incrustado que, por CSS (`.asset-svg { pointer-events: none }`), no recibe el puntero. Confiar sólo en `event.target.closest('.plan-element')` hacía que un clic dentro de un símbolo no encontrara nodo: el editor lo trataba como clic en el vacío y abría la caja de selección.
+
+`EditorApp.hitTarget(point, event)` resuelve el clic en dos capas:
+
+1. Calcula la pila geométrica con `Model.hitStack(point, { tolerance })`, con una tolerancia de **8 px de pantalla** convertida a unidades del lienzo (`8 / zoom`).
+2. Da prioridad al nodo SVG cuando el puntero acierta una **forma pintada o una etiqueta**; si el nodo es una `hit-area` invisible, manda el primer elemento de la pila, que es el que realmente se ve. Si no hay nodo (interior de un pictograma o de un equipo), también manda la pila; si no hay pila, no hay objetivo y empieza la marquesina.
+
+`onPointerDown` usa ese resultado para seleccionar y para armar el arrastre pendiente; `onDoubleClick` lo reutiliza para editar etiquetas y añadir vértices. `Ctrl/⌘ + clic` sigue recorriendo la pila (`cycleSelection`) y `Shift` sigue sumando a la selección. En `onPointerMove`, cuando la herramienta es *Seleccionar*, se consulta la misma pila para cambiar el cursor a `move` si hay algo seleccionable bajo el puntero. Las etiquetas de los elementos (`.element-label`, `.element-text`, `.element-dimension`) reciben el puntero, de modo que también seleccionan su elemento.
 
 ## Seguridad
 

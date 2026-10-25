@@ -147,7 +147,7 @@ body.editor-body { overflow: hidden; background: #eef2f8; }
 .plan-element .hit-area { pointer-events: stroke; }
 .plan-element .hit-area { cursor: pointer; }
 .plan-element .asset-svg { pointer-events: none; }
-.plan-element .element-label, .plan-element .element-text, .plan-element .element-dimension { pointer-events: none; user-select: none; }
+.plan-element .element-label, .plan-element .element-text, .plan-element .element-dimension { pointer-events: auto; user-select: none; }
 .selection-frame .handle { cursor: nwse-resize; }
 .selection-frame .handle-n, .selection-frame .handle-s { cursor: ns-resize; }
 .selection-frame .handle-e, .selection-frame .handle-w { cursor: ew-resize; }
@@ -716,6 +716,7 @@ body.is-dragging-resource .library-card { cursor: grabbing; }
   padding: 9px 10px; border: 1px solid var(--line); border-radius: 12px;
   background: linear-gradient(150deg, #f8fbff, #ffffff 70%);
 }
+.equipment-swap { background: linear-gradient(150deg, #f6fbf7, #ffffff 70%); }
 .sign-swap-thumb {
   width: 38px; height: 38px; flex: 0 0 auto; border-radius: 10px; padding: 4px;
   background: #fff; border: 1px solid var(--line); display: grid; place-items: center;

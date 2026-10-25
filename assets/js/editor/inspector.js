@@ -86,6 +86,10 @@
           this.app.startSignSwap();
           return;
         }
+        if (button.dataset.action === 'swap-equipment') {
+          this.app.startEquipmentSwap();
+          return;
+        }
         this.runAction(button.dataset.action, button);
       });
     }
@@ -329,6 +333,14 @@
           || swapSign.category)
         : '';
       const cad = single ? this.model.cadForType(single.type) : null;
+      const cadElements = elements.filter((element) => this.model.cadForType(element.type));
+      const allCad = cadElements.length === elements.length && cadElements.length > 0;
+      const cadCategory = cad
+        ? (this.model.catalogs.cadCategories?.[cad.category]?.short
+          || this.model.catalogs.cadCategories?.[cad.category]?.label
+          || cad.category
+          || 'Equipamiento CAD')
+        : '';
       const disabled = canEdit ? '' : ' disabled';
       const color = this.colorOf(elements);
       const opacity = single ? single.opacity : elements[0].opacity;
@@ -378,7 +390,18 @@
             <svg class="icon"><use href="#i-swap"></use></svg>Cambiar señal
           </button>
         </div>
-        <p class="help-text">Elige otro pictograma de la biblioteca: se conservan la posición, el tamaño, la rotación y la capa. <strong>Usted está aquí</strong> está en la familia <em>Ubicación</em>.</p>` : '';
+        <p class="help-text">Elige otro pictograma de la biblioteca: se conservan la posición, el tamaño, la rotación y la capa. <strong>Usted está aquí</strong> está en la familia <em>Ubicación</em>.</p>`
+        : allCad ? `<div class="sign-swap equipment-swap">
+          <span class="sign-swap-thumb" data-asset-preview="${esc(elements[0].type)}"></span>
+          <span class="sign-swap-copy">
+            <strong>${esc(elements.length === 1 ? (cad?.name || this.typeName(elements[0])) : `${elements.length} equipos`)}</strong>
+            <small>${esc(elements.length === 1 ? `${cadCategory} · Equipo CAD` : 'Se cambian todos a la vez')}</small>
+          </span>
+          <button class="button button-small button-soft sign-swap-button" type="button" data-action="swap-equipment"${canEdit ? '' : ' disabled'}>
+            <svg class="icon"><use href="#i-swap"></use></svg>Cambiar equipo
+          </button>
+        </div>
+        <p class="help-text">Elige otro objeto de la biblioteca: se conservan la posición, el tamaño, la rotación y la capa. El equipo toma el color de su familia.</p>` : '';
       const appearance = `${swapBlock}<div class="color-line">
           <span class="color-chip" style="--swatch:${color || '#cbd5e1'}" aria-hidden="true"></span>
           <span class="color-label">Color</span>
