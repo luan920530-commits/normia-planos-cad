@@ -144,13 +144,15 @@ assets/js/lib/geometry.js    clamp, snap, distancia, rotación, cajas, marcos, r
 assets/js/lib/model.js       Diseño normalizado, selección, historial (120), operaciones CAD
 assets/js/lib/renderer.js    Dibujo SVG: rejilla, capas, elementos, selección, reglas, miniaturas
 assets/js/editor/store.js    API: guardar, autosave, versiones, restaurar, ajustes, errores
-assets/js/editor/inspector.js Propiedades, paleta, acciones, agrupación y orden
+assets/js/editor/inspector.js Inspector plegable: ficha, geometría, apariencia, redes, superposiciones y acciones
 assets/js/editor/library.js  Cajón de bibliotecas: chips, búsqueda, grilla y detalle
 assets/js/editor.js          EditorApp: arranque, herramientas, puntero, teclado, guardado, exportación
 ```
 
 - El HTML entrega `#editor-design` y `#editor-boot` como JSON embebido; el editor los lee, los elimina del DOM y arranca.
 - `Model` mantiene `design`, `selection`, `history`, `future`, `clipboard` y `_pendingSnapshot`. `begin()/end()` agrupa arrastres y transformaciones en un solo paso de historial.
+- `Model.hitStack(point)` devuelve los elementos bajo un punto en el mismo orden de pintado del lienzo (capas y luego orden interno) usando geometría real: cajas rotadas, elipses y distancia a los segmentos de los trazos. Es la base de `Ctrl/⌘ + clic` para llegar al elemento que queda debajo de una superposición y de la sección **Elementos superpuestos** del inspector.
+- `EditorApp` mantiene la herramienta activa (`select`, `hand`, `place` o una de dibujo), el cursor que corresponde a cada una y el estado del paneo; el cursor se pasa al `Renderer` en cada repintado para que no se pierda.
 - `Renderer` no usa frameworks ni medidas del DOM para dibujar: recibe `view {zoom, panX, panY}` y genera SVG con `createElementNS`. Las vistas previas de biblioteca e inspector se construyen con el mismo renderizador.
 - Las reglas se dibujan en contenedores propios a partir del zoom y el desplazamiento; se actualizan al redimensionar y al hacer zoom.
 - `Store` centraliza las llamadas `fetch` con `Accept: application/json`, `Content-Type: application/json` y `X-CSRF-Token`; interpreta `409` y `419` de forma específica.

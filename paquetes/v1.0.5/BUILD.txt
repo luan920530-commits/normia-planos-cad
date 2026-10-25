@@ -1,0 +1,12 @@
+Normia Planos CAD v1.0.5
+Generado: 2026-10-25 14:33:23 UTC
+PHP mínimo: 8.1 (sin extensiones raras; requiere pdo_sqlite y session)
+
+902b526ec011e7e1dcae6b112c22a78392f84387c208c91ee26476f33e4a6f14  normia-planos-cad-1.0.5.zip
+f9ec003ad2fac26a9d62a8e6dbd22b104b902fb8f3a0abd4d724f02f6abf0497  normia-planos-cad-demo-1.0.5.zip
+
+Contenido:
+  normia-planos-cad-1.0.5.zip       aplicación completa (instalador web)
+  normia-planos-cad-demo-1.0.5.zip  igual, con demostración premarcada
+
+Verificado por: node tests/php/package.mjs

@@ -572,6 +572,58 @@
       return Boolean(element && this.layer(element.layerId)?.visible);
     }
 
+    /* --------------------------- prueba de impacto --------------------------- */
+
+    /** Punto en coordenadas locales del elemento (deshace su rotación). */
+    localPoint(element, point) {
+      const center = { x: element.x + element.w / 2, y: element.y + element.h / 2 };
+      const rotated = G.rotatePoint(point, center, -(element.rotation || 0));
+      return { x: rotated.x - element.x, y: rotated.y - element.y };
+    }
+
+    /** ¿El punto alcanza el elemento? `tolerance` en unidades del lienzo. */
+    hitTest(element, point, tolerance = 6) {
+      if (!element) return false;
+      const reach = Math.max(1, Number(tolerance) || 0);
+      if (PATH_TYPES.includes(element.type)) {
+        const points = this.visualPoints(element);
+        const stroke = Math.max(1, Number(element.stroke) || 2) / 2;
+        for (let index = 0; index < points.length - 1; index += 1) {
+          if (G.distanceToSegment(point, points[index], points[index + 1]) <= stroke + reach) return true;
+        }
+        return false;
+      }
+      const local = this.localPoint(element, point);
+      const w = Math.max(1, Number(element.w) || 1);
+      const h = Math.max(1, Number(element.h) || 1);
+      if (element.type === 'ellipse') {
+        const nx = (local.x - w / 2) / (w / 2 + reach);
+        const ny = (local.y - h / 2) / (h / 2 + reach);
+        return nx * nx + ny * ny <= 1;
+      }
+      return local.x >= -reach && local.x <= w + reach && local.y >= -reach && local.y <= h + reach;
+    }
+
+    /**
+     * Pila de elementos bajo un punto, del más alto al más bajo, con el mismo
+     * orden de pintado que el lienzo (capas y luego orden dentro de la capa).
+     * Es la base para seleccionar lo que queda debajo de una superposición.
+     */
+    hitStack(point, options = {}) {
+      const tolerance = Number.isFinite(options.tolerance) ? options.tolerance : 6;
+      const exclude = new Set(options.exclude || []);
+      const stack = [];
+      const layers = this.design.layers.filter((layer) => layer.visible);
+      for (let index = layers.length - 1; index >= 0; index -= 1) {
+        const layer = layers[index];
+        const elements = this.design.elements.filter((element) => element.layerId === layer.id && !exclude.has(element.id));
+        for (let item = elements.length - 1; item >= 0; item -= 1) {
+          if (this.hitTest(elements[item], point, tolerance)) stack.push(elements[item]);
+        }
+      }
+      return stack;
+    }
+
     /* ----------------------------- creación ----------------------------- */
     createElement(type, overrides = {}) {
       if (!this.isKnownType(type)) throw new Error('El tipo de elemento no pertenece a las bibliotecas permitidas.');

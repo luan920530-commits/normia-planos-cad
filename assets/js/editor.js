@@ -6,7 +6,8 @@
   const NS = 'http://www.w3.org/2000/svg';
   const MIN_SIZE = 4;
   const TYPE_HINTS = {
-    select: 'Selecciona y arrastra para mover. Shift añade a la selección; arrastra el fondo para seleccionar un área.',
+    select: 'Selecciona y arrastra para mover. Shift añade a la selección; Ctrl + clic baja al elemento que queda debajo; arrastra el fondo para seleccionar un área.',
+    hand: 'Mano: arrastra para desplazar el lienzo sin tocar los elementos. Rueda para zoom; doble clic o 0 ajusta a pantalla.',
     wall: 'Muro: arrastra para trazar. Mantén Shift para alinear horizontal o vertical. Esc vuelve a seleccionar.',
     door: 'Puerta sencilla: haz clic sobre el muro; la hoja abre hacia arriba. Flip en el inspector para cambiar bisagra o lado.',
     door_double: 'Puerta doble: haz clic sobre el muro. Dos hojas encontradas; ajusta el ancho de la caja para el vano.',
@@ -25,6 +26,24 @@
     wall: 'Muro', door: 'Puerta sencilla', door_double: 'Puerta doble', door_garage: 'Portón de garaje', route: 'Ruta de evacuación', text: 'Texto', dimension: 'Medida',
     line: 'Línea', rect: 'Rectángulo', ellipse: 'Elipse',
     pipe: 'Tubería', conduit: 'Tubería eléctrica',
+  };
+  /* Icono, etiqueta y atajo de cada herramienta para la paleta y la barra. */
+  const TOOL_META = {
+    select: { label: 'Seleccionar', icon: 'i-select', key: 'V' },
+    hand: { label: 'Mano', icon: 'i-hand', key: 'H' },
+    wall: { label: 'Muro', icon: 'i-wall', key: 'M' },
+    door: { label: 'Puerta', icon: 'i-door', key: 'U' },
+    door_double: { label: 'Puerta doble', icon: 'i-door-double', key: 'Shift+U' },
+    door_garage: { label: 'Portón o reja', icon: 'i-door-garage', key: 'R' },
+    route: { label: 'Ruta de evacuación', icon: 'i-route', key: 'E' },
+    pipe: { label: 'Tubería', icon: 'i-pipe', key: 'P' },
+    conduit: { label: 'Tubería eléctrica', icon: 'i-conduit', key: 'Shift+P' },
+    text: { label: 'Texto', icon: 'i-text', key: 'T' },
+    dimension: { label: 'Medida', icon: 'i-dimension', key: 'D' },
+    line: { label: 'Línea', icon: 'i-line', key: 'L' },
+    rect: { label: 'Rectángulo', icon: 'i-rect', key: 'B' },
+    ellipse: { label: 'Elipse', icon: 'i-ellipse', key: 'O' },
+    place: { label: 'Colocando', icon: 'i-sign', key: '' },
   };
   const q = (selector, context = document) => context.querySelector(selector);
   const qa = (selector, context = document) => Array.from(context.querySelectorAll(selector));
@@ -113,6 +132,7 @@
           const tool = button.dataset.tool;
           this.closeShapeFlyout();
           this.applyTool(tool);
+          this.closeToolsPalette();
         });
       });
       q('[data-pipe-menu]')?.addEventListener('click', (event) => {
@@ -180,6 +200,18 @@
       });
       qa('[data-close-drawer]').forEach((button) => {
         button.addEventListener('click', () => this.closeDrawer());
+      });
+      q('[data-tools-toggle]')?.addEventListener('click', (event) => {
+        event.stopPropagation();
+        this.toggleToolsPalette();
+      });
+      q('[data-tools-popover]')?.addEventListener('click', (event) => {
+        if (event.target.closest('[data-tool-choice], [data-open-library]')) this.closeToolsPalette();
+      });
+      document.addEventListener('pointerdown', (event) => {
+        const popover = q('[data-tools-popover]');
+        if (!popover || popover.hidden) return;
+        if (!event.target.closest?.('.tools-palette')) this.closeToolsPalette();
       });
       q('[data-drawer-backdrop]')?.addEventListener('click', () => this.closeDrawer());
       document.addEventListener('keydown', (event) => this.onKeyDown(event));
@@ -289,7 +321,10 @@
         this.scheduleRender();
       });
       window.addEventListener('keyup', (event) => {
-        if (event.code === 'Space') this.spaceDown = false;
+        if (event.code === 'Space' && this.spaceDown) {
+          this.spaceDown = false;
+          this.svg.style.cursor = this.cursorFor(this.tool);
+        }
       });
     }
 
@@ -303,7 +338,7 @@
     /* -------------------------------- estado -------------------------------- */
     applyTool(tool, options = {}) {
       const names = root.BASIC_TYPES || [];
-      const valid = tool === 'select' || tool === 'place' || names.includes(tool);
+      const valid = tool === 'select' || tool === 'hand' || tool === 'place' || names.includes(tool);
       if (!valid) {
         this.toast('Herramienta no disponible.', 'error');
         return;
@@ -330,6 +365,8 @@
         : TYPE_HINTS[tool] || TYPE_HINTS.select;
       this.closeDoorFlyout();
       this.closePipeFlyout();
+      this.closeToolsPalette();
+      this.syncToolPalette();
       this.svg.style.cursor = this.cursorFor(tool);
       if (!options.silent) this.scheduleRender();
     }
@@ -356,9 +393,53 @@
     }
 
     cursorFor(tool) {
-      if (tool === 'select') return 'default';
+      if (this.pan) return 'grabbing';
+      if (tool === 'hand') return 'grab';
+      if (tool === 'select') return this.spaceDown ? 'grab' : 'default';
       if (tool === 'place') return 'copy';
       return 'crosshair';
+    }
+
+    /** Mantiene el botón de la paleta con el icono y el nombre de la herramienta activa. */
+    syncToolPalette() {
+      const meta = TOOL_META[this.tool] || TOOL_META.select;
+      const label = q('[data-tools-label]');
+      if (label) label.textContent = meta.label;
+      const icon = q('[data-tools-icon]');
+      if (icon) icon.setAttribute('href', `#${meta.icon}`);
+      qa('[data-tool-choice]').forEach((button) => {
+        button.classList.toggle('is-current', button.dataset.toolChoice === this.tool);
+      });
+    }
+
+    toggleToolsPalette(open) {
+      const popover = q('[data-tools-popover]');
+      const toggle = q('[data-tools-toggle]');
+      if (!popover || !toggle) return;
+      const next = typeof open === 'boolean' ? open : popover.hidden;
+      popover.hidden = !next;
+      toggle.setAttribute('aria-expanded', next ? 'true' : 'false');
+      if (next) popover.querySelector('.tool-choice')?.focus?.();
+    }
+
+    closeToolsPalette() {
+      const popover = q('[data-tools-popover]');
+      if (!popover || popover.hidden) return;
+      this.toggleToolsPalette(false);
+    }
+
+    /**
+     * Pasa al siguiente elemento de la pila bajo el puntero. Ctrl/⌘ + clic
+     * baja un nivel (lo que está debajo de la superposición) y con Shift sube.
+     */
+    cycleSelection(stack, direction = 1) {
+      if (!stack.length) return false;
+      const current = this.model.selection.size === 1 ? [...this.model.selection][0] : null;
+      const index = stack.findIndex((element) => element.id === current);
+      const nextIndex = index === -1 ? 0 : (index + direction + stack.length) % stack.length;
+      const target = stack[nextIndex];
+      this.model.select([target.id]);
+      return true;
     }
 
     /* ------------------------------- render ------------------------------- */
@@ -380,6 +461,7 @@
         ghost: this.ghost,
         draft: this.draft,
         guides: this.guides,
+        cursor: this.cursorFor(this.tool),
       });
       this.inspector.render();
       this.inspector.refreshThumbnails();
@@ -416,6 +498,12 @@
           const element = selection[0];
           label.textContent = `${this.typeLabel(element)} · ${G.formatMeasurement(element.w, design.canvas.unit)} × ${G.formatMeasurement(element.h, design.canvas.unit)}`;
         } else label.textContent = `${selection.length} elementos seleccionados`;
+      }
+      const stack = q('[data-stack-status]');
+      if (stack) {
+        const count = this.lastHit?.ids?.length || 0;
+        stack.hidden = count < 2;
+        if (count >= 2) stack.textContent = `${count} superpuestos · Ctrl + clic baja`;
       }
     }
 
@@ -568,8 +656,21 @@
       }
       if (event.button !== 0) return;
       const point = this.clampPoint(this.toCanvas(event));
+      if (this.tool === 'hand') {
+        this.beginPan(event);
+        return;
+      }
       const elementNode = event.target.closest?.('.plan-element');
       if (this.tool === 'select') {
+        // Pila real bajo el puntero (no solo el nodo superior del SVG): permite
+        // llegar a un elemento tapado por otro con Ctrl/⌘ + clic.
+        const stack = this.model.hitStack(point, { tolerance: 6 / (this.view.zoom || 1) });
+        this.lastHit = { x: point.x, y: point.y, ids: stack.map((element) => element.id) };
+        if ((event.ctrlKey || event.metaKey) && stack.length) {
+          this.cycleSelection(stack, event.shiftKey ? -1 : 1);
+          this.scheduleRender();
+          return;
+        }
         if (elementNode) {
           const id = elementNode.dataset.id;
           if (event.shiftKey) this.model.select([id], true);
@@ -811,6 +912,8 @@
       }
       if (this.pan) {
         this.pan = null;
+        this.svg.closest('.canvas-shell')?.classList.remove('is-panning');
+        this.scheduleRender();
         return;
       }
       if (this.drag?.mode === 'marquee') {
@@ -905,7 +1008,10 @@
 
     beginPan(event) {
       this.pan = { startX: event.clientX, startY: event.clientY, panX: this.view.panX, panY: this.view.panY };
+      this.pending = null;
+      this.drag = null;
       this.svg.style.cursor = 'grabbing';
+      this.svg.closest('.canvas-shell')?.classList.add('is-panning');
       this.svg.setPointerCapture?.(event.pointerId);
     }
 
@@ -1231,6 +1337,11 @@
       const target = event.target;
       const typing = target instanceof Element && (target.closest('input, textarea, select, [contenteditable="true"]') !== null);
       if (event.key === 'Escape') {
+        const palette = q('[data-tools-popover]');
+        if (palette && !palette.hidden) {
+          this.closeToolsPalette();
+          return;
+        }
         if (this.activeDrawer) {
           this.closeDrawer();
           return;
@@ -1381,7 +1492,7 @@
         this.applyTool('door_double');
         return;
       }
-      const shortcuts = { v: 'select', m: 'wall', u: 'door', r: 'door_garage', e: 'route', t: 'text', d: 'dimension', l: 'line', b: 'rect', o: 'ellipse', p: 'pipe' };
+      const shortcuts = { v: 'select', h: 'hand', m: 'wall', u: 'door', r: 'door_garage', e: 'route', t: 'text', d: 'dimension', l: 'line', b: 'rect', o: 'ellipse', p: 'pipe' };
       const tool = shortcuts[event.key.toLowerCase()];
       if (tool) {
         event.preventDefault();

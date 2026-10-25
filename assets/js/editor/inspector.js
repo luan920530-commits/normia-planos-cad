@@ -5,8 +5,7 @@
   const G = root.Geometry;
   const TYPE_NAMES = {
     wall: 'Muro', door: 'Puerta sencilla', door_double: 'Puerta doble', door_garage: 'Portón de garaje', route: 'Ruta de evacuación', text: 'Texto', dimension: 'Medida',
-    line: 'Línea', rect: 'Rectángulo', ellipse: 'Elipse', sign: 'Señal ISO 7010', cad: 'Equipo CAD',
-    pipe: 'Tubería', conduit: 'Tubería eléctrica',
+    line: 'Línea', rect: 'Rectángulo', ellipse: 'Elipse', sign: 'Señal ISO 7010', cad: 'Equipo CAD', pipe: 'Tubería', conduit: 'Tubería eléctrica',
   };
   const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 
@@ -16,7 +15,9 @@
       this.panel = document.querySelector('[data-properties]');
       this.title = document.querySelector('[data-properties-title]');
       this.panelEl = document.querySelector('[data-properties-panel]');
+      this.count = document.querySelector('[data-selection-count]');
       this.signature = '';
+      this.collapsed = new Set();
       this.bound = false;
       if (this.panel) this.bind();
     }
@@ -66,9 +67,18 @@
         const field = event.target.closest('[data-live-preview]');
         if (!field) return;
         const output = this.panel.querySelector(`[data-output="${field.dataset.livePreview}"]`);
-        if (output) output.textContent = field.value;
+        if (output) output.textContent = `${Math.round(Number(field.value) * 100)}%`;
       });
       this.panel.addEventListener('click', (event) => {
+        const toggle = event.target.closest('[data-section-toggle]');
+        if (toggle) {
+          event.preventDefault();
+          const key = toggle.dataset.sectionToggle;
+          if (this.collapsed.has(key)) this.collapsed.delete(key);
+          else this.collapsed.add(key);
+          this.render(true);
+          return;
+        }
         const button = event.target.closest('[data-action]');
         if (!button) return;
         event.preventDefault();
@@ -105,6 +115,14 @@
         case 'align': changed = model.align(button.dataset.value); break;
         case 'distribute': changed = model.distribute(button.dataset.value); break;
         case 'select-all': model.selectAll(); break;
+        case 'rotate': {
+          const frame = model.selectionFrame();
+          if (frame) changed = model.setRotation(G.normalizeAngle((Number(frame.rotation) || 0) + Number(button.dataset.value || 0)));
+          break;
+        }
+        case 'select-stack':
+          model.select([button.dataset.value]);
+          break;
         case 'color':
           changed = model.setColor(button.dataset.value);
           break;
@@ -125,9 +143,77 @@
         return info ? `Tubería · ${info.label}` : TYPE_NAMES.pipe;
       }
       if (element.type === 'conduit') return `Circuito ${element.circuit || 'C1'}`;
-      if (this.model.cadForType(element.type)) return TYPE_NAMES.cad;
+      if (this.model.cadForType(element.type)) return this.model.cadForType(element.type).name;
       return TYPE_NAMES[element.type] || 'Elemento';
     }
+
+    /** Etiqueta breve de la familia del elemento para la ficha superior. */
+    kindLabel(element) {
+      if (!element) return 'Selección múltiple';
+      const code = this.model.signCodeForType(element.type);
+      if (code) return String(code).startsWith('SVC_') ? 'Señal de servicios' : 'Señal ISO 7010';
+      if (element.type === 'pipe') return 'Red de tubería';
+      if (element.type === 'conduit') return 'Red eléctrica';
+      if (this.model.cadForType(element.type)) return 'Equipo CAD';
+      if (this.model.isElectricalDeviceType(element.type)) return 'Equipo eléctrico';
+      return 'Elemento del plano';
+    }
+
+    heroMeta(element) {
+      if (!element) return 'Edición conjunta';
+      const unit = this.model.design.canvas.unit;
+      if (Array.isArray(element.points)) return `Trazo de ${element.points.length} vértices`;
+      if (element.type === 'ellipse') return `Elipse · ${G.formatNumber(element.w, 0)} × ${G.formatNumber(element.h, 0)} ${unit}`;
+      return `${G.formatNumber(element.w, 0)} × ${G.formatNumber(element.h, 0)} ${unit}`;
+    }
+
+    /* ------------------------------- piezas ------------------------------- */
+
+    section(key, title, icon, body, options = {}) {
+      const collapsed = this.collapsed.has(key);
+      const badge = options.badge ? `<span class="section-badge">${esc(options.badge)}</span>` : '';
+      return `<section class="inspector-section${collapsed ? ' is-collapsed' : ''}" data-section="${key}">
+        <button class="section-head" type="button" data-section-toggle="${key}" aria-expanded="${collapsed ? 'false' : 'true'}">
+          <svg class="icon section-icon" aria-hidden="true"><use href="#i-${icon}"></use></svg>
+          <span class="section-title">${esc(title)}</span>
+          ${badge}
+          <svg class="icon section-chevron" aria-hidden="true"><use href="#i-chevron-down"></use></svg>
+        </button>
+        <div class="section-body"${collapsed ? ' hidden' : ''}>${body}</div>
+      </section>`;
+    }
+
+    numberField(label, prop, value, options = {}) {
+      const unit = options.unit ? `<span class="num-unit">${esc(options.unit)}</span>` : '';
+      const min = options.min !== undefined ? ` min="${options.min}"` : '';
+      const max = options.max !== undefined ? ` max="${options.max}"` : '';
+      const step = options.step !== undefined ? options.step : 1;
+      const disabled = options.disabled ? ' disabled' : '';
+      return `<label class="num-field"><span class="num-label">${esc(label)}</span><span class="num-control"><input type="number" step="${step}" data-prop="${prop}" value="${value}"${min}${max}${disabled}>${unit}</span></label>`;
+    }
+
+    colorOf(elements) {
+      return elements.length && elements.every((element) => element.color === elements[0].color) ? elements[0].color : '';
+    }
+
+    stackMarkup(elements) {
+      const stacked = (this.app.lastHit?.ids || []).map((id) => this.model.element(id)).filter(Boolean);
+      const selected = new Set(elements.map((element) => element.id));
+      // Solo se muestra si la selección actual forma parte de esa pila.
+      if (stacked.length < 2 || !stacked.some((element) => selected.has(element.id))) return '';
+      const rows = stacked.map((element, index) => `<li>
+        <button class="stack-row${selected.has(element.id) ? ' is-current' : ''}" type="button" data-action="select-stack" data-value="${esc(element.id)}">
+          <span class="stack-index">${index + 1}</span>
+          <span class="stack-name">${esc(this.typeName(element))}</span>
+          <span class="stack-kind">${esc(TYPE_NAMES[element.type] || 'Elemento')}</span>
+        </button>
+      </li>`).join('');
+      const body = `<p class="help-text">Hay ${stacked.length} elementos en este punto. <strong>Ctrl + clic</strong> baja uno y <strong>Ctrl + Shift + clic</strong> vuelve a subir.</p>
+        <ol class="stack-list">${rows}</ol>`;
+      return this.section('stack', 'Elementos superpuestos', 'stack', body, { badge: String(stacked.length) });
+    }
+
+    /* ------------------------------- render ------------------------------- */
 
     render(force = false) {
       if (!this.panel) return;
@@ -139,6 +225,10 @@
       const isTyping = active && this.panel.contains(active);
       if (!force && (signature === this.signature || isTyping)) return;
       this.signature = signature;
+      if (this.count) {
+        this.count.hidden = elements.length < 2;
+        if (elements.length > 1) this.count.textContent = `${elements.length}`;
+      }
       if (!elements.length) {
         this.title.textContent = 'Propiedades';
         this.panel.innerHTML = this.emptyMarkup();
@@ -156,21 +246,24 @@
       const design = this.model.design;
       return `
         <div class="inspector-empty">
-          <p>Sin selección. Elige un elemento en el lienzo o usa <strong>Ctrl + A</strong> para seleccionar todo.</p>
-          <dl class="inspector-facts">
+          <span class="empty-mark"><svg class="icon"><use href="#i-move"></use></svg></span>
+          <h3>Nada seleccionado</h3>
+          <p>Elige un elemento del lienzo para ajustar su geometría, su color y sus datos. Con <strong>Ctrl + A</strong> seleccionas todo el piso.</p>
+          <dl class="empty-facts">
             <div><dt>Elementos</dt><dd>${design.elements.length}</dd></div>
             <div><dt>Capas</dt><dd>${design.layers.length}</dd></div>
             <div><dt>Grupos</dt><dd>${design.groups.length}</dd></div>
             <div><dt>Lienzo</dt><dd>${G.formatNumber(design.canvas.width, 0)} × ${G.formatNumber(design.canvas.height, 0)} ${esc(design.canvas.unit)}</dd></div>
-            <div><dt>Escala</dt><dd>${esc(design.canvas.scale)} (referencia)</dd></div>
           </dl>
-          <button class="button button-small button-ghost" type="button" data-action="select-all"><svg class="icon"><use href="#i-select"></use></svg>Seleccionar todo</button>
+          <button class="button button-small button-ghost empty-action" type="button" data-action="select-all"><svg class="icon"><use href="#i-select"></use></svg>Seleccionar todo</button>
+          <p class="empty-tip"><kbd>Ctrl</kbd> + clic sobre una superposición baja al elemento de abajo.</p>
           <p class="inspector-hint">El plano es esquemático: verifica medidas y escala en sitio antes de usarlo como referencia de obra.</p>
         </div>`;
     }
 
     markup(elements, frame, single) {
       const design = this.model.design;
+      const unit = design.canvas.unit;
       const hasPath = elements.some((element) => Array.isArray(element.points));
       const hasText = elements.some((element) => element.type === 'text' || element.type === 'dimension');
       const hasDoor = elements.some((element) => (root.DOOR_TYPES || ['door']).includes(element.type));
@@ -200,105 +293,146 @@
         : '';
       const colors = root.COLORS || [];
       const canEdit = this.model.canEdit();
+      const lockedAll = elements.every((element) => (element.locked || this.model.layer(element.layerId)?.locked));
       const layerOptions = design.layers.map((layer) => `<option value="${esc(layer.id)}" ${elements.every((element) => element.layerId === layer.id) ? 'selected' : ''}>${esc(layer.name)}</option>`).join('');
       const basicTypes = root.BASIC_TYPES || ['wall', 'door', 'route', 'text', 'dimension', 'line', 'rect', 'ellipse'];
       const typeOptions = basicTypes.map((key) => `<option value="${key}" ${single && single.type === key ? 'selected' : ''}>${TYPE_NAMES[key] || key}</option>`).join('');
-      const lockedAll = elements.every((element) => element.locked);
       const sign = single ? this.model.signCodeForType(single.type) : null;
       const cad = single ? this.model.cadForType(single.type) : null;
-      const mepSection = (hasPipe || hasConduit || hasDevice) && Mep ? `
-        <section class="inspector-section">
-          <h3>${hasPipe ? 'Red de tubería' : hasConduit ? 'Circuito eléctrico' : 'Conexión eléctrica'}</h3>
-          <div class="inspector-mep">
+      const disabled = canEdit ? '' : ' disabled';
+      const color = this.colorOf(elements);
+      const opacity = single ? single.opacity : elements[0].opacity;
+      const stroke = single ? single.stroke : elements[0].stroke;
+
+      /* ------------------------------ ficha ------------------------------ */
+      const thumb = single && (sign || cad)
+        ? `<span class="hero-thumb" data-asset-preview="${esc(single.type)}"></span>`
+        : '';
+      const hero = `<header class="inspector-hero${thumb ? ' has-thumb' : ''}">
+        ${thumb}
+        <div class="hero-copy">
+          <p class="hero-kicker">${esc(this.kindLabel(single))}</p>
+          <strong class="hero-title">${esc(single ? (sign ? (this.model.catalogs.signs[sign]?.name || sign) : cad ? cad.name : this.typeName(single)) : `${elements.length} elementos`)}</strong>
+          <small class="hero-meta">${esc(single ? this.heroMeta(single) : 'Edición conjunta')}</small>
+        </div>
+        <div class="hero-actions">
+          <button class="hero-action" type="button" data-action="lock" data-tooltip="${lockedAll ? 'Desbloquear' : 'Bloquear'} · Ctrl+L" aria-label="${lockedAll ? 'Desbloquear' : 'Bloquear'}"><svg class="icon"><use href="#i-${lockedAll ? 'unlock' : 'lock'}"></use></svg></button>
+          <button class="hero-action" type="button" data-action="duplicate" data-tooltip="Duplicar · Ctrl+D" aria-label="Duplicar"><svg class="icon"><use href="#i-duplicate"></use></svg></button>
+          <button class="hero-action is-danger" type="button" data-action="delete" data-tooltip="Eliminar · Supr" aria-label="Eliminar"><svg class="icon"><use href="#i-trash"></use></svg></button>
+        </div>
+      </header>`;
+
+      /* ---------------------------- geometría ---------------------------- */
+      const rotation = Math.round(frame.rotation || 0);
+      const geometry = `<div class="metric-grid">
+          ${this.numberField('X', 'x', Math.round(frame.x), { disabled: !canEdit, unit })}
+          ${this.numberField('Y', 'y', Math.round(frame.y), { disabled: !canEdit, unit })}
+          ${this.numberField('Ancho', 'w', Math.round(frame.w), { disabled: !canEdit, unit, min: 2 })}
+          ${this.numberField('Alto', 'h', Math.round(frame.h), { disabled: !canEdit, unit, min: 2 })}
+        </div>
+        <div class="rotation-row">
+          <button class="step-button" type="button" data-action="rotate" data-value="-90" data-tooltip="Girar −90°" aria-label="Girar menos 90 grados"${disabled}><svg class="icon"><use href="#i-rotate-left"></use></svg></button>
+          ${this.numberField('Rotación', 'rotation', rotation, { disabled: !canEdit, unit: '°', min: 0, max: 359 })}
+          <button class="step-button" type="button" data-action="rotate" data-value="90" data-tooltip="Girar +90°" aria-label="Girar más 90 grados"${disabled}><svg class="icon"><use href="#i-rotate-right"></use></svg></button>
+        </div>
+        ${hasPath ? `<p class="help-text">Trazo editable: arrastra los <strong>vértices</strong> del plano, haz <strong>doble clic</strong> sobre el trazo para añadir uno y <strong>Alt + clic</strong> para quitarlo. Ajustar la caja reescala el trazado completo.</p>` : ''}`;
+
+      /* --------------------------- apariencia --------------------------- */
+      const appearance = `<div class="color-line">
+          <span class="color-chip" style="--swatch:${color || '#cbd5e1'}" aria-hidden="true"></span>
+          <span class="color-label">Color</span>
+          <code class="color-value">${esc(color || 'varios')}</code>
+        </div>
+        <div class="swatch-grid" role="group" aria-label="Paleta de colores">
+          ${colors.map((swatch) => `<button class="swatch ${color === swatch ? 'is-selected' : ''}" type="button" data-action="color" data-value="${swatch}" style="--swatch:${swatch}" aria-label="Color ${swatch}"${canEdit && !sign ? '' : ' disabled'}></button>`).join('')}
+        </div>
+        <div class="metric-grid">
+          ${this.numberField('Grosor', 'stroke', stroke, { disabled: !canEdit, min: 0, max: 40, step: 0.5 })}
+          <label class="slider-field"><span class="num-label">Opacidad</span><input type="range" min="0.1" max="1" step="0.05" data-prop="opacity" data-live-preview="opacity" value="${opacity}"${disabled}><output data-output="opacity">${Math.round(opacity * 100)}%</output></label>
+        </div>
+        ${hasText ? `<div class="field-stack">
+          <label class="field compact"><span>Texto</span><textarea data-prop="label" rows="2" maxlength="240" placeholder="Escribe una etiqueta breve">${esc(single ? single.label : '')}</textarea></label>
+          ${this.numberField('Tamaño de letra', 'fontSize', single?.fontSize || 14, { disabled: !canEdit, min: 8, max: 160, unit: 'pt' })}
+        </div>` : ''}
+        ${hasDoor ? `<div class="switch-stack">
+          <label class="switch-row compact"><span><strong>Cambiar bisagra</strong><small>Voltea la puerta hacia el otro lado del vano.</small></span><input type="checkbox" data-prop="flipX" ${single?.flipX ? 'checked' : ''}${disabled}></label>
+          <label class="switch-row compact"><span><strong>Abrir al otro lado</strong><small>Invierte el sentido de abatimiento respecto al muro.</small></span><input type="checkbox" data-prop="flipY" ${single?.flipY ? 'checked' : ''}${disabled}></label>
+        </div>` : ''}`;
+
+      /* ------------------------------ MEP ------------------------------ */
+      const mepSection = (hasPipe || hasConduit || hasDevice) && Mep ? this.section(
+        'mep',
+        hasPipe ? 'Red de tubería' : hasConduit ? 'Circuito eléctrico' : 'Conexión eléctrica',
+        'network',
+        `<div class="inspector-mep">
             ${hasPipe ? `
-              <label class="field compact"><span>Red</span><select data-prop="network" ${canEdit ? '' : 'disabled'}>${networkOptions}</select><small>Al cambiar de red se aplican color, diámetro y material de referencia.</small></label>
-              <div class="inspector-grid two">
-                <label class="field compact"><span>Diámetro</span><select data-prop="diameter" ${canEdit ? '' : 'disabled'}>${diameterOptions}</select></label>
-                <label class="field compact"><span>Material</span><select data-prop="material" ${canEdit ? '' : 'disabled'}>${materialOptions}</select></label>
+              <label class="field compact"><span>Red</span><select data-prop="network"${disabled}>${networkOptions}</select><small>Al cambiar de red se aplican color, diámetro y material de referencia.</small></label>
+              <div class="metric-grid">
+                <label class="select-field"><span class="num-label">Diámetro</span><select data-prop="diameter"${disabled}>${diameterOptions}</select></label>
+                <label class="select-field"><span class="num-label">Material</span><select data-prop="material"${disabled}>${materialOptions}</select></label>
               </div>
-              <div class="inspector-grid two">
-                <label class="field compact"><span>Pendiente (física)</span><input type="number" min="0" max="15" step="0.5" data-prop="slope" value="${Number(single.slope) || 0}" ${canEdit ? '' : 'disabled'}><small>Referencia de diseño; el desagüe real se verifica en obra.</small></label>
-                <label class="field compact"><span>Presión (kPa)</span><input type="number" min="0" max="5000" step="5" data-prop="pressure" value="${Number(single.pressure) || 0}" ${canEdit ? '' : 'disabled'}></label>
+              <div class="metric-grid">
+                ${this.numberField('Pendiente', 'slope', Number(single.slope) || 0, { disabled: !canEdit, min: 0, max: 15, step: 0.5, unit: '%' })}
+                ${this.numberField('Presión', 'pressure', Number(single.pressure) || 0, { disabled: !canEdit, min: 0, max: 5000, step: 5, unit: 'kPa' })}
               </div>
-              <p class="help-text">Tramo de ${esc(Mep.formatMeters(Mep.elementLengthMeters(single, design.canvas)))} entre ${Array.isArray(single.points) ? single.points.length : 2} puntos. Arrastra los vértices azules para ajustar el recorrido.</p>` : ''}
+              <p class="help-text">Tramo de ${esc(Mep.formatMeters(Mep.elementLengthMeters(single, design.canvas)))} entre ${Array.isArray(single.points) ? single.points.length : 2} puntos. La pendiente es una referencia de diseño: el desagüe real se verifica en obra.</p>` : ''}
             ${hasConduit ? `
-              <div class="inspector-grid two">
-                <label class="field compact"><span>Circuito</span><input type="text" maxlength="12" data-prop="circuit" value="${esc(single.circuit || 'C1')}" ${canEdit ? '' : 'disabled'}></label>
-                <label class="field compact"><span>Tensión</span><select data-prop="voltage" ${canEdit ? '' : 'disabled'}>${voltageOptions}</select></label>
+              <div class="metric-grid">
+                <label class="field compact"><span>Circuito</span><input type="text" maxlength="12" data-prop="circuit" value="${esc(single.circuit || 'C1')}"${disabled}></label>
+                <label class="select-field"><span class="num-label">Tensión</span><select data-prop="voltage"${disabled}>${voltageOptions}</select></label>
               </div>
-              <div class="inspector-grid two">
-                <label class="field compact"><span>Calibre</span><select data-prop="gauge" ${canEdit ? '' : 'disabled'}>${gaugeOptions}</select></label>
-                <label class="field compact"><span>Fases</span><select data-prop="phases" ${canEdit ? '' : 'disabled'}>${phaseOptions}</select></label>
+              <div class="metric-grid">
+                <label class="select-field"><span class="num-label">Calibre</span><select data-prop="gauge"${disabled}>${gaugeOptions}</select></label>
+                <label class="select-field"><span class="num-label">Fases</span><select data-prop="phases"${disabled}>${phaseOptions}</select></label>
               </div>
-              <p class="help-text">Los tramos con el mismo código forman un circuito. El número de fases se declara aquí, no se deduce de la tensión.</p>
-              <p class="help-text">Tramo de ${esc(Mep.formatMeters(Mep.elementLengthMeters(single, design.canvas)))}. El panel <strong>Redes</strong> suma cargas y estima la caída de tensión.</p>` : ''}
+              <p class="help-text">Los tramos con el mismo código forman un circuito. Tramo de ${esc(Mep.formatMeters(Mep.elementLengthMeters(single, design.canvas)))}; el panel <strong>Redes</strong> suma cargas y estima la caída de tensión.</p>` : ''}
             ${hasDevice ? `
-              <label class="field compact"><span>Circuito</span><input type="text" maxlength="12" data-prop="circuit" value="${esc(single.circuit || 'C1')}" ${canEdit ? '' : 'disabled'}><small>Agrupa esta carga con su circuito.</small></label>
-              <label class="field compact"><span>Carga (VA)</span><input type="number" min="0" max="100000" step="10" data-prop="load" value="${Number(single.load) || 0}" ${canEdit ? '' : 'disabled'}></label>` : ''}
-          </div>
-        </section>` : '';
+              <div class="metric-grid">
+                <label class="field compact"><span>Circuito</span><input type="text" maxlength="12" data-prop="circuit" value="${esc(single.circuit || 'C1')}"${disabled}></label>
+                ${this.numberField('Carga', 'load', Number(single.load) || 0, { disabled: !canEdit, min: 0, max: 100000, step: 10, unit: 'VA' })}
+              </div>` : ''}
+          </div>`,
+        { badge: hasPipe ? (this.model.networkInfo(single.network)?.short || '') : hasConduit ? (single.circuit || 'C1') : '' },
+      ) : '';
+
+      /* ------------------------- organización ------------------------- */
+      const organization = `<label class="select-field"><span class="num-label">Capa</span><select data-prop="layerId">${layerOptions}</select></label>
+        <label class="switch-row compact"><span><strong>Bloquear</strong><small>Evita mover o modificar el elemento.</small></span><input type="checkbox" data-prop="locked" ${lockedAll ? 'checked' : ''}></label>
+        ${single && basicTypes.includes(single.type) ? `<label class="select-field"><span class="num-label">Tipo de elemento</span><select data-prop="type">${typeOptions}</select><small class="help-text">Convertir conserva posición, giro y capa; útil para corregir trazos.</small></label>` : ''}`;
+
+      /* ---------------------------- acciones ---------------------------- */
+      const actions = `<div class="action-grid">
+          <button class="action-button" type="button" data-action="duplicate"><svg class="icon"><use href="#i-duplicate"></use></svg>Duplicar</button>
+          <button class="action-button" type="button" data-action="lock"><svg class="icon"><use href="#i-${lockedAll ? 'unlock' : 'lock'}"></use></svg>${lockedAll ? 'Desbloquear' : 'Bloquear'}</button>
+          <button class="action-button" type="button" data-action="group"${elements.length > 1 ? '' : ' disabled'}><svg class="icon"><use href="#i-group"></use></svg>Agrupar</button>
+          <button class="action-button" type="button" data-action="ungroup"${this.model.isSelectionGrouped() ? '' : ' disabled'}><svg class="icon"><use href="#i-ungroup"></use></svg>Desagrupar</button>
+        </div>
+        <div class="icon-row" role="group" aria-label="Orden de dibujo">
+          <button class="icon-tile" type="button" data-action="front" data-tooltip="Traer al frente" aria-label="Traer al frente"><svg class="icon"><use href="#i-front"></use></svg></button>
+          <button class="icon-tile" type="button" data-action="forward" data-tooltip="Traer adelante" aria-label="Traer adelante"><svg class="icon"><use href="#i-forward"></use></svg></button>
+          <button class="icon-tile" type="button" data-action="backward" data-tooltip="Enviar atrás" aria-label="Enviar atrás"><svg class="icon"><use href="#i-backward"></use></svg></button>
+          <button class="icon-tile" type="button" data-action="back" data-tooltip="Enviar al fondo" aria-label="Enviar al fondo"><svg class="icon"><use href="#i-back"></use></svg></button>
+        </div>
+        ${elements.length > 1 ? `<div class="icon-row is-dense" role="group" aria-label="Alinear">
+          <button class="icon-tile" type="button" data-action="align" data-value="left" data-tooltip="Alinear a la izquierda" aria-label="Alinear a la izquierda"><svg class="icon"><use href="#i-align-left"></use></svg></button>
+          <button class="icon-tile" type="button" data-action="align" data-value="center" data-tooltip="Centrar horizontal" aria-label="Centrar horizontal"><svg class="icon"><use href="#i-align-center"></use></svg></button>
+          <button class="icon-tile" type="button" data-action="align" data-value="right" data-tooltip="Alinear a la derecha" aria-label="Alinear a la derecha"><svg class="icon"><use href="#i-align-right"></use></svg></button>
+          <button class="icon-tile" type="button" data-action="align" data-value="top" data-tooltip="Alinear arriba" aria-label="Alinear arriba"><svg class="icon"><use href="#i-align-top"></use></svg></button>
+          <button class="icon-tile" type="button" data-action="align" data-value="middle" data-tooltip="Centrar vertical" aria-label="Centrar vertical"><svg class="icon"><use href="#i-align-middle"></use></svg></button>
+          <button class="icon-tile" type="button" data-action="align" data-value="bottom" data-tooltip="Alinear abajo" aria-label="Alinear abajo"><svg class="icon"><use href="#i-align-bottom"></use></svg></button>
+          <button class="icon-tile" type="button" data-action="distribute" data-value="x" data-tooltip="Distribuir horizontal" aria-label="Distribuir horizontal"${elements.length > 2 ? '' : ' disabled'}><svg class="icon"><use href="#i-distribute-h"></use></svg></button>
+          <button class="icon-tile" type="button" data-action="distribute" data-value="y" data-tooltip="Distribuir vertical" aria-label="Distribuir vertical"${elements.length > 2 ? '' : ' disabled'}><svg class="icon"><use href="#i-distribute-v"></use></svg></button>
+        </div>` : ''}`;
+
       return `
-        ${sign ? `<div class="inspector-asset"><span class="inspector-asset-thumb" data-asset-preview="${esc(single.type)}"></span><div><strong>${esc(this.model.catalogs.signs[sign]?.name || sign)}</strong><small>${esc(sign)} · ${esc(this.model.catalogs.signCategories[this.model.catalogs.signs[sign]?.category]?.label || (String(sign).startsWith('SVC_') ? 'Orientación y servicios' : 'ISO 7010'))}</small></div></div>` : ''}
-        ${cad ? `<div class="inspector-asset"><span class="inspector-asset-thumb" data-asset-preview="${esc(single.type)}"></span><div><strong>${esc(cad.name)}</strong><small>Equipo CAD esquemático</small></div></div>` : ''}
+        ${hero}
         ${!canEdit ? '<div class="notice notice-warning compact-notice"><svg class="icon"><use href="#i-lock"></use></svg><p>La selección está bloqueada o pertenece a una capa bloqueada. Desbloquea para editar.</p></div>' : ''}
-        <section class="inspector-section">
-          <h3>Geometría</h3>
-          <div class="inspector-grid two">
-            <label class="field compact"><span>X</span><input type="number" step="1" data-prop="x" value="${Math.round(frame.x)}" ${canEdit ? '' : 'disabled'}></label>
-            <label class="field compact"><span>Y</span><input type="number" step="1" data-prop="y" value="${Math.round(frame.y)}" ${canEdit ? '' : 'disabled'}></label>
-            <label class="field compact"><span>Ancho</span><input type="number" step="1" min="2" data-prop="w" value="${Math.round(frame.w)}" ${canEdit ? '' : 'disabled'}></label>
-            <label class="field compact"><span>Alto</span><input type="number" step="1" min="2" data-prop="h" value="${Math.round(frame.h)}" ${canEdit ? '' : 'disabled'}></label>
-          </div>
-          <label class="field compact"><span>Rotación (°)</span><input type="number" step="1" min="0" max="359" data-prop="rotation" value="${Math.round(frame.rotation || 0)}" ${canEdit ? '' : 'disabled'}></label>
-          ${hasPath ? `<p class="help-text">Este elemento tiene un trazo editable: arrastra los <strong>vértices</strong> azules del plano para mover cada punto, haz <strong>doble clic</strong> sobre el trazo para añadir uno y usa <strong>Alt+clic</strong> sobre un vértice para quitarlo. Con Shift el vértice se alinea con el anterior. Ajustar la caja reescala el trazado completo.</p>` : ''}
-        </section>
-        <section class="inspector-section">
-          <h3>Apariencia</h3>
-          <div class="swatch-grid" role="group" aria-label="Paleta de colores">
-            ${colors.map((color) => `<button class="swatch ${elements.every((element) => element.color === color) ? 'is-selected' : ''}" type="button" data-action="color" data-value="${color}" style="--swatch:${color}" aria-label="Color ${color}" ${canEdit && !sign ? '' : 'disabled'}></button>`).join('')}
-          </div>
-          <div class="inspector-grid two">
-            <label class="field compact"><span>Grosor</span><input type="number" min="0" max="40" step="0.5" data-prop="stroke" value="${single ? single.stroke : elements[0].stroke}" ${canEdit ? '' : 'disabled'}></label>
-            <label class="field compact"><span>Opacidad</span><input type="range" min="0.1" max="1" step="0.05" data-prop="opacity" data-live-preview="opacity" value="${single ? single.opacity : elements[0].opacity}" ${canEdit ? '' : 'disabled'}><output data-output="opacity">${Math.round((single ? single.opacity : elements[0].opacity) * 100)}%</output></label>
-          </div>
-          ${hasText ? `<label class="field compact"><span>Texto</span><textarea data-prop="label" rows="2" maxlength="240" placeholder="Escribe una etiqueta breve">${esc(single ? single.label : '')}</textarea></label>
-          <label class="field compact"><span>Tamaño de letra</span><input type="number" min="8" max="160" step="1" data-prop="fontSize" value="${single?.fontSize || 14}"></label>` : ''}
-          ${hasDoor ? `<label class="switch-row compact"><span><strong>Cambiar bisagra</strong><small>Voltea la puerta hacia el otro lado del vano.</small></span><input type="checkbox" data-prop="flipX" ${single?.flipX ? 'checked' : ''} ${canEdit ? '' : 'disabled'}></label>
-          <label class="switch-row compact"><span><strong>Abrir al otro lado</strong><small>Invierte el sentido de abatimiento respecto al muro.</small></span><input type="checkbox" data-prop="flipY" ${single?.flipY ? 'checked' : ''} ${canEdit ? '' : 'disabled'}></label>` : ''}
-        </section>
+        ${this.section('geometry', 'Geometría', 'move', geometry)}
+        ${this.section('appearance', 'Apariencia', 'palette', appearance)}
         ${mepSection}
-        <section class="inspector-section">
-          <h3>Organización</h3>
-          <label class="field compact"><span>Capa</span><select data-prop="layerId">${layerOptions}</select></label>
-          <label class="switch-row compact"><span><strong>Bloquear</strong><small>Evita mover o modificar.</small></span><input type="checkbox" data-prop="locked" ${lockedAll ? 'checked' : ''}></label>
-          ${single && basicTypes.includes(single.type) ? `<label class="field compact"><span>Tipo de elemento</span><select data-prop="type">${typeOptions}</select><small>Convertir conserva posición, giro y capa. Es útil para corregir trazos.</small></label>` : ''}
-        </section>
-        <section class="inspector-section">
-          <h3>Acciones</h3>
-          <div class="inspector-actions">
-            <button class="action-button" type="button" data-action="duplicate" data-tooltip="Duplicar · Ctrl+D"><svg class="icon"><use href="#i-copy"></use></svg>Duplicar</button>
-            <button class="action-button" type="button" data-action="delete" data-tooltip="Eliminar · Supr"><svg class="icon"><use href="#i-trash"></use></svg>Eliminar</button>
-            <button class="action-button" type="button" data-action="lock"><svg class="icon"><use href="#i-lock"></use></svg>${lockedAll ? 'Desbloquear' : 'Bloquear'}</button>
-            <button class="action-button" type="button" data-action="group" ${elements.length > 1 ? '' : 'disabled'}><svg class="icon"><use href="#i-group"></use></svg>Agrupar</button>
-            <button class="action-button" type="button" data-action="ungroup" ${this.model.isSelectionGrouped() ? '' : 'disabled'}><svg class="icon"><use href="#i-ungroup"></use></svg>Desagrupar</button>
-          </div>
-          <div class="order-buttons" role="group" aria-label="Orden de dibujo">
-            <button class="action-button" type="button" data-action="front" data-tooltip="Traer al frente">Frente</button>
-            <button class="action-button" type="button" data-action="forward" data-tooltip="Traer adelante">Adelante</button>
-            <button class="action-button" type="button" data-action="backward" data-tooltip="Enviar atrás">Atrás</button>
-            <button class="action-button" type="button" data-action="back" data-tooltip="Enviar al fondo">Fondo</button>
-          </div>
-          ${elements.length > 1 ? `<div class="align-buttons" role="group" aria-label="Alinear">
-            <button class="action-button" type="button" data-action="align" data-value="left" data-tooltip="Alinear a la izquierda"><svg class="icon"><use href="#i-align-left"></use></svg></button>
-            <button class="action-button" type="button" data-action="align" data-value="center" data-tooltip="Centrar horizontal"><svg class="icon"><use href="#i-align-center"></use></svg></button>
-            <button class="action-button" type="button" data-action="align" data-value="right" data-tooltip="Alinear a la derecha"><svg class="icon"><use href="#i-align-right"></use></svg></button>
-            <button class="action-button" type="button" data-action="align" data-value="top" data-tooltip="Alinear arriba"><svg class="icon"><use href="#i-align-top"></use></svg></button>
-            <button class="action-button" type="button" data-action="align" data-value="middle" data-tooltip="Centrar vertical"><svg class="icon"><use href="#i-align-middle"></use></svg></button>
-            <button class="action-button" type="button" data-action="align" data-value="bottom" data-tooltip="Alinear abajo"><svg class="icon"><use href="#i-align-bottom"></use></svg></button>
-            <button class="action-button" type="button" data-action="distribute" data-value="x" data-tooltip="Distribuir horizontal" ${elements.length > 2 ? '' : 'disabled'}><svg class="icon"><use href="#i-distribute-h"></use></svg></button>
-            <button class="action-button" type="button" data-action="distribute" data-value="y" data-tooltip="Distribuir vertical" ${elements.length > 2 ? '' : 'disabled'}><svg class="icon"><use href="#i-distribute-v"></use></svg></button>
-          </div>` : ''}
-        </section>`;
+        ${this.stackMarkup(elements)}
+        ${this.section('organization', 'Organización', 'layers', organization)}
+        ${this.section('actions', 'Orden y acciones', 'arrange', actions)}`;
     }
 
     refreshThumbnails() {

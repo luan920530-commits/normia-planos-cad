@@ -1,6 +1,6 @@
 {
   "name": "normia-planos-cad",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "private": true,
   "description": "Normia Planos CAD · suite de pruebas de desarrollo (no se requiere Node en producción).",
   "type": "module",

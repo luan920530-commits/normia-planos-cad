@@ -811,6 +811,94 @@ async function main() {
     await app.export('print');
     report.check('La impresión usa la ruta del servidor', String(app.boot.printUrl).includes('print'));
 
+    /* ------------------------ mano, superposiciones, inspector ------------------------ */
+    app.model.clearSelection();
+    app.applyTool('select');
+    app.fit(true);
+    app.renderNow();
+    const beforeHand = app.model.design.elements.length;
+    q(window, '[data-tool="hand"]').click();
+    report.check('La barra lateral incluye la herramienta Mano', app.tool === 'hand' && q(window, '[data-stage-hint]').textContent.includes('Mano'), app.tool);
+    report.check('La herramienta Mano muestra el cursor de agarre', app.svg.style.cursor === 'grab', app.svg.style.cursor);
+    const panBefore = { x: app.view.panX, y: app.view.panY };
+    drag(window, app.svg, clientPoint(app, 400, 300), clientPoint(app, 460, 350));
+    app.renderNow();
+    report.check('Arrastrar con la Mano desplaza el lienzo',
+      Math.abs((app.view.panX - panBefore.x) - 60) <= 4 && Math.abs((app.view.panY - panBefore.y) - 50) <= 4,
+      `${Math.round(app.view.panX - panBefore.x)},${Math.round(app.view.panY - panBefore.y)}`);
+    report.check('La Mano no mueve ni crea elementos', app.model.design.elements.length === beforeHand && app.model.selection.size === 0,
+      `${app.model.design.elements.length} elementos`);
+    key(window, app.svg, 'h');
+    report.check('El atajo H activa la Mano desde el teclado', app.tool === 'hand');
+    key(window, app.svg, 'v');
+    report.check('El atajo V vuelve a Seleccionar', app.tool === 'select' && app.svg.style.cursor === 'default', app.svg.style.cursor);
+
+    q(window, '[data-tools-toggle]').click();
+    report.check('La paleta «Todas las herramientas» se abre',
+      q(window, '[data-tools-popover]').hidden === false && qa(window, '.tool-choice').length >= 14,
+      `${qa(window, '.tool-choice').length} herramientas`);
+    report.check('La paleta incluye la Mano y los atajos', Boolean(q(window, '.tool-choice[data-tool-choice="hand"]')) && q(window, '.tool-choice kbd')?.textContent.length > 0);
+    q(window, '.tool-choice[data-tool-choice="hand"]').click();
+    report.check('Elegir en la paleta activa la herramienta y cierra el panel',
+      app.tool === 'hand' && q(window, '[data-tools-popover]').hidden === true && q(window, '[data-tools-label]').textContent === 'Mano',
+      q(window, '[data-tools-label]').textContent);
+    app.applyTool('select');
+    app.fit(true);
+    app.renderNow();
+
+    const stackBottom = app.model.addElement('rect', { x: 900, y: 600, w: 140, h: 110, color: '#2563eb' });
+    const stackTop = app.model.addElement('rect', { x: 920, y: 615, w: 140, h: 110, color: '#dc2626' });
+    app.renderNow();
+    app.model.select([stackTop.id]);
+    const stackPoint = clientPoint(app, 960, 660);
+    pointer(window, app.svg, 'pointerdown', stackPoint, { ctrlKey: true });
+    app.renderNow();
+    report.check('Ctrl + clic alcanza el elemento que está debajo',
+      app.model.selection.size === 1 && app.model.selection.has(stackBottom.id), [...app.model.selection].join(','));
+    const stackStatus = q(window, '[data-stack-status]');
+    report.check('La barra de estado avisa de los elementos superpuestos',
+      stackStatus.hidden === false && /2 superpuestos/.test(stackStatus.textContent), stackStatus.textContent);
+    pointer(window, app.svg, 'pointerdown', stackPoint, { ctrlKey: true });
+    app.renderNow();
+    report.check('Ctrl + clic vuelve a subir al elemento superior', app.model.selection.has(stackTop.id));
+    pointer(window, app.svg, 'pointerdown', stackPoint, { ctrlKey: true, shiftKey: true });
+    app.renderNow();
+    report.check('Ctrl + Shift + clic retrocede en la pila', app.model.selection.has(stackBottom.id));
+    report.check('El inspector lista los elementos superpuestos',
+      Boolean(q(window, '[data-section="stack"]')) && qa(window, '.stack-row').length === 2,
+      `${qa(window, '.stack-row').length} filas`);
+    q(window, '.stack-row:not(.is-current)')?.click();
+    report.check('Elegir una fila de la pila cambia la selección', app.model.selection.has(stackTop.id));
+
+    report.check('El inspector agrupa las propiedades en secciones plegables',
+      qa(window, '[data-properties] [data-section]').length >= 5 && Boolean(q(window, '[data-section="geometry"] .section-head')),
+      `${qa(window, '[data-properties] [data-section]').length} secciones`);
+    report.check('La ficha del inspector ofrece acciones rápidas', qa(window, '.inspector-hero [data-action]').length === 3);
+    const appearanceHead = q(window, '[data-section="appearance"] .section-head');
+    appearanceHead.click();
+    app.renderNow();
+    const collapsedNow = q(window, '[data-section="appearance"]').classList.contains('is-collapsed');
+    q(window, '[data-section="appearance"] .section-head').click();
+    app.renderNow();
+    report.check('Las secciones del inspector se pliegan y se despliegan',
+      collapsedNow && !q(window, '[data-section="appearance"]').classList.contains('is-collapsed'));
+    report.check('Los campos de geometría muestran la unidad del lienzo',
+      q(window, '[data-section="geometry"] .num-unit')?.textContent === app.model.design.canvas.unit,
+      q(window, '[data-section="geometry"] .num-unit')?.textContent);
+    report.check('El inspector permite girar en pasos de 90°', qa(window, '[data-action="rotate"]').length === 2);
+    q(window, '[data-action="rotate"][data-value="90"]').click();
+    app.renderNow();
+    report.check('Girar 90° actualiza la rotación del elemento', Math.round(elementById(app, stackTop.id).rotation) === 90, String(elementById(app, stackTop.id).rotation));
+    q(window, '[data-action="rotate"][data-value="-90"]').click();
+    app.renderNow();
+    report.check('Girar −90° devuelve el elemento a su orientación', Math.round(elementById(app, stackTop.id).rotation) === 0, String(elementById(app, stackTop.id).rotation));
+
+    app.model.select([stackBottom.id, stackTop.id]);
+    app.model.deleteSelected();
+    app.model.clearSelection();
+    app.renderNow();
+    report.check('La prueba de superposición limpia sus elementos', !app.model.design.elements.some((element) => element.id === stackTop.id || element.id === stackBottom.id));
+
     /* ------------------------------- interfaz/tooltips ------------------------------- */
     const tips = qa(window, '[data-tooltip]');
     report.check('Hay controles con tooltip accesible', tips.length > 5, String(tips.length));

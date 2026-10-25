@@ -74,6 +74,9 @@
         <button class="rail-button is-active" type="button" data-tool="select" aria-pressed="true" data-tooltip="Seleccionar · V" aria-label="Seleccionar y mover">
           <svg class="icon"><use href="#i-select"></use></svg><span>Seleccionar</span>
         </button>
+        <button class="rail-button" type="button" data-tool="hand" aria-pressed="false" data-tooltip="Mano: desplazar el lienzo · H" aria-label="Desplazar el lienzo">
+          <svg class="icon"><use href="#i-hand"></use></svg><span>Mano</span>
+        </button>
         <button class="rail-button" type="button" data-tool="wall" aria-pressed="false" data-tooltip="Muro · M" aria-label="Dibujar muro">
           <svg class="icon"><use href="#i-wall"></use></svg><span>Muro</span>
         </button>
@@ -156,6 +159,52 @@
 
     <main class="canvas-stage">
       <div class="stage-toolbar">
+        <div class="tools-palette" data-tools-palette>
+          <button class="tool-palette-button" type="button" data-tools-toggle aria-expanded="false" aria-haspopup="true" data-tooltip="Todas las herramientas" aria-label="Todas las herramientas">
+            <span class="tool-palette-icon"><svg class="icon"><use href="#i-select" data-tools-icon></use></svg></span>
+            <span class="tool-palette-copy"><small>Herramienta</small><strong data-tools-label>Seleccionar</strong></span>
+            <svg class="icon chevron"><use href="#i-chevron-down"></use></svg>
+          </button>
+          <div class="tools-popover" data-tools-popover hidden role="menu" aria-label="Todas las herramientas">
+            <header class="tools-popover-head">
+              <div><strong>Todas las herramientas</strong><small>Elige una y sigue dibujando</small></div>
+              <kbd>H</kbd>
+            </header>
+            <div class="tool-group">
+              <p class="tool-group-title">Seleccionar</p>
+              <div class="tool-group-grid">
+                <button class="tool-choice" type="button" role="menuitem" data-tool="select" data-tool-choice="select"><span class="tool-choice-icon"><svg class="icon"><use href="#i-select"></use></svg></span><span class="tool-choice-name">Seleccionar</span><kbd>V</kbd></button>
+                <button class="tool-choice" type="button" role="menuitem" data-tool="hand" data-tool-choice="hand"><span class="tool-choice-icon"><svg class="icon"><use href="#i-hand"></use></svg></span><span class="tool-choice-name">Mano</span><kbd>H</kbd></button>
+              </div>
+            </div>
+            <div class="tool-group">
+              <p class="tool-group-title">Dibujar</p>
+              <div class="tool-group-grid">
+                <button class="tool-choice" type="button" role="menuitem" data-tool="wall" data-tool-choice="wall"><span class="tool-choice-icon"><svg class="icon"><use href="#i-wall"></use></svg></span><span class="tool-choice-name">Muro</span><kbd>M</kbd></button>
+                <button class="tool-choice" type="button" role="menuitem" data-tool="door" data-tool-choice="door"><span class="tool-choice-icon"><svg class="icon"><use href="#i-door"></use></svg></span><span class="tool-choice-name">Puerta</span><kbd>U</kbd></button>
+                <button class="tool-choice" type="button" role="menuitem" data-tool="route" data-tool-choice="route"><span class="tool-choice-icon"><svg class="icon"><use href="#i-route"></use></svg></span><span class="tool-choice-name">Ruta de evacuación</span><kbd>E</kbd></button>
+                <button class="tool-choice" type="button" role="menuitem" data-tool="door_double" data-tool-choice="door_double"><span class="tool-choice-icon"><svg class="icon"><use href="#i-door-double"></use></svg></span><span class="tool-choice-name">Puerta doble</span><kbd>Shift U</kbd></button>
+                <button class="tool-choice" type="button" role="menuitem" data-tool="pipe" data-tool-choice="pipe"><span class="tool-choice-icon"><svg class="icon"><use href="#i-pipe"></use></svg></span><span class="tool-choice-name">Tubería</span><kbd>P</kbd></button>
+                <button class="tool-choice" type="button" role="menuitem" data-tool="door_garage" data-tool-choice="door_garage"><span class="tool-choice-icon"><svg class="icon"><use href="#i-door-garage"></use></svg></span><span class="tool-choice-name">Portón o reja</span><kbd>R</kbd></button>
+                <button class="tool-choice" type="button" role="menuitem" data-tool="conduit" data-tool-choice="conduit"><span class="tool-choice-icon"><svg class="icon"><use href="#i-conduit"></use></svg></span><span class="tool-choice-name">Tubería eléctrica</span><kbd>Shift P</kbd></button>
+                <button class="tool-choice" type="button" role="menuitem" data-tool="text" data-tool-choice="text"><span class="tool-choice-icon"><svg class="icon"><use href="#i-text"></use></svg></span><span class="tool-choice-name">Texto</span><kbd>T</kbd></button>
+                <button class="tool-choice" type="button" role="menuitem" data-tool="dimension" data-tool-choice="dimension"><span class="tool-choice-icon"><svg class="icon"><use href="#i-dimension"></use></svg></span><span class="tool-choice-name">Medida</span><kbd>D</kbd></button>
+                <button class="tool-choice" type="button" role="menuitem" data-tool="line" data-tool-choice="line"><span class="tool-choice-icon"><svg class="icon"><use href="#i-line"></use></svg></span><span class="tool-choice-name">Línea</span><kbd>L</kbd></button>
+                <button class="tool-choice" type="button" role="menuitem" data-tool="rect" data-tool-choice="rect"><span class="tool-choice-icon"><svg class="icon"><use href="#i-rect"></use></svg></span><span class="tool-choice-name">Rectángulo</span><kbd>B</kbd></button>
+                <button class="tool-choice" type="button" role="menuitem" data-tool="ellipse" data-tool-choice="ellipse"><span class="tool-choice-icon"><svg class="icon"><use href="#i-ellipse"></use></svg></span><span class="tool-choice-name">Elipse</span><kbd>O</kbd></button>
+              </div>
+            </div>
+            <div class="tool-group">
+              <p class="tool-group-title">Insertar</p>
+              <div class="tool-group-grid">
+                <button class="tool-choice" type="button" role="menuitem" data-open-library="sign"><span class="tool-choice-icon"><svg class="icon"><use href="#i-sign"></use></svg></span><span class="tool-choice-name">Señales</span><span class="tool-choice-badge">354</span></button>
+                <button class="tool-choice" type="button" role="menuitem" data-open-library="cad"><span class="tool-choice-icon"><svg class="icon"><use href="#i-cad"></use></svg></span><span class="tool-choice-name">Equipos</span><span class="tool-choice-badge">145</span></button>
+              </div>
+            </div>
+            <footer class="tools-popover-foot"><span class="tool-tip"><kbd>Ctrl</kbd> + clic sobre un elemento superpuesto baja al de abajo.</span></footer>
+          </div>
+        </div>
+        <span class="toolbar-separator" role="separator"></span>
         <div class="zoom-controls">
           <button class="icon-button" type="button" data-zoom="out" data-tooltip="Alejar" aria-label="Alejar"><svg class="icon"><use href="#i-zoom-out"></use></svg></button>
           <button class="zoom-label" type="button" data-zoom="reset" data-tooltip="Zoom 100%"><span data-zoom-label>100%</span></button>
@@ -187,6 +236,7 @@
       <div class="stage-statusbar">
         <span class="status-item" data-cursor-position>X 0 · Y 0</span>
         <span class="status-item" data-selection-status>Sin selección</span>
+        <span class="status-item status-stack" data-stack-status hidden></span>
         <span class="status-spacer"></span>
         <span class="status-item" data-canvas-size><?= e($floor['name']) ?></span>
         <span class="status-item" data-scale-label>Sin escala</span>
@@ -197,8 +247,14 @@
 
     <aside class="properties-panel" data-properties-panel aria-label="Propiedades de la selección">
       <header class="properties-head">
-        <div><span class="eyebrow">Inspector</span><h2 data-properties-title>Propiedades</h2></div>
-        <button class="icon-button properties-close" type="button" data-close-properties aria-label="Cerrar propiedades"><svg class="icon"><use href="#i-close"></use></svg></button>
+        <div class="properties-heading">
+          <span class="eyebrow">Inspector</span>
+          <h2 data-properties-title>Propiedades</h2>
+        </div>
+        <div class="properties-head-actions">
+          <span class="properties-count" data-selection-count hidden></span>
+          <button class="icon-button properties-close" type="button" data-close-properties aria-label="Cerrar propiedades"><svg class="icon"><use href="#i-close"></use></svg></button>
+        </div>
       </header>
       <div class="properties-body" data-properties></div>
     </aside>
@@ -341,7 +397,8 @@
     <button class="icon-button" type="button" data-close-drawer aria-label="Cerrar atajos"><svg class="icon"><use href="#i-close"></use></svg></button>
   </header>
   <div class="drawer-body shortcut-grid">
-    <div><kbd>V</kbd><span>Seleccionar</span></div><div><kbd>M</kbd><span>Muro</span></div>
+    <div><kbd>V</kbd><span>Seleccionar</span></div><div><kbd>H</kbd><span>Mano (desplazar)</span></div>
+    <div><kbd>M</kbd><span>Muro</span></div><div><kbd>Ctrl + clic</kbd><span>Seleccionar lo que está debajo</span></div>
     <div><kbd>U</kbd><span>Puerta</span></div><div><kbd>E</kbd><span>Ruta de evacuación</span></div>
     <div><kbd>P</kbd><span>Tubería</span></div><div><kbd>Shift + P</kbd><span>Tubería eléctrica</span></div>
     <div><kbd>T</kbd><span>Texto</span></div><div><kbd>D</kbd><span>Medida</span></div>

@@ -26,7 +26,7 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 10. [Arquitectura](#arquitectura)
 11. [Seguridad](#seguridad)
 12. [Pruebas](#pruebas)
-13. [Cambios de la versión 1.0.4](#cambios-de-la-versión-104)
+13. [Cambios de la versión 1.0.5](#cambios-de-la-versión-105)
 14. [Paquetes y verificación](#paquetes-y-verificación)
 15. [Limitaciones](#limitaciones)
 16. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
@@ -167,8 +167,9 @@ Luego importa `resources/schema.sql` en el archivo SQLite y crea el usuario admi
 
 ### Barra lateral izquierda
 
-- **Seleccionar (V)**.
+- **Seleccionar (V)** y **Mano (H)** para desplazar el lienzo sin tocar los elementos.
 - **Muro (M)**, **Puerta (U)**, **Ruta de evacuación (E)**, **Tubería (P)** —con desplegable de red—, **Eléctrico (Shift + P)**, **Texto (T)**, **Medida (D)**, **Línea (L)**, **Rectángulo (B)** y **Elipse (O)**, agrupados en el menú de formas.
+- **Todas las herramientas** (arriba del lienzo): paleta agrupada con icono, nombre y atajo de cada herramienta, incluida la Mano.
 - **Señalización ISO 7010** y **Equipamiento CAD**: abren el cajón de biblioteca con búsqueda, familias y vista previa.
 - **Redes y circuitos**, **Capas**, **Versiones**, **Ajustes**, **Atajos** e **Imprimir** en la parte inferior.
 
@@ -176,6 +177,8 @@ Luego importa `resources/schema.sql` en el archivo SQLite y crea el usuario admi
 
 - Arrastrar con una herramienta de dibujo crea el elemento; `Shift` restringe a horizontal/vertical o mantiene proporciones.
 - Con **Seleccionar**, clic selecciona; `Shift` añade a la selección; arrastrar el fondo dibuja una marquesina.
+- **Elementos superpuestos**: `Ctrl/⌘ + clic` selecciona el siguiente elemento hacia abajo y `Ctrl/⌘ + Shift + clic` vuelve a subir. La barra de estado indica cuántos hay en ese punto y el inspector lista la pila para cambiarla con un clic.
+- **Mano (H)**: arrastra para desplazar el lienzo; la rueda sigue haciendo zoom y el botón central o `Espacio` + arrastre funcionan en cualquier herramienta.
 - Arrastrar un elemento seleccionado lo mueve con ajuste a la rejilla (`Alt` desactiva el ajuste).
 - Los tiradores de la caja de selección escalan; el tirador superior rota (`Shift` fija pasos de 15°). Los tiradores se dibujan un poco más grandes que el trazo para poder agarrar muros finos, pero un clic sin arrastre nunca mueve ni deforma nada.
 - **Rutas de evacuación**: clic para añadir puntos, clic sobre el primer punto para cerrar el circuito, `Retroceso` quita el último punto, `Enter` o doble clic termina y `Esc` cancela.
@@ -189,7 +192,9 @@ Luego importa `resources/schema.sql` en el archivo SQLite y crea el usuario admi
 | Acción | Atajo |
 | --- | --- |
 | Herramientas | `V` `M` `U` `E` `T` `D` `L` `B` `O` |
+| Mano (paneo) | `H` · también `Espacio` + arrastrar o botón central |
 | Redes | `P` (tubería) · `Shift + P` (tubería eléctrica) |
+| Seleccionar lo de abajo | `Ctrl/⌘ + clic` (baja) · `Ctrl/⌘ + Shift + clic` (sube) |
 | Guardar versión | `Ctrl/⌘ + S` |
 | Deshacer / rehacer | `Ctrl/⌘ + Z` / `Ctrl/⌘ + Y` o `Ctrl/⌘ + Shift + Z` |
 | Seleccionar todo | `Ctrl/⌘ + A` |
@@ -210,7 +215,7 @@ Luego importa `resources/schema.sql` en el archivo SQLite y crea el usuario admi
 
 ### Propiedades
 
-El inspector permite editar geometría (X, Y, ancho, alto, rotación), apariencia (29 colores, grosor, opacidad), sentido de apertura en puertas, texto y tamaño de letra, capa, bloqueo, cambio de tipo entre formas básicas, duplicado, eliminación, agrupación, alineación, distribución y orden de dibujo. En tuberías añade **red, diámetro, material, pendiente y presión**; en circuitos, **código, tensión, calibre y fases**; en equipos eléctricos, **circuito y carga en VA**. Los controles que no aplican al elemento seleccionado no se muestran o quedan deshabilitados.
+El inspector se organiza en una ficha superior con la miniatura, el tipo y las acciones rápidas (bloquear, duplicar, eliminar) y en **secciones plegables**: geometría, apariencia, instalación, elementos superpuestos, organización y orden. Los campos numéricos muestran la unidad del lienzo y la rotación se ajusta con pasos de 90°. En tuberías añade **red, diámetro, material, pendiente y presión**; en circuitos, **código, tensión, calibre y fases**; en equipos eléctricos, **circuito y carga en VA**. Los controles que no aplican al elemento seleccionado no se muestran o quedan deshabilitados.
 
 ### Capas y grupos
 
@@ -496,7 +501,7 @@ Lo único que no funciona sin red es la **vista previa de desarrollo** (`npm run
 | --- | --- |
 | `tests/php/lint.mjs` | `php -l` sobre todo `app/`, `bootstrap.php` e `index.php` en 8.1 y 8.3. |
 | `tests/php/functional.mjs` | 144 comprobaciones: instalador, requisitos, contraseñas débiles, CSRF, sesión, autorización entre cuentas, CRUD de proyectos/pisos, duplicados, importación v1/v2, catálogos (354 señales y 145 objetos), catálogo y guardado de redes, señales de baño y de servicios (guardado, color de familia y exportación SVG), puertas y portones (geometría, sentidos de apertura, exportación con trazo), validaciones de la API, guardado/versiones/borradores/conflictos, exportaciones, ciclo de vida y logout. |
-| `tests/js/editor.mjs` | 153 comprobaciones de interfaz sobre la app real: arranque, 354 señales y 145 objetos, **trazado de tuberías y circuitos, inspector de red y panel de redes**, puertas dobles y portones, **vértices de ruta editables (arrastrar, doble clic, Alt+clic)**, **señal de baño insertada desde la biblioteca**, **posiciones reales del trazo**, **clic sobre muros finos**, **rotación**, **rutas cerradas**, **arrastrar y soltar desde la biblioteca sin que el cajón lo bloquee**, reglas, herramientas, inserción con puntero, selección, mover, escalar, rotar, color, cambio de tipo, deshacer/rehacer, duplicar, agrupar, bloquear, desplazar, texto y saneado, guardar, reabrir, borradores, conflictos, exportación SVG/JSON/PNG, tooltips sin acumulación, capas, versiones y límites. |
+| `tests/js/editor.mjs` | 176 comprobaciones de interfaz sobre la app real: arranque, 354 señales y 145 objetos, **trazado de tuberías y circuitos, inspector de red y panel de redes**, **mano y paneo, selección de superpuestos, inspector plegable y paleta de herramientas**, puertas dobles y portones, **vértices de ruta editables (arrastrar, doble clic, Alt+clic)**, **señal de baño insertada desde la biblioteca**, **posiciones reales del trazo**, **clic sobre muros finos**, **rotación**, **rutas cerradas**, **arrastrar y soltar desde la biblioteca sin que el cajón lo bloquee**, reglas, herramientas, inserción con puntero, selección, mover, escalar, rotar, color, cambio de tipo, deshacer/rehacer, duplicar, agrupar, bloquear, desplazar, texto y saneado, guardar, reabrir, borradores, conflictos, exportación SVG/JSON/PNG, tooltips sin acumulación, capas, versiones y límites. |
 | `tests/php/package.mjs` | 37 comprobaciones: construye ambos ZIP, verifica que no haya bases, sesiones, credenciales, logs ni carpetas de desarrollo, valida los SHA-256 y hace una instalación limpia de la demo comprobando assets (11), catálogos (354/145), los cuatro pisos del proyecto de ejemplo, señales de servicios y redes en la demo, editor, SVG, JSON e impresión. |
 | `tests/js/offline.mjs` | 0 dependencias de red: revisa las vistas, los estilos, los scripts y los catálogos y falla si aparece un `fetch`, un `WebSocket`, un `src`/`href`/`url()` externo, una llamada de red desde PHP o un dominio no declarado. |
 
@@ -509,8 +514,8 @@ Resultados esperados de la última ejecución completa:
 ✓ Funcionamiento sin conexión · 78 archivos, sin referencias externas
 ✓ Funcional PHP 8.1 · 144/144
 ✓ Funcional PHP 8.3 · 144/144
-✓ Interfaz (JSDOM) PHP 8.1 · 153/153
-✓ Interfaz (JSDOM) PHP 8.3 · 153/153
+✓ Interfaz (JSDOM) PHP 8.1 · 176/176
+✓ Interfaz (JSDOM) PHP 8.3 · 176/176
 ✓ Paquetes y demo · 37/37
 9/9 pasos correctos
 ```
@@ -518,6 +523,17 @@ Resultados esperados de la última ejecución completa:
 Las pruebas trabajan sobre copias temporales: no escriben configuración ni bases en el repositorio. `node_modules` solo contiene dependencias de desarrollo y se excluye de los paquetes.
 
 ---
+
+## Cambios de la versión 1.0.5
+
+Entrega de interfaz sobre la 1.0.4. Los planos guardados siguen abriendo sin cambios.
+
+- **Herramienta Mano.** La barra lateral gana la mano (`H`) para desplazar el lienzo sin tocar el dibujo, con cursor de agarre y paneo suave. Se suman a `Espacio` + arrastre y al botón central, que siguen funcionando en cualquier herramienta.
+- **Selección de elementos superpuestos.** Antes sólo se podía seleccionar lo que estuviera encima. Ahora `Ctrl/⌘ + clic` baja al siguiente elemento de la pila y `Ctrl/⌘ + Shift + clic` sube; la barra de estado muestra cuántos hay en ese punto y el inspector añade la sección **Elementos superpuestos** para cambiarlos con un clic.
+- **Inspector rediseñado.** Ficha de selección con miniatura y acciones rápidas, secciones plegables con iconos, campos numéricos con unidad y contador, rotación en pasos de 90°, controles de opacidad y color más compactos, rejilla de alineación y orden con iconos, y un estado vacío con resumen del piso.
+- **Paleta «Todas las herramientas».** Un panel agrupado (seleccionar, dibujar, insertar) con icono, nombre y atajo de cada herramienta, al estilo de las barras profesionales modernas.
+- **Iconos nuevos y coherentes.** Mano, mover, paleta, pila, organizar, traer adelante y atrás, girar a izquierda y derecha; todos con la misma retícula de 24 px, trazo redondeado y peso uniforme.
+- **Corrección de cursores.** El cursor de cada herramienta ya no se perdía al repintar el lienzo; la mano muestra `grab`/`grabbing` y las herramientas de dibujo, la cruz.
 
 ## Cambios de la versión 1.0.4
 
@@ -569,12 +585,12 @@ Versión de corrección sobre la 1.0.0. Reemplaza los paquetes anteriores: la 1.
 
 ## Paquetes y verificación
 
-La entrega v1.0.4 incluye los ZIP ya construidos en **`paquetes/v1.0.4/`** (misma composición que genera el script, verificada por `tests/php/package.mjs`):
+La entrega v1.0.5 incluye los ZIP ya construidos en **`paquetes/v1.0.5/`** (misma composición que genera el script, verificada por `tests/php/package.mjs`):
 
 ```text
-paquetes/v1.0.4/
-├── normia-planos-cad-1.0.4.zip
-├── normia-planos-cad-demo-1.0.4.zip
+paquetes/v1.0.5/
+├── normia-planos-cad-1.0.5.zip
+├── normia-planos-cad-demo-1.0.5.zip
 ├── SHA256SUMS.txt
 └── BUILD.txt
 ```
@@ -588,8 +604,8 @@ npm run build          # o: bash tools/build-packages.sh
 El script deja los artefactos en `dist/`:
 
 ```text
-normia-planos-cad-1.0.4.zip
-normia-planos-cad-demo-1.0.4.zip
+normia-planos-cad-1.0.5.zip
+normia-planos-cad-demo-1.0.5.zip
 SHA256SUMS.txt
 BUILD.txt
 ```
@@ -599,11 +615,11 @@ BUILD.txt
 - Verifica las sumas:
 
 ```bash
-cd paquetes/v1.0.4
+cd paquetes/v1.0.5
 sha256sum -c SHA256SUMS.txt
 ```
 
-Los hashes exactos de los ZIP publicados están en `paquetes/v1.0.4/SHA256SUMS.txt`; `dist/` es solo la salida de trabajo y está ignorada por Git.
+Los hashes exactos de los ZIP publicados están en `paquetes/v1.0.5/SHA256SUMS.txt`; `dist/` es solo la salida de trabajo y está ignorada por Git.
 
 ---
 
