@@ -221,8 +221,16 @@
         if (!event.dataTransfer) return;
         event.preventDefault();
         event.dataTransfer.dropEffect = 'copy';
+        svg.closest('.canvas-shell')?.classList.add('is-drop-target');
       });
-      svg.addEventListener('drop', (event) => this.onResourceDrop(event));
+      svg.addEventListener('dragleave', (event) => {
+        if (event.relatedTarget && svg.contains(event.relatedTarget)) return;
+        svg.closest('.canvas-shell')?.classList.remove('is-drop-target');
+      });
+      svg.addEventListener('drop', (event) => {
+        svg.closest('.canvas-shell')?.classList.remove('is-drop-target');
+        this.onResourceDrop(event);
+      });
       svg.addEventListener('pointerdown', (event) => this.onPointerDown(event));
       svg.addEventListener('pointermove', (event) => this.onPointerMove(event));
       svg.addEventListener('pointerup', (event) => this.onPointerUp(event));
@@ -899,6 +907,25 @@
       } catch (error) {
         this.toast(error.message, 'error');
       }
+    }
+
+    /**
+     * El cajón de la biblioteca tiene un fondo que bloquea el lienzo. Mientras
+     * se arrastra una tarjeta se oculta ese fondo para poder soltarla en el
+     * plano; el panel sigue abierto y se restaura si se cancela el arrastre.
+     */
+    beginResourceDrag() {
+      const backdrop = q('[data-drawer-backdrop]');
+      if (backdrop) backdrop.hidden = true;
+      document.body.classList.add('is-dragging-resource');
+    }
+
+    endResourceDrag() {
+      document.body.classList.remove('is-dragging-resource');
+      q('[data-canvas-shell]')?.classList.remove('is-drop-target');
+      if (!this.activeDrawer) return;
+      const backdrop = q('[data-drawer-backdrop]');
+      if (backdrop) backdrop.hidden = false;
     }
 
     /** Coloca un recurso arrastrado desde la biblioteca al lienzo. */

@@ -322,6 +322,14 @@ async function main() {
     app.openDrawer('library');
     app.library.open('cad');
     app.renderNow();
+    const dragStart = new window.Event('dragstart', { bubbles: true, cancelable: true });
+    Object.defineProperty(dragStart, 'dataTransfer', {
+      value: { setData: () => {}, effectAllowed: '' },
+    });
+    qa(window, '[data-library-grid] .library-card')[0].dispatchEvent(dragStart);
+    app.renderNow();
+    report.check('Arrastrar una tarjeta libera el lienzo (el fondo del cajón no bloquea)',
+      q(window, '[data-drawer-backdrop]').hidden === true && app.activeDrawer === 'library');
     const dropEvent = new window.Event('drop', { bubbles: true, cancelable: true });
     Object.defineProperties(dropEvent, {
       clientX: { value: clientPoint(app, 700, 620).clientX },
@@ -334,6 +342,19 @@ async function main() {
     report.check('Arrastrar una tarjeta al lienzo crea el recurso', dropped.type === cadKey && app.model.design.elements.length === beforeCad + 2,
       `${dropped.type} en ${Math.round(dropped.x)},${Math.round(dropped.y)}`);
     report.check('Soltar cierra el cajón y vuelve a seleccionar', app.activeDrawer === null && app.tool === 'select');
+    app.openDrawer('library');
+    app.library.open('cad');
+    app.renderNow();
+    const cancelDrag = new window.Event('dragstart', { bubbles: true, cancelable: true });
+    Object.defineProperty(cancelDrag, 'dataTransfer', { value: { setData: () => {}, effectAllowed: '' } });
+    qa(window, '[data-library-grid] .library-card')[0].dispatchEvent(cancelDrag);
+    q(window, '[data-library-grid]').dispatchEvent(new window.Event('dragend', { bubbles: true }));
+    app.renderNow();
+    report.check('Cancelar el arrastre restaura el fondo del cajón',
+      q(window, '[data-drawer-backdrop]').hidden === false && app.activeDrawer === 'library');
+    app.closeDrawer();
+    app.applyTool('select');
+    app.renderNow();
 
     /* ------------------------------- selección ------------------------------- */
     selectElement(app, wall.id);

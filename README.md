@@ -401,7 +401,7 @@ npm run preview        # vista previa real en http://localhost:8080 (PHP en WebA
 | --- | --- |
 | `tests/php/lint.mjs` | `php -l` sobre todo `app/`, `bootstrap.php` e `index.php` en 8.1 y 8.3. |
 | `tests/php/functional.mjs` | 120 comprobaciones: instalador, requisitos, contraseñas débiles, CSRF, sesión, autorización entre cuentas, CRUD de proyectos/pisos, duplicados, importación v1/v2, validaciones de la API, guardado/versiones/borradores/conflictos, exportaciones, ciclo de vida y logout. |
-| `tests/js/editor.mjs` | 107 comprobaciones de interfaz sobre la app real: arranque, 332 señales y 32 objetos, **posiciones reales del trazo**, **clic sobre muros finos**, **rotación**, **rutas cerradas**, **arrastrar y soltar desde la biblioteca**, reglas, herramientas, inserción con puntero, selección, mover, escalar, rotar, color, cambio de tipo, deshacer/rehacer, duplicar, agrupar, bloquear, desplazar, texto y saneado, guardar, reabrir, borradores, conflictos, exportación SVG/JSON/PNG, tooltips sin acumulación, capas, versiones y límites. |
+| `tests/js/editor.mjs` | 109 comprobaciones de interfaz sobre la app real: arranque, 332 señales y 32 objetos, **posiciones reales del trazo**, **clic sobre muros finos**, **rotación**, **rutas cerradas**, **arrastrar y soltar desde la biblioteca sin que el cajón lo bloquee**, reglas, herramientas, inserción con puntero, selección, mover, escalar, rotar, color, cambio de tipo, deshacer/rehacer, duplicar, agrupar, bloquear, desplazar, texto y saneado, guardar, reabrir, borradores, conflictos, exportación SVG/JSON/PNG, tooltips sin acumulación, capas, versiones y límites. |
 | `tests/php/package.mjs` | 34 comprobaciones: construye ambos ZIP, verifica que no haya bases, sesiones, credenciales, logs ni carpetas de desarrollo, valida los SHA-256 y hace una instalación limpia de la demo comprobando assets (11), catálogos (332/32), editor, SVG, JSON e impresión. |
 
 Resultados esperados de la última ejecución completa:
@@ -412,8 +412,8 @@ Resultados esperados de la última ejecución completa:
 ✓ Sintaxis JavaScript · 16 archivos, sin errores
 ✓ Funcional PHP 8.1 · 120/120
 ✓ Funcional PHP 8.3 · 120/120
-✓ Interfaz (JSDOM) PHP 8.1 · 107/107
-✓ Interfaz (JSDOM) PHP 8.3 · 107/107
+✓ Interfaz (JSDOM) PHP 8.1 · 109/109
+✓ Interfaz (JSDOM) PHP 8.3 · 109/109
 ✓ Paquetes y demo · 34/34
 8/8 pasos correctos
 ```

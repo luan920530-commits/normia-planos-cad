@@ -88,7 +88,10 @@
         event.dataTransfer.setData('application/x-normia-resource', payload);
         event.dataTransfer.setData('text/plain', payload);
         event.dataTransfer.effectAllowed = 'copy';
+        // Sin esto el fondo modal del cajón tapa el lienzo y no se puede soltar.
+        this.app.beginResourceDrag();
       });
+      this.grid?.addEventListener('dragend', () => this.app.endResourceDrag());
       this.detail?.addEventListener('click', (event) => {
         if (event.target.closest('[data-insert]')) {
           if (this.selectedKey) this.app.startPlacement(this.kind, this.selectedKey);
