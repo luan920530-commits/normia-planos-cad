@@ -630,6 +630,8 @@ Versión de corrección sobre la 1.0.0. Reemplaza los paquetes anteriores: la 1.
 
 ## Paquetes y verificación
 
+Las versiones publicadas están en la página de **[Liberaciones](https://github.com/luan920530-commits/normia-planos-cad/releases)**. La primera es la **v1.0.9**, con sus notas, sus sumas SHA-256 y los enlaces de descarga de los paquetes que viven en `paquetes/v1.0.9/`.
+
 La entrega v1.0.9 incluye los ZIP ya construidos en **`paquetes/v1.0.9/`** (misma composición que genera el script, verificada por `tests/php/package.mjs`):
 
 ```text
