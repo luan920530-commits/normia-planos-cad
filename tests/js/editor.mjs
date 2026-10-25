@@ -3,7 +3,9 @@
  * Cubre inserción, selección, mover, escalar, rotar, color, cambio de tipo,
  * deshacer/rehacer, guardado, reapertura, borradores, conflictos y exportación.
  */
-import { startApp, extractToken } from '../php/harness.mjs';
+import fs from 'node:fs';
+import path from 'node:path';
+import { startApp, extractToken, repoRoot } from '../php/harness.mjs';
 import {
   openEditor,
   closeEditor,
@@ -898,6 +900,59 @@ async function main() {
     pointer(window, app.svg, 'pointerdown', stackPoint, { ctrlKey: true, shiftKey: true });
     app.renderNow();
     report.check('Ctrl + Shift + clic retrocede en la pila', app.model.selection.has(stackBottom.id));
+    /* ---------------- desplazamiento del inspector y de la barra lateral ---------------- */
+    const editorCss = fs.readFileSync(path.join(repoRoot, 'assets/css/editor.css'), 'utf8');
+    const cssBlock = (selector) => {
+      const index = editorCss.indexOf(selector + ' {');
+      if (index < 0) return '';
+      return editorCss.slice(index, editorCss.indexOf('}', index) + 1);
+    };
+    report.check('La fila del banco de trabajo queda acotada al alto de la ventana',
+      /grid-template-rows:\s*minmax\(0,\s*1fr\)/.test(cssBlock('.editor-workbench'))
+      && /overflow:\s*hidden/.test(cssBlock('.editor-workbench')),
+      cssBlock('.editor-workbench').replace(/\s+/g, ' ').slice(0, 120));
+    report.check('Los menús de la barra lateral se anclan a la ventana y no se recortan',
+      /position:\s*fixed/.test(cssBlock('.rail-flyout'))
+      && /overflow-y:\s*auto/.test(cssBlock('.rail')),
+      cssBlock('.rail-flyout').replace(/\s+/g, ' ').slice(0, 100));
+    report.check('La barra lateral hace su propio scroll y no estira la fila',
+      /overflow-y:\s*auto/.test(cssBlock('.rail')) && /min-height:\s*0/.test(cssBlock('.rail')),
+      cssBlock('.rail').replace(/\s+/g, ' ').slice(0, 120));
+    report.check('El panel y su cuerpo están acotados para poder desplazarse',
+      /min-height:\s*0/.test(cssBlock('.properties-panel'))
+      && /overflow-y:\s*auto/.test(cssBlock('.properties-body'))
+      && /min-height:\s*0/.test(cssBlock('.properties-body')),
+      cssBlock('.properties-body').replace(/\s+/g, ' ').slice(0, 120));
+
+    const railMenu = q(window, '[data-pipe-menu]');
+    railMenu?.click();
+    const railFlyout = q(window, '[data-pipe-flyout]');
+    report.check('Al abrir el menú de la barra lateral se calcula su posición',
+      Boolean(railFlyout) && railFlyout.hidden === false
+      && /^\d+px$/.test(railFlyout.style.left) && /^\d+px$/.test(railFlyout.style.top),
+      `${railFlyout?.style.left} · ${railFlyout?.style.top}`);
+    q(window, '.rail')?.dispatchEvent(new window.Event('scroll'));
+    report.check('Desplazar la barra lateral cierra sus menús',
+      q(window, '[data-pipe-flyout]')?.hidden === true,
+      String(q(window, '[data-pipe-flyout]')?.hidden));
+
+    const inspectorBody = q(window, '[data-properties]');
+    const propField = q(window, '[data-section="geometry"] [data-prop="x"]');
+    inspectorBody.scrollTop = 260;
+    propField?.focus?.();
+    propField.value = '120';
+    propField.dispatchEvent(new window.Event('change', { bubbles: true }));
+    app.renderNow();
+    report.check('Editar una propiedad conserva el desplazamiento del inspector',
+      q(window, '[data-properties]').scrollTop === 260,
+      String(q(window, '[data-properties]').scrollTop));
+    report.check('Editar una propiedad devuelve el foco al mismo campo',
+      window.document.activeElement?.dataset?.prop === 'x',
+      window.document.activeElement?.dataset?.prop || window.document.activeElement?.tagName);
+    q(window, '[data-properties]').scrollTop = 0;
+    app.model.clearSelection();
+    app.renderNow();
+
     report.check('El inspector lista los elementos superpuestos',
       Boolean(q(window, '[data-section="stack"]')) && qa(window, '.stack-row').length === 2,
       `${qa(window, '.stack-row').length} filas`);

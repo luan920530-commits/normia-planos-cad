@@ -222,8 +222,14 @@
       const types = elements.map((element) => element.type).join(',');
       const signature = `${ids}|${types}`;
       const active = document.activeElement;
-      const isTyping = active && this.panel.contains(active);
+      const isTyping = Boolean(active && this.panel.contains(active));
       if (!force && (signature === this.signature || isTyping)) return;
+      // Si la selección no cambió, el repintado debe conservar dónde estaba el
+      // usuario: sin esto cada retoque devolvía el panel al principio y el
+      // desplazamiento parecía bloqueado.
+      const sameSelection = signature === this.signature;
+      const keepScroll = sameSelection ? this.panel.scrollTop : 0;
+      const focusProp = isTyping ? (active.closest('[data-prop]')?.dataset.prop || '') : '';
       this.signature = signature;
       if (this.count) {
         this.count.hidden = elements.length < 2;
@@ -233,6 +239,7 @@
         this.title.textContent = 'Propiedades';
         this.panel.innerHTML = this.emptyMarkup();
         this.panelEl?.classList.remove('has-selection');
+        this.panel.scrollTop = 0;
         return;
       }
       this.panelEl?.classList.add('has-selection');
@@ -240,6 +247,11 @@
       const single = elements.length === 1 ? elements[0] : null;
       this.title.textContent = single ? this.typeName(single) : `${elements.length} elementos`;
       this.panel.innerHTML = this.markup(elements, frame, single);
+      if (keepScroll > 0) this.panel.scrollTop = keepScroll;
+      if (focusProp) {
+        const field = this.panel.querySelector(`[data-prop="${focusProp}"]`);
+        field?.focus?.({ preventScroll: true });
+      }
     }
 
     emptyMarkup() {

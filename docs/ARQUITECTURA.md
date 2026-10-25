@@ -175,6 +175,16 @@ app/Services/SvgAsset.php     Incrustación saneada de pictogramas del catálogo
 - Las celdas se reparten en 5, 3 o 1 columna según el ancho y cada texto se parte por palabras con `SvgAsset::wrap()`, el mismo algoritmo en PHP y en JS.
 - `SvgAsset` centraliza la validación (`LibraryRepository::safeSvg`) y la copia de atributos de presentación, de modo que el plano y el pie comparten una única ruta de incrustación.
 
+## Desplazamiento del editor
+
+El editor ocupa la ventana completa (`body { overflow: hidden }`), así que cada zona que puede crecer debe acotar su alto y desplazarse por dentro:
+
+- `.editor-app` reparte el alto con `grid-template-rows: auto auto minmax(0, 1fr)`.
+- `.editor-workbench` fija su única fila con `minmax(0, 1fr)`, `min-height: 0` y `overflow: hidden`: ningún hijo puede estirarla.
+- `.rail` hace su propio scroll (`overflow-y: auto`). Sus desplegables usan `position: fixed` y el editor los coloca junto al botón (`placeFlyout`); se cierran al desplazar la barra, al cambiar el tamaño de la ventana o al hacer clic fuera.
+- `.properties-panel` es una columna flex con `min-height: 0` y `overflow: hidden`; el scroll vive en `.properties-body` (`flex: 1 1 auto; min-height: 0; overflow-y: auto`), y sus bloques llevan `flex: 0 0 auto` para que nunca se compriman.
+- `Inspector.render()` conserva `scrollTop` y el foco del campo cuando la selección no cambió; antes cada retoque devolvía el panel al principio.
+
 ## Seguridad
 
 | Amenaza | Mitigación |

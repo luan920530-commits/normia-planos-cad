@@ -26,7 +26,7 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 10. [Arquitectura](#arquitectura)
 11. [Seguridad](#seguridad)
 12. [Pruebas](#pruebas)
-13. [Cambios de la versión 1.0.6](#cambios-de-la-versión-106)
+13. [Cambios de la versión 1.0.7](#cambios-de-la-versión-107)
 14. [Paquetes y verificación](#paquetes-y-verificación)
 15. [Limitaciones](#limitaciones)
 16. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
@@ -512,7 +512,7 @@ Lo único que no funciona sin red es la **vista previa de desarrollo** (`npm run
 | --- | --- |
 | `tests/php/lint.mjs` | `php -l` sobre todo `app/`, `bootstrap.php` e `index.php` en 8.1 y 8.3. |
 | `tests/php/functional.mjs` | 149 comprobaciones: instalador, requisitos, contraseñas débiles, CSRF, sesión, autorización entre cuentas, CRUD de proyectos/pisos, duplicados, importación v1/v2, catálogos (354 señales y 145 objetos), catálogo y guardado de redes, señales de baño y de servicios (guardado, color de familia y exportación SVG), puertas y portones (geometría, sentidos de apertura, exportación con trazo), validaciones de la API, guardado/versiones/borradores/conflictos, exportaciones, ciclo de vida y logout. |
-| `tests/js/editor.mjs` | 184 comprobaciones de interfaz sobre la app real: arranque, 354 señales y 145 objetos, **trazado de tuberías y circuitos, inspector de red y panel de redes**, **mano y paneo, selección de superpuestos, inspector plegable y paleta de herramientas**, puertas dobles y portones, **vértices de ruta editables (arrastrar, doble clic, Alt+clic)**, **señal de baño insertada desde la biblioteca**, **posiciones reales del trazo**, **clic sobre muros finos**, **rotación**, **rutas cerradas**, **arrastrar y soltar desde la biblioteca sin que el cajón lo bloquee**, reglas, herramientas, inserción con puntero, selección, mover, escalar, rotar, color, cambio de tipo, deshacer/rehacer, duplicar, agrupar, bloquear, desplazar, texto y saneado, guardar, reabrir, borradores, conflictos, exportación SVG/JSON/PNG, tooltips sin acumulación, capas, versiones y límites. |
+| `tests/js/editor.mjs` | 192 comprobaciones de interfaz sobre la app real: arranque, 354 señales y 145 objetos, **trazado de tuberías y circuitos, inspector de red y panel de redes**, **mano y paneo, selección de superpuestos, inspector plegable y paleta de herramientas**, puertas dobles y portones, **vértices de ruta editables (arrastrar, doble clic, Alt+clic)**, **señal de baño insertada desde la biblioteca**, **posiciones reales del trazo**, **clic sobre muros finos**, **rotación**, **rutas cerradas**, **arrastrar y soltar desde la biblioteca sin que el cajón lo bloquee**, reglas, herramientas, inserción con puntero, selección, mover, escalar, rotar, color, cambio de tipo, deshacer/rehacer, duplicar, agrupar, bloquear, desplazar, texto y saneado, guardar, reabrir, borradores, conflictos, exportación SVG/JSON/PNG, tooltips sin acumulación, capas, versiones y límites. |
 | `tests/php/package.mjs` | 37 comprobaciones: construye ambos ZIP, verifica que no haya bases, sesiones, credenciales, logs ni carpetas de desarrollo, valida los SHA-256 y hace una instalación limpia de la demo comprobando assets (11), catálogos (354/145), los cuatro pisos del proyecto de ejemplo, señales de servicios y redes en la demo, editor, SVG, JSON e impresión. |
 | `tests/js/offline.mjs` | 0 dependencias de red: revisa las vistas, los estilos, los scripts y los catálogos y falla si aparece un `fetch`, un `WebSocket`, un `src`/`href`/`url()` externo, una llamada de red desde PHP o un dominio no declarado. |
 
@@ -525,8 +525,8 @@ Resultados esperados de la última ejecución completa:
 ✓ Funcionamiento sin conexión · 78 archivos, sin referencias externas
 ✓ Funcional PHP 8.1 · 149/149
 ✓ Funcional PHP 8.3 · 149/149
-✓ Interfaz (JSDOM) PHP 8.1 · 184/184
-✓ Interfaz (JSDOM) PHP 8.3 · 184/184
+✓ Interfaz (JSDOM) PHP 8.1 · 192/192
+✓ Interfaz (JSDOM) PHP 8.3 · 192/192
 ✓ Paquetes y demo · 37/37
 9/9 pasos correctos
 ```
@@ -534,6 +534,14 @@ Resultados esperados de la última ejecución completa:
 Las pruebas trabajan sobre copias temporales: no escriben configuración ni bases en el repositorio. `node_modules` solo contiene dependencias de desarrollo y se excluye de los paquetes.
 
 ---
+
+## Cambios de la versión 1.0.7
+
+- **El inspector vuelve a desplazarse.** La barra lateral de herramientas no tenía scroll propio, así que su altura (~18 botones) estiraba la fila del banco de trabajo; el inspector crecía con ella y su contenido quedaba cortado sin barra, como si estuviera fijo. Ahora la fila está acotada al alto de la ventana, la barra hace su propio scroll y el panel de propiedades conserva un cuerpo desplazable.
+- **La barra lateral desplaza y no empuja.** Cuando no cabe, se desplaza dentro de su columna, con barra fina y sin afectar al lienzo ni al inspector.
+- **Menús de la barra lateral a prueba de scroll.** Los desplegables de puertas, tubería y formas pasan a anclarse a la ventana y se colocan junto a su botón, así que la barra puede desplazarse sin recortarlos; se cierran al desplazar o redimensionar.
+- **El inspector conserva el punto de lectura.** Al cambiar una propiedad ya no vuelve al principio: mantiene el desplazamiento y devuelve el foco al mismo campo.
+- **Barra compacta en más pantallas.** El modo de sólo iconos entra a partir de 1000 px de alto, de manera que en portátiles cabe completa.
 
 ## Cambios de la versión 1.0.6
 
@@ -605,12 +613,12 @@ Versión de corrección sobre la 1.0.0. Reemplaza los paquetes anteriores: la 1.
 
 ## Paquetes y verificación
 
-La entrega v1.0.6 incluye los ZIP ya construidos en **`paquetes/v1.0.6/`** (misma composición que genera el script, verificada por `tests/php/package.mjs`):
+La entrega v1.0.7 incluye los ZIP ya construidos en **`paquetes/v1.0.7/`** (misma composición que genera el script, verificada por `tests/php/package.mjs`):
 
 ```text
-paquetes/v1.0.6/
-├── normia-planos-cad-1.0.6.zip
-├── normia-planos-cad-demo-1.0.6.zip
+paquetes/v1.0.7/
+├── normia-planos-cad-1.0.7.zip
+├── normia-planos-cad-demo-1.0.7.zip
 ├── SHA256SUMS.txt
 └── BUILD.txt
 ```
@@ -624,8 +632,8 @@ npm run build          # o: bash tools/build-packages.sh
 El script deja los artefactos en `dist/`:
 
 ```text
-normia-planos-cad-1.0.6.zip
-normia-planos-cad-demo-1.0.6.zip
+normia-planos-cad-1.0.7.zip
+normia-planos-cad-demo-1.0.7.zip
 SHA256SUMS.txt
 BUILD.txt
 ```
@@ -635,11 +643,11 @@ BUILD.txt
 - Verifica las sumas:
 
 ```bash
-cd paquetes/v1.0.6
+cd paquetes/v1.0.7
 sha256sum -c SHA256SUMS.txt
 ```
 
-Los hashes exactos de los ZIP publicados están en `paquetes/v1.0.6/SHA256SUMS.txt`; `dist/` es solo la salida de trabajo y está ignorada por Git.
+Los hashes exactos de los ZIP publicados están en `paquetes/v1.0.7/SHA256SUMS.txt`; `dist/` es solo la salida de trabajo y está ignorada por Git.
 
 ---
 

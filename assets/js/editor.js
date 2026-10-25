@@ -125,6 +125,35 @@
       }
     }
 
+    /**
+     * Coloca el menú flotante de la barra lateral junto a su botón. El menú
+     * usa `position: fixed` para que la barra pueda desplazarse (y hacer
+     * scroll) sin recortarlo; aquí se calcula la posición y se mantiene
+     * dentro de la ventana.
+     */
+    placeFlyout(flyout, anchor) {
+      if (!flyout || flyout.hidden) return;
+      const rect = anchor?.getBoundingClientRect?.() || { left: 0, right: 88, top: 0, bottom: 44 };
+      const box = flyout.getBoundingClientRect?.() || { width: 0, height: 0 };
+      const width = Math.max(box.width || 0, flyout.offsetWidth || 0, 150);
+      const height = Math.max(box.height || 0, flyout.offsetHeight || 0, 60);
+      const viewportW = window.innerWidth || 1024;
+      const viewportH = window.innerHeight || 768;
+      const horizontalRail = viewportW <= 700;
+      let left = horizontalRail ? rect.left : rect.right + 10;
+      let top = horizontalRail ? rect.top - height - 8 : rect.top;
+      left = Math.max(8, Math.min(left, viewportW - width - 8));
+      top = Math.max(8, Math.min(top, viewportH - height - 8));
+      flyout.style.left = `${Math.round(left)}px`;
+      flyout.style.top = `${Math.round(top)}px`;
+    }
+
+    closeAllFlyouts() {
+      this.closeShapeFlyout();
+      this.closeDoorFlyout();
+      this.closePipeFlyout?.();
+    }
+
     /* ------------------------------- eventos ------------------------------- */
     bind() {
       qa('[data-tool]').forEach((button) => {
@@ -142,6 +171,7 @@
         if (!flyout) return;
         const open = flyout.hidden;
         flyout.hidden = !open;
+        if (open) this.placeFlyout(flyout, button);
         button?.setAttribute('aria-expanded', open ? 'true' : 'false');
       });
       qa('[data-pipe-flyout] [data-network]').forEach((button) => {
@@ -158,6 +188,7 @@
         if (!flyout) return;
         const open = flyout.hidden;
         flyout.hidden = !open;
+        if (open) this.placeFlyout(flyout, button);
         button.setAttribute('aria-expanded', open ? 'true' : 'false');
       });
       q('[data-shape-flyout]')?.addEventListener('click', (event) => {
@@ -174,6 +205,7 @@
         this.closeShapeFlyout();
         const open = flyout.hidden;
         flyout.hidden = !open;
+        if (open) this.placeFlyout(flyout, button);
         button.setAttribute('aria-expanded', open ? 'true' : 'false');
       });
       q('[data-door-flyout]')?.addEventListener('click', (event) => {
@@ -188,6 +220,10 @@
           this.closeDoorFlyout();
         }
       });
+      // Con la barra desplazable, el menú fijo dejaría de coincidir con su
+      // botón: se cierra al desplazar y al redimensionar.
+      q('.rail')?.addEventListener('scroll', () => this.closeAllFlyouts(), { passive: true });
+      window.addEventListener('resize', () => this.closeAllFlyouts());
 
       qa('[data-open-library]').forEach((button) => {
         button.addEventListener('click', () => {
