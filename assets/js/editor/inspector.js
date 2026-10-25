@@ -44,7 +44,7 @@
             this.model.setProps({ [prop]: field.value });
           } else if (prop === 'fontSize' || prop === 'stroke' || prop === 'opacity') {
             this.model.setProps({ [prop]: Number(field.value) });
-          } else if (prop === 'flipX' || prop === 'flipY' || prop === 'locked') {
+          } else if (prop === 'flipX' || prop === 'flipY' || prop === 'isExit' || prop === 'locked') {
             this.model.setProps({ [prop]: field.checked });
           } else if (prop === 'layerId') {
             this.model.setProps({ layerId: field.value });
@@ -421,6 +421,7 @@
         ${hasDoor ? `<div class="switch-stack">
           <label class="switch-row compact"><span><strong>Cambiar bisagra</strong><small>Voltea la puerta hacia el otro lado del vano.</small></span><input type="checkbox" data-prop="flipX" ${single?.flipX ? 'checked' : ''}${disabled}></label>
           <label class="switch-row compact"><span><strong>Abrir al otro lado</strong><small>Invierte el sentido de abatimiento respecto al muro.</small></span><input type="checkbox" data-prop="flipY" ${single?.flipY ? 'checked' : ''}${disabled}></label>
+          <label class="switch-row compact"><span><strong>Salida de emergencia</strong><small>El auditor mide el recorrido de evacuación desde esta puerta y la cuenta como salida.</small></span><input type="checkbox" data-prop="isExit" ${single?.isExit ? 'checked' : ''}${disabled}></label>
         </div>` : ''}`;
 
       /* ------------------------------ MEP ------------------------------ */

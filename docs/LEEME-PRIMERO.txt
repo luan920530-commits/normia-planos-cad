@@ -26,16 +26,27 @@ Normia Planos CAD · instalación rápida
    - Para reinstalar, borra config/config.php y los archivos .sqlite de storage/
      y vuelve a abrir el sitio.
 
-5. Aviso
+5. Revisión del plano (opcional)
+   - Selecciona cada puerta exterior, abre Apariencia y activa «Salida de emergencia».
+   - En Ajustes escribe la ocupación declarada del piso (0 = el auditor la estima).
+   - Pulsa «Revisión» en la barra lateral inferior: mide el recorrido más largo hasta
+     las salidas, el ancho útil, el ancho requerido y el tiempo de evacuación, y lista
+     los hallazgos por severidad. El botón «Informe» abre la hoja imprimible o PDF.
+   - Los umbrales están en resources/audit-criteria.json y son referencias
+     configurables: ajústalos a la norma aplicable antes de usarlos.
+
+6. Aviso
    - Los planos son esquemáticos. No sustituyen planos de obra, memorias de cálculo
      ni certificaciones. Verifica dimensiones, rutas y escala en el sitio.
+   - El auditor y la medición de evacuación son de referencia: no son un dictamen,
+     no certifican cumplimiento normativo y deben confirmarse en sitio.
    - Normia Planos CAD es software libre con licencia GPL-3.0. Los pictogramas ISO 7010
      incluidos conservan su licencia y atribución en resources/licenses/ y en el README.
    - Las 23 señales de orientación y servicios (baños, vestidores, cafetería, «Usted está
      aquí», etc.) son pictogramas propios de Normia: complementan la señalización pero
      no son ISO 7010.
 
-6. Sin conexión
+7. Sin conexión
    - La aplicación funciona en una red aislada: no descarga fuentes, iconos, scripts ni
      datos. Solo necesita el navegador y el servidor donde está publicada.
 

@@ -9,6 +9,7 @@ use App\Core\View;
 use App\Models\Floor;
 use App\Services\DesignValidator;
 use App\Services\MepCalculator;
+use App\Services\PlanAudit;
 use App\Services\SvgExporter;
 
 final class ExportController extends BaseController
@@ -79,6 +80,28 @@ final class ExportController extends BaseController
             'meta' => $meta,
             'mep' => $mep,
             'version' => (int) $floor['version'],
+            'backUrl' => url('projects/' . $projectId . '/floors/' . $floorId . '/editor'),
+            'user' => $this->user(),
+        ], null);
+    }
+
+    /** Informe de revisión imprimible (auditor de planos + métricas de evacuación). */
+    public function audit(int $projectId, int $floorId): void
+    {
+        $floor = $this->floor($floorId, $projectId);
+        $design = DesignValidator::normalizeJson((string) $floor['design_json']);
+        $meta = $this->meta($floor);
+        $report = PlanAudit::analyze($design);
+        View::render('editor/audit-report', [
+            'title' => 'Revisión del plano · ' . $floor['name'],
+            'project' => $floor,
+            'floor' => $floor,
+            'meta' => $meta,
+            'report' => $report,
+            'criteria' => $report['criteria'],
+            'design' => $design,
+            'version' => (int) $floor['version'],
+            'generatedAt' => gmdate('Y-m-d H:i'),
             'backUrl' => url('projects/' . $projectId . '/floors/' . $floorId . '/editor'),
             'user' => $this->user(),
         ], null);

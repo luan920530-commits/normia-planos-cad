@@ -78,12 +78,15 @@ Los errores se traducen en un único punto:
 | GET | `projects/{id}/floors/{floorId}/print` | Hoja imprimible. |
 | GET | `projects/{id}/floors/{floorId}/preview.svg` | Miniatura saneada. |
 | GET | `…/export/svg`, `…/export/json` | Exportaciones. |
+| GET | `…/audit` | Informe imprimible del auditor para el piso guardado. |
 | GET | `api/floors/{id}` | Diseño, metadatos y borrador pendiente. |
 | POST | `api/floors/{id}/save` | Guardar versión (bloqueo optimista). |
 | POST | `api/floors/{id}/autosave`, `/discard-draft` | Borradores. |
 | GET | `api/floors/{id}/versions` | Historial. |
 | POST | `api/floors/{id}/versions/{versionId}/restore` | Restaurar como versión nueva. |
 | POST | `api/floors/{id}/settings` | Nombre/nivel del piso. |
+| GET | `api/floors/{id}/mep` | Resumen de redes y circuitos del piso guardado. |
+| GET | `api/floors/{id}/audit` | Auditor y medición de evacuación; `?occupancy=N` simula el aforo. |
 | GET | `catalogs/signs`, `catalogs/cad` | Catálogos locales. |
 | GET/POST | `account/password` | Cambio de contraseña. |
 
@@ -120,11 +123,13 @@ Editor B: conserva el diseño, muestra aviso, permite recargar v6 o descargar co
 | `Project` | CRUD de proyectos con validación de nombre/sede/área/responsable/notas; crea el primer piso. |
 | `Floor` | Acceso por usuario, guardado con versión, borradores, historial y restauración. |
 | `DesignFactory` | Diseño en blanco por preset (A4 horizontal/vertical, A3, planta amplia, lienzo libre) con capas iniciales. |
-| `DesignValidator` | Normalización y límites del esquema v2 (lienzo, capas, elementos, grupos, etiquetas, colores, puntos, tamaño JSON). |
+| `DesignValidator` | Normalización y límites del esquema v2 (lienzo, capas, elementos, grupos, etiquetas, colores, puntos, tamaño JSON). Acepta `canvas.occupancy` (0–10 000) y `isExit` en puertas, y descarta la marca en cualquier otro tipo. |
 | `DesignImporter` | Importación del JSON propio (v2) y del formato heredado v1 con alias de herramientas y señales. |
 | `LibraryRepository` | Carga y **valida** los catálogos locales: 332 señales ISO 7010 + 23 de orientación y servicios, 7 familias, 145 objetos CAD, 18 familias, redes y valores eléctricos de `mep-networks.json`, SVG seguros, colores por familia u objeto. Expone `typeForCode()`/`codeForType()` para traducir `iso_*`/`sig_*` ↔ código de catálogo y `counts()` para que las vistas no repitan cifras. |
 | `SvgExporter` | Exportación SVG de la versión guardada, con identificadores únicos y símbolos incrustados (señales ISO, de servicios y equipos CAD). |
 | `Installer` | Requisitos, validación de la cuenta, creación del esquema, usuario administrador, demo opcional y escritura atómica de `config/config.php`. |
+| `MepCalculator` | Longitudes, pendientes, cargas, breaker, calibre y caída de tensión de referencia a partir de `mep-networks.json`. |
+| `PlanAudit` | Auditor de planos: salidas, rejilla de recorrido, ocupación, ancho requerido, tiempo de evacuación, señalización y hallazgos con severidad. Criterios en `resources/audit-criteria.json`. |
 | `DemoSeeder` | Carga `resources/demo/demo-project.json` como proyecto de ejemplo con sus pisos. |
 
 `LibraryRepository::safeSvg()` rechaza SVG con `<script>`, `<foreignObject>`, `<iframe>`, `<object>`, `<embed>`, `<audio>`, `<video>`, `<image>`, `<style>`, atributos `on*`, `href` no locales, `javascript:`/`vbscript:`/`data:`, `url()` remotos, `<!ENTITY`, `<!DOCTYPE` y `xml-stylesheet`. Los catálogos se validan al cargarse: si uno no pasa la comprobación, la aplicación registra el error y no sirve contenido inseguro.
@@ -146,6 +151,7 @@ assets/js/lib/renderer.js    Dibujo SVG: rejilla, capas, elementos, selección, 
 assets/js/editor/store.js    API: guardar, autosave, versiones, restaurar, ajustes, errores
 assets/js/editor/inspector.js Inspector plegable: ficha, geometría, apariencia, redes, superposiciones y acciones
 assets/js/editor/library.js  Cajón de bibliotecas: chips, búsqueda, grilla y detalle
+assets/js/editor/audit.js    Cajón de revisión: pide el informe, pinta métricas y hallazgos, filtra y enlaza al plano
 assets/js/editor.js          EditorApp: arranque, herramientas, puntero, teclado, guardado, exportación
 ```
 
@@ -205,6 +211,41 @@ El lienzo es un SVG con una zona invisible (`hit-area`) para muros, tuberías, l
 
 `onPointerDown` usa ese resultado para seleccionar y para armar el arrastre pendiente; `onDoubleClick` lo reutiliza para editar etiquetas y añadir vértices. `Ctrl/⌘ + clic` sigue recorriendo la pila (`cycleSelection`) y `Shift` sigue sumando a la selección. En `onPointerMove`, cuando la herramienta es *Seleccionar*, se consulta la misma pila para cambiar el cursor a `move` si hay algo seleccionable bajo el puntero. Las etiquetas de los elementos (`.element-label`, `.element-text`, `.element-dimension`) reciben el puntero, de modo que también seleccionan su elemento.
 
+## Auditor y medición de evacuación
+
+`app/Services/PlanAudit.php` es el único motor de cálculo; la API y el informe imprimible lo llaman con el diseño ya normalizado, de modo que la interfaz nunca calcula cifras por su cuenta.
+
+```text
+GET api/floors/{id}/audit[?occupancy=N]
+  └─ FloorApiController::audit()
+       ├─ DesignValidator::normalizeJson()      (autoridad de esquema)
+       ├─ PlanAudit::analyze($design, $occupancy)
+       │    ├─ salidas y vanos (puertas con isExit)
+       │    ├─ travelField()  rejilla + Dijkstra 8-vecinos
+       │    ├─ ocupación, ancho requerido y tiempos
+       │    ├─ rutas (longitud, llegada a salida, cruces de muro)
+       │    ├─ señalización (salida junto al vano, «Usted está aquí», extinción)
+       │    └─ hallazgos con severidad y criterios aplicados
+       └─ Response::json({ok, floor, report, notice})
+```
+
+Decisiones del cálculo:
+
+1. **Rejilla**: celdas de 20 cm configurables (`grid.cellCm`) sobre el lienzo, con un máximo de celdas (`grid.maxCells`); si se supera, la celda crece en pasos de 1,5 hasta caber. Los muros bloquean celdas a menos de medio trazo más una holgura (`grid.wallClearanceCm`). Cada puerta libera las celdas de su vano, así que una puerta abierta no se confunde con una pared.
+2. **Vanos como origen**: los centros de las celdas del vano de cada salida son las semillas (coste 0). El recorrido de cada celda es el camino más corto hasta la salida más cercana, con vecinos de 8 direcciones (diagonal = √2). El máximo de esas distancias es el **recorrido más largo**.
+3. **Exterior fuera del cómputo**: se inunda el espacio libre desde el borde del lienzo con los vanos cerrados. Esa región es el terreno de fuera del edificio; se descuenta de la superficie libre, de la ocupación estimada, del recorrido y de los recintos sin salida. Solo se aplica cuando el recinto está cerrado y queda al menos un 20 % de superficie interior; en un plano sin cerramiento se analiza el lienzo completo y el informe lo refleja con `exteriorAreaM2 = 0`.
+4. **Zonas sin salida**: las celdas libres interiores que el recorrido no alcanza se agrupan por componentes conexas y se informan a partir de `egress.minRoomAreaM2` para no repetir un aviso por celda.
+5. **Ocupación**: `canvas.occupancy` si es mayor que 0 (`declared`); si no, `densityPersonsPerM2 × freeAreaM2` redondeado (`estimated`) y aviso `occupancy_missing`.
+6. **Ancho y tiempo**: ancho útil = Σ vanos × `doorClearanceFactor`; ancho requerido = personas × `widthMmPerPerson`; marcha = recorrido máximo ÷ `travelSpeedMps`; cola = personas ÷ (`flowPersonsPerSecondPerMeter` × ancho útil); tiempo estimado = marcha + cola. Un ancho insuficiente genera `width_short`; una salida por debajo de `minExitWidthCm` genera `narrow_exit`.
+7. **Rutas dibujadas**: se mide la polilínea con sus puntos reales (rotación incluida) y se comprueba la distancia del extremo a la salida más cercana (`routeExitToleranceCm`) y las intersecciones con muros fuera de un vano (`wallCrossings`).
+8. **Señalización**: pictogramas de salida (`exitSignCodes`) a menos de `exitSignRadiusCm` del vano, presencia del marcador `youAreHereCode` y de algún pictograma de extinción (`fireSignCodes`).
+
+El cajón `assets/js/editor/audit.js` llama al endpoint (`boot.auditUrl`), pinta cuatro tarjetas de resumen, las métricas, la tabla de rutas y la lista de hallazgos con filtros por severidad; el contador del botón de la barra lateral resume críticos e importantes. «Ver en el plano» usa `EditorApp.focusAuditFinding()` → `Model.select()` + `EditorApp.frameBounds()`. La hoja imprimible vive en `app/Views/editor/audit-report.php` y comparte el aviso de alcance con el resto de la aplicación.
+
+> Los criterios son **referencias configurables**, no normativa: el auditor no emite dictámenes ni certifica cumplimiento. La velocidad, el flujo, la densidad y los anchos deben ajustarse a la norma aplicable y confirmarse en sitio.
+
+---
+
 ## Seguridad
 
 | Amenaza | Mitigación |
@@ -226,7 +267,7 @@ La suite es parte del repositorio y no del paquete de producción:
 
 - `tests/php/harness.mjs` copia el repositorio a un directorio temporal (excluye configuración, bases, sesiones, logs y `node_modules`), levanta PHP compilado a WebAssembly con `@php-wasm/node` y expone un cliente HTTP con cookies, formularios y JSON.
 - `tests/php/lint.mjs` ejecuta `php -l` sobre los archivos de la aplicación.
-- `tests/php/functional.mjs` recorre instalación, autenticación, autorización, proyectos, pisos, editor, guardado, versiones, borradores, conflictos, validaciones, importación, exportación y ciclo de vida.
+- `tests/php/functional.mjs` recorre instalación, autenticación, autorización, proyectos, pisos, editor, guardado, versiones, borradores, conflictos, validaciones, importación, exportación, **auditor y medición de evacuación** e informe imprimible.
 - `tests/js/boot.mjs` crea un JSDOM con el HTML real del editor, conecta `window.fetch` al cliente PHP y suple lo que JSDOM no implementa (medidas del SVG, Canvas, descargas, `window.open`).
 - `tests/js/editor.mjs` ejecuta el editor real y comprueba interacciones de puntero, teclado, bibliotecas, guardado, reapertura, exportaciones y saneado.
 - `tests/php/package.mjs` construye los ZIP, verifica su contenido y sumas, y hace una **instalación limpia** del paquete de demostración comprobando assets, catálogos y exportaciones.

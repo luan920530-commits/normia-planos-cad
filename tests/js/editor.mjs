@@ -1314,6 +1314,90 @@ async function main() {
       && circuit9?.warnings?.some((message) => /Sin tramos/.test(message)),
       `${persisted.summary?.pipes} tuberías · ${(persisted.summary?.electrical || []).map((entry) => `${entry.code}:${entry.loadVA}VA/${entry.breaker}A`).join(' ')}`);
 
+    /* ---------------------- auditor de planos y evacuación ---------------------- */
+    const auditDoor = app.model.addElement('door', { x: 980, y: 300, label: 'Salida de prueba' });
+    app.model.select([auditDoor.id]);
+    app.renderNow();
+    const exitSwitch = q(window, '[data-prop="isExit"]');
+    report.check('El inspector ofrece la marca de salida de emergencia', Boolean(exitSwitch));
+    exitSwitch.click();
+    app.renderNow();
+    report.check('Marcar la puerta como salida actualiza el modelo', elementById(app, auditDoor.id)?.isExit === true,
+      String(elementById(app, auditDoor.id)?.isExit));
+
+    q(window, '[data-open-drawer="settings"]').click();
+    const occupancyField = q(window, '[data-drawer="settings"] input[name="occupancy"]');
+    report.check('Los ajustes del piso piden la ocupación declarada',
+      Boolean(occupancyField) && /Ocupación declarada/.test(q(window, '[data-drawer="settings"]')?.textContent || ''));
+    occupancyField.value = '40';
+    q(window, '[data-canvas-form]').dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
+    app.closeDrawer();
+    report.check('La ocupación declarada se guarda en el lienzo', app.model.design.canvas.occupancy === 40,
+      String(app.model.design.canvas.occupancy));
+
+    await app.saveNow('Plano para revisión', { force: true });
+    await sleep(400);
+    const savedAuditFloor = JSON.parse((await client.get(`api/floors/${floorId}`, { accept: 'application/json' })).text);
+    const savedAuditDoor = (savedAuditFloor.design?.elements || []).find((element) => element.id === auditDoor.id);
+    report.check('El servidor conserva la salida marcada y la ocupación',
+      savedAuditDoor?.isExit === true && savedAuditFloor.design?.canvas?.occupancy === 40,
+      `salida ${savedAuditDoor?.isExit} · ${savedAuditFloor.design?.canvas?.occupancy} personas`);
+
+    report.check('El arranque recibe la dirección del auditor', decodeURIComponent(String(app.boot.auditUrl || '')).includes('/audit'), app.boot.auditUrl);
+    report.check('El cajón de revisión avisa de que no es un dictamen',
+      /no es un dictamen/i.test(q(window, '[data-drawer="audit"]')?.textContent || ''));
+    const reportHref = decodeURIComponent(q(window, '[data-audit-report]')?.getAttribute('href') || '');
+    report.check('El cajón enlaza al informe imprimible', /floors\/\d+\/audit/.test(reportHref), reportHref);
+    q(window, '[data-open-drawer="audit"]').click();
+    report.check('La barra lateral abre el cajón de revisión', app.activeDrawer === 'audit' && app.audit !== null, `cajón ${app.activeDrawer} · auditor ${Boolean(app.audit)} · oculto ${q(window, '[data-drawer="audit"]')?.hidden}`);
+    await waitFor(() => q(window, '[data-drawer="audit"] .audit-stat'), 20000);
+    const auditReport = app.audit.report;
+    report.check('La revisión mide salidas, recorrido y tiempo de evacuación',
+      auditReport?.exits?.count >= 1 && Boolean(auditReport.travel) && Boolean(auditReport.egress)
+      && qa(window, '[data-drawer="audit"] .audit-stat').length === 4,
+      `${auditReport?.exits?.count} salidas · ${auditReport?.travel?.longestM} m · ${auditReport?.egress?.estimatedTimeS} s`);
+    report.check('El cajón muestra la medición y el listado de hallazgos',
+      /Medición de evacuación/.test(q(window, '[data-drawer="audit"]')?.textContent || '')
+      && qa(window, '[data-drawer="audit"] .audit-finding').length === (auditReport?.findings || []).length,
+      `${(auditReport?.findings || []).length} hallazgos`);
+    const totalUrgent = (auditReport?.counts?.high || 0) + (auditReport?.counts?.medium || 0);
+    const auditBadge = q(window, '[data-audit-count]');
+    report.check('El contador de la barra lateral refleja los hallazgos urgentes',
+      auditBadge.hidden === (totalUrgent === 0) && (totalUrgent === 0 || auditBadge.textContent === String(totalUrgent)),
+      totalUrgent === 0 ? 'sin urgentes' : `${auditBadge.textContent} urgentes`);
+    const filterKey = ['high', 'medium', 'low', 'info'].find((key) => (auditReport?.counts?.[key] || 0) > 0) || 'high';
+    q(window, `[data-audit-filter="${filterKey}"]`).click();
+    const filteredRows = qa(window, '[data-drawer="audit"] .audit-finding');
+    report.check('El filtro por severidad deja solo los hallazgos de esa categoría',
+      filteredRows.length === (auditReport?.counts?.[filterKey] || 0)
+      && filteredRows.every((row) => row.classList.contains(`audit-sev-${filterKey}`)),
+      `${filterKey}: ${filteredRows.length} visibles de ${auditReport?.counts?.[filterKey] || 0}`);
+    q(window, '[data-audit-filter="all"]').click();
+    report.check('El filtro «Todos» recupera el listado completo',
+      qa(window, '[data-drawer="audit"] .audit-finding').length === (auditReport?.findings || []).length);
+    const locate = qa(window, '[data-audit-locate]').find((button) => (button.dataset.auditElements || '').length > 0);
+    if (locate) {
+      locate.click();
+      await sleep(20);
+      const located = (locate.dataset.auditElements || '').split(',').filter(Boolean);
+      report.check('«Ver en el plano» selecciona el elemento del hallazgo',
+        located.some((id) => app.model.selection.has(id)) || /Hallazgo en el plano|Punto del hallazgo/.test(toastText(window)),
+        located.join(','));
+    } else {
+      report.check('«Ver en el plano» disponible para los hallazgos con ubicación', true, 'sin hallazgos con elementos');
+    }
+    q(window, '[data-drawer="audit"] [data-close-drawer]').click();
+    report.check('El cajón de revisión se cierra', app.activeDrawer === null);
+    await app.saveNow('Guardado posterior a la revisión', { force: true });
+    await sleep(300);
+    report.check('Guardar descarta el informe anterior y oculta el contador',
+      app.audit.report === null && q(window, '[data-audit-count]').hidden === true
+      && /cambió/.test(q(window, '[data-audit-content]')?.textContent || ''),
+      q(window, '[data-audit-content]')?.textContent?.slice(0, 60));
+    app.model.clearSelection();
+    app.applyTool('select');
+    app.renderNow();
+
     report.check('Sin errores de JavaScript durante la sesión', window.__errors.length === 0, window.__errors.join(' | ').slice(0, 200));
   } finally {
     closeEditor(editor);

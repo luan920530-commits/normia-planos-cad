@@ -282,6 +282,9 @@
         unit: ['cm', 'm', 'mm'].includes(canvasSource.unit) ? canvasSource.unit : 'cm',
         scale: /^1:[1-9][0-9]{0,4}$/.test(canvasSource.scale || '') ? canvasSource.scale : '1:100',
         background: ['#ffffff', '#f8fafc'].includes(canvasSource.background) ? canvasSource.background : '#ffffff',
+        // Ocupación declarada del piso (personas). 0 = sin declarar: el auditor
+        // la estima con el área libre y lo advierte en el informe.
+        occupancy: G.clamp(Math.round(Number(canvasSource.occupancy) || 0), 0, 10000),
       };
       let layers = Array.isArray(source.layers) && source.layers.length ? source.layers : [{ id: 'capa_planta', name: 'Planta', visible: true, locked: false }];
       layers = layers.slice(0, 24).map((layer, index) => ({
@@ -315,6 +318,7 @@
         if (DOOR_TYPES.includes(type)) {
           normalized.flipX = Boolean(element.flipX);
           normalized.flipY = Boolean(element.flipY);
+          normalized.isExit = Boolean(element.isExit);
           migrateDoor(normalized, canvas);
         }
         if (MEP_TYPES.includes(type) || this.isElectricalDeviceType(type)) {
@@ -644,6 +648,7 @@
       if (DOOR_TYPES.includes(type)) {
         element.flipX = Boolean(element.flipX);
         element.flipY = Boolean(element.flipY);
+        element.isExit = Boolean(element.isExit);
         migrateDoor(element, this.design.canvas);
       }
       if (type === 'pipe') {
@@ -897,7 +902,7 @@
       const elements = this.selectedElements();
       if (!elements.length) return false;
       const allowed = [
-        'color', 'stroke', 'opacity', 'label', 'fontSize', 'flipX', 'flipY', 'layerId', 'locked',
+        'color', 'stroke', 'opacity', 'label', 'fontSize', 'flipX', 'flipY', 'isExit', 'layerId', 'locked',
         'network', 'diameter', 'material', 'slope', 'pressure', 'circuit', 'voltage', 'gauge', 'phases', 'load',
       ];
       const keys = Object.keys(patch);
@@ -921,6 +926,9 @@
           }
           if (patch.flipX !== undefined && DOOR_TYPES.includes(element.type)) element.flipX = Boolean(patch.flipX);
           if (patch.flipY !== undefined && DOOR_TYPES.includes(element.type)) element.flipY = Boolean(patch.flipY);
+          // Solo una puerta puede ser salida de emergencia: es el origen que
+          // usa el auditor para medir el recorrido de evacuación.
+          if (patch.isExit !== undefined) element.isExit = DOOR_TYPES.includes(element.type) ? Boolean(patch.isExit) : false;
           if (patch.layerId !== undefined && this.layer(patch.layerId)) element.layerId = patch.layerId;
           if (patch.locked !== undefined) element.locked = Boolean(patch.locked);
           if (patch.network !== undefined && element.type === 'pipe' && this.networkInfo(patch.network)) {
@@ -997,9 +1005,11 @@
           if (DOOR_TYPES.includes(type)) {
             element.flipX = false;
             element.flipY = false;
+            element.isExit = false;
           } else {
             delete element.flipX;
             delete element.flipY;
+            delete element.isExit;
           }
           if (MEP_TYPES.includes(type)) {
             const preset = this.defaultFor(type);
@@ -1274,6 +1284,7 @@
       if (patch.unit !== undefined && ['cm', 'm', 'mm'].includes(patch.unit)) canvas.unit = patch.unit;
       if (patch.scale !== undefined && /^1:[1-9][0-9]{0,4}$/.test(patch.scale)) canvas.scale = patch.scale;
       if (patch.background !== undefined && ['#ffffff', '#f8fafc'].includes(patch.background)) canvas.background = patch.background;
+      if (patch.occupancy !== undefined) canvas.occupancy = G.clamp(Math.round(Number(patch.occupancy)) || 0, 0, 10000);
       const overflow = this.design.elements.some((element) => element.x + element.w > canvas.width + 0.5 || element.y + element.h > canvas.height + 0.5);
       if (overflow) throw new Error('No puedes reducir el lienzo: hay elementos fuera de los nuevos límites. Muévelos o amplía el lienzo.');
       return this.apply('canvas', () => {

@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "notice": "Umbrales de referencia configurables para el auditor de planos. No son una norma ni un dictamen: ajústalos a la normativa aplicable y revísalos con un profesional competente antes de usarlos como criterio de cumplimiento.",
+  "grid": {
+    "cellCm": 20,
+    "wallClearanceCm": 4,
+    "maxCells": 120000
+  },
+  "egress": {
+    "maxTravelM": 30,
+    "minExitCount": 2,
+    "minExitWidthCm": 80,
+    "doorClearanceFactor": 0.9,
+    "widthMmPerPerson": 5,
+    "travelSpeedMps": 1,
+    "flowPersonsPerSecondPerMeter": 1.3,
+    "routeExitToleranceCm": 80,
+    "minRoomAreaM2": 2
+  },
+  "occupancy": {
+    "densityPersonsPerM2": 0.2,
+    "maxPersons": 10000
+  },
+  "signs": {
+    "exitSignCodes": [
+      "E001",
+      "E002"
+    ],
+    "exitSignRadiusCm": 150,
+    "fireSignCodes": [
+      "F001",
+      "F002",
+      "F005"
+    ],
+    "youAreHereCode": "SVC_AQUI"
+  }
+}

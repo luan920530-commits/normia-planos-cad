@@ -236,7 +236,7 @@ final class DesignValidator
         if (!is_array($canvas)) {
             throw new DomainException('Falta la configuración del lienzo.');
         }
-        $allowed = ['width', 'height', 'grid', 'unit', 'scale', 'background'];
+        $allowed = ['width', 'height', 'grid', 'unit', 'scale', 'background', 'occupancy'];
         foreach (array_keys($canvas) as $key) {
             if (!in_array($key, $allowed, true)) {
                 throw new DomainException('El lienzo contiene una propiedad no permitida.');
@@ -245,6 +245,9 @@ final class DesignValidator
         $width = self::integer($canvas['width'] ?? null, 400, 4000, 'ancho del lienzo');
         $height = self::integer($canvas['height'] ?? null, 300, 3000, 'alto del lienzo');
         $grid = self::integer($canvas['grid'] ?? 20, 5, 100, 'cuadrícula');
+        // Ocupación declarada del piso (personas). 0 = sin declarar: el auditor
+        // la estima a partir del área libre y lo advierte en el informe.
+        $occupancy = self::integer($canvas['occupancy'] ?? 0, 0, 10000, 'ocupación del piso');
         $unit = $canvas['unit'] ?? 'cm';
         $scale = $canvas['scale'] ?? '1:100';
         $background = $canvas['background'] ?? '#ffffff';
@@ -264,6 +267,7 @@ final class DesignValidator
             'unit' => $unit,
             'scale' => $scale,
             'background' => $background,
+            'occupancy' => $occupancy,
         ];
     }
 
@@ -313,7 +317,7 @@ final class DesignValidator
         $ids = [];
         $baseKeys = [
             'id', 'type', 'layerId', 'x', 'y', 'w', 'h', 'rotation', 'color', 'stroke', 'opacity',
-            'label', 'fontSize', 'points', 'flipX', 'flipY', 'locked',
+            'label', 'fontSize', 'points', 'flipX', 'flipY', 'isExit', 'locked',
         ];
         foreach ($elements as $element) {
             if (!is_array($element)) {
@@ -380,6 +384,12 @@ final class DesignValidator
             if (!is_bool($flipX) || !is_bool($flipY)) {
                 throw new DomainException('El sentido de apertura no es válido.');
             }
+            // Solo las puertas pueden declararse salida de emergencia.
+            $isExit = $element['isExit'] ?? false;
+            if (!is_bool($isExit)) {
+                throw new DomainException('La marca de salida de emergencia no es válida.');
+            }
+            $isExit = in_array($type, self::DOOR_TYPES, true) ? $isExit : false;
             $points = null;
             if (in_array($type, ['wall', 'route', 'dimension', 'line', 'pipe', 'conduit'], true)) {
                 $points = self::normalizePoints($element['points'] ?? null, $w, $h, $type);
@@ -471,6 +481,7 @@ final class DesignValidator
             if (in_array($type, self::DOOR_TYPES, true)) {
                 $normalized['flipX'] = $flipX;
                 $normalized['flipY'] = $flipY;
+                $normalized['isExit'] = $isExit;
             }
             foreach ($mep as $key => $value) {
                 $normalized[$key] = $value;

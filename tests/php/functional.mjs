@@ -133,7 +133,20 @@ try {
   const designMatch = /<textarea id="editor-design" hidden>([\s\S]*?)<\/textarea>/.exec(editorHtml);
   let design = null;
   try { design = JSON.parse(decodeEntities(designMatch?.[1] || '')); } catch { design = null; }
-  report.check('Editor recibe el diseño guardado', design?.format === 2 && design?.elements?.length === 85, `${design?.elements?.length} elementos`);
+  report.check('Editor recibe el diseño guardado', design?.format === 2 && design?.elements?.length === 87, `${design?.elements?.length} elementos`);
+  report.check('La demo trae dos salidas marcadas y la ocupación declarada',
+    (design?.elements || []).filter((element) => element.isExit === true).length === 2 && design?.canvas?.occupancy === 30,
+    `${(design?.elements || []).filter((element) => element.isExit === true).length} salidas · ${design?.canvas?.occupancy} personas`);
+  const demoAudit = (await json(`api/floors/${floorId}/audit`)).body;
+  report.check('La demo pasa la revisión de referencia sin hallazgos críticos',
+    demoAudit.report?.counts?.high === 0 && demoAudit.report?.exits?.count === 2
+    && demoAudit.report?.travel?.computed === true && demoAudit.report?.travel?.longestM > 0,
+    `${demoAudit.report?.counts?.high} críticos · ${demoAudit.report?.exits?.count} salidas · ${demoAudit.report?.travel?.longestM} m`);
+  report.check('El recorrido no cuenta el terreno de fuera del edificio',
+    demoAudit.report?.travel?.exteriorAreaM2 > 0
+    && demoAudit.report.travel.freeAreaM2 + demoAudit.report.travel.exteriorAreaM2 > demoAudit.report.travel.freeAreaM2
+    && demoAudit.report.travel.freeAreaM2 < demoAudit.report.travel.reachableAreaM2 + 0.01,
+    `libre ${demoAudit.report?.travel?.freeAreaM2} m² · exterior ${demoAudit.report?.travel?.exteriorAreaM2} m²`);
 
   res = await client.get('/assets/js/editor.js');
   report.check('JS del editor se sirve completo', res.status === 200 && res.text.length > 20000, `${res.text.length} bytes`);
@@ -177,7 +190,7 @@ try {
   /* ---------------------------- guardado y versiones ---------------------------- */
   ({ body: catalog } = await json(`api/floors/${floorId}`));
   let floor = catalog;
-  report.check('API del piso devuelve diseño y versión', floor.floor?.version === 1 && floor.design?.elements?.length === 85, `v${floor.floor?.version}`);
+  report.check('API del piso devuelve diseño y versión', floor.floor?.version === 1 && floor.design?.elements?.length === 87, `v${floor.floor?.version}`);
   const original = floor.design;
   const changed = JSON.parse(JSON.stringify(original));
   changed.elements[0].label = 'Prueba funcional';
@@ -188,6 +201,175 @@ try {
   report.check('Guardar crea la versión 2', res.status === 200 && saved.version === 2, `${res.status} v${saved.version}`);
   ({ body: catalog } = await json(`api/floors/${floorId}`));
   report.check('Guardado conserva el diseño', catalog.design?.elements?.[0]?.label === 'Prueba funcional' && catalog.floor?.version === 2, `v${catalog.floor?.version}`);
+
+  /* -------------------- auditor de planos y evacuación -------------------- */
+  const auditPage = await client.get('projects/new');
+  client.csrf = extractToken(auditPage.text);
+  const auditProject = await client.postForm('projects', {
+    _token: client.csrf, name: 'Proyecto de revisión', site: 'Sede QA', workplace: 'Planta',
+    responsible: 'Equipo QA', notes: 'Auditor de planos', preset: 'planta',
+  });
+  const auditProjectId = Number(/projects\/(\d+)/.exec(decodeURIComponent(auditProject.location))?.[1] || 0);
+  const auditProjectPage = await client.get(`projects/${auditProjectId}`);
+  const auditFloorHref = [...auditProjectPage.text.matchAll(/href="([^"]+)"/g)]
+    .map((match) => { try { return decodeURIComponent(match[1]); } catch { return match[1]; } })
+    .find((href) => /\/floors\/\d+\/editor/.test(href)) || '';
+  const auditFloorId = Number(/floors\/(\d+)\/editor/.exec(auditFloorHref)?.[1] || 0);
+  const auditFloor = (await json(`api/floors/${auditFloorId}`)).body;
+  const baseDesign = JSON.parse(JSON.stringify(auditFloor.design));
+  const auditLayer = baseDesign.layers[0].id;
+  baseDesign.canvas = { ...baseDesign.canvas, width: 800, height: 600, unit: 'cm', scale: '1:100', occupancy: 0 };
+  baseDesign.layers = [{ id: auditLayer, name: 'Planta', visible: true, locked: false }];
+  baseDesign.groups = [];
+  const wall = (id, x, y, w, h, points) => ({
+    id, type: 'wall', layerId: auditLayer, x, y, w, h, rotation: 0, color: '#0f172a',
+    stroke: 10, opacity: 1, label: '', locked: false, points,
+  });
+  const door = (id, x, isExit) => ({
+    id, type: 'door', layerId: auditLayer, x, y: 410, w: 90, h: 90, rotation: 0,
+    color: '#475569', stroke: 2, opacity: 1, label: '', locked: false,
+    flipX: false, flipY: false, isExit,
+  });
+  baseDesign.elements = [
+    wall('muro_sup', 100, 100, 600, 2, [{ x: 0, y: 0 }, { x: 600, y: 0 }]),
+    wall('muro_izq', 100, 100, 2, 400, [{ x: 0, y: 0 }, { x: 0, y: 400 }]),
+    wall('muro_der', 700, 100, 2, 400, [{ x: 0, y: 0 }, { x: 0, y: 400 }]),
+    wall('muro_inf_a', 100, 500, 200, 2, [{ x: 0, y: 0 }, { x: 200, y: 0 }]),
+    wall('muro_inf_b', 390, 500, 310, 2, [{ x: 0, y: 0 }, { x: 310, y: 0 }]),
+    door('puerta_1', 300, true),
+    {
+      id: 'ruta_mala', type: 'route', layerId: auditLayer, x: 20, y: 300, w: 180, h: 2,
+      rotation: 0, color: '#237f52', stroke: 3, opacity: 1, label: '', locked: false,
+      points: [{ x: 0, y: 0 }, { x: 180, y: 0 }],
+    },
+    {
+      id: 'texto_planta', type: 'text', layerId: auditLayer, x: 130, y: 130, w: 200, h: 30,
+      rotation: 0, color: '#0f172a', stroke: 0, opacity: 1, label: 'Bodega', locked: false, fontSize: 18,
+    },
+  ];
+  res = await client.postJson(`api/floors/${auditFloorId}/save`, { design: baseDesign, expected_version: 1, note: 'Plano a revisar' });
+  report.check('Guardar un plano con una salida marcada', res.status === 200, String(res.status));
+  let audit = {};
+  ({ body: audit } = await json(`api/floors/${auditFloorId}/audit`));
+  const auditReport = audit.report || {};
+  const codes = (report) => (report.findings || []).map((finding) => finding.code);
+  report.check('La API de revisión devuelve el informe del plano guardado',
+    audit.ok === true && Array.isArray(auditReport.findings) && auditReport.exits?.count === 1,
+    `${auditReport.findings?.length || 0} hallazgos · ${auditReport.exits?.count} salidas`);
+  report.check('El auditor avisa de que una sola salida es insuficiente',
+    codes(auditReport).includes('too_few_exits') && auditReport.counts.medium >= 1,
+    codes(auditReport).join(','));
+  report.check('El auditor marca la ruta que atraviesa un muro',
+    codes(auditReport).includes('route_through_wall')
+    && (auditReport.routes?.[0]?.wallCrossings || 0) >= 1,
+    `cruces ${auditReport.routes?.[0]?.wallCrossings} · ${codes(auditReport).join(',')}`);
+  report.check('El auditor detecta la ruta que no llega a una salida',
+    auditReport.routes?.[0]?.endsAtExit === false && codes(auditReport).includes('route_no_exit'));
+  report.check('El auditor estima la ocupación cuando no está declarada',
+    auditReport.occupancy?.source === 'estimated' && auditReport.occupancy?.people >= 1
+    && codes(auditReport).includes('occupancy_missing'),
+    `${auditReport.occupancy?.people} personas`);
+  report.check('El recorrido de evacuación se mide sobre el espacio libre',
+    auditReport.travel?.computed === true
+    && Number.isFinite(auditReport.travel?.longestM) && auditReport.travel.longestM > 0
+    && auditReport.travel.freeAreaM2 > 0,
+    `${auditReport.travel?.longestM} m · ${auditReport.travel?.freeAreaM2} m² libres`);
+  report.check('El auditor echa en falta el marcador «Usted está aquí»',
+    codes(auditReport).includes('no_you_are_here'));
+
+  // Versión corregida: segunda salida, señalización junto a los vanos, marcador
+  // de posición, ocupación declarada y una ruta limpia que termina en la salida.
+  const fixedDesign = JSON.parse(JSON.stringify(baseDesign));
+  fixedDesign.canvas.occupancy = 40;
+  fixedDesign.elements = fixedDesign.elements.filter((element) => element.id !== 'muro_inf_b' && element.id !== 'ruta_mala');
+  fixedDesign.elements.push(wall('muro_inf_b', 390, 500, 160, 2, [{ x: 0, y: 0 }, { x: 160, y: 0 }]));
+  fixedDesign.elements.push(wall('muro_inf_c', 640, 500, 60, 2, [{ x: 0, y: 0 }, { x: 60, y: 0 }]));
+  fixedDesign.elements.push(door('puerta_2', 550, true));
+  fixedDesign.elements.push({
+    id: 'senal_salida_1', type: 'iso_e001', layerId: auditLayer, x: 325, y: 520, w: 40, h: 40,
+    rotation: 0, color: '#237f52', stroke: 0, opacity: 1, label: '', locked: false,
+  });
+  fixedDesign.elements.push({
+    id: 'senal_salida_2', type: 'iso_e002', layerId: auditLayer, x: 575, y: 520, w: 40, h: 40,
+    rotation: 0, color: '#237f52', stroke: 0, opacity: 1, label: '', locked: false,
+  });
+  fixedDesign.elements.push({
+    id: 'aqui_1', type: 'sig_aqui', layerId: auditLayer, x: 200, y: 200, w: 64, h: 64,
+    rotation: 0, color: '#1d4ed8', stroke: 0, opacity: 1, label: '', locked: false,
+  });
+  fixedDesign.elements.push({
+    id: 'ruta_buena', type: 'route', layerId: auditLayer, x: 150, y: 470, w: 195, h: 20,
+    rotation: 0, color: '#237f52', stroke: 3, opacity: 1, label: 'Ruta principal', locked: false,
+    points: [{ x: 0, y: 20 }, { x: 195, y: 0 }],
+  });
+  const currentVersion = (await json(`api/floors/${auditFloorId}`)).body.floor.version;
+  res = await client.postJson(`api/floors/${auditFloorId}/save`, { design: fixedDesign, expected_version: currentVersion, note: 'Plano corregido' });
+  report.check('Guardar un plano corregido con dos salidas', res.status === 200, String(res.status));
+  ({ body: audit } = await json(`api/floors/${auditFloorId}/audit`));
+  const fixedReport = audit.report || {};
+  report.check('Con dos salidas y ruta limpia no quedan hallazgos críticos ni importantes',
+    fixedReport.exits?.count === 2 && fixedReport.counts.high === 0 && fixedReport.counts.medium === 0
+    && (fixedReport.routes?.[0]?.wallCrossings || 0) === 0 && fixedReport.routes?.[0]?.endsAtExit === true,
+    `salidas ${fixedReport.exits?.count} · críticos ${fixedReport.counts?.high} · importantes ${fixedReport.counts?.medium} · ${codes(fixedReport).join(',')}`);
+  report.check('La ocupación declarada alimenta el ancho y el tiempo de evacuación',
+    fixedReport.occupancy?.source === 'declared' && fixedReport.occupancy?.people === 40
+    && Math.abs((fixedReport.egress?.requiredWidthM || 0) - 0.2) < 0.001
+    && Number.isFinite(fixedReport.egress?.estimatedTimeS) && fixedReport.egress.estimatedTimeS > 0,
+    `${fixedReport.occupancy?.people} pers · ${fixedReport.egress?.requiredWidthM} m · ${fixedReport.egress?.estimatedTimeS} s`);
+  report.check('El auditor reconoce las señales junto a cada salida y el marcador de posición',
+    codes(fixedReport).includes('exit_without_sign') === false
+    && codes(fixedReport).includes('no_you_are_here') === false
+    && fixedReport.signs?.youAreHere === true && fixedReport.signs?.exitSigns === 2,
+    `${fixedReport.signs?.exitSigns} señales de salida`);
+  const savedFixed = (await json(`api/floors/${auditFloorId}`)).body.design.elements.find((element) => element.id === 'puerta_2');
+  report.check('La marca de salida de emergencia se conserva al guardar', savedFixed?.isExit === true);
+  res = await client.postJson(`api/floors/${auditFloorId}/save`, {
+    design: { ...fixedDesign, elements: fixedDesign.elements.map((element) => element.id === 'puerta_2' ? { ...element, isExit: 'sí' } : element) },
+    expected_version: (await json(`api/floors/${auditFloorId}`)).body.floor.version,
+  });
+  report.check('La API rechaza una marca de salida inválida', res.status === 422, String(res.status));
+  const outOfRange = JSON.parse(JSON.stringify(fixedDesign));
+  outOfRange.canvas.occupancy = 12000;
+  res = await client.postJson(`api/floors/${auditFloorId}/save`, {
+    design: outOfRange,
+    expected_version: (await json(`api/floors/${auditFloorId}`)).body.floor.version,
+  });
+  report.check('La API rechaza una ocupación fuera de rango', res.status === 422, String(res.status));
+  const wallMarked = JSON.parse(JSON.stringify(fixedDesign));
+  wallMarked.elements = wallMarked.elements.map((element) => (element.id === 'muro_sup' ? { ...element, isExit: true } : element));
+  res = await client.postJson(`api/floors/${auditFloorId}/save`, {
+    design: wallMarked,
+    expected_version: (await json(`api/floors/${auditFloorId}`)).body.floor.version,
+  });
+  const markedWall = (await json(`api/floors/${auditFloorId}`)).body.design.elements.find((element) => element.id === 'muro_sup');
+  report.check('La marca de salida no se guarda fuera de las puertas',
+    res.status === 200 && markedWall?.isExit === undefined,
+    `${res.status} · ${String(markedWall?.isExit)}`);
+  const sealedDesign = JSON.parse(JSON.stringify(wallMarked));
+  sealedDesign.elements.push(
+    wall('recinto_sup', 430, 150, 200, 2, [{ x: 0, y: 0 }, { x: 200, y: 0 }]),
+    wall('recinto_inf', 430, 348, 200, 2, [{ x: 0, y: 0 }, { x: 200, y: 0 }]),
+    wall('recinto_izq', 430, 150, 2, 200, [{ x: 0, y: 0 }, { x: 0, y: 200 }]),
+    wall('recinto_der', 628, 150, 2, 200, [{ x: 0, y: 0 }, { x: 0, y: 200 }])
+  );
+  res = await client.postJson(`api/floors/${auditFloorId}/save`, {
+    design: sealedDesign,
+    expected_version: (await json(`api/floors/${auditFloorId}`)).body.floor.version,
+  });
+  report.check('Guardar un plano con un recinto cerrado', res.status === 200, String(res.status));
+  const sealedReport = (await json(`api/floors/${auditFloorId}/audit`)).body.report || {};
+  const sealedFinding = (sealedReport.findings || []).find((finding) => finding.code === 'unreachable_area');
+  report.check('El auditor detecta el recinto cerrado sin salida alcanzable',
+    Boolean(sealedFinding) && sealedReport.counts.high >= 1 && sealedReport.travel.unreachableAreaM2 >= 3
+    && sealedFinding.position !== null,
+    `${sealedReport.travel?.unreachableAreaM2} m² · ${sealedFinding?.value} · ${sealedReport.counts?.high} críticos`);
+  const auditView = await client.get(`projects/${auditProjectId}/floors/${auditFloorId}/audit`);
+  report.check('El informe imprimible de revisión se genera',
+    auditView.status === 200 && noPhpErrors(auditView.text)
+    && /Auditor de planos de emergencia/.test(auditView.text) && /Proyecto de revisión/.test(auditView.text)
+    && /Medición de evacuación/.test(auditView.text) && /Criterios aplicados/.test(auditView.text)
+    && /no certifica cumplimiento normativo/i.test(auditView.text),
+    `${auditView.status} · ${auditView.text.length} bytes`);
 
   /* --------------------------- guardado de redes --------------------------- */
   // Se prueba en un proyecto aparte para no alterar el número de versión del

@@ -1,0 +1,209 @@
+/* Normia Planos CAD · informe de revisión del plano (auditor). */
+
+.audit-body { background: #eef2f8; }
+
+.audit-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 900px;
+}
+
+.audit-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--ink);
+}
+
+.audit-eyebrow {
+  display: inline-block;
+  font-size: .68rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--blue-strong, #1d4ed8);
+}
+
+.audit-head h1 {
+  margin: 4px 0 2px;
+  font-size: 1.25rem;
+  line-height: 1.2;
+}
+
+.audit-meta {
+  margin: 0;
+  font-size: .76rem;
+  color: var(--muted);
+}
+
+.audit-score {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  min-width: 84px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: #fff;
+  text-align: center;
+}
+
+.audit-score strong { font-size: 1.6rem; line-height: 1; }
+.audit-score span { font-size: .68rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.audit-score.is-clean strong { color: #15803d; }
+.audit-score.is-medium strong { color: #b45309; }
+.audit-score.is-high strong { color: #b71f2e; }
+
+.audit-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.audit-summary article {
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.audit-summary span { font-size: .7rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.audit-summary strong { font-size: 1.05rem; }
+
+.audit-h2 {
+  margin: 6px 0 0;
+  font-size: .8rem;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--muted);
+}
+
+.audit-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.audit-metrics article {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.audit-metrics span { font-size: .68rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.audit-metrics strong { font-size: 1rem; color: var(--ink); }
+.audit-metrics small { font-size: .68rem; color: var(--muted); line-height: 1.35; }
+
+.audit-group { break-inside: avoid; }
+
+.audit-group h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 6px;
+  font-size: .82rem;
+}
+
+.audit-group h3 em {
+  font-style: normal;
+  font-size: .68rem;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--line);
+  color: var(--muted);
+}
+
+.audit-high h3 { color: #b71f2e; }
+.audit-medium h3 { color: #b45309; }
+.audit-low h3 { color: #1d4ed8; }
+.audit-info h3 { color: var(--muted); }
+
+.audit-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.audit-list li {
+  padding: 8px 11px;
+  border: 1px solid var(--line);
+  border-left-width: 4px;
+  border-radius: 10px;
+  background: #fff;
+  break-inside: avoid;
+}
+
+.audit-high .audit-list li { border-left-color: #b71f2e; }
+.audit-medium .audit-list li { border-left-color: #f59e0b; }
+.audit-low .audit-list li { border-left-color: #2563eb; }
+.audit-info .audit-list li { border-left-color: #94a3b8; }
+
+.audit-list-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.audit-list-head strong { font-size: .82rem; }
+.audit-value {
+  flex: 0 0 auto;
+  font-size: .7rem;
+  font-weight: 700;
+  color: var(--muted);
+  background: #f1f5f9;
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+
+.audit-list p { margin: 3px 0 2px; font-size: .76rem; line-height: 1.45; color: var(--ink); }
+.audit-list small { font-size: .66rem; color: var(--muted); }
+
+.audit-clean {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid #bbf7d0;
+  border-radius: 12px;
+  background: #f0fdf4;
+  font-size: .8rem;
+  color: #14532d;
+}
+
+.audit-table th[scope="row"] { width: 48%; }
+
+.audit-criteria th { font-weight: 600; }
+.audit-criteria td { color: var(--muted); }
+
+.audit-footer { border-top: 1px solid var(--line); padding-top: 10px; }
+.audit-sign { font-size: .68rem; color: var(--muted); }
+
+@media (max-width: 720px) {
+  .audit-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .audit-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media print {
+  .audit-body { background: #fff; }
+  .audit-sheet { max-width: none; gap: 10px; }
+  .audit-summary, .audit-metrics { break-inside: avoid; }
+  .audit-list li { box-shadow: none; }
+  .audit-head h1 { font-size: 1.05rem; }
+  .audit-metrics strong { font-size: .92rem; }
+  .audit-group { break-inside: auto; }
+  .audit-list li { break-inside: avoid; }
+}

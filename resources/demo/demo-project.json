@@ -18,7 +18,8 @@
           "grid": 20,
           "unit": "cm",
           "scale": "1:100",
-          "background": "#ffffff"
+          "background": "#ffffff",
+          "occupancy": 30
         },
         "layers": [
           {
@@ -375,7 +376,8 @@
             "label": "",
             "locked": false,
             "flipX": false,
-            "flipY": false
+            "flipY": false,
+            "isExit": true
           },
           {
             "id": "el_015",
@@ -392,7 +394,8 @@
             "label": "Carga",
             "locked": false,
             "flipX": true,
-            "flipY": false
+            "flipY": false,
+            "isExit": true
           },
           {
             "id": "el_016",
@@ -1102,9 +1105,9 @@
             "type": "route",
             "layerId": "capa_rutas",
             "x": 340,
-            "y": 380,
+            "y": 340,
             "w": 880,
-            "h": 548,
+            "h": 588,
             "rotation": 0,
             "color": "#237f52",
             "stroke": 3,
@@ -1117,26 +1120,52 @@
                 "y": 0
               },
               {
-                "x": 0,
-                "y": 320
+                "x": 340,
+                "y": 0
               },
               {
                 "x": 340,
-                "y": 320
-              },
-              {
-                "x": 340,
-                "y": 500
+                "y": 300
               },
               {
                 "x": 880,
-                "y": 500
+                "y": 300
               },
               {
                 "x": 880,
-                "y": 548
+                "y": 588
               }
             ]
+          },
+          {
+            "id": "el_920",
+            "type": "sig_aqui",
+            "layerId": "capa_senalizacion",
+            "x": 256,
+            "y": 296,
+            "w": 48,
+            "h": 48,
+            "rotation": 0,
+            "color": "#1d4ed8",
+            "stroke": 0,
+            "opacity": 1,
+            "label": "Usted está aquí",
+            "locked": false
+          },
+          {
+            "id": "el_921",
+            "type": "iso_e001",
+            "layerId": "capa_senalizacion",
+            "x": 1424,
+            "y": 866,
+            "w": 56,
+            "h": 56,
+            "rotation": 0,
+            "color": "#237f52",
+            "stroke": 0,
+            "opacity": 1,
+            "label": "",
+            "locked": false
           },
           {
             "type": "wall",

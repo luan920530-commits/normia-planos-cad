@@ -48,6 +48,7 @@ final class EditorController extends BaseController
                 'cadUrl' => url('catalogs/cad'),
                 'mepUrl' => url('catalogs/mep'),
                 'mepSummaryUrl' => url('api/floors/' . $floorId . '/mep'),
+                'auditUrl' => url('api/floors/' . $floorId . '/audit'),
                 'projectUrl' => url('projects/' . $projectId),
                 'autosaveInterval' => 30,
                 'draftAt' => $floor['draft']['updated_at'] ?? null,

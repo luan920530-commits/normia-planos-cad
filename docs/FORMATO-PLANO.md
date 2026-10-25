@@ -13,7 +13,8 @@ Normia Planos CAD guarda cada piso como un documento JSON normalizado. El mismo 
     "grid": 20,
     "unit": "cm",
     "scale": "1:100",
-    "background": "#ffffff"
+    "background": "#ffffff",
+    "occupancy": 40
   },
   "layers": [
     { "id": "capa_planta", "name": "Planta", "visible": true, "locked": false },
@@ -32,6 +33,7 @@ Normia Planos CAD guarda cada piso como un documento JSON normalizado. El mismo 
 | `canvas.unit` | texto | `cm`, `m` o `mm`. |
 | `canvas.scale` | texto | `1:<1–99999>`. Es una referencia declarada. |
 | `canvas.background` | color | `#ffffff` o `#f8fafc`. |
+| `canvas.occupancy` | entero | 0–10 000 personas. `0` (o ausente) = sin declarar: el auditor estima la ocupación por superficie y lo advierte. |
 | `layers` | arreglo | 1–24 capas; la primera es la capa inicial. |
 | `elements` | arreglo | 0–1200 elementos. |
 | `groups` | arreglo | 0–80 grupos con 2–80 miembros existentes. |
@@ -47,6 +49,8 @@ Normia Planos CAD guarda cada piso como un documento JSON normalizado. El mismo 
 - `visible: false` impide seleccionar y editar sus elementos.
 - `locked: true` impide mover, borrar o modificar; bloquea también el cambio de capa.
 - No se puede eliminar la última capa. Al eliminar una capa, sus elementos pasan a la primera capa restante.
+
+`isExit` solo se conserva en `door`, `door_double` y `door_garage`; el validador rechaza con `422` cualquier otro valor que no sea booleano y elimina la marca de los demás tipos. Es la referencia que usa el auditor para medir el recorrido de evacuación.
 
 ## Elementos
 
@@ -71,9 +75,9 @@ Todos los elementos comparten:
 | `type` | Geometría | Campos propios |
 | --- | --- | --- |
 | `wall` | Trazo | `points` (2–40), `stroke` grueso. |
-| `door` | Puerta de un batiente (90 × 90 por defecto) | `flipX` y `flipY` para cambiar el sentido de apertura. |
-| `door_double` | Puerta de dos batientes (120 × 60) | `flipX` y `flipY`. |
-| `door_garage` | Portón o reja de garaje (160 × 50) | `flipX` y `flipY`. |
+| `door` | Puerta de un batiente (90 × 90 por defecto) | `flipX` y `flipY` para cambiar el sentido de apertura; `isExit` para marcarla como salida de emergencia. |
+| `door_double` | Puerta de dos batientes (120 × 60) | `flipX`, `flipY` e `isExit`. |
+| `door_garage` | Portón o reja de garaje (160 × 50) | `flipX`, `flipY` e `isExit`. |
 | `route` | Ruta de evacuación | `points` (2–40), flechas. Un circuito cerrado repite el primer punto al final. |
 | `text` | Texto | `fontSize` 8–160, `label` obligatoria. |
 | `dimension` | Medida | `points` exactamente 2; `label` opcional. |

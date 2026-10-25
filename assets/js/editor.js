@@ -52,6 +52,7 @@
 
   class EditorApp {
     constructor(bootData, design, catalogs) {
+      this.window = typeof window !== 'undefined' ? window : null;
       this.boot = bootData;
       this.catalogs = catalogs;
       this.svg = q('#plan-canvas');
@@ -62,6 +63,7 @@
       this.renderer = new root.Renderer(this.svg, catalogs);
       this.inspector = new root.Inspector(this);
       this.library = new root.Library(this);
+      this.audit = root.Audit ? new root.Audit(this) : null;
       this.tool = 'select';
       this.view = { zoom: 1, panX: 0, panY: 0 };
       this.showGrid = true;
@@ -1659,6 +1661,7 @@
         this.removeBannerByAction('reload');
         this.removeBannerByAction('download');
         this.updateSaveStatus();
+        this.audit?.invalidate();
         if (this.activeDrawer === 'versions') this.loadVersions();
       } catch (error) {
         if (error.status === 409) {
@@ -1701,6 +1704,7 @@
         this.renderNow();
         this.updateSaveStatus();
         this.toast(`Versión v${this.store.version} recargada desde el servidor.`, 'success');
+        this.audit?.invalidate();
       } catch (error) {
         this.toast(error.message, 'error');
       }
@@ -1808,6 +1812,53 @@
         ${summary.electrical.length ? `<section class="network-section"><h3>Circuitos eléctricos</h3><div class="network-cards">${circuitRows}</div></section>` : ''}
         ${summary.warnings.length ? `<section class="network-section"><h3>Avisos (${summary.warnings.length})</h3><ul class="network-warnings wide">${summary.warnings.slice(0, 12).map((message) => `<li>${esc(message)}</li>`).join('')}</ul></section>` : ''}
         <p class="network-footnote">Cálculo estimado con los valores de referencia locales. No sustituye memoria de cálculo ni revisión profesional.</p>`;
+    }
+
+    /**
+     * Lleva la vista al hallazgo del auditor: selecciona los elementos
+     * implicados y encuadra su caja; si el hallazgo solo tiene un punto,
+     * centra el plano ahí con un zoom de trabajo.
+     */
+    focusAuditFinding(findingId, elementIds = '') {
+      const ids = String(elementIds || '').split(',').map((id) => id.trim()).filter(Boolean);
+      const elements = ids.map((id) => this.model.element(id)).filter(Boolean);
+      if (elements.length) {
+        this.model.select(elements.map((element) => element.id));
+        const bounds = G.boundsOfElements(elements);
+        this.frameBounds(bounds, 90);
+        const first = elements[0];
+        const finding = this.audit?.report?.findings?.find((item) => item.elements.includes(first.id));
+        this.toast(`Hallazgo en el plano: ${finding ? finding.title : this.typeLabel(first)}.`, 'info', { duration: 2600 });
+        this.renderNow();
+        return;
+      }
+      // Sin elementos: usar la posición del hallazgo.
+      const finding = this.audit?.report?.findings?.[Number(findingId)] || null;
+      const point = finding?.position || null;
+      if (!point) {
+        this.toast('Este hallazgo no tiene una ubicación concreta en el plano.', 'info');
+        return;
+      }
+      const pad = 260;
+      this.frameBounds({ x: point.x - pad / 2, y: point.y - pad / 2, w: pad, h: pad }, 0);
+      this.model.clearSelection();
+      this.renderNow();
+      this.toast(`Punto del hallazgo: X ${Math.round(point.x)} · Y ${Math.round(point.y)}.`, 'info', { duration: 2600 });
+    }
+
+    /** Ajusta zoom y pane para que una caja del lienzo quede a la vista. */
+    frameBounds(bounds, padding = 40) {
+      const stage = this.svg.closest('[data-canvas-shell]') || this.svg.parentElement;
+      const rect = stage?.getBoundingClientRect?.() || { width: 1200, height: 800 };
+      const width = Math.max(1, rect.width);
+      const height = Math.max(1, rect.height);
+      const w = Math.max(40, bounds.w + padding * 2);
+      const h = Math.max(40, bounds.h + padding * 2);
+      const zoom = G.clamp(Math.min(width / w, height / h), 0.15, 4);
+      this.view.zoom = zoom;
+      this.view.panX = width / 2 - (bounds.x + bounds.w / 2) * zoom;
+      this.view.panY = height / 2 - (bounds.y + bounds.h / 2) * zoom;
+      this.scheduleRender();
     }
 
     renderLayers() {
@@ -1928,6 +1979,7 @@
           grid: Number(form.elements.grid.value),
           unit: form.elements.unit.value,
           scale: form.elements.scale.value.trim(),
+          occupancy: form.elements.occupancy ? Number(form.elements.occupancy.value) || 0 : 0,
         });
         this.fit(true);
         this.renderNow();
@@ -2158,6 +2210,7 @@
       if (name === 'versions') this.loadVersions();
       if (name === 'layers') this.renderLayers();
       if (name === 'networks') this.renderNetworks();
+      if (name === 'audit') this.audit?.open();
       if (name === 'footer') this.renderFooterPreview();
       const focusable = drawer.querySelector('input, button, select, textarea, a[href]');
       window.setTimeout(() => focusable?.focus(), 40);

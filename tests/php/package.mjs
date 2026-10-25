@@ -68,6 +68,11 @@ async function main() {
     'normia-planos-cad/assets/js/editor/store.js',
     'normia-planos-cad/resources/iso7010-catalog.json',
     'normia-planos-cad/resources/cad-objects.json',
+    'normia-planos-cad/resources/audit-criteria.json',
+    'normia-planos-cad/app/Services/PlanAudit.php',
+    'normia-planos-cad/app/Views/editor/audit-report.php',
+    'normia-planos-cad/assets/js/editor/audit.js',
+    'normia-planos-cad/assets/css/audit.css',
     'normia-planos-cad/resources/demo/demo-project.json',
     'normia-planos-cad/config/config.example.php',
     'normia-planos-cad/storage/sessions/.gitkeep',
@@ -189,6 +194,18 @@ async function main() {
       report.check('La exportación SVG trae la leyenda de redes',
         (svg.text.match(/data-mep-legend=/g) || []).length >= 3,
         `${(svg.text.match(/data-mep-legend=/g) || []).length} entradas`);
+      const audit = await client.get(`api/floors/${floorIds[0]}/audit`, { accept: 'application/json' });
+      let auditReport = {};
+      try { auditReport = JSON.parse(audit.text).report || {}; } catch { auditReport = {}; }
+      report.check('El auditor responde en la demo empaquetada',
+        audit.status === 200 && auditReport.exits?.count === 2 && auditReport.counts?.high === 0
+        && auditReport.travel?.longestM > 0,
+        `${auditReport.exits?.count} salidas · ${auditReport.travel?.longestM} m · ${auditReport.counts?.high} críticos`);
+      const auditView = await client.get(`projects/1/floors/${floorIds[0]}/audit`);
+      report.check('El informe de revisión de la demo se imprime',
+        auditView.status === 200 && /Medición de evacuación/.test(auditView.text)
+        && /Criterios aplicados/.test(auditView.text) && /no certifica/i.test(auditView.text),
+        `${auditView.status} · ${auditView.text.length} bytes`);
     }
     const account = await client.get('account/password');
     report.check('Las vistas internas responden con sesión', account.status === 200);

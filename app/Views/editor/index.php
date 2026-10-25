@@ -139,6 +139,10 @@
         </button>
       </div>
       <div class="rail-bottom">
+        <button class="rail-button" type="button" data-open-drawer="audit" data-tooltip="Revisión del plano · auditor y evacuación" aria-label="Revisión del plano">
+          <svg class="icon"><use href="#i-audit"></use></svg><span>Revisión</span>
+          <em class="rail-count rail-count-alert" data-audit-count hidden></em>
+        </button>
         <button class="rail-button" type="button" data-open-drawer="networks" data-tooltip="Redes y circuitos" aria-label="Redes y circuitos">
           <svg class="icon"><use href="#i-network"></use></svg><span>Redes</span>
         </button>
@@ -296,6 +300,27 @@
   </footer>
 </section>
 
+<section class="drawer" data-drawer="audit" hidden aria-labelledby="audit-title">
+  <header class="drawer-head">
+    <div><span class="eyebrow">Revisión del plano</span><h2 id="audit-title">Auditor de emergencias</h2></div>
+    <button class="icon-button" type="button" data-close-drawer aria-label="Cerrar revisión"><svg class="icon"><use href="#i-close"></use></svg></button>
+  </header>
+  <div class="drawer-body audit-drawer-body">
+    <div class="notice notice-warning compact-notice">
+      <svg class="icon"><use href="#i-alert"></use></svg>
+      <p>Revisión de <strong>referencia</strong> con umbrales configurables. No es un dictamen ni certifica cumplimiento normativo: verifica el plano en sitio y con un profesional competente.</p>
+    </div>
+    <div class="audit-toolbar">
+      <button class="button button-primary button-small" type="button" data-audit-run><svg class="icon"><use href="#i-audit"></use></svg>Revisar el plano guardado</button>
+      <a class="button button-ghost button-small" data-audit-report href="<?= e(url('projects/' . (int) $project['id'] . '/floors/' . (int) $floor['id'] . '/audit')) ?>" target="_blank" rel="noopener"><svg class="icon"><use href="#i-export"></use></svg>Informe</a>
+    </div>
+    <div class="audit-content" data-audit-content>
+      <p class="muted">Pulsa <strong>Revisar</strong> para medir recorridos, comprobar salidas y señalización y listar los hallazgos del plano guardado.</p>
+    </div>
+  </div>
+  <footer class="drawer-foot"><p>Umbrales en <code>resources/audit-criteria.json</code>. El análisis usa el último diseño guardado, no los cambios sin guardar.</p></footer>
+</section>
+
 <section class="drawer" data-drawer="networks" hidden aria-labelledby="networks-title">
   <header class="drawer-head">
     <div><span class="eyebrow">Instalaciones</span><h2 id="networks-title">Redes y circuitos</h2></div>
@@ -404,6 +429,7 @@
         <label class="field"><span>Unidad</span><select name="unit"><?php foreach (['cm', 'm', 'mm'] as $unit): ?><option value="<?= e($unit) ?>" <?= $floor['design']['canvas']['unit'] === $unit ? 'selected' : '' ?>><?= e($unit) ?></option><?php endforeach; ?></select></label>
       </div>
       <label class="field"><span>Escala de referencia</span><input type="text" name="scale" pattern="1:[0-9]{1,5}" value="<?= e($floor['design']['canvas']['scale']) ?>" required><small>Referencia de impresión; verifica en sitio.</small></label>
+      <label class="field"><span>Ocupación declarada (personas)</span><input type="number" name="occupancy" min="0" max="10000" step="1" value="<?= e((string) ($floor['design']['canvas']['occupancy'] ?? 0)) ?>"><small>Con 0 el auditor estima la ocupación por superficie libre y lo advierte en el informe.</small></label>
       <button class="button button-primary button-small" type="submit">Aplicar lienzo</button>
       <p class="help-text">Los cambios de lienzo forman parte del diseño y se confirman al guardar el plano.</p>
     </form>
@@ -451,6 +477,7 @@
 <script src="<?= e(asset('js/editor/store.js')) ?>" defer></script>
 <script src="<?= e(asset('js/editor/inspector.js')) ?>" defer></script>
 <script src="<?= e(asset('js/editor/library.js')) ?>" defer></script>
+<script src="<?= e(asset('js/editor/audit.js')) ?>" defer></script>
 <script src="<?= e(asset('js/editor.js')) ?>" defer></script>
 </body>
 </html>

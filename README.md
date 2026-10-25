@@ -3,6 +3,7 @@
 Editor de planos de emergencia y evacuación, en español, pensado para pequeñas y medianas organizaciones que necesitan documentar plantas, rutas, señalización y equipamiento sin depender de software CAD de escritorio ni de servicios externos.
 
 - **Editor completo**: instalador web, cuentas, proyectos y pisos, editor SVG real, biblioteca de **355 pictogramas** (332 ISO 7010 + 23 señales de orientación como baños, vestidores, cafetería y **«Usted está aquí»**), **145 objetos CAD esquemáticos de 18 familias** (restaurante, bodega, comercio, hospital, costura, asadero, supermercado, vivienda, deportes, exteriores, instalaciones eléctricas y redes hidrosanitarias, entre otras), puertas de uno y dos batientes y portones, **rutas con vértices editables**, **redes de tubería (agua, gas, desagües e incendio) y circuitos eléctricos**, cambio de señal y de equipo desde el inspector, guardado con versiones, borradores automáticos, deshacer/rehacer y exportación SVG/JSON/PNG/impresión.
+- **Auditor de planos y evacuación**: el cajón **Revisión** mide el recorrido más largo hasta las salidas marcadas, cuenta salidas y anchos útiles, estima la ocupación (declarada o por densidad), calcula el ancho requerido y el tiempo de evacuación, y lista los hallazgos por severidad con un botón para verlos en el plano. Los umbrales viven en `resources/audit-criteria.json`, el cálculo también corre en el servidor y el informe se imprime o se guarda como PDF.
 - **Instalaciones**: tuberías de agua, gas, desagües e incendio y red eléctrica con longitudes, diámetros, circuitos, cargas y caída de tensión estimada.
 - **PHP ≥ 8.1 + SQLite/PDO**, arquitectura MVC propia, sin Composer, sin `node_modules` en producción y sin CDN.
 - **100 % local**: las fuentes, los estilos, los iconos, los pictogramas y los catálogos viven en el paquete. La aplicación no hace llamadas a servicios de terceros.
@@ -20,16 +21,17 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 4. [Primeros pasos](#primeros-pasos)
 5. [El editor](#el-editor)
 6. [Bibliotecas de señalización y CAD](#bibliotecas-de-señalización-y-cad)
-7. [Guardado, versiones y borradores](#guardado-versiones-y-borradores)
-8. [Exportaciones](#exportaciones)
-9. [Formato de datos](#formato-de-datos)
-10. [Arquitectura](#arquitectura)
-11. [Seguridad](#seguridad)
-12. [Pruebas](#pruebas)
-13. [Cambios de la versión 1.0.9](#cambios-de-la-versión-109)
-14. [Paquetes y verificación](#paquetes-y-verificación)
-15. [Limitaciones](#limitaciones)
-16. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
+7. [Revisión del plano y evacuación](#revisión-del-plano-y-evacuación)
+8. [Guardado, versiones y borradores](#guardado-versiones-y-borradores)
+9. [Exportaciones](#exportaciones)
+10. [Formato de datos](#formato-de-datos)
+11. [Arquitectura](#arquitectura)
+12. [Seguridad](#seguridad)
+13. [Pruebas](#pruebas)
+14. [Cambios de la versión 1.1.0](#cambios-de-la-versión-110)
+15. [Paquetes y verificación](#paquetes-y-verificación)
+16. [Limitaciones](#limitaciones)
+17. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
 
 ---
 
@@ -47,6 +49,7 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 | Propiedades | Posición, tamaño, rotación, sentido de apertura, color (paleta de 29), grosor, opacidad, texto, capa, bloqueo, cambio de tipo y, en redes, **sistema, diámetro, material, pendiente, presión, circuito, tensión, calibre, fases y carga**. |
 | Historial | Deshacer/rehacer con 120 pasos, duplicar, pegar, agrupar, alinear, distribuir y orden de dibujo. |
 | Redes | Panel **Redes y circuitos** con longitudes por sistema, diámetros usados, pendientes, cargas por circuito, breaker y calibre sugeridos y caída de tensión estimada. |
+| Revisión | Cajón **Revisión** con recorrido más largo hasta las salidas, salidas y anchos, ocupación declarada o estimada, ancho requerido, tiempo de evacuación y hallazgos por severidad enlazados al plano. |
 | Persistencia | Guardado manual con nota, versiones inmutables, restaurar versión, borrador automático cada 30 s y detección de conflictos. |
 | Exportación | SVG, JSON, PNG (generado en el navegador) e impresión lista para PDF desde el navegador. |
 | Datos | Base SQLite con claves foráneas, consultas preparadas y copia de seguridad = 2 archivos. |
@@ -324,9 +327,38 @@ El panel **Redes y circuitos** (barra lateral inferior) resume el piso:
 | `resources/cad-objects.json` | `{version, categories{furniture,...}, objects{cad_*:{category,name,description,reference,color,load?,svg}}}` — 145 objetos en 18 familias |
 | `resources/service-signs.json` | `{format, standard, license, categories{services,location}, signs{SVC_*:{name,category,description,aliases,svg}}}` — 23 señales propias |
 | `resources/mep-networks.json` | `{hydraulic{clave:{label,short,color,dash,stroke,diameter,material,gravity,pressureKpa,reference}},diameters[],materials{},slopes{},electrical{...}}` — valores de referencia de redes y circuitos |
+| `resources/audit-criteria.json` | `{version, notice, grid, egress, occupancy, signs}` — umbrales del auditor y de la medición de evacuación |
 | `resources/sign-aliases.json` | Alias heredados → códigos ISO 7010 |
 | `resources/schema.sql` | Esquema SQLite |
 | `resources/demo/demo-project.json` | Proyecto de demostración (4 pisos) |
+
+---
+
+## Revisión del plano y evacuación
+
+La barra lateral inferior tiene un botón **Revisión** que abre el auditor. Analiza el **último diseño guardado** (no los cambios sin guardar) y devuelve dos cosas: una medición de evacuación y una lista de hallazgos con severidad.
+
+**Cómo marcar las salidas.** Selecciona una puerta y activa **Salida de emergencia** en *Apariencia*. Solo las puertas pueden ser salidas; el editor guarda la marca (`isExit`) y el servidor la valida. Marca todas las salidas reales: el auditor mide hasta la más cercana y cuenta el ancho útil de todas.
+
+**Qué mide**
+
+| Métrica | Cómo se calcula |
+| --- | --- |
+| Recorrido más largo | Rejilla de celdas sobre el espacio libre (muros y vanos respetados) y camino más corto desde cada celda hasta una salida. Se informa el punto más alejado y el límite de referencia. |
+| Superficie libre y zonas sin salida | Área interior transitable, superficie alcanzable y recintos que quedan sin camino a una salida. El terreno de fuera del edificio no cuenta. |
+| Salidas y anchos | Número de salidas, ancho de vano de cada una y ancho útil (vano × factor de holgura de hojas y marcos). |
+| Ocupación | La declarada en **Ajustes → Ocupación declarada (personas)**; si está en 0, se estima con la densidad de referencia por superficie libre y el informe lo advierte. |
+| Ancho requerido | Ocupación × ancho de paso por persona, comparado con el ancho útil disponible. |
+| Tiempo estimado | Marcha (recorrido ÷ velocidad) + cola en las salidas (personas ÷ flujo por metro de ancho). |
+| Señalización | Salida con pictograma de salida cerca del vano, presencia de «Usted está aquí» y de medios de extinción. |
+
+**Hallazgos.** Cada aviso trae severidad (*crítico*, *importante*, *menor*, *informativo*), título, explicación, valor medido y, cuando aplica, los elementos del plano. El botón **Ver en el plano** selecciona el elemento y ajusta el zoom. El contador del botón de la barra lateral muestra los críticos e importantes pendientes. Códigos: `no_exit`, `too_few_exits`, `narrow_exit`, `travel_too_long`, `unreachable_area`, `no_route`, `route_no_exit`, `route_through_wall`, `occupancy_missing`, `width_short`, `exit_without_sign`, `no_you_are_here` y `no_fire_sign`.
+
+**Criterios configurables.** Los umbrales están en `resources/audit-criteria.json`: recorrido máximo, mínimo de salidas, ancho mínimo de vano, factor de holgura, ancho por persona, velocidad de marcha, flujo, densidad de ocupación, tolerancia de llegada de las rutas, superficie mínima de recinto y radio de la señalización. Edita el archivo para ajustarlo a la norma aplicable; el informe imprimible enumera los valores usados.
+
+**API e informe.** `GET /index.php?r=api/floors/{id}/audit` (admite `?occupancy=N` para simular una ocupación) devuelve `{ok, floor, report, notice}` con `findings`, `counts`, `exits`, `travel`, `occupancy`, `egress`, `routes`, `signs` y `criteria`. El informe imprimible está en `…/projects/{id}/floors/{floorId}/audit` y lleva las métricas, los hallazgos, las rutas, los criterios aplicados y el aviso de alcance.
+
+> **La revisión es de referencia.** Los umbrales son configurables y el cálculo es esquemático: **no es un dictamen**, no certifica cumplimiento normativo y no sustituye la verificación en sitio ni la revisión de un profesional competente. Los anchos, las rutas y la ocupación real deben confirmarse en el sitio.
 
 ---
 
@@ -351,6 +383,7 @@ API interna del editor (todas las peticiones POST requieren `X-CSRF-Token` o `_t
 | `GET api/floors/{id}/versions` | Historial. |
 | `POST api/floors/{id}/versions/{versionId}/restore` | Restaura una versión como nueva. |
 | `POST api/floors/{id}/settings` | Nombre y nivel del piso (rechaza `<` y `>`). |
+| `GET api/floors/{id}/audit` | Informe del auditor sobre el diseño guardado; `?occupancy=N` simula la ocupación. |
 
 ---
 
@@ -387,7 +420,7 @@ El detalle completo está en [`docs/FORMATO-PLANO.md`](docs/FORMATO-PLANO.md). R
 ```json
 {
   "format": 2,
-  "canvas": { "width": 1123, "height": 794, "grid": 20, "unit": "cm", "scale": "1:100", "background": "#ffffff" },
+  "canvas": { "width": 1123, "height": 794, "grid": 20, "unit": "cm", "scale": "1:100", "background": "#ffffff", "occupancy": 40 },
   "layers": [{ "id": "capa_planta", "name": "Planta", "visible": true, "locked": false }],
   "elements": [
     {
@@ -395,13 +428,19 @@ El detalle completo está en [`docs/FORMATO-PLANO.md`](docs/FORMATO-PLANO.md). R
       "x": 60, "y": 60, "w": 400, "h": 12, "rotation": 0,
       "color": "#334155", "stroke": 12, "opacity": 1, "label": "", "locked": false,
       "points": [{ "x": 0, "y": 6 }, { "x": 400, "y": 6 }]
+    },
+    {
+      "id": "el_salida_001", "type": "door", "layerId": "capa_planta",
+      "x": 300, "y": 500, "w": 90, "h": 90, "rotation": 0,
+      "color": "#475569", "stroke": 2, "opacity": 1, "label": "", "locked": false,
+      "flipX": false, "flipY": false, "isExit": true
     }
   ],
   "groups": [{ "id": "grupo_puesto", "name": "Puesto de trabajo", "members": ["el_...", "el_..."] }]
 }
 ```
 
-Límites del validador: lienzo 400–4000 × 300–3000, rejilla 5–100, hasta 1200 elementos, 24 capas y 80 grupos de 2–80 miembros, identificadores `^[A-Za-z][A-Za-z0-9_-]{2,63}$`, etiquetas de hasta 240 caracteres sin `<` ni `>`, 29 colores permitidos, trazos de hasta 40 puntos (línea y medida exactamente 2), JSON de hasta 2.5 MB.
+`canvas.occupancy` es la ocupación declarada en personas (0–10 000; 0 = sin declarar). `isExit` solo se conserva en puertas y marca la salida de emergencia que usa el auditor. Límites del validador: lienzo 400–4000 × 300–3000, rejilla 5–100, hasta 1200 elementos, 24 capas y 80 grupos de 2–80 miembros, identificadores `^[A-Za-z][A-Za-z0-9_-]{2,63}$`, etiquetas de hasta 240 caracteres sin `<` ni `>`, 29 colores permitidos, trazos de hasta 40 puntos (línea y medida exactamente 2), JSON de hasta 2.5 MB.
 
 La importación acepta el JSON propio v2 y el formato heredado de la fase de referencia (`format: 1`, `elements[].tool`), y convierte alias (`exit`, `extinguisher`, `first_aid`, `alarm`, `assembly`, `exit_sign`, `fire_extinguisher`, `first_aid_kit`, `emergency_exit`) a señales ISO 7010. Un archivo con herramientas desconocidas, markup arbitrario, colores fuera de paleta o coordenadas inválidas se rechaza entero (no se importa parcialmente). No se importan DWG, DXF ni SVG.
 
@@ -504,7 +543,7 @@ La aplicación está pensada para redes aisladas y equipos sin internet:
 - **La política de seguridad del navegador** (`Content-Security-Policy`) limita `script-src`, `style-src`, `img-src`, `font-src` y `connect-src` a `'self'`; cualquier intento de cargar algo externo queda bloqueado por el propio navegador.
 - **El servidor no hace llamadas salientes**: no usa `curl`, `fsockopen`, `get_headers` ni `file_get_contents()` sobre URLs.
 - **Las exportaciones se generan en local**: el SVG y el JSON los produce PHP; el PNG lo dibuja el navegador sobre el propio SVG. La impresión usa `print.css` local.
-- **`npm run test:offline`** recorre los 80 archivos que se sirven al navegador y falla si aparece una petición externa. Forma parte de `node tests/run-all.mjs`.
+- **`npm run test:offline`** recorre los 85 archivos que se sirven al navegador y falla si aparece una petición externa. Forma parte de `node tests/run-all.mjs`.
 
 Lo único que no funciona sin red es la **vista previa de desarrollo** (`npm run preview`), que solo existe para revisar el editor en el equipo de desarrollo; nunca se incluye en los paquetes.
 
@@ -513,29 +552,45 @@ Lo único que no funciona sin red es la **vista previa de desarrollo** (`npm run
 | Bloque | Comprobaciones |
 | --- | --- |
 | `tests/php/lint.mjs` | `php -l` sobre todo `app/`, `bootstrap.php` e `index.php` en 8.1 y 8.3. |
-| `tests/php/functional.mjs` | 152 comprobaciones: instalador, requisitos, contraseñas débiles, CSRF, sesión, autorización entre cuentas, CRUD de proyectos/pisos, duplicados, importación v1/v2, catálogos (355 señales y 145 objetos), catálogo y guardado de redes, señales de baño y de servicios (guardado, color de familia y exportación SVG), puertas y portones (geometría, sentidos de apertura, exportación con trazo), validaciones de la API, guardado/versiones/borradores/conflictos, exportaciones, ciclo de vida y logout. |
-| `tests/js/editor.mjs` | 229 comprobaciones de interfaz sobre la app real: arranque, 355 señales y 145 objetos, **trazado de tuberías y circuitos, inspector de red y panel de redes**, **mano y paneo, selección de superpuestos, inspector plegable y paleta de herramientas**, puertas dobles y portones, **vértices de ruta editables (arrastrar, doble clic, Alt+clic)**, **señal de baño insertada desde la biblioteca**, **posiciones reales del trazo**, **clic sobre muros finos, pictogramas y equipos**, **cambio de señal y de equipo desde el inspector**, **rotación**, **rutas cerradas**, **arrastrar y soltar desde la biblioteca sin que el cajón lo bloquee**, reglas, herramientas, inserción con puntero, selección, mover, escalar, rotar, color, cambio de tipo, deshacer/rehacer, duplicar, agrupar, bloquear, desplazar, texto y saneado, guardar, reabrir, borradores, conflictos, exportación SVG/JSON/PNG, tooltips sin acumulación, capas, versiones y límites. |
-| `tests/php/package.mjs` | 37 comprobaciones: construye ambos ZIP, verifica que no haya bases, sesiones, credenciales, logs ni carpetas de desarrollo, valida los SHA-256 y hace una instalación limpia de la demo comprobando assets (11), catálogos (355/145), los cuatro pisos del proyecto de ejemplo, señales de servicios y redes en la demo, la señal «Usted está aquí», editor, SVG, JSON e impresión. |
+| `tests/php/functional.mjs` | 174 comprobaciones: instalador, requisitos, contraseñas débiles, CSRF, sesión, autorización entre cuentas, CRUD de proyectos/pisos, duplicados, importación v1/v2, catálogos (355 señales y 145 objetos), catálogo y guardado de redes, señales de baño y de servicios (guardado, color de familia y exportación SVG), **auditor y medición de evacuación** (salidas, recorrido máximo, zonas inalcanzables, rutas que cruzan muros o no llegan a la salida, ocupación declarada y estimada, señalización, validación de `isExit`, informe imprimible y demo coherente), puertas y portones (geometría, sentidos de apertura, exportación con trazo), validaciones de la API, guardado/versiones/borradores/conflictos, exportaciones, ciclo de vida y logout. |
+| `tests/js/editor.mjs` | 246 comprobaciones de interfaz sobre la app real: arranque, 355 señales y 145 objetos, **trazado de tuberías y circuitos, inspector de red y panel de redes**, **mano y paneo, selección de superpuestos, inspector plegable y paleta de herramientas**, puertas dobles y portones, **vértices de ruta editables (arrastrar, doble clic, Alt+clic)**, **señal de baño insertada desde la biblioteca**, **posiciones reales del trazo**, **clic sobre muros finos, pictogramas y equipos**, **cambio de señal y de equipo desde el inspector**, **auditor de planos** (interruptor de salida, ocupación declarada, cajón de revisión, contador, filtros, «Ver en el plano», cierre sin dejar el fondo bloqueado), **rotación**, **rutas cerradas**, **arrastrar y soltar desde la biblioteca sin que el cajón lo bloquee**, reglas, herramientas, inserción con puntero, selección, mover, escalar, rotar, color, cambio de tipo, deshacer/rehacer, duplicar, agrupar, bloquear, desplazar, texto y saneado, guardar, reabrir, borradores, conflictos, exportación SVG/JSON/PNG, tooltips sin acumulación, capas, versiones y límites. |
+| `tests/php/package.mjs` | 39 comprobaciones: construye ambos ZIP, verifica que no haya bases, sesiones, credenciales, logs ni carpetas de desarrollo, valida los SHA-256 y hace una instalación limpia de la demo comprobando assets, catálogos (355/145), los cuatro pisos del proyecto de ejemplo, señales de servicios y redes en la demo, la señal «Usted está aquí», **el auditor y su informe en la demo empaquetada**, editor, SVG, JSON e impresión. |
 | `tests/js/offline.mjs` | 0 dependencias de red: revisa las vistas, los estilos, los scripts y los catálogos y falla si aparece un `fetch`, un `WebSocket`, un `src`/`href`/`url()` externo, una llamada de red desde PHP o un dominio no declarado. |
 
 Resultados esperados de la última ejecución completa:
 
 ```text
-✓ Sintaxis PHP 8.1 · 54 archivos, sin errores
-✓ Sintaxis PHP 8.3 · 54 archivos, sin errores
-✓ Sintaxis JavaScript · 20 archivos, sin errores
-✓ Funcionamiento sin conexión · 80 archivos, sin referencias externas
-✓ Funcional PHP 8.1 · 152/152
-✓ Funcional PHP 8.3 · 152/152
-✓ Interfaz (JSDOM) PHP 8.1 · 229/229
-✓ Interfaz (JSDOM) PHP 8.3 · 229/229
-✓ Paquetes y demo · 37/37
+✓ Sintaxis PHP 8.1 · 56 archivos, sin errores
+✓ Sintaxis PHP 8.3 · 56 archivos, sin errores
+✓ Sintaxis JavaScript · 21 archivos, sin errores
+✓ Funcionamiento sin conexión · 85 archivos, sin referencias externas
+✓ Funcional PHP 8.1 · 174/174
+✓ Funcional PHP 8.3 · 174/174
+✓ Interfaz (JSDOM) PHP 8.1 · 246/246
+✓ Interfaz (JSDOM) PHP 8.3 · 246/246
+✓ Paquetes y demo · 39/39
 9/9 pasos correctos
 ```
 
 Las pruebas trabajan sobre copias temporales: no escriben configuración ni bases en el repositorio. `node_modules` solo contiene dependencias de desarrollo y se excluye de los paquetes.
 
 ---
+
+## Cambios de la versión 1.1.0
+
+La entrega grande de esta versión: un **auditor de planos** y una **medición de evacuación** que usan la geometría real del plano. Los diseños guardados siguen abriendo sin cambios; las claves nuevas (`canvas.occupancy` e `isExit`) son opcionales y el formato sigue siendo v2.
+
+- **Cajón «Revisión» con hallazgos por severidad.** El botón **Revisión** de la barra lateral inferior abre un auditor que analiza el último diseño guardado y lista los avisos en cuatro niveles (*crítico*, *importante*, *menor*, *informativo*), con filtros por nivel, el valor medido y un botón **Ver en el plano** que selecciona el elemento y ajusta el zoom. El contador del botón muestra los críticos e importantes pendientes.
+- **Medición de evacuación.** Sobre una rejilla de celdas que respeta muros y vanos, el motor calcula el **camino más corto desde cada punto hasta la salida marcada más cercana** y devuelve el recorrido más largo, la superficie libre interior (el terreno de fuera del edificio no computa), las zonas sin salida alcanzable y la celda más desfavorable. Con eso avisa de recorridos por encima del umbral y de recintos sin salida.
+- **Salidas de emergencia.** Cualquier puerta, puerta doble o portón se marca desde *Apariencia* con el interruptor **Salida de emergencia**. La marca (`isExit`) se valida en el servidor —solo se acepta en puertas y con un booleano— y es el origen de la medición. El inspector explica para qué sirve.
+- **Ocupación declarada.** *Ajustes* incorpora **Ocupación declarada (personas)**. Si queda en 0, el auditor estima la ocupación por la densidad de referencia sobre la superficie libre y lo advierte en el informe; si se declara, se usa para el ancho requerido y el tiempo de evacuación.
+- **Aforo, ancho y tiempo.** El informe compara el **ancho requerido** (personas × ancho de paso) con el **ancho útil** de las salidas (vano × holgura de marcos y hojas) y estima el **tiempo de evacuación** como marcha más cola en las salidas, con la velocidad y el flujo de referencia.
+- **Rutas revisadas.** Las rutas dibujadas se miden, se comprueba si terminan en una salida (con tolerancia) y si cruzan muros fuera de un vano; los avisos enlazan con el trazo para corregirlo.
+- **Criterios configurables.** Todos los umbrales están en `resources/audit-criteria.json` (recorrido máximo, mínimo de salidas, ancho mínimo, factor de holgura, ancho por persona, velocidad, flujo, densidad, tolerancias, superficie mínima de recinto y radio de señalización). El informe imprimible enumera los valores aplicados.
+- **Cálculo en el servidor y API.** `GET api/floors/{id}/audit` devuelve el informe completo (`findings`, `counts`, `exits`, `travel`, `occupancy`, `egress`, `routes`, `signs`, `criteria`) y acepta `?occupancy=N` para simular otro aforo. El cajón usa ese mismo endpoint, así que la interfaz y la API nunca discrepan.
+- **Informe imprimible.** `projects/{id}/floors/{floorId}/audit` genera una hoja con el encabezado del proyecto y del piso, las métricas, los hallazgos agrupados por severidad, la tabla de rutas, los criterios y el aviso de alcance; se imprime o se guarda como PDF desde el navegador.
+- **Demo actualizada.** La planta baja del proyecto de ejemplo marca sus dos salidas, corrige la ruta de evacuación para que pase por los vanos en lugar de atravesar muros, incorpora el marcador **Usted está aquí**, una señal de salida junto al portón y una ocupación declarada de 30 personas. El auditor de la demo queda sin hallazgos críticos.
+- **Correcciones de la entrega.** El interruptor de salida ya aplica el cambio al modelo (antes se repintaba sin efecto), el cajón se engancha siempre al documento aunque la aplicación no exponga la ventana y el auditor descuenta el exterior del edificio. La suite gana **pruebas funcionales del motor** (salidas, recorrido, rutas, señales y validación) y **de interfaz** (interruptor, ocupación, cajón, contador, filtros, «Ver en el plano» e informe).
 
 ## Cambios de la versión 1.0.9
 
@@ -630,14 +685,14 @@ Versión de corrección sobre la 1.0.0. Reemplaza los paquetes anteriores: la 1.
 
 ## Paquetes y verificación
 
-Las versiones publicadas están en la página de **[Liberaciones](https://github.com/luan920530-commits/normia-planos-cad/releases)**. La primera es la **v1.0.9**, con sus notas, sus sumas SHA-256 y los enlaces de descarga de los paquetes que viven en `paquetes/v1.0.9/`.
+Las versiones publicadas están en la página de **[Liberaciones](https://github.com/luan920530-commits/normia-planos-cad/releases)**. La versión vigente es la **v1.1.0**, con sus notas, sus sumas SHA-256 y los enlaces de descarga de los paquetes que viven en `paquetes/v1.1.0/`. Las entregas v1.0.4 a v1.0.9 y las v1.0.0 a v1.0.3 no deben usarse: la v1.1.0 las reemplaza.
 
-La entrega v1.0.9 incluye los ZIP ya construidos en **`paquetes/v1.0.9/`** (misma composición que genera el script, verificada por `tests/php/package.mjs`):
+La entrega v1.1.0 incluye los ZIP ya construidos en **`paquetes/v1.1.0/`** (misma composición que genera el script, verificada por `tests/php/package.mjs`):
 
 ```text
-paquetes/v1.0.9/
-├── normia-planos-cad-1.0.9.zip
-├── normia-planos-cad-demo-1.0.9.zip
+paquetes/v1.1.0/
+├── normia-planos-cad-1.1.0.zip
+├── normia-planos-cad-demo-1.1.0.zip
 ├── SHA256SUMS.txt
 ├── BUILD.txt
 └── LEEME.txt
@@ -652,8 +707,8 @@ npm run build          # o: bash tools/build-packages.sh
 El script deja los artefactos en `dist/`:
 
 ```text
-normia-planos-cad-1.0.9.zip
-normia-planos-cad-demo-1.0.9.zip
+normia-planos-cad-1.1.0.zip
+normia-planos-cad-demo-1.1.0.zip
 SHA256SUMS.txt
 BUILD.txt
 ```
@@ -663,11 +718,11 @@ BUILD.txt
 - Verifica las sumas:
 
 ```bash
-cd paquetes/v1.0.9
+cd paquetes/v1.1.0
 sha256sum -c SHA256SUMS.txt
 ```
 
-Los hashes exactos de los ZIP publicados están en `paquetes/v1.0.9/SHA256SUMS.txt`; `dist/` es solo la salida de trabajo y está ignorada por Git.
+Los hashes exactos de los ZIP publicados están en `paquetes/v1.1.0/SHA256SUMS.txt`; `dist/` es solo la salida de trabajo y está ignorada por Git.
 
 ---
 
@@ -675,6 +730,7 @@ Los hashes exactos de los ZIP publicados están en `paquetes/v1.0.9/SHA256SUMS.t
 
 - Planos **esquemáticos**: no hay cálculo de áreas, estructuras ni normativa automática. La escala es una referencia declarada, no una medición certificada.
 - **Las redes son un apoyo de diseño, no un cálculo firmado.** El panel estima longitudes, cargas, breaker, calibre y caída de tensión con tablas de referencia locales; no reemplaza la memoria de cálculo, el estudio de cargas, el diseño hidrosanitario ni la revisión de un profesional competente, y no verifica cumplimiento de NTC 1500, NTC 2505, NTC 2050, NFPA ni de la norma local aplicable.
+- **El auditor y la medición de evacuación son de referencia.** Calculan sobre el dibujo esquemático con rejilla de 20 cm, umbrales configurables y supuestos de velocidad, flujo y densidad. No son un dictamen técnico, no certifican cumplimiento normativo, no reemplazan el estudio de evacuación ni la revisión de un profesional competente y deben confirmarse en sitio: ocupación real, ancho libre de marcos y hojas, estado de las vías, señalización física y puntos de reunión.
 - Sin DWG/DXF ni importación de CAD de escritorio. La importación acepta el JSON propio (v2 y heredado v1); no se importan SVG ni archivos de CAD.
 - El trabajo es por cuenta: no hay colaboración simultánea. El control de versiones evita sobrescrituras accidentales, pero dos personas deben coordinar quién guarda.
 - El PNG se rasteriza en el cliente; en navegadores muy antiguos o sin Canvas puede no generarse (el SVG y el JSON siguen disponibles).
