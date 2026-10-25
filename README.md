@@ -501,7 +501,7 @@ Lo único que no funciona sin red es la **vista previa de desarrollo** (`npm run
 | --- | --- |
 | `tests/php/lint.mjs` | `php -l` sobre todo `app/`, `bootstrap.php` e `index.php` en 8.1 y 8.3. |
 | `tests/php/functional.mjs` | 144 comprobaciones: instalador, requisitos, contraseñas débiles, CSRF, sesión, autorización entre cuentas, CRUD de proyectos/pisos, duplicados, importación v1/v2, catálogos (354 señales y 145 objetos), catálogo y guardado de redes, señales de baño y de servicios (guardado, color de familia y exportación SVG), puertas y portones (geometría, sentidos de apertura, exportación con trazo), validaciones de la API, guardado/versiones/borradores/conflictos, exportaciones, ciclo de vida y logout. |
-| `tests/js/editor.mjs` | 176 comprobaciones de interfaz sobre la app real: arranque, 354 señales y 145 objetos, **trazado de tuberías y circuitos, inspector de red y panel de redes**, **mano y paneo, selección de superpuestos, inspector plegable y paleta de herramientas**, puertas dobles y portones, **vértices de ruta editables (arrastrar, doble clic, Alt+clic)**, **señal de baño insertada desde la biblioteca**, **posiciones reales del trazo**, **clic sobre muros finos**, **rotación**, **rutas cerradas**, **arrastrar y soltar desde la biblioteca sin que el cajón lo bloquee**, reglas, herramientas, inserción con puntero, selección, mover, escalar, rotar, color, cambio de tipo, deshacer/rehacer, duplicar, agrupar, bloquear, desplazar, texto y saneado, guardar, reabrir, borradores, conflictos, exportación SVG/JSON/PNG, tooltips sin acumulación, capas, versiones y límites. |
+| `tests/js/editor.mjs` | 177 comprobaciones de interfaz sobre la app real: arranque, 354 señales y 145 objetos, **trazado de tuberías y circuitos, inspector de red y panel de redes**, **mano y paneo, selección de superpuestos, inspector plegable y paleta de herramientas**, puertas dobles y portones, **vértices de ruta editables (arrastrar, doble clic, Alt+clic)**, **señal de baño insertada desde la biblioteca**, **posiciones reales del trazo**, **clic sobre muros finos**, **rotación**, **rutas cerradas**, **arrastrar y soltar desde la biblioteca sin que el cajón lo bloquee**, reglas, herramientas, inserción con puntero, selección, mover, escalar, rotar, color, cambio de tipo, deshacer/rehacer, duplicar, agrupar, bloquear, desplazar, texto y saneado, guardar, reabrir, borradores, conflictos, exportación SVG/JSON/PNG, tooltips sin acumulación, capas, versiones y límites. |
 | `tests/php/package.mjs` | 37 comprobaciones: construye ambos ZIP, verifica que no haya bases, sesiones, credenciales, logs ni carpetas de desarrollo, valida los SHA-256 y hace una instalación limpia de la demo comprobando assets (11), catálogos (354/145), los cuatro pisos del proyecto de ejemplo, señales de servicios y redes en la demo, editor, SVG, JSON e impresión. |
 | `tests/js/offline.mjs` | 0 dependencias de red: revisa las vistas, los estilos, los scripts y los catálogos y falla si aparece un `fetch`, un `WebSocket`, un `src`/`href`/`url()` externo, una llamada de red desde PHP o un dominio no declarado. |
 
@@ -514,8 +514,8 @@ Resultados esperados de la última ejecución completa:
 ✓ Funcionamiento sin conexión · 78 archivos, sin referencias externas
 ✓ Funcional PHP 8.1 · 144/144
 ✓ Funcional PHP 8.3 · 144/144
-✓ Interfaz (JSDOM) PHP 8.1 · 176/176
-✓ Interfaz (JSDOM) PHP 8.3 · 176/176
+✓ Interfaz (JSDOM) PHP 8.1 · 177/177
+✓ Interfaz (JSDOM) PHP 8.3 · 177/177
 ✓ Paquetes y demo · 37/37
 9/9 pasos correctos
 ```
@@ -532,7 +532,7 @@ Entrega de interfaz sobre la 1.0.4. Los planos guardados siguen abriendo sin cam
 - **Selección de elementos superpuestos.** Antes sólo se podía seleccionar lo que estuviera encima. Ahora `Ctrl/⌘ + clic` baja al siguiente elemento de la pila y `Ctrl/⌘ + Shift + clic` sube; la barra de estado muestra cuántos hay en ese punto y el inspector añade la sección **Elementos superpuestos** para cambiarlos con un clic.
 - **Inspector rediseñado.** Ficha de selección con miniatura y acciones rápidas, secciones plegables con iconos, campos numéricos con unidad y contador, rotación en pasos de 90°, controles de opacidad y color más compactos, rejilla de alineación y orden con iconos, y un estado vacío con resumen del piso.
 - **Paleta «Todas las herramientas».** Un panel agrupado (seleccionar, dibujar, insertar) con icono, nombre y atajo de cada herramienta, al estilo de las barras profesionales modernas.
-- **Iconos nuevos y coherentes.** Mano, mover, paleta, pila, organizar, traer adelante y atrás, girar a izquierda y derecha; todos con la misma retícula de 24 px, trazo redondeado y peso uniforme.
+- **Iconos nuevos y coherentes.** Mover, paleta, pila, organizar, traer adelante y atrás, girar a izquierda y derecha y reglas ocultas; todos con la misma retícula de 24 px, trazo redondeado y peso uniforme. El interruptor de reglas cambia de icono y de tooltip según su estado.
 - **Corrección de cursores.** El cursor de cada herramienta ya no se perdía al repintar el lienzo; la mano muestra `grab`/`grabbing` y las herramientas de dibujo, la cruz.
 
 ## Cambios de la versión 1.0.4

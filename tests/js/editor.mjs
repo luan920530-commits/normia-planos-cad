@@ -899,6 +899,18 @@ async function main() {
     app.renderNow();
     report.check('La prueba de superposición limpia sus elementos', !app.model.design.elements.some((element) => element.id === stackTop.id || element.id === stackBottom.id));
 
+    const rulersToggle = q(window, '[data-toggle="rulers"]');
+    const rulerUse = rulersToggle?.querySelector('use');
+    const rulerStart = rulerUse?.getAttribute('href');
+    rulersToggle?.click();
+    const rulerHidden = rulerUse?.getAttribute('href');
+    rulersToggle?.click();
+    report.check('El interruptor de reglas cambia de icono y de tooltip',
+      rulerStart === '#i-ruler' && rulerHidden === '#i-ruler-slash'
+      && rulerUse?.getAttribute('href') === '#i-ruler'
+      && rulersToggle?.dataset.tooltip === 'Ocultar reglas',
+      `${rulerStart} → ${rulerHidden} → ${rulerUse?.getAttribute('href')} · ${rulersToggle?.dataset.tooltip}`);
+
     /* ------------------------------- interfaz/tooltips ------------------------------- */
     const tips = qa(window, '[data-tooltip]');
     report.check('Hay controles con tooltip accesible', tips.length > 5, String(tips.length));

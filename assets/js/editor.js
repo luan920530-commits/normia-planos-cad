@@ -237,6 +237,9 @@
           if (key === 'rulers') {
             this.showRulers = !this.showRulers;
             qa('.ruler').forEach((ruler) => { ruler.hidden = !this.showRulers; });
+            const use = button.querySelector('use');
+            if (use) use.setAttribute('href', this.showRulers ? '#i-ruler' : '#i-ruler-slash');
+            button.dataset.tooltip = this.showRulers ? 'Ocultar reglas' : 'Mostrar reglas';
           }
           button.classList.toggle('is-active', key === 'grid' ? this.showGrid : key === 'snap' ? this.snapEnabled : this.showRulers);
           button.setAttribute('aria-pressed', button.classList.contains('is-active') ? 'true' : 'false');
