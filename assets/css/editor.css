@@ -124,6 +124,8 @@ body.editor-body { overflow: hidden; background: #eef2f8; }
 .canvas-paper { filter: drop-shadow(0 6px 18px rgba(15, 23, 42, .08)); }
 .plan-element { cursor: pointer; }
 .plan-element.is-locked { cursor: not-allowed; }
+.plan-element .hit-area { pointer-events: stroke; }
+.plan-element .hit-area { cursor: pointer; }
 .plan-element .asset-svg { pointer-events: none; }
 .plan-element .element-label, .plan-element .element-text, .plan-element .element-dimension { pointer-events: none; user-select: none; }
 .selection-frame .handle { cursor: nwse-resize; }

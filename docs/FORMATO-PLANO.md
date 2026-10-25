@@ -72,7 +72,7 @@ Todos los elementos comparten:
 | --- | --- | --- |
 | `wall` | Trazo | `points` (2–40), `stroke` grueso. |
 | `door` | Puerta | `flipX` para cambiar el sentido. |
-| `route` | Ruta de evacuación | `points` (2–40), flechas. |
+| `route` | Ruta de evacuación | `points` (2–40), flechas. Un circuito cerrado repite el primer punto al final. |
 | `text` | Texto | `fontSize` 8–160, `label` obligatoria. |
 | `dimension` | Medida | `points` exactamente 2; `label` opcional. |
 | `line` | Línea | `points` exactamente 2. |

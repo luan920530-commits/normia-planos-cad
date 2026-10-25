@@ -25,9 +25,10 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 10. [Arquitectura](#arquitectura)
 11. [Seguridad](#seguridad)
 12. [Pruebas](#pruebas)
-13. [Paquetes y verificación](#paquetes-y-verificación)
-14. [Limitaciones](#limitaciones)
-15. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
+13. [Cambios de la versión 1.0.1](#cambios-de-la-versión-101)
+14. [Paquetes y verificación](#paquetes-y-verificación)
+15. [Limitaciones](#limitaciones)
+16. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
 
 ---
 
@@ -174,7 +175,9 @@ Luego importa `resources/schema.sql` en el archivo SQLite y crea el usuario admi
 - Arrastrar con una herramienta de dibujo crea el elemento; `Shift` restringe a horizontal/vertical o mantiene proporciones.
 - Con **Seleccionar**, clic selecciona; `Shift` añade a la selección; arrastrar el fondo dibuja una marquesina.
 - Arrastrar un elemento seleccionado lo mueve con ajuste a la rejilla (`Alt` desactiva el ajuste).
-- Los tiradores de la caja de selección escalan; el tirador superior rota (`Shift` fija pasos de 15°).
+- Los tiradores de la caja de selección escalan; el tirador superior rota (`Shift` fija pasos de 15°). Los tiradores se dibujan un poco más grandes que el trazo para poder agarrar muros finos, pero un clic sin arrastre nunca mueve ni deforma nada.
+- **Rutas de evacuación**: clic para añadir puntos, clic sobre el primer punto para cerrar el circuito, `Retroceso` quita el último punto, `Enter` o doble clic termina y `Esc` cancela.
+- **Biblioteca**: arrastra una tarjeta al lienzo o pulsa **Insertar en el plano**; el cajón se cierra y el recurso se coloca con el siguiente clic (o `Enter` sobre la tarjeta).
 - Rueda = zoom en el puntero; `Shift` + rueda = desplazamiento vertical; barra espaciadora + arrastrar = paneo.
 - Doble clic en un texto o etiqueta abre y enfoca el campo de texto del inspector.
 
@@ -394,9 +397,9 @@ npm run lint:js        # sintaxis de todos los JS/MJS
 | Bloque | Comprobaciones |
 | --- | --- |
 | `tests/php/lint.mjs` | `php -l` sobre todo `app/`, `bootstrap.php` e `index.php` en 8.1 y 8.3. |
-| `tests/php/functional.mjs` | 119 comprobaciones: instalador, requisitos, contraseñas débiles, CSRF, sesión, autorización entre cuentas, CRUD de proyectos/pisos, duplicados, importación v1/v2, validaciones de la API, guardado/versiones/borradores/conflictos, exportaciones, ciclo de vida y logout. |
-| `tests/js/editor.mjs` | 84 comprobaciones de interfaz sobre la app real: arranque, 332 señales y 32 objetos, reglas, herramientas, inserción con puntero, selección, mover, escalar, rotar, color, cambio de tipo, deshacer/rehacer, duplicar, agrupar, bloquear, desplazar, texto y saneado, guardar, reabrir, borradores, conflictos, exportación SVG/JSON/PNG, tooltips sin acumulación, capas, versiones y límites. |
-| `tests/php/package.mjs` | 32 comprobaciones: construye ambos ZIP, verifica que no haya bases, sesiones, credenciales, logs ni carpetas de desarrollo, valida los SHA-256 y hace una instalación limpia de la demo comprobando assets (11), catálogos (332/32), editor, SVG, JSON e impresión. |
+| `tests/php/functional.mjs` | 120 comprobaciones: instalador, requisitos, contraseñas débiles, CSRF, sesión, autorización entre cuentas, CRUD de proyectos/pisos, duplicados, importación v1/v2, validaciones de la API, guardado/versiones/borradores/conflictos, exportaciones, ciclo de vida y logout. |
+| `tests/js/editor.mjs` | 107 comprobaciones de interfaz sobre la app real: arranque, 332 señales y 32 objetos, **posiciones reales del trazo**, **clic sobre muros finos**, **rotación**, **rutas cerradas**, **arrastrar y soltar desde la biblioteca**, reglas, herramientas, inserción con puntero, selección, mover, escalar, rotar, color, cambio de tipo, deshacer/rehacer, duplicar, agrupar, bloquear, desplazar, texto y saneado, guardar, reabrir, borradores, conflictos, exportación SVG/JSON/PNG, tooltips sin acumulación, capas, versiones y límites. |
+| `tests/php/package.mjs` | 34 comprobaciones: construye ambos ZIP, verifica que no haya bases, sesiones, credenciales, logs ni carpetas de desarrollo, valida los SHA-256 y hace una instalación limpia de la demo comprobando assets (11), catálogos (332/32), editor, SVG, JSON e impresión. |
 
 Resultados esperados de la última ejecución completa:
 
@@ -404,11 +407,11 @@ Resultados esperados de la última ejecución completa:
 ✓ Sintaxis PHP 8.1 · 51 archivos, sin errores
 ✓ Sintaxis PHP 8.3 · 51 archivos, sin errores
 ✓ Sintaxis JavaScript · 16 archivos, sin errores
-✓ Funcional PHP 8.1 · 119/119
-✓ Funcional PHP 8.3 · 119/119
-✓ Interfaz (JSDOM) PHP 8.1 · 84/84
-✓ Interfaz (JSDOM) PHP 8.3 · 84/84
-✓ Paquetes y demo · 32/32
+✓ Funcional PHP 8.1 · 120/120
+✓ Funcional PHP 8.3 · 120/120
+✓ Interfaz (JSDOM) PHP 8.1 · 107/107
+✓ Interfaz (JSDOM) PHP 8.3 · 107/107
+✓ Paquetes y demo · 34/34
 8/8 pasos correctos
 ```
 
@@ -416,14 +419,28 @@ Las pruebas trabajan sobre copias temporales: no escriben configuración ni base
 
 ---
 
+## Cambios de la versión 1.0.1
+
+Versión de corrección sobre la 1.0.0. Reemplaza los paquetes anteriores: la 1.0.0 tenía fallos reales en el editor que no se veían en las pruebas.
+
+- **Abrir un plano ya no falla.** El renombrado de identificadores SVG usaba el selector `[xlink:href]`, que los navegadores reales rechazan; jsdom lo aceptaba y ocultaba el error. Ahora se recorren los nodos y se leen las referencias con `getAttribute`/`getAttributeNS` sobre el espacio de nombres XLink, sin selectores inválidos.
+- **Muros, rutas, líneas y cotas se dibujan donde se trazan.** El renderizador usaba coordenadas locales del elemento sin sumar su posición; ahora el trazo usa puntos absolutos y una zona de pulsación transparente más ancha.
+- **Un muro fino ya no desaparece ni se deforma al segundo clic.** Los tiradores de selección se dibujan con un mínimo de 22 px de alto y no empiezan a transformar hasta que el puntero se desplaza 3 px, así que un clic simple nunca inicia un escalado o una rotación.
+- **Rotar mantiene el trazo junto a su caja.** La rotación se aplica sobre el centro real del elemento y las pruebas comprueban el punto pintado, no solo el modelo.
+- **La señalización se puede aplicar al plano.** La ficha de la biblioteca cierra el cajón al insertar, muestra una pista clara y las tarjetas se pueden arrastrar al lienzo (o pulsar `Enter` para colocarlas). El recurso sigue al cursor hasta que haces clic.
+- **Rutas de evacuación cerradas.** Un clic sobre el primer punto cierra el circuito con ≥3 puntos; `Retroceso` quita el último punto, `Enter` o doble clic terminan y `Esc` cancela. La pista del lienzo indica el número de puntos y cómo cerrar.
+- **Líneas coherentes al exportar.** El exportador SVG usa los puntos reales del trazo en lugar de la diagonal de la caja del elemento.
+
+---
+
 ## Paquetes y verificación
 
-La entrega v1.0.0 incluye los ZIP ya construidos en **`paquetes/v1.0.0/`** (misma composición que genera el script, verificada por `tests/php/package.mjs`):
+La entrega v1.0.1 incluye los ZIP ya construidos en **`paquetes/v1.0.1/`** (misma composición que genera el script, verificada por `tests/php/package.mjs`):
 
 ```text
-paquetes/v1.0.0/
-├── normia-planos-cad-1.0.0.zip
-├── normia-planos-cad-demo-1.0.0.zip
+paquetes/v1.0.1/
+├── normia-planos-cad-1.0.1.zip
+├── normia-planos-cad-demo-1.0.1.zip
 ├── SHA256SUMS.txt
 └── BUILD.txt
 ```
@@ -437,8 +454,8 @@ npm run build          # o: bash tools/build-packages.sh
 El script deja los artefactos en `dist/`:
 
 ```text
-normia-planos-cad-1.0.0.zip
-normia-planos-cad-demo-1.0.0.zip
+normia-planos-cad-1.0.1.zip
+normia-planos-cad-demo-1.0.1.zip
 SHA256SUMS.txt
 BUILD.txt
 ```
@@ -448,11 +465,11 @@ BUILD.txt
 - Verifica las sumas:
 
 ```bash
-cd paquetes/v1.0.0
+cd paquetes/v1.0.1
 sha256sum -c SHA256SUMS.txt
 ```
 
-Los hashes exactos de los ZIP publicados están en `paquetes/v1.0.0/SHA256SUMS.txt`; `dist/` es solo la salida de trabajo y está ignorada por Git.
+Los hashes exactos de los ZIP publicados están en `paquetes/v1.0.1/SHA256SUMS.txt`; `dist/` es solo la salida de trabajo y está ignorada por Git.
 
 ---
 

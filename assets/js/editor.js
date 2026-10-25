@@ -217,6 +217,12 @@
       });
 
       const svg = this.svg;
+      svg.addEventListener('dragover', (event) => {
+        if (!event.dataTransfer) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'copy';
+      });
+      svg.addEventListener('drop', (event) => this.onResourceDrop(event));
       svg.addEventListener('pointerdown', (event) => this.onPointerDown(event));
       svg.addEventListener('pointermove', (event) => this.onPointerMove(event));
       svg.addEventListener('pointerup', (event) => this.onPointerUp(event));
@@ -251,9 +257,13 @@
         return;
       }
       if (tool !== 'place') this.placement = null;
+      // Una ruta a medio trazar no se descarta en silencio: se cierra con los
+      // puntos ya confirmados antes de cambiar de herramienta.
+      if (this.draft?.tool === 'route' && this.draft.points.length > 2) this.finishRoute();
       this.tool = tool;
       this.draft = null;
       this.ghost = null;
+      this.pending = null;
       this.drag = null;
       qa('[data-tool]').forEach((button) => {
         if (button.classList.contains('rail-library')) return;
@@ -457,8 +467,18 @@
 
     /* -------------------------------- puntero -------------------------------- */
     onPointerDown(event) {
-      if (event.target.closest?.('.selection-frame .handle')) {
-        this.beginTransform(event, event.target.closest('.handle').dataset.handle);
+      const handleNode = event.target.closest?.('.selection-frame .handle');
+      if (handleNode) {
+        // No se transforma todavía: un clic simple sobre un tirador no debe
+        // mover ni rotar nada. El arrastre empieza al superar el umbral.
+        this.pending = {
+          mode: 'transform',
+          handle: handleNode.dataset.handle,
+          start: this.toCanvas(event),
+          startClient: { x: event.clientX, y: event.clientY },
+          pointerId: event.pointerId,
+        };
+        this.svg.setPointerCapture?.(event.pointerId);
         return;
       }
       if (event.button === 1 || (event.button === 0 && this.spaceDown)) {
@@ -474,19 +494,20 @@
           if (event.shiftKey) this.model.select([id], true);
           else if (!this.model.selection.has(id)) this.model.select([id]);
           if (this.model.canEdit() && this.model.selection.size) {
-            this.drag = {
+            this.pending = {
               mode: 'move',
               start: point,
-              frame: this.model.selectionFrame(),
               startClient: { x: event.clientX, y: event.clientY },
+              pointerId: event.pointerId,
             };
-            this.model.begin();
             this.svg.setPointerCapture?.(event.pointerId);
           }
+          this.scheduleRender();
         } else {
           if (!event.shiftKey) this.model.clearSelection();
           this.drag = { mode: 'marquee', start: point, current: point };
           this.svg.setPointerCapture?.(event.pointerId);
+          this.scheduleRender();
         }
         return;
       }
@@ -495,8 +516,19 @@
         return;
       }
       if (this.tool === 'route') {
-        if (!this.draft) this.draft = { tool: 'route', points: [point, point] };
-        else this.draft.points.splice(this.draft.points.length - 1, 0, point);
+        if (!this.draft) {
+          this.draft = { tool: 'route', points: [point, point] };
+        } else {
+          const committed = this.draft.points.slice(0, -1);
+          const first = committed[0];
+          const closeDistance = 14 / (this.view.zoom || 1);
+          if (first && committed.length >= 3 && G.distance(point, first) <= closeDistance) {
+            this.finishRoute(true);
+            return;
+          }
+          this.draft.points.splice(this.draft.points.length - 1, 0, point);
+        }
+        this.updateRouteHint();
         this.scheduleRender();
         return;
       }
@@ -510,10 +542,52 @@
       this.scheduleRender();
     }
 
+    /** Convierte un arrastre pendiente en movimiento real (evita saltos al hacer clic). */
+    startMove(pending) {
+      this.drag = {
+        mode: 'move',
+        start: pending.start,
+        frame: this.model.selectionFrame(),
+        startClient: pending.startClient,
+        pointerId: pending.pointerId,
+      };
+      this.model.begin();
+      this.svg.setPointerCapture?.(pending.pointerId);
+    }
+
+    /** Convierte un arrastre pendiente en transformación real desde un tirador. */
+    startTransform(pending) {
+      const frame = this.model.selectionFrame();
+      if (!frame) return;
+      const display = this.renderer.displayFrame(frame);
+      const anchor = this.renderer.handlePoint(frame, pending.handle);
+      this.model.begin();
+      this.drag = {
+        mode: 'transform',
+        handle: pending.handle,
+        frame,
+        start: pending.start,
+        startClient: pending.startClient,
+        anchor,
+        displayAnchor: this.renderer.handlePoint(display, pending.handle),
+        pointerId: pending.pointerId,
+      };
+      this.svg.setPointerCapture?.(pending.pointerId);
+    }
+
     onPointerMove(event) {
       const point = this.clampPoint(this.toCanvas(event));
       const cursor = q('[data-cursor-position]');
       if (cursor) cursor.textContent = `X ${Math.round(point.x)} · Y ${Math.round(point.y)}`;
+      if (this.pending) {
+        const dx = event.clientX - this.pending.startClient.x;
+        const dy = event.clientY - this.pending.startClient.y;
+        if (Math.hypot(dx, dy) < 3) return;
+        const pending = this.pending;
+        this.pending = null;
+        if (pending.mode === 'transform') this.startTransform(pending);
+        else this.startMove(pending);
+      }
       if (this.pan) {
         this.view.panX = this.pan.panX + (event.clientX - this.pan.startX);
         this.view.panY = this.pan.panY + (event.clientY - this.pan.startY);
@@ -593,6 +667,11 @@
     }
 
     onPointerUp(event, cancelled = false) {
+      if (this.pending) {
+        this.pending = null;
+        this.scheduleRender();
+        return;
+      }
       if (this.pan) {
         this.pan = null;
         return;
@@ -663,20 +742,6 @@
       this.svg.setPointerCapture?.(event.pointerId);
     }
 
-    beginTransform(event, handle) {
-      const frame = this.model.selectionFrame();
-      if (!frame) return;
-      this.model.begin();
-      this.drag = {
-        mode: 'transform',
-        handle,
-        frame,
-        start: this.toCanvas(event),
-        pointerId: event.pointerId,
-      };
-      this.svg.setPointerCapture?.(event.pointerId);
-    }
-
     updateTransform(point, event) {
       const drag = this.drag;
       if (!drag) return;
@@ -689,7 +754,13 @@
         this.scheduleRender();
         return;
       }
-      const snapped = this.snapPoint(point, event);
+      // El tirador puede dibujarse expandido para no tapar trazos finos.
+      // Se aplica el desplazamiento del puntero sobre la esquina real del marco,
+      // así el primer movimiento no produce saltos.
+      const delta = { x: point.x - drag.start.x, y: point.y - drag.start.y };
+      const anchor = drag.anchor || point;
+      const target = { x: anchor.x + delta.x, y: anchor.y + delta.y };
+      const snapped = this.snapPoint(target, event);
       const next = G.resizeFrame(drag.frame, drag.handle, snapped, { keepRatio: event.shiftKey, minSize: MIN_SIZE });
       next.x = G.clamp(next.x, 0, canvas.width - Math.max(MIN_SIZE, next.w));
       next.y = G.clamp(next.y, 0, canvas.height - Math.max(MIN_SIZE, next.h));
@@ -758,21 +829,39 @@
       this.scheduleRender();
     }
 
-    finishRoute() {
+    finishRoute(closed = false) {
       if (!this.draft || this.draft.points.length < 2) return;
-      const points = this.draft.points.filter((point, index, list) => index === 0 || G.distance(point, list[index - 1]) > 2);
+      // El último punto es el cursor elástico: no forma parte del trazo.
+      const committed = this.draft.points.slice(0, -1);
+      const points = committed.filter((point, index, list) => index === 0 || G.distance(point, list[index - 1]) > 2);
+      this.draft = null;
       if (points.length < 2) {
-        this.draft = null;
+        this.toast('Una ruta necesita al menos dos puntos. Haz clic para trazar.', 'info');
+        this.updateRouteHint();
         this.scheduleRender();
         return;
       }
+      if (closed && points.length >= 3) points.push({ x: points[0].x, y: points[0].y });
       try {
         this.model.addPath('route', points, {});
+        this.toast(closed ? 'Ruta cerrada en circuito.' : 'Ruta de evacuación creada.', 'success', { duration: 2400 });
       } catch (error) {
         this.toast(error.message, 'error');
       }
-      this.draft = null;
+      if (this.tool === 'route') this.updateRouteHint();
       this.scheduleRender();
+    }
+
+    /** Pista contextual de la ruta en curso (puntos, cierre y atajos). */
+    updateRouteHint() {
+      const hint = q('[data-stage-hint]');
+      if (!hint) return;
+      if (!this.draft) {
+        hint.textContent = TYPE_HINTS.route;
+        return;
+      }
+      const count = Math.max(0, this.draft.points.length - 1);
+      hint.textContent = `Ruta de evacuación · ${count} punto${count === 1 ? '' : 's'} · clic en el primer punto para cerrar el circuito · Enter o doble clic termina · Retroceso quita el último · Esc cancela`;
     }
 
     insertAtPoint(tool, point) {
@@ -807,6 +896,43 @@
           this.model.clearSelection();
         }
         this.scheduleRender();
+      } catch (error) {
+        this.toast(error.message, 'error');
+      }
+    }
+
+    /** Coloca un recurso arrastrado desde la biblioteca al lienzo. */
+    onResourceDrop(event) {
+      const transfer = event.dataTransfer;
+      if (!transfer) return;
+      const raw = transfer.getData('application/x-normia-resource') || transfer.getData('text/plain') || '';
+      if (!raw) return;
+      event.preventDefault();
+      let payload;
+      try {
+        payload = JSON.parse(raw);
+      } catch {
+        return;
+      }
+      const kind = payload.kind === 'cad' ? 'cad' : payload.kind === 'sign' ? 'sign' : null;
+      const key = typeof payload.key === 'string' ? payload.key : '';
+      if (!kind || !key) return;
+      const type = kind === 'sign' ? `iso_${key.toLowerCase()}` : key;
+      if (!this.model.isKnownType(type)) {
+        this.toast('El recurso no pertenece a las bibliotecas locales.', 'error');
+        return;
+      }
+      if (!this.model.canEdit()) {
+        this.toast('La capa activa está bloqueada. Desbloquéala para colocar recursos.', 'error');
+        return;
+      }
+      const point = this.snapPoint(this.clampPoint(this.toCanvas(event)), event);
+      try {
+        this.model.placeFromLibrary(kind, key, point);
+        this.applyTool('select');
+        this.closeDrawer();
+        this.scheduleRender();
+        this.toast('Recurso colocado en el plano.', 'success', { duration: 2200 });
       } catch (error) {
         this.toast(error.message, 'error');
       }
@@ -876,6 +1002,8 @@
         if (this.draft) {
           this.draft = null;
           this.drag = null;
+          this.pending = null;
+          this.updateRouteHint();
           this.scheduleRender();
           return;
         }
@@ -888,6 +1016,15 @@
         return;
       }
       if (typing) return;
+      if (this.draft?.tool === 'route' && (event.key === 'Backspace' || event.key === 'Delete')) {
+        event.preventDefault();
+        const committed = this.draft.points.length - 1;
+        if (committed > 1) this.draft.points.splice(this.draft.points.length - 2, 1);
+        else this.draft = null;
+        this.updateRouteHint();
+        this.scheduleRender();
+        return;
+      }
       const mod = event.ctrlKey || event.metaKey;
       if (mod && event.key.toLowerCase() === 's') {
         event.preventDefault();

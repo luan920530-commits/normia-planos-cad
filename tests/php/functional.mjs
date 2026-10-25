@@ -291,6 +291,13 @@ try {
   const legacyTypes = new Set((catalog.design?.elements || []).map((element) => element.type));
   report.check('Alias heredados se convierten a ISO 7010', ['iso_e002', 'iso_f001', 'iso_e003', 'iso_f005', 'iso_e007'].every((type) => legacyTypes.has(type)), [...legacyTypes].join(','));
   report.check('Trazo heredado conserva puntos', (catalog.design?.elements || []).filter((element) => element.type === 'wall').every((element) => element.points?.length === 2));
+  const legacyLine = (catalog.design?.elements || []).find((element) => element.type === 'line');
+  const legacySvg = (await client.get(`projects/${projectId}/floors/${legacyFloorId}/export/svg`)).text;
+  const drawnLine = /<line x1="([-\d.]+)" y1="([-\d.]+)" x2="([-\d.]+)" y2="([-\d.]+)"/.exec(legacySvg);
+  report.check('La línea exportada sigue los puntos y no la diagonal de la caja',
+    Boolean(drawnLine) && Math.abs(Number(drawnLine[1]) - (legacyLine?.x || 0)) < 0.6 && Math.abs(Number(drawnLine[3]) - ((legacyLine?.x || 0) + (legacyLine?.w || 0))) < 0.6
+    && Math.abs(Number(drawnLine[2]) - (legacyLine?.y || 0)) < 0.6 && Math.abs(Number(drawnLine[4]) - (legacyLine?.y || 0)) < 0.6,
+    drawnLine ? drawnLine.slice(1).join(',') : 'sin <line>');
 
   const beforeInvalid = Number((await client.get(`projects/${projectId}`)).text.match(/class="floor-card/g)?.length || 0);
   const invalidLegacy = JSON.stringify({ format: 1, elements: [{ tool: 'herramienta_mala', x: 10, y: 10 }] });

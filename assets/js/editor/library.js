@@ -67,11 +67,27 @@
         this.app.startPlacement(this.kind, card.dataset.key);
       });
       this.grid?.addEventListener('keydown', (event) => {
-        if (event.key !== 'Enter' && event.key !== ' ') return;
         const card = event.target.closest('[data-key]');
         if (!card) return;
-        event.preventDefault();
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          this.select(card.dataset.key);
+          this.app.startPlacement(this.kind, card.dataset.key);
+          return;
+        }
+        if (event.key === ' ') {
+          event.preventDefault();
+          this.select(card.dataset.key);
+        }
+      });
+      this.grid?.addEventListener('dragstart', (event) => {
+        const card = event.target.closest?.('[data-key]');
+        if (!card || !event.dataTransfer) return;
         this.select(card.dataset.key);
+        const payload = JSON.stringify({ kind: this.kind, key: card.dataset.key });
+        event.dataTransfer.setData('application/x-normia-resource', payload);
+        event.dataTransfer.setData('text/plain', payload);
+        event.dataTransfer.effectAllowed = 'copy';
       });
       this.detail?.addEventListener('click', (event) => {
         if (event.target.closest('[data-insert]')) {
@@ -177,7 +193,10 @@
           card.className = `library-card${this.selectedKey === item.key ? ' is-selected' : ''}`;
           card.dataset.key = item.key;
           card.dataset.type = item.type;
-          card.setAttribute('aria-label', `${item.name} · ${item.code || item.key}`);
+          card.dataset.kind = this.kind;
+          card.draggable = true;
+          card.title = 'Arrastra al plano o usa “Insertar en el plano”';
+          card.setAttribute('aria-label', `${item.name} · ${item.code || item.key}. Arrastra al plano o pulsa Insertar.`);
           const thumb = document.createElement('span');
           thumb.className = 'library-thumb';
           thumb.style.setProperty('--thumb-color', item.color);
@@ -221,11 +240,11 @@
         <div class="library-detail-preview" style="--detail-color:${esc(item.color)}"></div>
         <h3>${esc(item.name)}</h3>
         <p class="library-detail-code">${item.code ? `${esc(item.code)} · ` : ''}${esc(item.familyName)}</p>
-        <p class="library-detail-description">${esc(item.description || 'Sin descripción adicional.')}</p>
         <div class="library-detail-actions">
           <button class="button button-primary" type="button" data-insert><svg class="icon"><use href="#i-plus"></use></svg>Insertar en el plano</button>
-          <span class="library-detail-hint">Luego haz clic sobre el lienzo para ubicarlo.</span>
+          <span class="library-detail-hint">El cajón se cierra y el recurso sigue al cursor: haz clic en el plano para ubicarlo. También puedes arrastrar la tarjeta hasta el lienzo o pulsar Enter sobre ella.</span>
         </div>
+        <p class="library-detail-description">${esc(item.description || 'Sin descripción adicional.')}</p>
         <p class="library-detail-note">Representación esquemática. No sustituye la señalización física ni certifica cumplimiento normativo.</p>`;
       const preview = this.detail.querySelector('.library-detail-preview');
       preview?.appendChild(this.app.renderer.thumbnail(item.type));

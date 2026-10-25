@@ -50,6 +50,42 @@ function handle(app, name) {
   return app.svg.querySelector(`.selection-frame .handle[data-handle="${name}"]`);
 }
 
+function numbers(value) {
+  return String(value || '').trim().split(/[\s,]+/).map(Number).filter((item) => Number.isFinite(item));
+}
+
+function renderedPoints(app, id) {
+  const node = app.svg.querySelector(`.plan-element[data-id="${id}"]`);
+  const polyline = node?.querySelector('polyline:not(.hit-area)');
+  return polyline ? numbers(polyline.getAttribute('points')) : [];
+}
+
+function near(actual, expected, tolerance = 1.5) {
+  return Math.abs(Number(actual) - Number(expected)) <= tolerance;
+}
+
+/** Puntos del trazo ya transformados por la rotación del grupo (como los pinta el navegador). */
+function worldPoints(app, id) {
+  const node = app.svg.querySelector(`.plan-element[data-id="${id}"]`);
+  const polyline = node?.querySelector('polyline:not(.hit-area)');
+  const raw = numbers(polyline?.getAttribute('points'));
+  const transform = /translate\(([-\d.eE]+) ([-\d.eE]+)\) rotate\(([-\d.eE]+)\) translate\(([-\d.eE]+) ([-\d.eE]+)\)/.exec(node?.getAttribute('transform') || '');
+  if (!transform) return raw;
+  const [, tx, ty, degrees, dx, dy] = transform.map(Number);
+  const angle = (degrees * Math.PI) / 180;
+  const points = [];
+  for (let index = 0; index < raw.length; index += 2) {
+    // translate(a b) rotate(θ) translate(d e) => mundo = R(p + d) + a
+    const px = raw[index] + dx;
+    const py = raw[index + 1] + dy;
+    points.push({
+      x: px * Math.cos(angle) - py * Math.sin(angle) + tx,
+      y: px * Math.sin(angle) + py * Math.cos(angle) + ty,
+    });
+  }
+  return points;
+}
+
 function routePath(relative) {
   return new URL(relative, 'http://127.0.0.1/').pathname + new URL(relative, 'http://127.0.0.1/').search;
 }
@@ -128,6 +164,114 @@ async function main() {
     const wall = app.model.design.elements[app.model.design.elements.length - 1];
     report.check('El muro conserva dos puntos y su longitud', wall?.type === 'wall' && wall.points?.length === 2 && Math.round(wall.w) === 220, `${wall?.type} · ancho ${Math.round(wall?.w || 0)}`);
 
+    /* ---------------- posiciones reales del trazo (no en el origen) ---------------- */
+    const wallNode = () => app.svg.querySelector(`.plan-element[data-id="${wall.id}"]`);
+    const wallStroke = () => wallNode()?.querySelector('polyline:not(.hit-area)');
+    let drawn = renderedPoints(app, wall.id);
+    report.check('El muro se dibuja en su posición real, no en el origen',
+      near(drawn[0], wall.x + wall.points[0].x) && near(drawn[1], wall.y + wall.points[0].y)
+      && near(drawn[2], wall.x + wall.points[1].x) && near(drawn[3], wall.y + wall.points[1].y),
+      `dibujado ${drawn.slice(0, 4).join(',')} · modelo ${Math.round(wall.x)},${Math.round(wall.y)}`);
+    report.check('El muro tiene una zona de pulsación amplia', Number(wallStroke()?.getAttribute('stroke-width')) > 0
+      && Number(wallNode()?.querySelector('.hit-area')?.getAttribute('stroke-width')) >= 12,
+      `${wallNode()?.querySelector('.hit-area')?.getAttribute('stroke-width')} uds`);
+
+    app.applyTool('select');
+    app.model.clearSelection();
+    app.renderNow();
+    const wallHit = clientPoint(app, wall.x + wall.w / 2, wall.y + wall.h / 2);
+    pointer(window, wallNode().querySelector('.hit-area') || wallStroke(), 'pointerdown', wallHit);
+    pointer(window, wallNode().querySelector('.hit-area') || wallStroke(), 'pointerup', wallHit);
+    app.renderNow();
+    report.check('Un clic en el trazo selecciona el muro correcto', app.model.selection.size === 1 && app.model.selection.has(wall.id));
+    const beforeSecondClick = JSON.stringify(elementById(app, wall.id));
+    pointer(window, wallNode().querySelector('.hit-area') || wallStroke(), 'pointerdown', wallHit);
+    pointer(window, wallNode().querySelector('.hit-area') || wallStroke(), 'pointerup', wallHit);
+    app.renderNow();
+    report.check('Un segundo clic no borra ni deforma el muro',
+      JSON.stringify(elementById(app, wall.id)) === beforeSecondClick && app.model.design.elements.some((element) => element.id === wall.id),
+      `elementos ${app.model.design.elements.length}`);
+
+    window.document.querySelector('[data-tool="rect"]')?.click();
+    app.renderNow();
+    window.document.querySelector('[data-tool="select"]')?.click();
+    app.renderNow();
+    report.check('Cambiar de herramienta conserva el elemento y su geometría',
+      JSON.stringify(elementById(app, wall.id)) === beforeSecondClick && Boolean(wallNode()));
+
+    /* --------------------- rotación sin saltar fuera del lienzo --------------------- */
+    app.model.select([wall.id]);
+    app.model.setRotation(90);
+    app.renderNow();
+    drawn = renderedPoints(app, wall.id);
+    const rotated = elementById(app, wall.id);
+    const rotatedWorld = worldPoints(app, wall.id);
+    const boxCenter = { x: rotated.x + rotated.w / 2, y: rotated.y + rotated.h / 2 };
+    const angle = (rotated.rotation * Math.PI) / 180;
+    const expectedPoint = (() => {
+      const world = { x: rotated.x + rotated.points[0].x, y: rotated.y + rotated.points[0].y };
+      const dx = world.x - boxCenter.x;
+      const dy = world.y - boxCenter.y;
+      return { x: boxCenter.x + dx * Math.cos(angle) - dy * Math.sin(angle), y: boxCenter.y + dx * Math.sin(angle) + dy * Math.cos(angle) };
+    })();
+    report.check('Rotar el muro mantiene el trazo junto a su caja',
+      near(rotatedWorld[0].x, expectedPoint.x, 2) && near(rotatedWorld[0].y, expectedPoint.y, 2)
+      && rotatedWorld[0].x > 0 && rotatedWorld[0].y > 0
+      && rotatedWorld[0].x < app.model.design.canvas.width && rotatedWorld[0].y < app.model.design.canvas.height,
+      `pintado ${Math.round(rotatedWorld[0].x)},${Math.round(rotatedWorld[0].y)} · esperado ${Math.round(expectedPoint.x)},${Math.round(expectedPoint.y)}`);
+    app.model.setRotation(0);
+    app.renderNow();
+
+    /* -------------------------------- líneas -------------------------------- */
+    app.applyTool('line');
+    drag(window, app.svg, clientPoint(app, 600, 400), clientPoint(app, 400, 500));
+    app.renderNow();
+    const lineElement = app.model.design.elements.at(-1);
+    const lineDrawn = renderedPoints(app, lineElement.id);
+    report.check('La línea respeta la dirección del trazo (no la diagonal de la caja)',
+      lineElement.type === 'line' && lineDrawn[0] > lineDrawn[2] && lineDrawn[1] < lineDrawn[3],
+      `${lineDrawn.slice(0, 4).join(',')}`);
+    report.check('La línea se dibuja en su posición real',
+      near(lineDrawn[0], 600, 3) && near(lineDrawn[1], 400, 3) && near(lineDrawn[2], 400, 3) && near(lineDrawn[3], 500, 3),
+      `${lineDrawn.slice(0, 4).map((value) => Math.round(value)).join(',')}`);
+
+    /* --------------------------------- rutas --------------------------------- */
+    const clickAt = (x, y) => {
+      const point = clientPoint(app, x, y);
+      pointer(window, app.svg, 'pointerdown', point);
+      pointer(window, app.svg, 'pointerup', point);
+      return point;
+    };
+    app.applyTool('route');
+    clickAt(120, 620);
+    clickAt(320, 620);
+    clickAt(320, 720);
+    report.check('La ruta acumula puntos mientras se dibuja', app.draft?.points?.length === 4, `${app.draft?.points?.length} puntos`);
+    report.check('La pista de la ruta indica cómo cerrarla', /cerrar el circuito/.test(q(window, '[data-stage-hint]').textContent), q(window, '[data-stage-hint]').textContent.slice(0, 60));
+    key(window, window.document.body, 'Backspace');
+    app.renderNow();
+    report.check('Retroceso quita el último punto de la ruta', app.draft?.points?.length === 3, `${app.draft?.points?.length}`);
+    clickAt(320, 720);
+    clickAt(122, 622);
+    app.renderNow();
+    const route = app.model.design.elements.at(-1);
+    report.check('Clic en el primer punto cierra el circuito', route.type === 'route' && route.points.length === 4
+      && near(route.points[0].x, route.points[3].x, 0.01) && near(route.points[0].y, route.points[3].y, 0.01),
+      `${route.points.length} puntos`);
+    const routeDrawn = renderedPoints(app, route.id);
+    report.check('La ruta se dibuja donde se trazó, no en el origen',
+      routeDrawn.length === 8 && near(routeDrawn[0], route.x + route.points[0].x, 2) && near(routeDrawn[1], route.y + route.points[0].y, 2)
+      && near(routeDrawn[6], route.x + route.points[3].x, 2) && near(routeDrawn[7], route.y + route.points[3].y, 2),
+      drawn.slice(0, 4).join(','));
+    app.model.select([route.id]);
+    app.renderNow();
+    report.check('La selección de la ruta abraza su caja real',
+      near(app.model.selectionFrame().x, route.x, 0.5) && near(app.model.selectionFrame().y, route.y, 0.5),
+      `${Math.round(app.model.selectionFrame().x)},${Math.round(app.model.selectionFrame().y)}`);
+    app.model.clearSelection();
+    app.applyTool('select');
+    app.renderNow();
+
     app.applyTool('door');
     const beforeDoor = app.model.design.elements.length;
     pointer(window, app.svg, 'pointerdown', clientPoint(app, 640, 320));
@@ -141,15 +285,30 @@ async function main() {
     app.library.open('sign');
     report.check('La biblioteca de señalización muestra 332 resultados', q(window, '[data-library-families]').textContent.includes('332'), q(window, '[data-library-families]').textContent.slice(0, 80));
     report.check('La biblioteca pinta pictogramas locales', qa(window, '[data-library-grid] .library-thumb svg').length > 0, String(qa(window, '[data-library-grid] .library-thumb svg').length));
-    app.closeDrawer();
+    /* --------------- flujo real: tarjeta → insertar → clic en el plano --------------- */
+    const signCard = qa(window, '[data-library-grid] .library-card').find((card) => card.dataset.key === 'E002');
+    report.check('Las tarjetas de la biblioteca se pueden arrastrar', signCard?.draggable === true);
+    signCard?.click();
+    report.check('Elegir una tarjeta muestra su ficha y el botón Insertar',
+      Boolean(q(window, '[data-library-detail] [data-insert]')) && q(window, '[data-library-detail]').textContent.includes('Salida'),
+      q(window, '[data-library-detail] h3')?.textContent);
+    q(window, '[data-library-detail] [data-insert]')?.click();
+    await sleep(30);
+    report.check('Insertar cierra el cajón y activa el modo colocación',
+      app.activeDrawer === null && app.tool === 'place' && app.placement?.type === 'iso_e002',
+      `cajón ${app.activeDrawer} · herramienta ${app.tool}`);
     const beforeSign = app.model.design.elements.length;
-    app.startPlacement('sign', 'E002');
     pointer(window, app.svg, 'pointerdown', clientPoint(app, 800, 300));
     pointer(window, app.svg, 'pointerup', clientPoint(app, 800, 300));
     app.renderNow();
     const signElement = app.model.design.elements.at(-1);
-    report.check('Colocar una señal ISO 7010', app.model.design.elements.length === beforeSign + 1 && signElement.type === 'iso_e002', signElement?.type);
+    report.check('Colocar una señal ISO 7010 desde la biblioteca', app.model.design.elements.length === beforeSign + 1 && signElement.type === 'iso_e002', signElement?.type);
+    report.check('La señal cae en el punto donde se hizo clic',
+      near(signElement.x + signElement.w / 2, 800, 12) && near(signElement.y + signElement.h / 2, 300, 12),
+      `centro ${Math.round(signElement.x + signElement.w / 2)},${Math.round(signElement.y + signElement.h / 2)}`);
     report.check('La señal usa el color de su familia', signElement?.color === '#237f52', signElement?.color);
+    const signNode = app.svg.querySelector(`.plan-element[data-id="${signElement.id}"]`);
+    report.check('La señal se dibuja como pictograma local', Boolean(signNode?.querySelector('svg')) && signNode.querySelector('svg').getAttribute('width') === String(signElement.w));
 
     const cadKey = Object.keys(app.catalogs.cad)[0];
     const beforeCad = app.model.design.elements.length;
@@ -158,6 +317,23 @@ async function main() {
     pointer(window, app.svg, 'pointerup', clientPoint(app, 900, 520));
     app.renderNow();
     report.check('Colocar un objeto CAD', app.model.design.elements.length === beforeCad + 1 && app.model.design.elements.at(-1).type === cadKey, cadKey);
+
+    /* --------------------- arrastrar y soltar desde la biblioteca --------------------- */
+    app.openDrawer('library');
+    app.library.open('cad');
+    app.renderNow();
+    const dropEvent = new window.Event('drop', { bubbles: true, cancelable: true });
+    Object.defineProperties(dropEvent, {
+      clientX: { value: clientPoint(app, 700, 620).clientX },
+      clientY: { value: clientPoint(app, 700, 620).clientY },
+      dataTransfer: { value: { getData: (type) => (type === 'text/plain' || type === 'application/x-normia-resource' ? JSON.stringify({ kind: 'cad', key: cadKey }) : '') } },
+    });
+    app.svg.dispatchEvent(dropEvent);
+    app.renderNow();
+    const dropped = app.model.design.elements.at(-1);
+    report.check('Arrastrar una tarjeta al lienzo crea el recurso', dropped.type === cadKey && app.model.design.elements.length === beforeCad + 2,
+      `${dropped.type} en ${Math.round(dropped.x)},${Math.round(dropped.y)}`);
+    report.check('Soltar cierra el cajón y vuelve a seleccionar', app.activeDrawer === null && app.tool === 'select');
 
     /* ------------------------------- selección ------------------------------- */
     selectElement(app, wall.id);
@@ -409,6 +585,46 @@ async function main() {
     const clamped = app.model.addElement('wall', { x: -500, y: -500, w: 99999, h: 2 });
     app.renderNow();
     report.check('Las coordenadas fuera del lienzo se limitan', clamped.x === 0 && clamped.y === 0 && clamped.w <= app.model.design.canvas.width, `${clamped.x},${clamped.y} ${clamped.w}`);
+
+    /* -------------------- bibliotecas completas sin excepciones -------------------- */
+    let assetsOk = 0;
+    const assetFailures = [];
+    for (const code of Object.keys(app.catalogs.signs)) {
+      try {
+        const thumb = app.renderer.thumbnail(`iso_${code.toLowerCase()}`);
+        if (thumb.querySelector('svg')) assetsOk += 1;
+        else assetFailures.push(code);
+      } catch (error) {
+        assetFailures.push(`${code}: ${error.message}`);
+      }
+    }
+    for (const key of Object.keys(app.catalogs.cad)) {
+      try {
+        const thumb = app.renderer.thumbnail(key);
+        if (thumb.querySelector('svg')) assetsOk += 1;
+        else assetFailures.push(key);
+      } catch (error) {
+        assetFailures.push(`${key}: ${error.message}`);
+      }
+    }
+    report.check('Los 332 pictogramas y 32 equipos se instancian sin errores', assetsOk === 364 && assetFailures.length === 0,
+      `${assetsOk}/364 · ${assetFailures.slice(0, 3).join(', ')}`);
+
+    const xlink = new window.DOMParser().parseFromString(
+      '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 10 10"><defs><g id="marca"><rect width="10" height="10"/></g></defs><use xlink:href="#marca"/></svg>',
+      'image/svg+xml',
+    ).documentElement;
+    let namespaceError = '';
+    try {
+      app.renderer.namespaceIds(xlink);
+    } catch (error) {
+      namespaceError = error.message;
+    }
+    const prefixed = xlink.querySelector('use')?.getAttribute('xlink:href') || xlink.querySelector('use')?.getAttributeNS('http://www.w3.org/1999/xlink', 'href') || '';
+    report.check('Los identificadores y referencias SVG se renombran sin selectores inválidos',
+      namespaceError === '' && prefixed.startsWith('#') && prefixed !== '#marca' && /-a\d+-marca$/.test(prefixed)
+      && !/a\d+-[^#]*-a\d+-marca$/.test(prefixed),
+      namespaceError || prefixed);
 
     report.check('Sin errores de JavaScript durante la sesión', window.__errors.length === 0, window.__errors.join(' | ').slice(0, 200));
   } finally {
