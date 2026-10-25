@@ -20,7 +20,60 @@ const VERSION = process.env.PHP_VERSION || '8.3';
 const EMAIL = process.env.NORMIA_EMAIL || 'admin@normia.local';
 const PASSWORD = process.env.NORMIA_PASSWORD || 'ClaveSegura2026';
 
-const runtime = await startRuntime(cloneProject(), VERSION, { cleanup: true });
+/*
+ * El servidor HTTP se enlaza ANTES de cargar PHP. Así nos quedamos con el
+ * puerto pedido y el proxy WebSocket interno de php-wasm (que usa un puerto
+ * efímero del sistema) no puede ocuparlo primero y dejar la vista previa en 403.
+ */
+let runtime = null;
+let ready = false;
+
+const server = http.createServer(async (request, response) => {
+  if (!ready) {
+    response.writeHead(503, { 'content-type': 'text/html; charset=utf-8', 'retry-after': '2' });
+    response.end('<!doctype html><html lang="es"><meta charset="utf-8"><title>Preparando la vista previa</title><meta http-equiv="refresh" content="2"><body style="font-family:system-ui;padding:2rem;color:#1e293b"><h1 style="font-size:1.1rem">Preparando la vista previa…</h1><p>PHP aún se está iniciando. Esta página se recarga sola.</p></body></html>');
+    return;
+  }
+  try {
+    const body = await readBody(request);
+    const headers = {};
+    for (const [name, value] of Object.entries(request.headers)) {
+      if (name === 'host' || name === 'connection' || name === 'content-length') continue;
+      headers[name] = Array.isArray(value) ? value.join(', ') : String(value ?? '');
+    }
+    headers.host = 'localhost';
+    if (runtime.client.cookie) headers.cookie = runtime.client.cookie;
+
+    const result = await runtime.handler.request({
+      method: request.method || 'GET',
+      url: request.url || '/',
+      headers,
+      body,
+    });
+
+    response.writeHead(result.httpStatusCode, toHeaders(result.headers));
+    response.end(Buffer.from(result.bytes));
+  } catch (error) {
+    console.error('Error en la vista previa:', error?.message || error);
+    response.writeHead(500, { 'content-type': 'text/plain; charset=utf-8' });
+    response.end('La vista previa encontró un error. Revisa la consola del servidor.');
+  }
+});
+
+server.keepAliveTimeout = 60000;
+
+await new Promise((resolve, reject) => {
+  server.once('error', (error) => {
+    if (error?.code === 'EADDRINUSE') {
+      console.error(`El puerto ${PORT} ya está ocupado. Cierra el proceso anterior o usa: PORT=8080 npm run preview`);
+      process.exit(1);
+    }
+    reject(error);
+  });
+  server.listen(PORT, '0.0.0.0', () => resolve());
+});
+const boundPort = server.address().port;
+console.log(`Escuchando en http://0.0.0.0:${boundPort} (PHP se inicia ahora)`);
 
 async function ensureInstalled() {
   const home = await runtime.client.get('/');
@@ -61,41 +114,11 @@ function readBody(request) {
   });
 }
 
+runtime = await startRuntime(cloneProject(), VERSION, { cleanup: true });
 await ensureInstalled();
 await runtime.login(EMAIL, PASSWORD);
-console.log(`Sesión iniciada como ${EMAIL}`);
+ready = true;
 
-const server = http.createServer(async (request, response) => {
-  try {
-    const body = await readBody(request);
-    const headers = {};
-    for (const [name, value] of Object.entries(request.headers)) {
-      if (name === 'host' || name === 'connection' || name === 'content-length') continue;
-      headers[name] = Array.isArray(value) ? value.join(', ') : String(value ?? '');
-    }
-    headers.host = 'localhost';
-    if (runtime.client.cookie) headers.cookie = runtime.client.cookie;
-
-    const result = await runtime.handler.request({
-      method: request.method || 'GET',
-      url: request.url || '/',
-      headers,
-      body,
-    });
-
-    response.writeHead(result.httpStatusCode, toHeaders(result.headers));
-    response.end(Buffer.from(result.bytes));
-  } catch (error) {
-    console.error('Error en la vista previa:', error?.message || error);
-    response.writeHead(500, { 'content-type': 'text/plain; charset=utf-8' });
-    response.end('La vista previa encontró un error. Revisa la consola del servidor.');
-  }
-});
-
-server.keepAliveTimeout = 60000;
-
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`Normia Planos CAD · vista previa PHP ${VERSION} en http://0.0.0.0:${PORT}`);
-  console.log(`Cuenta: ${EMAIL} · contraseña: ${PASSWORD}`);
-  console.log('Solo para revisión local: los datos viven en una copia temporal.');
-});
+console.log(`Normia Planos CAD · vista previa PHP ${VERSION} en http://0.0.0.0:${boundPort}`);
+console.log(`Cuenta: ${EMAIL} · contraseña: ${PASSWORD}`);
+console.log('Solo para revisión local: los datos viven en una copia temporal.');

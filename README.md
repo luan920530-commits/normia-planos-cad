@@ -395,6 +395,8 @@ npm run preview        # vista previa real en http://localhost:8080 (PHP en WebA
 
 `npm run preview` levanta la aplicación completa con `@php-wasm/node`: instala la demo en una copia temporal, inicia sesión y sirve el editor para revisarlo en un navegador real sin instalar PHP. Es solo para desarrollo (`tools/` no se incluye en los ZIP). Cuenta de la vista previa: `admin@normia.local` / `ClaveSegura2026`. Para cambiar el puerto, `PORT=9000 npm run preview`.
 
+El servidor HTTP se enlaza **antes** de cargar PHP a propósito: php-wasm abre un proxy WebSocket en un puerto efímero que, si se adelanta, responde 403 y deja la vista previa en blanco. Si el puerto elegido está ocupado, el script lo indica y sugiere `PORT=8080`.
+
 ### Qué cubre cada bloque
 
 | Bloque | Comprobaciones |
