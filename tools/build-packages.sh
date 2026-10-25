@@ -24,6 +24,7 @@ EXCLUDES=(
   --exclude=.gitignore
   --exclude=node_modules
   --exclude=dist
+  --exclude=paquetes
   --exclude=coverage
   --exclude=tests
   --exclude=tools

@@ -38,7 +38,7 @@ function invalidEntries(entries) {
     if (/storage\/logs\/(?!\.gitkeep$).+/.test(entry)) return true;
     if (/storage\/cache\/(?!\.gitkeep$).+/.test(entry)) return true;
     if (/last-error\.log$|\.DS_Store$|node_modules\/|\.git\//.test(entry)) return true;
-    if (/(^|\/)(tests|tools)\//.test(entry)) return true;
+    if (/(^|\/)(tests|tools|paquetes|dist)\//.test(entry)) return true;
     if (/(^|\/)package(-lock)?\.json$/.test(entry)) return true;
     return false;
   });
@@ -88,6 +88,21 @@ async function main() {
   report.check('SHA-256 del paquete de producción coincide', sums[path.basename(prodZip)] === sha256(prodZip), sums[path.basename(prodZip)] || 'sin suma');
   report.check('SHA-256 del paquete de demostración coincide', sums[path.basename(demoZip)] === sha256(demoZip), sums[path.basename(demoZip)] || 'sin suma');
   report.check('BUILD.txt documenta los paquetes', fs.existsSync(path.join(dist, 'BUILD.txt')) && fs.readFileSync(path.join(dist, 'BUILD.txt'), 'utf8').includes(appVersion));
+
+  const releaseDir = path.join(repoRoot, 'paquetes', `v${appVersion}`);
+  report.check('La entrega incluye los ZIP en paquetes/', fs.existsSync(path.join(releaseDir, `normia-planos-cad-${appVersion}.zip`)) && fs.existsSync(path.join(releaseDir, `normia-planos-cad-demo-${appVersion}.zip`)));
+  const releaseFile = path.join(releaseDir, 'SHA256SUMS.txt');
+  const releaseSums = fs.existsSync(releaseFile)
+    ? Object.fromEntries(fs.readFileSync(releaseFile, 'utf8').trim().split('\n').map((line) => {
+      const [hash, name] = line.trim().split(/\s+/);
+      return [name, hash];
+    }))
+    : {};
+  const releaseOk = fs.existsSync(releaseDir) && [`normia-planos-cad-${appVersion}.zip`, `normia-planos-cad-demo-${appVersion}.zip`].every((name) => {
+    const file = path.join(releaseDir, name);
+    return fs.existsSync(file) && releaseSums[name] === sha256(file);
+  });
+  report.check('Las sumas de la entrega coinciden con sus ZIP', releaseOk, Object.keys(releaseSums).join(', '));
 
   /* ---------------------- instalación limpia de la demo ---------------------- */
   const workdir = fs.mkdtempSync(path.join(os.tmpdir(), 'normia-package-'));

@@ -1,0 +1,16 @@
+Normia Planos CAD v1.0.0 · paquetes listos para desplegar
+=========================================================
+
+- normia-planos-cad-1.0.0.zip       aplicación completa (instalador web)
+- normia-planos-cad-demo-1.0.0.zip  igual, con el proyecto de demostración premarcado
+- SHA256SUMS.txt                    sumas de ambos ZIP
+- BUILD.txt                         resumen de la construcción
+
+Verificación de integridad:
+    sha256sum -c SHA256SUMS.txt
+
+Contenido y requisitos: README.md del repositorio.
+Instalación rápida: LEEME-PRIMERO.txt dentro de cada ZIP.
+
+Los ZIP no incluyen bases de datos, sesiones, credenciales, logs ni carpetas de
+desarrollo. Los planos son esquemáticos: verifica dimensiones y escala en sitio.
