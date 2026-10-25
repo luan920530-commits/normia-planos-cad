@@ -418,11 +418,23 @@ Las pruebas trabajan sobre copias temporales: no escriben configuración ni base
 
 ## Paquetes y verificación
 
+La entrega v1.0.0 incluye los ZIP ya construidos en **`paquetes/v1.0.0/`** (misma composición que genera el script, verificada por `tests/php/package.mjs`):
+
+```text
+paquetes/v1.0.0/
+├── normia-planos-cad-1.0.0.zip
+├── normia-planos-cad-demo-1.0.0.zip
+├── SHA256SUMS.txt
+└── BUILD.txt
+```
+
+Para regenerarlos desde el código (por ejemplo tras cambiar plantillas o catálogos):
+
 ```bash
 npm run build          # o: bash tools/build-packages.sh
 ```
 
-Genera en `dist/`:
+El script deja los artefactos en `dist/`:
 
 ```text
 normia-planos-cad-1.0.0.zip
@@ -431,17 +443,16 @@ SHA256SUMS.txt
 BUILD.txt
 ```
 
-- **Excluidos siempre**: `config/config.php`, `*.sqlite`, sesiones, logs, caché, `tests/`, `tools/`, `package.json`, `node_modules`, `.git`, `dist` y el marcador de demo (salvo en el paquete de demostración).
+- **Excluidos siempre**: `config/config.php`, `*.sqlite`, sesiones, logs, caché, `tests/`, `tools/`, `package.json`, `node_modules`, `.git`, `dist`, `paquetes` y el marcador de demo (salvo en el paquete de demostración).
 - **Incluidos**: aplicación, assets, catálogos, licencias, documentación, `LEEME-PRIMERO.txt`, `config/config.example.php` y carpetas `storage` vacías con `.gitkeep`.
 - Verifica las sumas:
 
 ```bash
-cd dist
+cd paquetes/v1.0.0
 sha256sum -c SHA256SUMS.txt
-sha256sum normia-planos-cad-1.0.0.zip normia-planos-cad-demo-1.0.0.zip
 ```
 
-- Los hashes exactos de cada entrega están en `dist/SHA256SUMS.txt` (no se versionan en Git porque `dist/` es un artefacto).
+Los hashes exactos de los ZIP publicados están en `paquetes/v1.0.0/SHA256SUMS.txt`; `dist/` es solo la salida de trabajo y está ignorada por Git.
 
 ---
 
