@@ -379,6 +379,26 @@ try {
   report.check('SVG incluye leyenda y aviso', res.text.includes('verifica dimensiones y escala') && res.text.includes('leyenda'));
   report.check('SVG sin recursos externos', !/(href|src)="https?:/.test(res.text) && !/xlink:href="(?!#)/.test(res.text));
   report.check('SVG con pictogramas embebidos', res.text.includes('<svg x=') && res.text.includes('data-layer='));
+  const footerSvg = res.text;
+  const footerCells = [...footerSvg.matchAll(/data-footer-cell="([a-z]+)"/g)].map((match) => match[1]);
+  report.check('El SVG lleva la franja de orientación con las cinco celdas',
+    footerSvg.includes('data-plan-footer="guia"')
+    && ['position', 'route', 'exit', 'fire', 'meeting'].every((key) => footerCells.includes(key)),
+    footerCells.join(','));
+  const footerBand = footerSvg.slice(footerSvg.indexOf('id="guia-evacuacion"'), footerSvg.indexOf('id="datos-plano"'));
+  report.check('Las celdas de orientación reutilizan los pictogramas ISO locales',
+    (footerBand.match(/<svg x=/g) || []).length >= 3 && footerBand.includes('viewBox="0 0 105.833 105.833"'),
+    `${(footerBand.match(/<svg x=/g) || []).length} pictogramas`);
+  report.check('El pie incluye los datos del plano y la nota de la aplicación',
+    footerSvg.includes('data-plan-data="1"') && footerSvg.includes('Bodega') && footerSvg.includes('Planta baja ajustada')
+    && footerSvg.includes('Escala 1:') && footerSvg.includes('Versión v') && footerSvg.includes('elementos')
+    && footerSvg.includes('© ') && footerSvg.includes('Normia Planos CAD') && footerSvg.includes('GPL-3.0')
+    && footerSvg.includes('verifica dimensiones y escala en sitio'),
+    (footerSvg.match(/data-footer-line="[a-z]+">([^<]{0,90})/g) || []).slice(0, 3).join(' | '));
+  report.check('El pie no repite el título duplicado sobre el plano',
+    !footerSvg.includes('Representación esquemática · verifica dimensiones') && /<title>/.test(footerSvg));
+  report.check('El pie cambia de columnas según el ancho del lienzo',
+    footerSvg.includes('data-footer-band="1"'), String(res.text.length));
   res = await client.get(`projects/${projectId}/floors/${floorId}/export/json`);
   let exported = {};
   try { exported = JSON.parse(res.text); } catch {}

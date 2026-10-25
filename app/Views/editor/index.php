@@ -148,6 +148,9 @@
         <button class="rail-button" type="button" data-open-drawer="versions" data-tooltip="Versiones" aria-label="Versiones">
           <svg class="icon"><use href="#i-history"></use></svg><span>Versiones</span>
         </button>
+        <button class="rail-button" type="button" data-open-drawer="footer" data-tooltip="Pie de plano" aria-label="Pie de plano">
+          <svg class="icon"><use href="#i-layout-footer"></use></svg><span>Pie de plano</span>
+        </button>
         <button class="rail-button" type="button" data-open-drawer="settings" data-tooltip="Ajustes del piso" aria-label="Ajustes del piso">
           <svg class="icon"><use href="#i-settings"></use></svg><span>Ajustes</span>
         </button>
@@ -352,9 +355,29 @@
     <button class="export-card" type="button" data-export="png"><span class="export-icon"><svg class="icon"><use href="#i-image"></use></svg></span><strong>PNG</strong><small>Imagen rasterizada a partir del SVG guardado. Útil para informes.</small><span class="export-action">Descargar <svg class="icon"><use href="#i-download"></use></svg></span></button>
     <button class="export-card" type="button" data-export="json"><span class="export-icon"><svg class="icon"><use href="#i-file"></use></svg></span><strong>JSON</strong><small>Formato propio validado. Conserva capas, textos, rotaciones y objetos.</small><span class="export-action">Descargar <svg class="icon"><use href="#i-download"></use></svg></span></button>
     <button class="export-card" type="button" data-export="print"><span class="export-icon"><svg class="icon"><use href="#i-print"></use></svg></span><strong>Imprimir / PDF</strong><small>Abre una hoja limpia; usa el diálogo del navegador para guardar PDF.</small><span class="export-action">Abrir <svg class="icon"><use href="#i-chevron-right"></use></svg></span></button>
+    <button class="export-card export-footer-card" type="button" data-open-drawer="footer" data-footer-open><span class="export-icon"><svg class="icon"><use href="#i-layout-footer"></use></svg></span><strong>Pie de plano</strong><small>Franja de orientación y datos del piso que acompaña al SVG, al PNG y a la impresión.</small><span class="export-action">Revisar <svg class="icon"><use href="#i-chevron-right"></use></svg></span></button>
     <div class="notice notice-info export-note"><svg class="icon"><use href="#i-info"></use></svg><p>Las exportaciones usan la última versión guardada, no cambios sin guardar. No se ofrece compatibilidad DWG/DXF en esta versión.</p></div>
   </div>
   <footer class="drawer-foot"><p><a class="text-link" href="<?= e(url('projects/' . (int) $project['id'] . '#importar')) ?>">Importar un plano JSON</a> desde el proyecto.</p></footer>
+</section>
+
+<section class="drawer drawer-narrow" data-drawer="footer" hidden aria-labelledby="footer-title">
+  <header class="drawer-head">
+    <div><span class="eyebrow">Salida</span><h2 id="footer-title">Pie de plano</h2></div>
+    <button class="icon-button" type="button" data-close-drawer aria-label="Cerrar el pie de plano"><svg class="icon"><use href="#i-close"></use></svg></button>
+  </header>
+  <div class="drawer-body footer-body">
+    <p class="help-text">Este pie se agrega automáticamente debajo del plano en la exportación SVG, en el PNG y en la impresión. Toma los datos guardados del proyecto y del piso; los cambios sin guardar no aparecen hasta que guardes.</p>
+    <div class="footer-preview" data-footer-preview aria-live="polite">
+      <p class="muted">Preparando la vista previa…</p>
+    </div>
+    <div class="footer-cells" data-footer-cells></div>
+    <div class="notice notice-info"><svg class="icon"><use href="#i-info"></use></svg><p>Las cinco celdas de orientación son fijas: posición actual, rutas, salidas, equipos contra incendios y punto de reunión. El bloque inferior incluye proyecto, piso, nivel, sitio, área, responsable, escala, unidad, versión, fecha de guardado, número de elementos y la nota de la aplicación que generó el plano.</p></div>
+  </div>
+  <footer class="drawer-foot footer-actions">
+    <button class="button button-primary button-small" type="button" data-export="print"><svg class="icon"><use href="#i-print"></use></svg>Imprimir con el pie</button>
+    <button class="button button-ghost button-small" type="button" data-export="svg"><svg class="icon"><use href="#i-download"></use></svg>Descargar SVG</button>
+  </footer>
 </section>
 
 <section class="drawer drawer-narrow" data-drawer="settings" hidden aria-labelledby="settings-title">

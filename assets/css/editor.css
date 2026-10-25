@@ -672,3 +672,21 @@ body.is-dragging-resource .library-card { cursor: grabbing; }
   .rail-button > span { display: none; }
   .rail-library .rail-count { display: none; }
 }
+
+/* ------------------------------- pie de plano ------------------------------- */
+.footer-body { gap: 12px; }
+.footer-preview {
+  border: 1px solid var(--line); border-radius: 12px; overflow: hidden;
+  background: #fff; box-shadow: var(--shadow-sm);
+  max-height: 340px; overflow-y: auto;
+}
+.footer-preview-svg { display: block; width: 100%; height: auto; }
+.footer-cells { display: flex; flex-wrap: wrap; gap: 6px; }
+.footer-cell-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 10px; border-radius: 999px; border: 1px solid var(--line);
+  background: var(--surface-soft); font-size: .74rem; color: var(--ink);
+}
+.footer-cell-dot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; }
+.footer-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.export-footer-card { grid-column: 1 / -1; }

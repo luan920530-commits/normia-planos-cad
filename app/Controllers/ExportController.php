@@ -95,6 +95,7 @@ final class ExportController extends BaseController
             'workplace' => $floor['project_workplace'] ?? '',
             'exported_by' => $this->user()['name'] ?? '',
             'version' => (int) $floor['version'],
+            'saved_at' => $floor['updated_at'] ?? '',
         ];
     }
 }

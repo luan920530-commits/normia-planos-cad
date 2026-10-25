@@ -142,7 +142,7 @@ Editor B: conserva el diseño, muestra aviso, permite recargar v6 o descargar co
 assets/js/ui.js              Tooltips únicos, toasts, diálogos, menús y confirmaciones
 assets/js/lib/geometry.js    clamp, snap, distancia, rotación, cajas, marcos, redimensionado
 assets/js/lib/model.js       Diseño normalizado, selección, historial (120), operaciones CAD
-assets/js/lib/renderer.js    Dibujo SVG: rejilla, capas, elementos, selección, reglas, miniaturas
+assets/js/lib/renderer.js    Dibujo SVG: rejilla, capas, elementos, selección, reglas, miniaturas, pie de plano
 assets/js/editor/store.js    API: guardar, autosave, versiones, restaurar, ajustes, errores
 assets/js/editor/inspector.js Inspector plegable: ficha, geometría, apariencia, redes, superposiciones y acciones
 assets/js/editor/library.js  Cajón de bibliotecas: chips, búsqueda, grilla y detalle
@@ -159,6 +159,21 @@ assets/js/editor.js          EditorApp: arranque, herramientas, puntero, teclado
 - Los tooltips son **uno solo** en el DOM (`#normia-tooltip`), con temporizador y limpieza de texto al ocultarse; así no se acumulan.
 - La exportación PNG rasteriza el mismo renderizador en un `<canvas>` del navegador; nada se sube al servidor.
 - La impresión se resuelve en el servidor (`editor/print.php`) con `print.css` y el diseño guardado, para que el resultado sea reproducible.
+
+## Pie de página de los planos
+
+El pie que acompaña a cada plano se compone en el servidor y se reutiliza tal cual en el navegador:
+
+```text
+app/Services/PlanFooter.php   Celdas de orientación, líneas de datos, maquetación adaptable y dibujo SVG
+app/Services/SvgAsset.php     Incrustación saneada de pictogramas del catálogo (señales y equipos CAD)
+```
+
+- `PlanFooter::payload($design, $meta)` devuelve `cells`, `lines` y `fields`. El editor lo recibe en `boot.footer`; `EditorController` y `ExportController` lo generan con los mismos datos guardados.
+- `SvgExporter` reserva la altura con `PlanFooter::bandHeight()` y `PlanFooter::dataHeight()` y dibuja la franja antes de la leyenda de redes; así el alto total del SVG siempre coincide con el contenido.
+- En el navegador, `Renderer.footerBand(payload, {width, top})` produce el mismo marcado (`data-plan-footer`, `data-footer-cell`, `data-footer-line`), que es lo que entra al PNG. `EditorApp.buildExportSvg()` amplía el `viewBox` con la altura del pie.
+- Las celdas se reparten en 5, 3 o 1 columna según el ancho y cada texto se parte por palabras con `SvgAsset::wrap()`, el mismo algoritmo en PHP y en JS.
+- `SvgAsset` centraliza la validación (`LibraryRepository::safeSvg`) y la copia de atributos de presentación, de modo que el plano y el pie comparten una única ruta de incrustación.
 
 ## Seguridad
 

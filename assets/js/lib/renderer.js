@@ -613,6 +613,215 @@
       return group;
     }
 
+    /* -------------------------- pie de página del plano -------------------------- */
+
+    /**
+     * El pie del plano se dibuja en el navegador sólo para la exportación PNG.
+     * El contenido (`payload`) llega del servidor en `boot.footer`, de modo que
+     * la franja de orientación, los datos y la nota de la aplicación sean los
+     * mismos que en el SVG exportado y en la impresión.
+     */
+    static footerColumns(width, count) {
+      if (count <= 1) return 1;
+      if (width >= 1000) return Math.min(5, count);
+      return width >= 620 ? Math.min(3, count) : 1;
+    }
+
+    static footerRowHeight(width) {
+      return Math.round(Math.max(84, Math.min(150, width * 0.082)) * 100) / 100;
+    }
+
+    static footerLineStep(size) {
+      return Math.round(size * 1.34 * 100) / 100;
+    }
+
+    static footerToneSize(tone) {
+      return tone === 'strong' ? 10.5 : (tone === 'body' ? 9.2 : 8.4);
+    }
+
+    static footerToneFill(tone) {
+      return tone === 'strong' ? '#0f172a' : (tone === 'body' ? '#475569' : '#7c8798');
+    }
+
+    /** Parte el texto por palabras con un ancho estimado en caracteres. */
+    static wrapText(text, maxChars) {
+      const limit = Math.max(8, maxChars);
+      const words = String(text ?? '').trim().split(/\s+/).filter(Boolean);
+      const lines = [];
+      let current = '';
+      for (const word of words) {
+        const candidate = current === '' ? word : `${current} ${word}`;
+        if (candidate.length <= limit) {
+          current = candidate;
+          continue;
+        }
+        if (current !== '') lines.push(current);
+        current = word;
+        while (current.length > limit) {
+          lines.push(current.slice(0, limit));
+          current = current.slice(limit);
+        }
+      }
+      if (current !== '') lines.push(current);
+      return lines.length ? lines : [''];
+    }
+
+    /** Resuelve los marcadores `{clave}` de las líneas con los datos del piso. */
+    static footerText(template, fields) {
+      return String(template ?? '').replace(/\{([a-z_]+)\}/g, (match, key) => (
+        fields[key] === undefined || fields[key] === null ? match : String(fields[key])
+      ));
+    }
+
+    footerPayload(payload = {}, width) {
+      const fields = payload.fields || {};
+      const cells = Array.isArray(payload.cells) ? payload.cells : [];
+      const templates = Array.isArray(payload.lines) ? payload.lines : [];
+      const lines = [];
+      for (const template of templates) {
+        const tone = template.tone || 'body';
+        const size = Renderer.footerToneSize(tone);
+        const text = Renderer.footerText(template.text, fields);
+        const maxChars = Math.max(24, Math.floor((width - 28) / (size * 0.52)));
+        for (const part of Renderer.wrapText(text, maxChars)) lines.push({ text: part, tone, size });
+      }
+      return { cells, lines };
+    }
+
+    static footerBandHeight(width, count) {
+      const rows = Math.ceil(Math.max(1, count) / Renderer.footerColumns(width, count));
+      return Math.round(rows * Renderer.footerRowHeight(width) * 100) / 100;
+    }
+
+    /** Altura total que ocupa el pie (franja + bloque de datos). */
+    footerHeight(payload, width) {
+      const resolved = this.footerPayload(payload, width);
+      const data = resolved.lines.reduce((total, line) => total + Renderer.footerLineStep(line.size), 0);
+      return Renderer.footerBandHeight(width, resolved.cells.length) + data + 16;
+    }
+
+    /** Dibuja la franja y el bloque de datos a partir de `top`. */
+    footerBand(payload, options = {}) {
+      const width = Number(options.width || 0);
+      const top = Number(options.top || 0);
+      const { cells, lines } = this.footerPayload(payload, width);
+      const columns = Renderer.footerColumns(width, cells.length);
+      const rows = Math.ceil(Math.max(1, cells.length) / columns);
+      const rowHeight = Renderer.footerRowHeight(width);
+      const band = rows * rowHeight;
+      const cellWidth = width / columns;
+      const group = node('g', { id: 'pie-plano', 'data-plan-footer': 'guia', 'font-family': 'Helvetica, Arial, sans-serif' });
+      group.appendChild(node('rect', { x: 0, y: top, width, height: this.footerHeight(payload, width), fill: '#ffffff' }));
+
+      const bandGroup = node('g', { id: 'guia-evacuacion', 'data-footer-band': '1' });
+      bandGroup.appendChild(node('rect', { x: 0, y: top, width, height: band, fill: '#f8fafc', stroke: '#e2e8f0', 'stroke-width': 1 }));
+      for (let row = 0; row <= rows; row += 1) {
+        const y = top + row * rowHeight;
+        bandGroup.appendChild(node('line', { x1: 0, y1: y, x2: width, y2: y, stroke: '#e2e8f0', 'stroke-width': 1 }));
+      }
+      for (let column = 1; column < columns; column += 1) {
+        bandGroup.appendChild(node('line', {
+          x1: column * cellWidth, y1: top, x2: column * cellWidth, y2: top + band, stroke: '#e2e8f0', 'stroke-width': 1,
+        }));
+      }
+      cells.forEach((cell, index) => {
+        const column = index % columns;
+        const row = Math.floor(index / columns);
+        bandGroup.appendChild(this.footerCell(cell, column * cellWidth, top + row * rowHeight, cellWidth, rowHeight));
+      });
+      group.appendChild(bandGroup);
+
+      const dataGroup = node('g', { id: 'datos-plano', 'data-plan-data': '1' });
+      dataGroup.appendChild(node('line', { x1: 0, y1: top + band, x2: width, y2: top + band, stroke: '#e2e8f0', 'stroke-width': 1 }));
+      let cursor = top + band + 6;
+      for (const line of lines) {
+        const baseline = cursor + line.size * 0.94;
+        dataGroup.appendChild(node('text', {
+          x: 14,
+          y: Math.round(baseline * 100) / 100,
+          'font-size': line.size,
+          'font-weight': line.tone === 'strong' ? 600 : 400,
+          fill: Renderer.footerToneFill(line.tone),
+          'data-footer-line': line.tone,
+        }, line.text));
+        cursor += Renderer.footerLineStep(line.size);
+      }
+      group.appendChild(dataGroup);
+      this.svg.appendChild(group);
+      return group;
+    }
+
+    footerCell(cell, x, y, width, height) {
+      const group = node('g', { 'data-footer-cell': cell.key || '' });
+      const pad = Math.min(14, height * 0.16);
+      const icon = Math.round(height * 0.5 * 100) / 100;
+      const gap = Math.round(height * 0.08 * 100) / 100;
+      const iconX = x + pad;
+      const iconY = y + (height - icon) / 2;
+      const textX = iconX + icon + gap;
+      const textWidth = Math.max(40, x + width - pad - textX);
+      const titleSize = Math.round(Math.max(7.5, Math.min(13.5, height * 0.098)) * 100) / 100;
+      const bodySize = Math.round(Math.max(6.6, Math.min(11, height * 0.082)) * 100) / 100;
+      const titleChars = Math.max(8, Math.floor(textWidth / (titleSize * 0.56)));
+      const bodyChars = Math.max(10, Math.floor(textWidth / (bodySize * 0.52)));
+      const titleLines = Renderer.wrapText(cell.title || '', titleChars).slice(0, 2);
+      const titleStep = titleSize * 1.18;
+      const lineStep = Renderer.footerLineStep(bodySize);
+      const titleBlock = titleLines.length * titleStep;
+      const available = height - pad * 2 - titleBlock - 4;
+      const maxBody = Math.max(1, Math.floor(available / lineStep));
+      const bodyLines = Renderer.wrapText(cell.text || '', bodyChars).slice(0, maxBody);
+      const blockHeight = titleBlock + 4 + bodyLines.length * lineStep;
+      let cursor = y + Math.max(pad, (height - blockHeight) / 2);
+
+      group.appendChild(this.footerIcon(String(cell.icon || ''), iconX, iconY, icon, cell.accent || '#1d4ed8'));
+      titleLines.forEach((line, index) => {
+        group.appendChild(node('text', {
+          x: Math.round(textX * 100) / 100,
+          y: Math.round((cursor + titleSize * 0.92 + index * titleStep) * 100) / 100,
+          'font-size': titleSize,
+          'font-weight': 700,
+          fill: cell.title_color || '#0f172a',
+          'letter-spacing': 0.3,
+        }, line));
+      });
+      cursor += titleBlock + 4;
+      bodyLines.forEach((line, index) => {
+        group.appendChild(node('text', {
+          x: Math.round(textX * 100) / 100,
+          y: Math.round((cursor + bodySize * 0.86 + index * lineStep) * 100) / 100,
+          'font-size': bodySize,
+          fill: '#475569',
+        }, line));
+      });
+      return group;
+    }
+
+    footerIcon(icon, x, y, size, accent) {
+      const code = /^sign:([A-Za-z][0-9]{3})$/.exec(icon);
+      if (code) {
+        const type = `iso_${code[1].toLowerCase()}`;
+        const asset = this.assetNode(type);
+        if (asset) {
+          asset.setAttribute('x', x);
+          asset.setAttribute('y', y);
+          asset.setAttribute('width', size);
+          asset.setAttribute('height', size);
+          return asset;
+        }
+      }
+      const scale = size / 24;
+      const group = node('g', { transform: `translate(${x} ${y}) scale(${scale})`, fill: accent });
+      group.appendChild(node('path', {
+        d: icon === 'pin'
+          ? 'M12 2.2c-4.2 0-7.6 3.4-7.6 7.6 0 5.6 7.6 12 7.6 12s7.6-6.4 7.6-12c0-4.2-3.4-7.6-7.6-7.6z'
+          : 'M2.5 9.4h9.9V5.2L21.9 12l-9.5 6.8v-4.2H2.5z',
+        fill: accent,
+      }));
+      if (icon === 'pin') group.appendChild(node('circle', { cx: 12, cy: 9.8, r: 2.9, fill: '#ffffff' }));
+      return group;
+    }
+
     renderRulers(top, left, design, view, unit) {
       this.renderRulerAxis(top, 'x', design, view, unit);
       this.renderRulerAxis(left, 'y', design, view, unit);

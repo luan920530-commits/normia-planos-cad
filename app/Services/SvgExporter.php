@@ -3,20 +3,12 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use RuntimeException;
-
 /**
  * Genera una representación SVG limpia del diseño guardado.
  * No incluye cuadrícula, guías, selección ni controles del editor.
  */
 final class SvgExporter
 {
-    /** Propiedades de presentación que se heredan desde la etiqueta raíz del catálogo. */
-    private const SVG_PRESENTATION = [
-        'fill', 'fill-opacity', 'fill-rule', 'stroke', 'stroke-width', 'stroke-opacity',
-        'stroke-linecap', 'stroke-linejoin', 'stroke-miterlimit', 'stroke-dasharray', 'opacity',
-    ];
-
     private static int $assetSequence = 0;
 
     public static function render(array $design, array $meta = [], bool $withFrame = true): string
@@ -25,8 +17,14 @@ final class SvgExporter
         $width = (float) $canvas['width'];
         $height = (float) $canvas['height'];
         /* La leyenda de redes se dibuja sólo en la exportación con marco (no en la vista previa). */
-        $mepRows = $withFrame ? self::mepLegend($design) : [];
-        $frameHeight = $withFrame ? 64.0 + 15.0 * count($mepRows) : 0.0;
+        $mepItems = $withFrame ? self::mepLegend($design) : [];
+        $mepColumns = $mepItems === [] ? 1 : self::legendColumns($width);
+        $mepRows = $mepItems === [] ? [] : array_chunk($mepItems, $mepColumns);
+        $footer = $withFrame ? PlanFooter::payload($design, $meta) : null;
+        $bandHeight = $withFrame ? PlanFooter::bandHeight($width) : 0.0;
+        $dataHeight = $withFrame ? PlanFooter::dataHeight($width, (array) $footer) : 0.0;
+        $mepHeight = $withFrame && $mepRows !== [] ? 10.0 + 15.0 * count($mepRows) : 0.0;
+        $frameHeight = $withFrame ? 2.0 + $bandHeight + $dataHeight + $mepHeight + 8.0 : 0.0;
         $totalHeight = $height + $frameHeight;
         $title = trim((string) ($meta['floor_name'] ?? 'Plano de emergencia'));
         $project = trim((string) ($meta['project_name'] ?? ''));
@@ -69,14 +67,12 @@ final class SvgExporter
         if ($withFrame) {
             $svg .= '<g id="leyenda" font-family="Helvetica, Arial, sans-serif">' . "\n";
             $svg .= '<line x1="0" y1="' . self::n($height + 0.5) . '" x2="' . self::n($width) . '" y2="' . self::n($height + 0.5) . '" stroke="#e2e8f0" stroke-width="1"/>' . "\n";
-            $svg .= '<text x="18" y="' . self::n($height + 26) . '" font-size="13" font-weight="600" fill="#0f172a">' . self::x($title) . '</text>' . "\n";
-            $svg .= '<text x="18" y="' . self::n($height + 44) . '" font-size="10" fill="#64748b">' . self::x($project !== '' ? $project : 'Normia Planos CAD') . ' · Escala de referencia ' . self::x($scale) . ' · Unidad ' . self::x($unit) . '</text>' . "\n";
-            $svg .= '<text x="' . self::n($width - 18) . '" y="' . self::n($height + 26) . '" text-anchor="end" font-size="9" fill="#64748b">Representación esquemática · verifica dimensiones y escala en sitio</text>' . "\n";
-            $svg .= '<text x="' . self::n($width - 18) . '" y="' . self::n($height + 44) . '" text-anchor="end" font-size="9" fill="#94a3b8">Pictogramas ISO 7010 · Normia Planos CAD</text>' . "\n";
+            $svg .= PlanFooter::render($width, $height + 2, (array) $footer);
+            $mepTop = $height + 2 + $bandHeight + $dataHeight;
             foreach ($mepRows as $rowIndex => $row) {
-                $rowY = $height + 62 + 15 * $rowIndex;
+                $rowY = $mepTop + 12 + 15 * $rowIndex;
                 foreach ($row as $columnIndex => $item) {
-                    $itemX = 18 + 168 * $columnIndex;
+                    $itemX = PlanFooter::PAD + self::legendColumnWidth($width) * $columnIndex;
                     $svg .= '<g data-mep-legend="' . self::x($item['key']) . '">';
                     $svg .= '<line x1="' . self::n($itemX) . '" y1="' . self::n($rowY - 3) . '" x2="' . self::n($itemX + 20) . '" y2="' . self::n($rowY - 3) . '" stroke="' . self::x($item['color']) . '" stroke-width="2.4" stroke-linecap="round"'
                         . ($item['dash'] !== '' ? ' stroke-dasharray="' . self::x($item['dash']) . '"' : '') . '/>';
@@ -261,51 +257,7 @@ final class SvgExporter
 
     private static function nestedSvg(string $asset, float $x, float $y, float $w, float $h, string $color): string
     {
-        // `$asset` puede ser un tipo del editor (iso_e002, sig_wc_men) o un
-        // código del catálogo (E002, SVC_WC_MEN); ambos deben resolverse igual.
-        $signCode = DesignValidator::signCodeForType($asset);
-        if ($signCode === null
-            && preg_match('/^(?:[EFMPW][0-9]{3}|SVC_[A-Z][A-Z0-9_]{1,40})$/D', $asset) === 1
-            && LibraryRepository::sign($asset) !== null) {
-            $signCode = $asset;
-        }
-        if ($signCode !== null) {
-            $definition = LibraryRepository::sign($signCode);
-        } else {
-            $definition = LibraryRepository::cadObject($asset);
-        }
-        if ($definition === null) {
-            throw new RuntimeException('El recurso no pertenece al catálogo local.');
-        }
-        $raw = (string) $definition['svg'];
-        if (!LibraryRepository::safeSvg($raw)) {
-            throw new RuntimeException('El recurso local no supera la validación de seguridad.');
-        }
-        if (preg_match('/<svg\b[^>]*\bviewBox="([^"]+)"/i', $raw, $match) === 1) {
-            $viewBox = $match[1];
-        } else {
-            $viewBox = '0 0 100 100';
-        }
-        $inner = '';
-        if (preg_match('/<svg\b[^>]*>(.*)<\/svg>\s*$/is', $raw, $match) === 1) {
-            $inner = $match[1];
-        }
-        // Los SVG del catálogo declaran fill/stroke en la etiqueta raíz. Si no
-        // se copian, el equipo se exporta como una caja gris sin trazo.
-        $rootAttributes = '';
-        if (preg_match('/<svg\b([^>]*)>/i', $raw, $rootMatch) === 1
-            && preg_match_all('/([a-z-]+)\s*=\s*"([^"]*)"/i', $rootMatch[1], $pairs, PREG_SET_ORDER)) {
-            foreach ($pairs as $pair) {
-                $name = strtolower($pair[1]);
-                if (in_array($name, self::SVG_PRESENTATION, true)) {
-                    $rootAttributes .= ' ' . $name . '="' . self::x($pair[2]) . '"';
-                }
-            }
-        }
-        return '<svg x="' . self::n($x) . '" y="' . self::n($y) . '" width="' . self::n($w) . '" height="' . self::n($h)
-            . '" viewBox="' . self::x($viewBox) . '" preserveAspectRatio="xMidYMid meet" color="' . self::x($color) . '"'
-            . $rootAttributes . '>'
-            . $inner . '</svg>' . "\n";
+        return SvgAsset::nested($asset, $x, $y, $w, $h, $color);
     }
 
     /** @param array<int,array{x:float|int,y:float|int}> $points */
@@ -412,11 +364,11 @@ final class SvgExporter
     }
 
     /**
-     * Filas de leyenda (máximo 6 por fila) con los sistemas de tubería y los
-     * circuitos presentes en el plano. El resultado es visual: los detalles
-     * numéricos se muestran en la vista de impresión y en el panel de redes.
+     * Entradas de leyenda con los sistemas de tubería y los circuitos
+     * presentes en el plano. El resultado es visual: los detalles numéricos se
+     * muestran en la vista de impresión y en el panel de redes.
      *
-     * @return list<list<array{key:string,color:string,dash:string,text:string}>>
+     * @return list<array{key:string,color:string,dash:string,text:string}>
      */
     private static function mepLegend(array $design): array
     {
@@ -451,7 +403,19 @@ final class SvgExporter
                 ];
             }
         }
-        return array_chunk($items, 6);
+        return $items;
+    }
+
+    /** Columnas de la leyenda de redes que caben en el ancho del plano. */
+    private static function legendColumns(float $width): int
+    {
+        return max(1, min(6, (int) floor(($width - PlanFooter::PAD * 2) / self::legendColumnWidth($width))));
+    }
+
+    private static function legendColumnWidth(float $width): float
+    {
+        $columns = max(1, min(6, (int) floor(($width - PlanFooter::PAD * 2) / 168.0)));
+        return round(($width - PlanFooter::PAD * 2) / $columns, 2);
     }
 
     private static function firstLine(string $value): string

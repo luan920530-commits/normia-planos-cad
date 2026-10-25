@@ -26,7 +26,7 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 10. [Arquitectura](#arquitectura)
 11. [Seguridad](#seguridad)
 12. [Pruebas](#pruebas)
-13. [Cambios de la versión 1.0.5](#cambios-de-la-versión-105)
+13. [Cambios de la versión 1.0.6](#cambios-de-la-versión-106)
 14. [Paquetes y verificación](#paquetes-y-verificación)
 15. [Limitaciones](#limitaciones)
 16. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
@@ -359,11 +359,22 @@ API interna del editor (todas las peticiones POST requieren `X-CSRF-Token` o `_t
 | **SVG** | Botón Exportar o ruta `…/export/svg` | Dibujo vectorial de la versión guardada, con estilos incrustados, sin scripts. |
 | **JSON** | `…/export/json` | `schema_version: 2`, proyecto, piso, diseño completo, atribución y fecha. |
 | **PNG** | Exportar → PNG | Se rasteriza en el navegador el diseño actual; no sube nada al servidor. |
-| **Impresión/PDF** | `…/print` o Exportar → Imprimir | Hoja con membrete, metadatos, plano y pie con el aviso de verificación en sitio. Usa “Guardar como PDF” del navegador. |
+| **Impresión/PDF** | `…/print` o Exportar → Imprimir | Hoja con el plano, la leyenda de redes y el pie de orientación. Usa “Guardar como PDF” del navegador. |
 
 Nombre de archivo: `normia-<proyecto>-<piso>-v<versión>.<svg|json|png>`. Las exportaciones usan la **última versión guardada**; si hay cambios sin guardar, el editor lo advierte antes de exportar.
 
 Los SVG se generan con identificadores únicos por plano, sin `<script>`, sin `<foreignObject>`, sin eventos `on*` y sin referencias externas; los catálogos se insertan como símbolos saneados.
+
+### Pie de plano
+
+Los tres formatos que muestran el plano (SVG, PNG e impresión) llevan el mismo **pie de página** debajo del dibujo, generado a partir de los datos guardados del proyecto y del piso:
+
+- **Franja de orientación** con cinco celdas, cada una con su pictograma: *su posición actual*, *rutas de evacuación*, *salidas de emergencia*, *equipos de protección contra incendios* y *punto de reunión*. Las celdas de salidas y extinción reutilizan los pictogramas ISO 7010 locales del catálogo (E002 y F001).
+- **Bloque de datos**: proyecto, piso y nivel; sitio, área y responsable; escala, unidad, versión, fecha de guardado y número de elementos; y una nota de atribución con la aplicación que generó el plano (`© año Normia Planos CAD · GPL-3.0 · versión`), los créditos de los pictogramas y el aviso de que el plano es esquemático.
+- La franja se reparte en **5, 3 o 1 columna** según el ancho del lienzo, y el texto se parte por palabras para no salirse de cada celda.
+- Se puede revisar antes de exportar desde **Exportar → Pie de plano** (o el botón *Pie de plano* de la barra lateral), que muestra la vista previa real del pie con los datos actuales.
+
+El mismo contenido se calcula una sola vez en `app/Services/PlanFooter.php`; el editor lo recibe en su arranque (`boot.footer`) para dibujar idéntico pie en la exportación PNG, que ocurre en el navegador.
 
 ---
 
@@ -500,8 +511,8 @@ Lo único que no funciona sin red es la **vista previa de desarrollo** (`npm run
 | Bloque | Comprobaciones |
 | --- | --- |
 | `tests/php/lint.mjs` | `php -l` sobre todo `app/`, `bootstrap.php` e `index.php` en 8.1 y 8.3. |
-| `tests/php/functional.mjs` | 144 comprobaciones: instalador, requisitos, contraseñas débiles, CSRF, sesión, autorización entre cuentas, CRUD de proyectos/pisos, duplicados, importación v1/v2, catálogos (354 señales y 145 objetos), catálogo y guardado de redes, señales de baño y de servicios (guardado, color de familia y exportación SVG), puertas y portones (geometría, sentidos de apertura, exportación con trazo), validaciones de la API, guardado/versiones/borradores/conflictos, exportaciones, ciclo de vida y logout. |
-| `tests/js/editor.mjs` | 177 comprobaciones de interfaz sobre la app real: arranque, 354 señales y 145 objetos, **trazado de tuberías y circuitos, inspector de red y panel de redes**, **mano y paneo, selección de superpuestos, inspector plegable y paleta de herramientas**, puertas dobles y portones, **vértices de ruta editables (arrastrar, doble clic, Alt+clic)**, **señal de baño insertada desde la biblioteca**, **posiciones reales del trazo**, **clic sobre muros finos**, **rotación**, **rutas cerradas**, **arrastrar y soltar desde la biblioteca sin que el cajón lo bloquee**, reglas, herramientas, inserción con puntero, selección, mover, escalar, rotar, color, cambio de tipo, deshacer/rehacer, duplicar, agrupar, bloquear, desplazar, texto y saneado, guardar, reabrir, borradores, conflictos, exportación SVG/JSON/PNG, tooltips sin acumulación, capas, versiones y límites. |
+| `tests/php/functional.mjs` | 149 comprobaciones: instalador, requisitos, contraseñas débiles, CSRF, sesión, autorización entre cuentas, CRUD de proyectos/pisos, duplicados, importación v1/v2, catálogos (354 señales y 145 objetos), catálogo y guardado de redes, señales de baño y de servicios (guardado, color de familia y exportación SVG), puertas y portones (geometría, sentidos de apertura, exportación con trazo), validaciones de la API, guardado/versiones/borradores/conflictos, exportaciones, ciclo de vida y logout. |
+| `tests/js/editor.mjs` | 184 comprobaciones de interfaz sobre la app real: arranque, 354 señales y 145 objetos, **trazado de tuberías y circuitos, inspector de red y panel de redes**, **mano y paneo, selección de superpuestos, inspector plegable y paleta de herramientas**, puertas dobles y portones, **vértices de ruta editables (arrastrar, doble clic, Alt+clic)**, **señal de baño insertada desde la biblioteca**, **posiciones reales del trazo**, **clic sobre muros finos**, **rotación**, **rutas cerradas**, **arrastrar y soltar desde la biblioteca sin que el cajón lo bloquee**, reglas, herramientas, inserción con puntero, selección, mover, escalar, rotar, color, cambio de tipo, deshacer/rehacer, duplicar, agrupar, bloquear, desplazar, texto y saneado, guardar, reabrir, borradores, conflictos, exportación SVG/JSON/PNG, tooltips sin acumulación, capas, versiones y límites. |
 | `tests/php/package.mjs` | 37 comprobaciones: construye ambos ZIP, verifica que no haya bases, sesiones, credenciales, logs ni carpetas de desarrollo, valida los SHA-256 y hace una instalación limpia de la demo comprobando assets (11), catálogos (354/145), los cuatro pisos del proyecto de ejemplo, señales de servicios y redes en la demo, editor, SVG, JSON e impresión. |
 | `tests/js/offline.mjs` | 0 dependencias de red: revisa las vistas, los estilos, los scripts y los catálogos y falla si aparece un `fetch`, un `WebSocket`, un `src`/`href`/`url()` externo, una llamada de red desde PHP o un dominio no declarado. |
 
@@ -512,10 +523,10 @@ Resultados esperados de la última ejecución completa:
 ✓ Sintaxis PHP 8.3 · 52 archivos, sin errores
 ✓ Sintaxis JavaScript · 20 archivos, sin errores
 ✓ Funcionamiento sin conexión · 78 archivos, sin referencias externas
-✓ Funcional PHP 8.1 · 144/144
-✓ Funcional PHP 8.3 · 144/144
-✓ Interfaz (JSDOM) PHP 8.1 · 177/177
-✓ Interfaz (JSDOM) PHP 8.3 · 177/177
+✓ Funcional PHP 8.1 · 149/149
+✓ Funcional PHP 8.3 · 149/149
+✓ Interfaz (JSDOM) PHP 8.1 · 184/184
+✓ Interfaz (JSDOM) PHP 8.3 · 184/184
 ✓ Paquetes y demo · 37/37
 9/9 pasos correctos
 ```
@@ -523,6 +534,15 @@ Resultados esperados de la última ejecución completa:
 Las pruebas trabajan sobre copias temporales: no escriben configuración ni bases en el repositorio. `node_modules` solo contiene dependencias de desarrollo y se excluye de los paquetes.
 
 ---
+
+## Cambios de la versión 1.0.6
+
+- **Pie de página en todos los planos.** La exportación SVG, el PNG y la hoja de impresión terminan con una franja de orientación para evacuación y un bloque de datos del piso. Se actualiza solo con lo último guardado.
+- **Cinco celdas de orientación** con icono y color propios: su posición actual, rutas de evacuación, salidas de emergencia, equipos de protección contra incendios y punto de reunión. Dos de ellas reutilizan los pictogramas ISO 7010 del catálogo local.
+- **Datos del plano y nota de la aplicación**: proyecto, piso, nivel, sitio, área, responsable, escala, unidad, versión, fecha de guardado, número de elementos, atribución de los pictogramas y aviso de verificación en sitio, con `© año Normia Planos CAD · GPL-3.0 · versión`.
+- **Cajón «Pie de plano»** con la vista previa real, la lista de celdas y atajos para imprimir o descargar el SVG con el pie.
+- **Un solo origen de contenido.** `PlanFooter` compone el pie en el servidor y el editor recibe los mismos datos, de modo que el PNG del navegador y el SVG del servidor no pueden desincronizarse.
+- **La franja se adapta al ancho** del lienzo (5, 3 o 1 columna) y los textos se parten por palabras; la leyenda de redes también reparte sus entradas según el ancho disponible.
 
 ## Cambios de la versión 1.0.5
 
@@ -585,12 +605,12 @@ Versión de corrección sobre la 1.0.0. Reemplaza los paquetes anteriores: la 1.
 
 ## Paquetes y verificación
 
-La entrega v1.0.5 incluye los ZIP ya construidos en **`paquetes/v1.0.5/`** (misma composición que genera el script, verificada por `tests/php/package.mjs`):
+La entrega v1.0.6 incluye los ZIP ya construidos en **`paquetes/v1.0.6/`** (misma composición que genera el script, verificada por `tests/php/package.mjs`):
 
 ```text
-paquetes/v1.0.5/
-├── normia-planos-cad-1.0.5.zip
-├── normia-planos-cad-demo-1.0.5.zip
+paquetes/v1.0.6/
+├── normia-planos-cad-1.0.6.zip
+├── normia-planos-cad-demo-1.0.6.zip
 ├── SHA256SUMS.txt
 └── BUILD.txt
 ```
@@ -604,8 +624,8 @@ npm run build          # o: bash tools/build-packages.sh
 El script deja los artefactos en `dist/`:
 
 ```text
-normia-planos-cad-1.0.5.zip
-normia-planos-cad-demo-1.0.5.zip
+normia-planos-cad-1.0.6.zip
+normia-planos-cad-demo-1.0.6.zip
 SHA256SUMS.txt
 BUILD.txt
 ```
@@ -615,11 +635,11 @@ BUILD.txt
 - Verifica las sumas:
 
 ```bash
-cd paquetes/v1.0.5
+cd paquetes/v1.0.6
 sha256sum -c SHA256SUMS.txt
 ```
 
-Los hashes exactos de los ZIP publicados están en `paquetes/v1.0.5/SHA256SUMS.txt`; `dist/` es solo la salida de trabajo y está ignorada por Git.
+Los hashes exactos de los ZIP publicados están en `paquetes/v1.0.6/SHA256SUMS.txt`; `dist/` es solo la salida de trabajo y está ignorada por Git.
 
 ---
 

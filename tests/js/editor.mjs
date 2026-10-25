@@ -811,6 +811,40 @@ async function main() {
     await app.export('print');
     report.check('La impresión usa la ruta del servidor', String(app.boot.printUrl).includes('print'));
 
+    /* ---------------------------- pie de plano ---------------------------- */
+    report.check('El arranque recibe los datos del pie de página',
+      Array.isArray(app.boot.footer?.cells) && app.boot.footer.cells.length === 5
+      && app.boot.footer.cells.map((cell) => cell.key).join(',') === 'position,route,exit,fire,meeting',
+      (app.boot.footer?.cells || []).map((cell) => cell.key).join(','));
+    q(window, '[data-open-drawer="footer"]').click();
+    app.renderFooterPreview();
+    const footerPreview = q(window, '[data-footer-preview] svg');
+    report.check('El cajón del pie de plano muestra una vista previa real',
+      app.activeDrawer === 'footer' && Boolean(footerPreview)
+      && footerPreview.querySelectorAll('[data-footer-cell]').length === 5,
+      `${footerPreview?.querySelectorAll('[data-footer-cell]').length} celdas`);
+    report.check('La vista previa incluye los datos del proyecto y la nota de la aplicación',
+      /Proyecto UI/.test(footerPreview?.textContent || '') && /Normia Planos CAD/.test(footerPreview?.textContent || '')
+      && /GPL-3\.0/.test(footerPreview?.textContent || ''),
+      (footerPreview?.textContent || '').replace(/\s+/g, ' ').slice(0, 110));
+    report.check('El cajón lista las cinco celdas de orientación',
+      qa(window, '[data-footer-cells] [data-footer-cell]').length === 5,
+      String(qa(window, '[data-footer-cells] [data-footer-cell]').length));
+    const footerExport = app.buildExportSvg();
+    const footerGroup = footerExport.svg.querySelector('[data-footer-band]');
+    report.check('El PNG incorpora el pie debajo del plano',
+      Boolean(footerGroup) && footerExport.height > app.model.design.canvas.height
+      && Number(footerExport.svg.getAttribute('height')) === footerExport.height,
+      `alto ${Math.round(footerExport.height)} vs lienzo ${app.model.design.canvas.height}`);
+    report.check('El pie exportado conserva las cinco celdas y las líneas de datos',
+      footerExport.svg.querySelectorAll('[data-footer-cell]').length === 5
+      && footerExport.svg.querySelectorAll('[data-footer-line]').length >= 4,
+      `${footerExport.svg.querySelectorAll('[data-footer-cell]').length} celdas · ${footerExport.svg.querySelectorAll('[data-footer-line]').length} líneas`);
+    app.closeDrawer();
+    report.check('El cajón del pie se cierra sin dejar el fondo bloqueado',
+      app.activeDrawer === null && !window.document.body.classList.contains('has-drawer'),
+      String(app.activeDrawer));
+
     /* ------------------------ mano, superposiciones, inspector ------------------------ */
     app.model.clearSelection();
     app.applyTool('select');

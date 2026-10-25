@@ -1889,7 +1889,30 @@
       }
     }
 
-    async exportPng(base) {
+    /**
+     * Datos del pie de página con la escala y la versión actuales. La base
+     * llega del servidor (`boot.footer`), así el PNG usa el mismo contenido
+     * que el SVG exportado y la impresión.
+     */
+    footerPayload() {
+      const base = this.boot.footer;
+      if (!base || !Array.isArray(base.cells) || base.cells.length === 0) return null;
+      const canvas = this.model.design.canvas;
+      return {
+        cells: base.cells,
+        lines: Array.isArray(base.lines) ? base.lines : [],
+        fields: {
+          ...(base.fields || {}),
+          scale: canvas.scale,
+          unit: canvas.unit,
+          version: String(this.store.version),
+          count: String(this.model.design.elements.length),
+        },
+      };
+    }
+
+    /** SVG de exportación: plano limpio + pie de página. */
+    buildExportSvg() {
       const canvas = this.model.design.canvas;
       const svg = document.createElementNS(NS, 'svg');
       svg.setAttribute('xmlns', NS);
@@ -1900,19 +1923,29 @@
         selection: null,
         activeTool: 'select',
       });
+      const footer = this.footerPayload();
+      const extra = footer ? renderer.footerHeight(footer, canvas.width) : 0;
+      const height = canvas.height + extra;
       svg.setAttribute('width', String(canvas.width));
-      svg.setAttribute('height', String(canvas.height));
-      svg.setAttribute('viewBox', `0 0 ${canvas.width} ${canvas.height}`);
+      svg.setAttribute('height', String(height));
+      svg.setAttribute('viewBox', `0 0 ${canvas.width} ${height}`);
+      if (footer) renderer.footerBand(footer, { width: canvas.width, top: canvas.height });
+      return { svg, width: canvas.width, height };
+    }
+
+    async exportPng(base) {
+      const canvas = this.model.design.canvas;
+      const { svg, width, height } = this.buildExportSvg();
       const source = new XMLSerializer().serializeToString(svg);
       const blob = new Blob([source], { type: 'image/svg+xml;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       try {
         const image = await loadImage(url);
         const maxPixels = 24_000_000;
-        const scale = Math.max(1, Math.min(2, Math.sqrt(maxPixels / (canvas.width * canvas.height))));
+        const scale = Math.max(1, Math.min(2, Math.sqrt(maxPixels / (width * height))));
         const target = document.createElement('canvas');
-        target.width = Math.round(canvas.width * scale);
-        target.height = Math.round(canvas.height * scale);
+        target.width = Math.round(width * scale);
+        target.height = Math.round(height * scale);
         const context = target.getContext('2d');
         if (!context) throw new Error('El navegador no permite dibujar el lienzo.');
         context.fillStyle = canvas.background;
@@ -1924,6 +1957,51 @@
         downloadBlob(pngBlob, `${base}.png`);
       } finally {
         URL.revokeObjectURL(url);
+      }
+    }
+
+    /* ---------------------------- pie de página ---------------------------- */
+
+    /**
+     * Vista previa del pie con los datos actuales del editor. Usa el mismo
+     * renderizador y la misma carga útil que la exportación PNG, para que lo
+     * que se ve aquí sea lo que se descarga.
+     */
+    renderFooterPreview() {
+      const holder = q('[data-footer-preview]');
+      if (!holder) return;
+      const payload = this.footerPayload();
+      if (!payload) {
+        holder.innerHTML = '<p class="muted">El servidor no envió los datos del pie de página.</p>';
+        return;
+      }
+      const width = this.model.design.canvas.width;
+      const svg = document.createElementNS(NS, 'svg');
+      const renderer = new root.Renderer(svg, this.catalogs);
+      const height = renderer.footerHeight(payload, width);
+      svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+      svg.setAttribute('width', String(width));
+      svg.setAttribute('height', String(height));
+      svg.setAttribute('role', 'img');
+      svg.setAttribute('aria-label', 'Vista previa del pie de plano');
+      svg.classList.add('footer-preview-svg');
+      renderer.footerBand(payload, { width, top: 0 });
+      holder.replaceChildren(svg);
+
+      const list = q('[data-footer-cells]');
+      if (list) {
+        list.replaceChildren(...payload.cells.map((cell) => {
+          const item = document.createElement('div');
+          item.className = 'footer-cell-chip';
+          item.dataset.footerCell = cell.key;
+          const dot = document.createElement('span');
+          dot.className = 'footer-cell-dot';
+          dot.style.background = cell.accent;
+          const label = document.createElement('span');
+          label.textContent = cell.title;
+          item.append(dot, label);
+          return item;
+        }));
       }
     }
 
@@ -1945,6 +2023,7 @@
       if (name === 'versions') this.loadVersions();
       if (name === 'layers') this.renderLayers();
       if (name === 'networks') this.renderNetworks();
+      if (name === 'footer') this.renderFooterPreview();
       const focusable = drawer.querySelector('input, button, select, textarea, a[href]');
       window.setTimeout(() => focusable?.focus(), 40);
     }

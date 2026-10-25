@@ -5,6 +5,7 @@ namespace App\Controllers;
 
 use App\Models\Floor;
 use App\Services\LibraryRepository;
+use App\Services\PlanFooter;
 use App\Models\Project;
 
 final class EditorController extends BaseController
@@ -50,6 +51,16 @@ final class EditorController extends BaseController
                 'autosaveInterval' => 30,
                 'draftAt' => $floor['draft']['updated_at'] ?? null,
                 'fileBase' => slug_filename($project['name'] . '-' . $floor['name']) . '-v' . (int) $floor['version'],
+                'footer' => PlanFooter::payload($design, [
+                    'project_name' => $project['name'],
+                    'floor_name' => $floor['name'],
+                    'level' => $floor['level'],
+                    'site' => $project['site'],
+                    'workplace' => $project['workplace'],
+                    'responsible' => $project['responsible'],
+                    'version' => (int) $floor['version'],
+                    'saved_at' => $floor['updated_at'] ?? '',
+                ]),
                 'project' => [
                     'name' => $project['name'],
                     'site' => $project['site'],

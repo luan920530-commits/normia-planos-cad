@@ -77,7 +77,6 @@
 <?php endif; ?>
   <footer class="print-footer">
     <p><strong>Verificación en sitio:</strong> este plano es una representación esquemática. Confirma dimensiones, accesos, rutas, señalización y equipos antes de usarlo. No constituye certificación ni aprobación legal automática.</p>
-    <p><?= e($meta['site'] !== '' ? $meta['site'] : '') ?><?= $meta['site'] !== '' && $meta['workplace'] !== '' ? ' · ' : '' ?><?= e($meta['workplace'] !== '' ? $meta['workplace'] : '') ?><?= $meta['responsible'] !== '' ? ' · Responsable: ' . e($meta['responsible']) : '' ?></p>
   </footer>
 </main>
 <script src="<?= e(asset('js/print.js')) ?>" defer></script>
