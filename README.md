@@ -514,7 +514,7 @@ Lo único que no funciona sin red es la **vista previa de desarrollo** (`npm run
 | --- | --- |
 | `tests/php/lint.mjs` | `php -l` sobre todo `app/`, `bootstrap.php` e `index.php` en 8.1 y 8.3. |
 | `tests/php/functional.mjs` | 152 comprobaciones: instalador, requisitos, contraseñas débiles, CSRF, sesión, autorización entre cuentas, CRUD de proyectos/pisos, duplicados, importación v1/v2, catálogos (355 señales y 145 objetos), catálogo y guardado de redes, señales de baño y de servicios (guardado, color de familia y exportación SVG), puertas y portones (geometría, sentidos de apertura, exportación con trazo), validaciones de la API, guardado/versiones/borradores/conflictos, exportaciones, ciclo de vida y logout. |
-| `tests/js/editor.mjs` | 228 comprobaciones de interfaz sobre la app real: arranque, 355 señales y 145 objetos, **trazado de tuberías y circuitos, inspector de red y panel de redes**, **mano y paneo, selección de superpuestos, inspector plegable y paleta de herramientas**, puertas dobles y portones, **vértices de ruta editables (arrastrar, doble clic, Alt+clic)**, **señal de baño insertada desde la biblioteca**, **posiciones reales del trazo**, **clic sobre muros finos, pictogramas y equipos**, **cambio de señal y de equipo desde el inspector**, **rotación**, **rutas cerradas**, **arrastrar y soltar desde la biblioteca sin que el cajón lo bloquee**, reglas, herramientas, inserción con puntero, selección, mover, escalar, rotar, color, cambio de tipo, deshacer/rehacer, duplicar, agrupar, bloquear, desplazar, texto y saneado, guardar, reabrir, borradores, conflictos, exportación SVG/JSON/PNG, tooltips sin acumulación, capas, versiones y límites. |
+| `tests/js/editor.mjs` | 229 comprobaciones de interfaz sobre la app real: arranque, 355 señales y 145 objetos, **trazado de tuberías y circuitos, inspector de red y panel de redes**, **mano y paneo, selección de superpuestos, inspector plegable y paleta de herramientas**, puertas dobles y portones, **vértices de ruta editables (arrastrar, doble clic, Alt+clic)**, **señal de baño insertada desde la biblioteca**, **posiciones reales del trazo**, **clic sobre muros finos, pictogramas y equipos**, **cambio de señal y de equipo desde el inspector**, **rotación**, **rutas cerradas**, **arrastrar y soltar desde la biblioteca sin que el cajón lo bloquee**, reglas, herramientas, inserción con puntero, selección, mover, escalar, rotar, color, cambio de tipo, deshacer/rehacer, duplicar, agrupar, bloquear, desplazar, texto y saneado, guardar, reabrir, borradores, conflictos, exportación SVG/JSON/PNG, tooltips sin acumulación, capas, versiones y límites. |
 | `tests/php/package.mjs` | 37 comprobaciones: construye ambos ZIP, verifica que no haya bases, sesiones, credenciales, logs ni carpetas de desarrollo, valida los SHA-256 y hace una instalación limpia de la demo comprobando assets (11), catálogos (355/145), los cuatro pisos del proyecto de ejemplo, señales de servicios y redes en la demo, la señal «Usted está aquí», editor, SVG, JSON e impresión. |
 | `tests/js/offline.mjs` | 0 dependencias de red: revisa las vistas, los estilos, los scripts y los catálogos y falla si aparece un `fetch`, un `WebSocket`, un `src`/`href`/`url()` externo, una llamada de red desde PHP o un dominio no declarado. |
 
@@ -527,8 +527,8 @@ Resultados esperados de la última ejecución completa:
 ✓ Funcionamiento sin conexión · 80 archivos, sin referencias externas
 ✓ Funcional PHP 8.1 · 152/152
 ✓ Funcional PHP 8.3 · 152/152
-✓ Interfaz (JSDOM) PHP 8.1 · 228/228
-✓ Interfaz (JSDOM) PHP 8.3 · 228/228
+✓ Interfaz (JSDOM) PHP 8.1 · 229/229
+✓ Interfaz (JSDOM) PHP 8.3 · 229/229
 ✓ Paquetes y demo · 37/37
 9/9 pasos correctos
 ```
@@ -543,7 +543,7 @@ Las pruebas trabajan sobre copias temporales: no escriben configuración ni base
 - **Seleccionar un solo objeto con un clic.** El problema real era que los pictogramas y los equipos se dibujan con trazos finos dentro de un SVG incrustado que ignora el puntero: al hacer clic en su interior no había nodo bajo el cursor, el editor lo interpretaba como un clic en el vacío y abría la caja de selección. Ahora el clic se resuelve contra la **pila geométrica real** (`hitStack`) con una tolerancia de 8 píxeles de pantalla, prefiere el objeto visible que queda encima y recurre al nodo SVG cuando el puntero acierta una forma pintada o su etiqueta. Un clic sencillo basta para muros finos, tuberías, textos, pictogramas y equipos; `Ctrl/⌘ + clic` sigue bajando en la pila y `Shift` sigue añadiendo a la selección.
 - **Pista visual antes de hacer clic.** El cursor cambia a la cruz de movimiento cuando hay un elemento seleccionable bajo el puntero y vuelve a la flecha sobre el lienzo vacío. Las etiquetas y los textos de los elementos también reciben el clic, sin seleccionar el objeto equivocado.
 - **Biblioteca con el vocabulario correcto.** En modo sustitución el cajón distingue señal y equipo: título *Cambiar equipo*, insignia *Equipo actual*, botón **Usar este equipo** y una nota propia que recuerda que los objetos CAD son esquemáticos y que las medidas y la escala se verifican en sitio.
-- **228 comprobaciones de interfaz** en PHP 8.1 y 8.3, con pruebas nuevas para el clic sobre pictogramas, equipos y muros finos, la pila con `Ctrl` y `Shift`, el cursor, y el cambio de equipo con deshacer.
+- **229 comprobaciones de interfaz** en PHP 8.1 y 8.3, con pruebas nuevas para el clic sobre pictogramas, equipos y muros finos, la pila con `Ctrl` y `Shift`, el cursor, y el cambio de equipo con deshacer y conservación del circuito eléctrico.
 
 ## Cambios de la versión 1.0.8
 

@@ -190,7 +190,7 @@ El editor ocupa la ventana completa (`body { overflow: hidden }`), así que cada
 `Library` trabaja en dos modos, con el mismo estado y el mismo buscador:
 
 - `insert` (por defecto): la tarjeta se arrastra al lienzo o se pulsa **Insertar**; el recurso sigue al cursor (`EditorApp.startPlacement`).
-- `replace`: la tarjeta no se arrastra. Al elegirla, `EditorApp.replaceSelection(type)` llama a `Model.changeType()`, que conserva posición, tamaño, rotación, capa, opacidad y bloqueo, y aplica el color de la nueva familia. El recurso actual se marca con la insignia *Actual* y el detalle cambia su botón a **Usar esta señal** o **Usar este equipo** según el tipo.
+- `replace`: la tarjeta no se arrastra. Al elegirla, `EditorApp.replaceSelection(type)` llama a `Model.changeType()`, que conserva posición, tamaño, rotación, capa, opacidad y bloqueo, y aplica el color de la nueva familia. Si el elemento era un equipo eléctrico y el nuevo también lo es, conserva el circuito asignado; si deja de serlo, elimina los datos de red. El recurso actual se marca con la insignia *Actual* y el detalle cambia su botón a **Usar esta señal** o **Usar este equipo** según el tipo.
 
 El inspector abre el cajón desde la sección **Apariencia**: `[data-action="swap-sign"]` llama a `EditorApp.startSignSwap()` y `[data-action="swap-equipment"]` a `EditorApp.startEquipmentSwap()`. Cada botón sólo aparece cuando todos los elementos seleccionados son señales o equipos CAD, respectivamente. `Library` adapta título, insignia, botón, pistas y nota al sustantivo del recurso, y expone el modo en `data-library-mode` para que el CSS y las pruebas puedan comprobarlo.
 

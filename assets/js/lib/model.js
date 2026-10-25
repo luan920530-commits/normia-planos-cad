@@ -975,6 +975,8 @@
       return this.apply('type', () => {
         elements.forEach((element) => {
           const defaultElement = this.defaultFor(type);
+          const previousType = element.type;
+          const previousCircuit = this.isElectricalDeviceType(previousType) ? element.circuit : '';
           const keepLabel = element.label;
           const keepLayer = element.layerId;
           const keepRotation = element.rotation;
@@ -1028,7 +1030,11 @@
             delete element.load;
           }
           if (this.isElectricalDeviceType(type)) {
-            element.circuit = this.electricalConfig().defaultCircuit;
+            // Cambiar un equipo eléctrico por otro no debe moverlo de circuito:
+            // solo se usa el circuito por defecto cuando el elemento no lo era.
+            element.circuit = this.isElectricalDeviceType(previousType) && previousCircuit
+              ? previousCircuit
+              : this.electricalConfig().defaultCircuit;
             element.load = G.clamp(Number(this.cadForType(type)?.load) || 0, 0, 100000);
           }
           if (PATH_TYPES.includes(type)) {

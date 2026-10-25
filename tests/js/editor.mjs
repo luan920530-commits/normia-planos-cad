@@ -1284,6 +1284,15 @@ async function main() {
     const restoredGear = elementById(app, gear.id);
     report.check('Deshacer devuelve el equipo anterior y su color',
       restoredGear.type === 'cad_forklift' && restoredGear.color === '#ca8a04', `${restoredGear.type} · ${restoredGear.color}`);
+    const circuitProbe = app.model.addElement('cad_elec_ac', { x: 60, y: 60, circuit: 'C7' });
+    app.model.select([circuitProbe.id]);
+    app.model.changeType('cad_elec_outlet');
+    report.check('Cambiar entre equipos eléctricos conserva el circuito asignado',
+      elementById(app, circuitProbe.id).type === 'cad_elec_outlet' && elementById(app, circuitProbe.id).circuit === 'C7',
+      `${elementById(app, circuitProbe.id).type} · ${elementById(app, circuitProbe.id).circuit}`);
+    app.model.select([circuitProbe.id]);
+    app.model.deleteSelected();
+    app.renderNow();
     app.model.clearSelection();
     app.model.select([clickWall.id]);
     app.renderNow();

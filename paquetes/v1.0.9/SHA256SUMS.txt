@@ -1,2 +1,2 @@
-b44f7c1b10810c3c6a3361d9d8592eae7eb2c5b270dd19675524a3909361971f  normia-planos-cad-1.0.9.zip
-3b28d8fc7e04c37fa3c01495d3542c65d8a6ae5ae3b17b75e6f19184485cdf4f  normia-planos-cad-demo-1.0.9.zip
+c99cb51680e7b65ec48f083883566b15d98d86ad9ff073fa6a2cd3fc4c182700  normia-planos-cad-1.0.9.zip
+09c2fdeca6ceae4e46adf5e88b506db0220914ba6279ac0256fdeb9f950fc40c  normia-planos-cad-demo-1.0.9.zip

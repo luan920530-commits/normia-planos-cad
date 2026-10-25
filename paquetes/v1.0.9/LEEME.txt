@@ -16,7 +16,8 @@ Novedades de la 1.0.9:
   · cambiar el equipo CAD de un elemento desde el inspector: en Apariencia,
     botón «Cambiar equipo» que abre la biblioteca de equipos con el objeto
     actual resaltado; al elegir otro se conservan posición, tamaño, rotación,
-    capa, opacidad y bloqueo, y el equipo toma el color de su familia;
+    capa, opacidad y bloqueo, el equipo toma el color de su familia y,
+    entre equipos eléctricos, se conserva el circuito asignado;
   · seleccionar un solo objeto con un clic: el clic se resuelve contra la
     pila geométrica del lienzo con 8 px de tolerancia, así que funciona en
     pictogramas, equipos de trazo fino, textos y muros finos, sin necesidad
@@ -26,7 +27,7 @@ Novedades de la 1.0.9:
     seleccionable bajo el puntero;
   · la biblioteca usa el vocabulario correcto en modo sustitución («Cambiar
     equipo», «Equipo actual», «Usar este equipo»);
-  · 228 comprobaciones de interfaz, verificadas en PHP 8.1 y 8.3.
+  · 229 comprobaciones de interfaz, verificadas en PHP 8.1 y 8.3.
 
 Novedades de la 1.0.8:
   · cambiar la señal desde el inspector y nueva señal «Usted está aquí».
