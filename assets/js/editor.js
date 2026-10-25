@@ -410,6 +410,42 @@
       if (!options.silent) this.scheduleRender();
     }
 
+    /**
+     * Abre la biblioteca en modo «cambiar señal»: al elegir un pictograma se
+     * sustituye el de los elementos seleccionados sin moverlos de sitio.
+     */
+    startSignSwap() {
+      const elements = this.model.selectedElements();
+      const signs = elements.filter((element) => this.model.signCodeForType(element.type));
+      if (!signs.length) {
+        this.toast('Selecciona una señal del plano para cambiarla.', 'info');
+        return;
+      }
+      const current = this.model.signCodeForType(signs[0].type);
+      this.library.open('sign', { mode: 'replace', current });
+      this.openDrawer('library');
+      this.library.search?.focus?.();
+    }
+
+    /**
+     * Cambia el tipo de la selección desde la biblioteca (señales o equipos).
+     * Conserva posición, tamaño, rotación, capa y opacidad.
+     */
+    replaceSelection(type, name = '') {
+      if (!this.model.isKnownType(type)) {
+        this.toast('El recurso no pertenece a las bibliotecas locales.', 'error');
+        return false;
+      }
+      if (!this.model.selectedElements().length) return false;
+      if (!this.model.changeType(type)) return false;
+      this.closeDrawer();
+      this.applyTool('select');
+      this.renderNow();
+      this.afterEdit();
+      this.toast(name !== '' ? `Señal cambiada a “${name}”.` : 'Recurso sustituido.', 'success', { duration: 2600 });
+      return true;
+    }
+
     startPlacement(kind, key) {
       const type = kind === 'sign' ? this.model.typeForSignCode(key) : key;
       if (!this.model.isKnownType(type)) {

@@ -30,6 +30,8 @@
       this.query = '';
       this.limit = PAGE;
       this.selectedKey = null;
+      this.currentKey = null;
+      this.mode = 'insert';
       this.items = [];
       if (this.grid) this.bind();
     }
@@ -64,7 +66,7 @@
         const card = event.target.closest('[data-key]');
         if (!card) return;
         this.select(card.dataset.key);
-        this.app.startPlacement(this.kind, card.dataset.key);
+        this.useItem(card.dataset.key);
       });
       this.grid?.addEventListener('keydown', (event) => {
         const card = event.target.closest('[data-key]');
@@ -72,7 +74,7 @@
         if (event.key === 'Enter') {
           event.preventDefault();
           this.select(card.dataset.key);
-          this.app.startPlacement(this.kind, card.dataset.key);
+          this.useItem(card.dataset.key);
           return;
         }
         if (event.key === ' ') {
@@ -83,6 +85,10 @@
       this.grid?.addEventListener('dragstart', (event) => {
         const card = event.target.closest?.('[data-key]');
         if (!card || !event.dataTransfer) return;
+        if (this.mode === 'replace') {
+          event.preventDefault();
+          return;
+        }
         this.select(card.dataset.key);
         const payload = JSON.stringify({ kind: this.kind, key: card.dataset.key });
         event.dataTransfer.setData('application/x-normia-resource', payload);
@@ -94,7 +100,7 @@
       this.grid?.addEventListener('dragend', () => this.app.endResourceDrag());
       this.detail?.addEventListener('click', (event) => {
         if (event.target.closest('[data-insert]')) {
-          if (this.selectedKey) this.app.startPlacement(this.kind, this.selectedKey);
+          if (this.selectedKey) this.useItem(this.selectedKey);
         }
       });
       this.more?.addEventListener('click', () => {
@@ -103,21 +109,34 @@
       });
     }
 
-    open(kind = 'sign') {
+    /**
+     * Abre el cajón. Con `mode: 'replace'` no inserta: cambia la señal de los
+     * elementos seleccionados, conservando posición, tamaño y rotación.
+     */
+    open(kind = 'sign', options = {}) {
       this.kind = kind === 'cad' ? 'cad' : 'sign';
+      this.mode = options.mode === 'replace' ? 'replace' : 'insert';
+      this.currentKey = options.current || null;
       this.family = 'all';
       this.query = '';
       this.limit = PAGE;
-      this.selectedKey = null;
+      this.selectedKey = this.mode === 'replace' ? this.currentKey : null;
       if (this.search) this.search.value = '';
-      if (this.title) this.title.textContent = this.kind === 'sign' ? 'Señalización y orientación' : 'Equipamiento CAD';
+      this.drawer?.setAttribute('data-library-mode', this.mode);
+      if (this.title) {
+        this.title.textContent = this.mode === 'replace'
+          ? 'Cambiar señal'
+          : this.kind === 'sign' ? 'Señalización y orientación' : 'Equipamiento CAD';
+      }
       if (this.eyebrow) {
         const total = this.kind === 'sign' ? Object.keys(this.app.catalogs.signs || {}).length : Object.keys(this.app.catalogs.cad || {}).length;
         if (this.kind === 'sign') {
           const service = Object.keys(this.app.catalogs.signs || {}).filter((code) => code.startsWith('SVC_')).length;
-          this.eyebrow.textContent = `Biblioteca visual · ${total - service} ISO 7010 + ${service} de servicios`;
+          this.eyebrow.textContent = this.mode === 'replace'
+            ? `Sustituir la señal · ${total - service} ISO 7010 + ${service} de servicios y orientación`
+            : `Biblioteca visual · ${total - service} ISO 7010 + ${service} de servicios y orientación`;
         } else {
-          this.eyebrow.textContent = `Biblioteca visual · ${total} equipos`;
+          this.eyebrow.textContent = this.mode === 'replace' ? `Sustituir el equipo · ${total} equipos` : `Biblioteca visual · ${total} equipos`;
         }
       }
       if (this.attribution) {
@@ -126,9 +145,28 @@
           : 'Objetos CAD esquemáticos creados para Normia. Las dimensiones son aproximadas; verifica medidas y escala en sitio.';
       }
       this.buildItems();
+      if (this.mode === 'replace' && this.currentKey) {
+        // La señal actual debe quedar dentro de la página visible para poder
+        // resaltarla y centrarla.
+        const index = this.items.findIndex((item) => item.key === this.currentKey);
+        if (index >= this.limit) this.limit = Math.ceil((index + 1) / PAGE) * PAGE;
+      }
       this.renderChips();
       this.renderGrid();
-      this.renderDetail(null);
+      this.renderDetail(this.mode === 'replace' ? this.items.find((item) => item.key === this.currentKey) || null : null);
+      if (this.mode === 'replace') {
+        window.setTimeout(() => this.grid?.querySelector('.library-card.is-current')?.scrollIntoView?.({ block: 'nearest' }), 60);
+      }
+    }
+
+    /** Inserta el recurso o, en modo reemplazo, sustituye la selección. */
+    useItem(key) {
+      if (this.mode === 'replace') {
+        const item = this.items.find((candidate) => candidate.key === key);
+        if (item) this.app.replaceSelection(item.type, item.name);
+        return;
+      }
+      this.app.startPlacement(this.kind, key);
     }
 
     buildItems() {
@@ -200,15 +238,18 @@
       } else {
         const fragment = document.createDocumentFragment();
         for (const item of visible) {
+          const replace = this.mode === 'replace';
+          const current = replace && this.currentKey === item.key;
           const card = document.createElement('button');
           card.type = 'button';
-          card.className = `library-card${this.selectedKey === item.key ? ' is-selected' : ''}`;
+          card.className = `library-card${this.selectedKey === item.key ? ' is-selected' : ''}${current ? ' is-current' : ''}`;
           card.dataset.key = item.key;
           card.dataset.type = item.type;
           card.dataset.kind = this.kind;
-          card.draggable = true;
-          card.title = 'Arrastra al plano o usa “Insertar en el plano”';
-          card.setAttribute('aria-label', `${item.name} · ${item.code || item.key}. Arrastra al plano o pulsa Insertar.`);
+          card.draggable = !replace;
+          card.title = current ? 'Señal actual del elemento'
+            : replace ? 'Doble clic para usar esta señal' : 'Arrastra al plano o usa “Insertar en el plano”';
+          card.setAttribute('aria-label', `${item.name} · ${item.code || item.key}.${current ? ' Señal actual.' : replace ? ' Pulsa dos veces para usarla.' : ' Arrastra al plano o pulsa Insertar.'}`);
           const thumb = document.createElement('span');
           thumb.className = 'library-thumb';
           thumb.style.setProperty('--thumb-color', item.color);
@@ -219,8 +260,14 @@
           card.appendChild(label);
           const meta = document.createElement('span');
           meta.className = 'library-card-meta';
-          meta.textContent = item.code ? `${item.code} · ${item.familyName}` : item.familyName;
+          meta.textContent = current ? 'Señal actual' : (item.code ? `${item.code} · ${item.familyName}` : item.familyName);
           card.appendChild(meta);
+          if (current) {
+            const badge = document.createElement('span');
+            badge.className = 'library-card-current';
+            badge.textContent = 'Actual';
+            card.appendChild(badge);
+          }
           fragment.appendChild(card);
         }
         this.grid.innerHTML = '';
@@ -245,7 +292,10 @@
     renderDetail(item) {
       if (!this.detail) return;
       if (!item) {
-        this.detail.innerHTML = `<div class="library-detail-empty"><span><svg class="icon"><use href="#i-sign"></use></svg></span><p>Elige un pictograma u objeto para ver su vista previa, familia y descripción. Doble clic o <strong>Insertar</strong> para colocarlo en el plano.</p></div>`;
+        const emptyHint = this.mode === 'replace'
+          ? 'Elige la señal que sustituirá a la actual. Doble clic o <strong>Usar esta señal</strong>; la posición, el tamaño y la rotación se conservan.'
+          : 'Elige un pictograma u objeto para ver su vista previa, familia y descripción. Doble clic o <strong>Insertar</strong> para colocarlo en el plano.';
+        this.detail.innerHTML = `<div class="library-detail-empty"><span><svg class="icon"><use href="#i-sign"></use></svg></span><p>${emptyHint}</p></div>`;
         return;
       }
       this.detail.innerHTML = `
@@ -253,8 +303,10 @@
         <h3>${esc(item.name)}</h3>
         <p class="library-detail-code">${item.code ? `${esc(item.code)} · ` : ''}${esc(item.familyName)}</p>
         <div class="library-detail-actions">
-          <button class="button button-primary" type="button" data-insert><svg class="icon"><use href="#i-plus"></use></svg>Insertar en el plano</button>
-          <span class="library-detail-hint">El cajón se cierra y el recurso sigue al cursor: haz clic en el plano para ubicarlo. También puedes arrastrar la tarjeta hasta el lienzo o pulsar Enter sobre ella.</span>
+          <button class="button button-primary" type="button" data-insert><svg class="icon"><use href="#i-${this.mode === 'replace' ? 'swap' : 'plus'}"></use></svg>${this.mode === 'replace' ? 'Usar esta señal' : 'Insertar en el plano'}</button>
+          <span class="library-detail-hint">${this.mode === 'replace'
+            ? 'Sustituye la señal del elemento seleccionado sin moverlo. Doble clic o Enter sobre otra tarjeta también la aplica.'
+            : 'El cajón se cierra y el recurso sigue al cursor: haz clic en el plano para ubicarlo. También puedes arrastrar la tarjeta hasta el lienzo o pulsar Enter sobre ella.'}</span>
         </div>
         <p class="library-detail-description">${esc(item.description || 'Sin descripción adicional.')}</p>
         <p class="library-detail-note">Representación esquemática. No sustituye la señalización física ni certifica cumplimiento normativo.</p>`;

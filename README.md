@@ -2,7 +2,7 @@
 
 Editor de planos de emergencia y evacuación, en español, pensado para pequeñas y medianas organizaciones que necesitan documentar plantas, rutas, señalización y equipamiento sin depender de software CAD de escritorio ni de servicios externos.
 
-- **Editor completo**: instalador web, cuentas, proyectos y pisos, editor SVG real, biblioteca de **354 pictogramas** (332 ISO 7010 + 22 señales de servicios como baños, vestidores y cafetería), **145 objetos CAD esquemáticos de 18 familias** (restaurante, bodega, comercio, hospital, costura, asadero, supermercado, vivienda, deportes, exteriores, instalaciones eléctricas y redes hidrosanitarias, entre otras), puertas de uno y dos batientes y portones, **rutas con vértices editables**, **redes de tubería (agua, gas, desagües e incendio) y circuitos eléctricos**, guardado con versiones, borradores automáticos, deshacer/rehacer y exportación SVG/JSON/PNG/impresión.
+- **Editor completo**: instalador web, cuentas, proyectos y pisos, editor SVG real, biblioteca de **355 pictogramas** (332 ISO 7010 + 23 señales de orientación como baños, vestidores, cafetería y **«Usted está aquí»**), **145 objetos CAD esquemáticos de 18 familias** (restaurante, bodega, comercio, hospital, costura, asadero, supermercado, vivienda, deportes, exteriores, instalaciones eléctricas y redes hidrosanitarias, entre otras), puertas de uno y dos batientes y portones, **rutas con vértices editables**, **redes de tubería (agua, gas, desagües e incendio) y circuitos eléctricos**, guardado con versiones, borradores automáticos, deshacer/rehacer y exportación SVG/JSON/PNG/impresión.
 - **Instalaciones**: tuberías de agua, gas, desagües e incendio y red eléctrica con longitudes, diámetros, circuitos, cargas y caída de tensión estimada.
 - **PHP ≥ 8.1 + SQLite/PDO**, arquitectura MVC propia, sin Composer, sin `node_modules` en producción y sin CDN.
 - **100 % local**: las fuentes, los estilos, los iconos, los pictogramas y los catálogos viven en el paquete. La aplicación no hace llamadas a servicios de terceros.
@@ -26,7 +26,7 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 10. [Arquitectura](#arquitectura)
 11. [Seguridad](#seguridad)
 12. [Pruebas](#pruebas)
-13. [Cambios de la versión 1.0.7](#cambios-de-la-versión-107)
+13. [Cambios de la versión 1.0.8](#cambios-de-la-versión-108)
 14. [Paquetes y verificación](#paquetes-y-verificación)
 15. [Limitaciones](#limitaciones)
 16. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
@@ -43,7 +43,7 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 | Pisos | Varios pisos por proyecto, orden, duplicación y protección del último piso. |
 | Editor | Lienzo SVG con rejilla, reglas, ajuste, zoom, paneo, selección múltiple, marquesina, capas y grupos. |
 | Herramientas | Muro, puerta sencilla, puerta doble, portón o reja, ruta de evacuación, texto, medida, línea, rectángulo, elipse, **tubería** y **tubería eléctrica**. |
-| Bibliotecas | 354 señales (332 ISO 7010 + 22 de orientación y servicios) en 6 familias y 145 objetos CAD en 18 familias, con búsqueda y filtros por familia. |
+| Bibliotecas | 355 señales (332 ISO 7010 + 23 de orientación y servicios) en 7 familias y 145 objetos CAD en 18 familias, con búsqueda y filtros por familia. |
 | Propiedades | Posición, tamaño, rotación, sentido de apertura, color (paleta de 29), grosor, opacidad, texto, capa, bloqueo, cambio de tipo y, en redes, **sistema, diámetro, material, pendiente, presión, circuito, tensión, calibre, fases y carga**. |
 | Historial | Deshacer/rehacer con 120 pasos, duplicar, pegar, agrupar, alinear, distribuir y orden de dibujo. |
 | Redes | Panel **Redes y circuitos** con longitudes por sistema, diámetros usados, pendientes, cargas por circuito, breaker y calibre sugeridos y caída de tensión estimada. |
@@ -215,7 +215,7 @@ Luego importa `resources/schema.sql` en el archivo SQLite y crea el usuario admi
 
 ### Propiedades
 
-El inspector se organiza en una ficha superior con la miniatura, el tipo y las acciones rápidas (bloquear, duplicar, eliminar) y en **secciones plegables**: geometría, apariencia, instalación, elementos superpuestos, organización y orden. Los campos numéricos muestran la unidad del lienzo y la rotación se ajusta con pasos de 90°. En tuberías añade **red, diámetro, material, pendiente y presión**; en circuitos, **código, tensión, calibre y fases**; en equipos eléctricos, **circuito y carga en VA**. Los controles que no aplican al elemento seleccionado no se muestran o quedan deshabilitados.
+El inspector se organiza en una ficha superior con la miniatura, el tipo y las acciones rápidas (bloquear, duplicar, eliminar) y en **secciones plegables**: geometría, apariencia, instalación, elementos superpuestos, organización y orden. En **Apariencia**, cualquier señal seleccionada muestra su pictograma y un botón **Cambiar señal** que abre la biblioteca en modo sustitución: eliges otro pictograma y se cambia sin mover el elemento ni perder tamaño, rotación, capa u opacidad. Con varias señales seleccionadas el cambio se aplica a todas. Los campos numéricos muestran la unidad del lienzo y la rotación se ajusta con pasos de 90°. En tuberías añade **red, diámetro, material, pendiente y presión**; en circuitos, **código, tensión, calibre y fases**; en equipos eléctricos, **circuito y carga en VA**. Los controles que no aplican al elemento seleccionado no se muestran o quedan deshabilitados.
 
 ### Capas y grupos
 
@@ -227,7 +227,7 @@ El inspector se organiza en una ficha superior con la miniatura, el tipo y las a
 
 ## Bibliotecas de señalización y CAD
 
-### Señalización: 332 ISO 7010 + 22 de servicios
+### Señalización: 332 ISO 7010 + 23 de orientación y servicios
 
 **ISO 7010 (332 pictogramas)**
 
@@ -235,10 +235,11 @@ El inspector se organiza en una ficha superior con la miniatura, el tipo y las a
 - Identificador interno: `iso_<código en minúsculas>` (por ejemplo `iso_e002`).
 - Origen y licencia: `resources/licenses/iso-safety-signs.LICENSE.txt` y `iso-safety-signs.NOTICE.txt`.
 
-**Orientación y servicios (22 pictogramas propios)**
+**Orientación y servicios (23 pictogramas propios)**
 
 - Familia `services` (`#0f766e`), identificador `sig_<nombre>` (por ejemplo `sig_wc_men` → `SVC_WC_MEN`).
 - Cubre lo que ISO 7010 no normaliza y faltaba en la biblioteca: **baño de hombres**, **baño de mujeres**, **baño mixto**, **baño accesible (PMR)**, **cambiador de bebés**, **lactario**, **duchas**, **vestidores**, **cafetería**, **comedor**, **recepción**, **sala de espera**, **farmacia**, **parqueadero**, **bicicletero**, **punto de carga**, **lavandería**, **depósito**, **zona de fumadores**, **vigilancia**, **ascensor** y **escaleras**.
+- **Ubicación (`location`, `#1d4ed8`)**: el marcador **«Usted está aquí»** (`SVC_AQUI` → `sig_aqui`), que sitúa la posición de quien lee el plano. Es la señal que acompaña al pie de evolución y se puede colocar en cualquier punto, con el tamaño que se quiera.
 - Son pictogramas originales de este proyecto (GPL-3.0), no señales ISO 7010: se documenta así en la ficha de cada recurso para no atribuirles una norma que no les corresponde.
 - Búsqueda por código, nombre, descripción, familia y alias en español (`baño`, `bano`, `sanitario`, `wc`, `vestuario`, `cafeteria`, `parqueadero`, `discapacidad`, `pmr`…).
 - El color de las señales (ISO o de servicios) se deriva de su familia y no se edita con la paleta.
@@ -511,9 +512,9 @@ Lo único que no funciona sin red es la **vista previa de desarrollo** (`npm run
 | Bloque | Comprobaciones |
 | --- | --- |
 | `tests/php/lint.mjs` | `php -l` sobre todo `app/`, `bootstrap.php` e `index.php` en 8.1 y 8.3. |
-| `tests/php/functional.mjs` | 149 comprobaciones: instalador, requisitos, contraseñas débiles, CSRF, sesión, autorización entre cuentas, CRUD de proyectos/pisos, duplicados, importación v1/v2, catálogos (354 señales y 145 objetos), catálogo y guardado de redes, señales de baño y de servicios (guardado, color de familia y exportación SVG), puertas y portones (geometría, sentidos de apertura, exportación con trazo), validaciones de la API, guardado/versiones/borradores/conflictos, exportaciones, ciclo de vida y logout. |
-| `tests/js/editor.mjs` | 192 comprobaciones de interfaz sobre la app real: arranque, 354 señales y 145 objetos, **trazado de tuberías y circuitos, inspector de red y panel de redes**, **mano y paneo, selección de superpuestos, inspector plegable y paleta de herramientas**, puertas dobles y portones, **vértices de ruta editables (arrastrar, doble clic, Alt+clic)**, **señal de baño insertada desde la biblioteca**, **posiciones reales del trazo**, **clic sobre muros finos**, **rotación**, **rutas cerradas**, **arrastrar y soltar desde la biblioteca sin que el cajón lo bloquee**, reglas, herramientas, inserción con puntero, selección, mover, escalar, rotar, color, cambio de tipo, deshacer/rehacer, duplicar, agrupar, bloquear, desplazar, texto y saneado, guardar, reabrir, borradores, conflictos, exportación SVG/JSON/PNG, tooltips sin acumulación, capas, versiones y límites. |
-| `tests/php/package.mjs` | 37 comprobaciones: construye ambos ZIP, verifica que no haya bases, sesiones, credenciales, logs ni carpetas de desarrollo, valida los SHA-256 y hace una instalación limpia de la demo comprobando assets (11), catálogos (354/145), los cuatro pisos del proyecto de ejemplo, señales de servicios y redes en la demo, editor, SVG, JSON e impresión. |
+| `tests/php/functional.mjs` | 152 comprobaciones: instalador, requisitos, contraseñas débiles, CSRF, sesión, autorización entre cuentas, CRUD de proyectos/pisos, duplicados, importación v1/v2, catálogos (355 señales y 145 objetos), catálogo y guardado de redes, señales de baño y de servicios (guardado, color de familia y exportación SVG), puertas y portones (geometría, sentidos de apertura, exportación con trazo), validaciones de la API, guardado/versiones/borradores/conflictos, exportaciones, ciclo de vida y logout. |
+| `tests/js/editor.mjs` | 206 comprobaciones de interfaz sobre la app real: arranque, 355 señales y 145 objetos, **trazado de tuberías y circuitos, inspector de red y panel de redes**, **mano y paneo, selección de superpuestos, inspector plegable y paleta de herramientas**, puertas dobles y portones, **vértices de ruta editables (arrastrar, doble clic, Alt+clic)**, **señal de baño insertada desde la biblioteca**, **posiciones reales del trazo**, **clic sobre muros finos**, **rotación**, **rutas cerradas**, **arrastrar y soltar desde la biblioteca sin que el cajón lo bloquee**, reglas, herramientas, inserción con puntero, selección, mover, escalar, rotar, color, cambio de tipo, deshacer/rehacer, duplicar, agrupar, bloquear, desplazar, texto y saneado, guardar, reabrir, borradores, conflictos, exportación SVG/JSON/PNG, tooltips sin acumulación, capas, versiones y límites. |
+| `tests/php/package.mjs` | 37 comprobaciones: construye ambos ZIP, verifica que no haya bases, sesiones, credenciales, logs ni carpetas de desarrollo, valida los SHA-256 y hace una instalación limpia de la demo comprobando assets (11), catálogos (355/145), los cuatro pisos del proyecto de ejemplo, señales de servicios y redes en la demo, la señal «Usted está aquí», editor, SVG, JSON e impresión. |
 | `tests/js/offline.mjs` | 0 dependencias de red: revisa las vistas, los estilos, los scripts y los catálogos y falla si aparece un `fetch`, un `WebSocket`, un `src`/`href`/`url()` externo, una llamada de red desde PHP o un dominio no declarado. |
 
 Resultados esperados de la última ejecución completa:
@@ -523,10 +524,10 @@ Resultados esperados de la última ejecución completa:
 ✓ Sintaxis PHP 8.3 · 52 archivos, sin errores
 ✓ Sintaxis JavaScript · 20 archivos, sin errores
 ✓ Funcionamiento sin conexión · 78 archivos, sin referencias externas
-✓ Funcional PHP 8.1 · 149/149
-✓ Funcional PHP 8.3 · 149/149
-✓ Interfaz (JSDOM) PHP 8.1 · 192/192
-✓ Interfaz (JSDOM) PHP 8.3 · 192/192
+✓ Funcional PHP 8.1 · 152/152
+✓ Funcional PHP 8.3 · 152/152
+✓ Interfaz (JSDOM) PHP 8.1 · 206/206
+✓ Interfaz (JSDOM) PHP 8.3 · 206/206
 ✓ Paquetes y demo · 37/37
 9/9 pasos correctos
 ```
@@ -534,6 +535,13 @@ Resultados esperados de la última ejecución completa:
 Las pruebas trabajan sobre copias temporales: no escriben configuración ni bases en el repositorio. `node_modules` solo contiene dependencias de desarrollo y se excluye de los paquetes.
 
 ---
+
+## Cambios de la versión 1.0.8
+
+- **Cambiar una señal sin volver a dibujarla.** En el inspector, sección **Apariencia**, cualquier señal muestra su pictograma actual y un botón **Cambiar señal**. Abre la biblioteca en modo sustitución, con la señal actual resaltada: al elegir otra se reemplaza el pictograma y se conservan posición, tamaño, rotación, capa y opacidad. Funciona también con varias señales seleccionadas y entra en el historial (deshacer).
+- **Señal «Usted está aquí».** Nuevo pictograma `SVC_AQUI` (`sig_aqui`) en la familia **Ubicación**, con su propio azul (`#1d4ed8`), búsqueda por «aquí», «posición actual» o «estás aquí». Cierra el hueco frente a los planos de evacuación, que siempre necesitan marcar el punto de partida del lector.
+- **La biblioteca entiende dos modos.** En modo sustitución las tarjetas no se arrastran al lienzo, el botón del detalle dice **Usar esta señal**, la tarjeta activa muestra una insignia *Actual* y el cajón se cierra al aplicar el cambio.
+- **Recuentos del catálogo en el servidor.** Las vistas ya no llevan cifras fijas: `LibraryRepository::counts()` alimenta el panel, la barra lateral y la paleta, así que añadir pictogramas no deja números desactualizados.
 
 ## Cambios de la versión 1.0.7
 
@@ -613,12 +621,12 @@ Versión de corrección sobre la 1.0.0. Reemplaza los paquetes anteriores: la 1.
 
 ## Paquetes y verificación
 
-La entrega v1.0.7 incluye los ZIP ya construidos en **`paquetes/v1.0.7/`** (misma composición que genera el script, verificada por `tests/php/package.mjs`):
+La entrega v1.0.8 incluye los ZIP ya construidos en **`paquetes/v1.0.8/`** (misma composición que genera el script, verificada por `tests/php/package.mjs`):
 
 ```text
-paquetes/v1.0.7/
-├── normia-planos-cad-1.0.7.zip
-├── normia-planos-cad-demo-1.0.7.zip
+paquetes/v1.0.8/
+├── normia-planos-cad-1.0.8.zip
+├── normia-planos-cad-demo-1.0.8.zip
 ├── SHA256SUMS.txt
 └── BUILD.txt
 ```
@@ -632,8 +640,8 @@ npm run build          # o: bash tools/build-packages.sh
 El script deja los artefactos en `dist/`:
 
 ```text
-normia-planos-cad-1.0.7.zip
-normia-planos-cad-demo-1.0.7.zip
+normia-planos-cad-1.0.8.zip
+normia-planos-cad-demo-1.0.8.zip
 SHA256SUMS.txt
 BUILD.txt
 ```
@@ -643,11 +651,11 @@ BUILD.txt
 - Verifica las sumas:
 
 ```bash
-cd paquetes/v1.0.7
+cd paquetes/v1.0.8
 sha256sum -c SHA256SUMS.txt
 ```
 
-Los hashes exactos de los ZIP publicados están en `paquetes/v1.0.7/SHA256SUMS.txt`; `dist/` es solo la salida de trabajo y está ignorada por Git.
+Los hashes exactos de los ZIP publicados están en `paquetes/v1.0.8/SHA256SUMS.txt`; `dist/` es solo la salida de trabajo y está ignorada por Git.
 
 ---
 

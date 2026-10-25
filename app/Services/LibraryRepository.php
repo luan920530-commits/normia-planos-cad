@@ -15,6 +15,7 @@ final class LibraryRepository
         'prohibition' => '#b71f2e',
         'warning' => '#f9a800',
         'services' => '#0f766e',
+        'location' => '#1d4ed8',
     ];
 
     /** Señales de orientación propias (no ISO 7010): prefijo de código. */
@@ -23,7 +24,7 @@ final class LibraryRepository
     /** Versión y mínimos de los catálogos locales. */
     private const ISO_SIGNS = 332;
     private const ISO_CATEGORIES = 5;
-    private const SERVICE_SIGNS = 22;
+    private const SERVICE_SIGNS = 23;
     private const CAD_OBJECTS = 145;
     private const CAD_CATEGORIES = 18;
 
@@ -181,6 +182,28 @@ final class LibraryRepository
         return null;
     }
 
+    /**
+     * Recuentos del catálogo local, para que las vistas no repitan cifras a mano.
+     *
+     * @return array{signs:int,iso:int,services:int,cad:int}
+     */
+    public static function counts(): array
+    {
+        $signs = self::signs();
+        $services = 0;
+        foreach (array_keys($signs) as $code) {
+            if (str_starts_with((string) $code, self::SERVICE_PREFIX)) {
+                $services++;
+            }
+        }
+        return [
+            'signs' => count($signs),
+            'iso' => count($signs) - $services,
+            'services' => $services,
+            'cad' => count(self::cad()),
+        ];
+    }
+
     public static function sign(string $code): ?array
     {
         $signs = self::signs();
@@ -281,7 +304,7 @@ final class LibraryRepository
         if (!is_array($service) || !isset($service['signs'], $service['categories'])
             || !is_array($service['signs']) || !is_array($service['categories'])
             || count($service['signs']) < self::SERVICE_SIGNS) {
-            throw new RuntimeException('El catálogo de servicios debe contener al menos 22 señales.');
+            throw new RuntimeException('El catálogo de servicios debe contener al menos ' . self::SERVICE_SIGNS . ' señales.');
         }
         foreach ($service['categories'] as $key => $category) {
             if (!is_array($category) || !isset($category['label'])) {

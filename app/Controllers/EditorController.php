@@ -28,6 +28,7 @@ final class EditorController extends BaseController
             'designJson' => $designJson,
             'siblings' => $siblings,
             'networks' => LibraryRepository::networks(),
+            'catalog' => LibraryRepository::counts(),
             'boot' => [
                 'floorId' => (int) $floorId,
                 'projectId' => (int) $projectId,

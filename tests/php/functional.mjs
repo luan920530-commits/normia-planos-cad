@@ -143,12 +143,16 @@ try {
   }
 
   let { response: catalogResponse, body: catalog } = await json('catalogs/signs');
-  report.check('Catálogo de señales con 332 ISO 7010 y 22 de servicios',
-    catalogResponse.status === 200 && catalog.count === 354 && catalog.isoCount === 332 && catalog.serviceCount === 22
-    && Object.keys(catalog.signs || {}).length === 354);
+  report.check('Catálogo de señales con 332 ISO 7010 y 23 de servicios y orientación',
+    catalogResponse.status === 200 && catalog.count === 355 && catalog.isoCount === 332 && catalog.serviceCount === 23
+    && Object.keys(catalog.signs || {}).length === 355);
   report.check('Señales con SVG seguro embebido', catalog.signs?.E002?.svg?.startsWith('<svg') && !/xlink:href="(?!#)/.test(catalog.signs?.E002?.svg || ''));
   report.check('Señales de baño disponibles', ['SVC_WC_MEN', 'SVC_WC_WOMEN', 'SVC_WC_MIXED', 'SVC_WC_ACCESSIBLE'].every((code) => catalog.signs?.[code]?.svg?.startsWith('<svg')));
-  report.check('Familias de señalización completas', Object.keys(catalog.categories || {}).length === 6 && catalog.colors?.emergency === '#237f52' && catalog.colors?.services === '#0f766e');
+  report.check('Familias de señalización completas',
+    Object.keys(catalog.categories || {}).length === 7 && catalog.colors?.emergency === '#237f52'
+    && catalog.colors?.services === '#0f766e' && catalog.colors?.location === '#1d4ed8'
+    && catalog.categories?.location?.label === 'Ubicación en el plano',
+    Object.keys(catalog.categories || {}).join(','));
   report.check('Alias heredados disponibles', catalog.legacyTools?.extinguisher === 'F001' && catalog.legacyTools?.exit === 'E002');
   ({ response: catalogResponse, body: catalog } = await json('catalogs/cad'));
   report.check('Catálogo CAD con 145 objetos', catalogResponse.status === 200 && catalog.count === 145 && Object.keys(catalog.objects || {}).length === 145);
@@ -326,6 +330,27 @@ try {
     /data-element="bano_hombres"/.test(serviceSvg) && /data-element="bano_accesible"/.test(serviceSvg)
     && (serviceSvg.match(/<svg [^>]*color="#0f766e"/g) || []).length >= 3,
     `${(serviceSvg.match(/<svg [^>]*color="#0f766e"/g) || []).length} símbolos`);
+  /* --------------------- señal «Usted está aquí» (SVC_AQUI) --------------------- */
+  const locationDesign = JSON.parse(JSON.stringify(serviceDesign));
+  locationDesign.elements = locationDesign.elements.filter((element) => !String(element.type).startsWith('sig_aqui'));
+  locationDesign.elements.push(
+    { id: 'aqui_piso', type: 'sig_aqui', layerId: doorLayer, x: 420, y: 460, w: 72, h: 72, rotation: 0, color: '#1d4ed8', stroke: 0, opacity: 1, label: '', locked: false },
+  );
+  res = await client.postJson(`api/floors/${floorId}/save`, { design: locationDesign, expected_version: (await json(`api/floors/${floorId}`)).body.floor.version });
+  report.check('La API acepta la señal «Usted está aquí»', res.status === 200, `${res.status} · ${res.text.slice(0, 120)}`);
+  const catalogSigns = await json('catalogs/signs');
+  report.check('El catálogo expone la señal de posición con su familia y color',
+    catalogSigns.body.signs?.SVC_AQUI?.name === 'Usted está aquí'
+    && catalogSigns.body.signs?.SVC_AQUI?.category === 'location'
+    && catalogSigns.body.colors?.location === '#1d4ed8',
+    `${catalogSigns.body.signs?.SVC_AQUI?.name} · ${catalogSigns.body.colors?.location}`);
+  res = await client.get(`projects/${projectId}/floors/${floorId}/export/svg`);
+  const locationSvg = res.text;
+  report.check('El SVG exportado dibuja la marca de posición con su azul de familia',
+    /data-element="aqui_piso"/.test(locationSvg) && /<svg [^>]*color="#1d4ed8"/.test(locationSvg)
+    && /viewBox="0 0 100 100"/.test(locationSvg),
+    `${(locationSvg.match(/<svg [^>]*color="#1d4ed8"/g) || []).length} marcas`);
+
   const serviceBad = JSON.parse(JSON.stringify(serviceDesign));
   serviceBad.elements.push({ ...serviceDesign.elements[0], id: 'senal_inventada', type: 'sig_no_existe' });
   res = await client.postJson(`api/floors/${floorId}/save`, { design: serviceBad, expected_version: (await json(`api/floors/${floorId}`)).body.floor.version });

@@ -122,7 +122,7 @@ Editor B: conserva el diseño, muestra aviso, permite recargar v6 o descargar co
 | `DesignFactory` | Diseño en blanco por preset (A4 horizontal/vertical, A3, planta amplia, lienzo libre) con capas iniciales. |
 | `DesignValidator` | Normalización y límites del esquema v2 (lienzo, capas, elementos, grupos, etiquetas, colores, puntos, tamaño JSON). |
 | `DesignImporter` | Importación del JSON propio (v2) y del formato heredado v1 con alias de herramientas y señales. |
-| `LibraryRepository` | Carga y **valida** los catálogos locales: 332 señales ISO 7010 + 22 de servicios, 6 familias, 145 objetos CAD, 18 familias, redes y valores eléctricos de `mep-networks.json`, SVG seguros, colores por familia u objeto. Expone `typeForCode()`/`codeForType()` para traducir `iso_*`/`sig_*` ↔ código de catálogo. |
+| `LibraryRepository` | Carga y **valida** los catálogos locales: 332 señales ISO 7010 + 23 de orientación y servicios, 7 familias, 145 objetos CAD, 18 familias, redes y valores eléctricos de `mep-networks.json`, SVG seguros, colores por familia u objeto. Expone `typeForCode()`/`codeForType()` para traducir `iso_*`/`sig_*` ↔ código de catálogo y `counts()` para que las vistas no repitan cifras. |
 | `SvgExporter` | Exportación SVG de la versión guardada, con identificadores únicos y símbolos incrustados (señales ISO, de servicios y equipos CAD). |
 | `Installer` | Requisitos, validación de la cuenta, creación del esquema, usuario administrador, demo opcional y escritura atómica de `config/config.php`. |
 | `DemoSeeder` | Carga `resources/demo/demo-project.json` como proyecto de ejemplo con sus pisos. |
@@ -184,6 +184,15 @@ El editor ocupa la ventana completa (`body { overflow: hidden }`), así que cada
 - `.rail` hace su propio scroll (`overflow-y: auto`). Sus desplegables usan `position: fixed` y el editor los coloca junto al botón (`placeFlyout`); se cierran al desplazar la barra, al cambiar el tamaño de la ventana o al hacer clic fuera.
 - `.properties-panel` es una columna flex con `min-height: 0` y `overflow: hidden`; el scroll vive en `.properties-body` (`flex: 1 1 auto; min-height: 0; overflow-y: auto`), y sus bloques llevan `flex: 0 0 auto` para que nunca se compriman.
 - `Inspector.render()` conserva `scrollTop` y el foco del campo cuando la selección no cambió; antes cada retoque devolvía el panel al principio.
+
+## Biblioteca en modo sustitución
+
+`Library` trabaja en dos modos, con el mismo estado y el mismo buscador:
+
+- `insert` (por defecto): la tarjeta se arrastra al lienzo o se pulsa **Insertar**; el recurso sigue al cursor (`EditorApp.startPlacement`).
+- `replace`: la tarjeta no se arrastra. Al elegirla, `EditorApp.replaceSelection(type)` llama a `Model.changeType()`, que conserva posición, tamaño, rotación, capa y opacidad, y aplica el color de la nueva familia. La señal actual se marca con la insignia *Actual* y el detalle cambia su botón a **Usar esta señal**.
+
+El inspector abre el cajón con `EditorApp.startSignSwap()` desde la sección **Apariencia** (`[data-action="swap-sign"]`), que sólo aparece cuando todos los elementos seleccionados son señales. El cajón expone el modo en `data-library-mode` para que el CSS y las pruebas puedan comprobarlo.
 
 ## Seguridad
 

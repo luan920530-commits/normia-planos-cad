@@ -131,7 +131,7 @@
         <span class="rail-separator" role="separator"></span>
         <button class="rail-button rail-library" type="button" data-open-library="sign" data-tooltip="Biblioteca de señalización ISO 7010" aria-label="Biblioteca de señalización ISO 7010">
           <svg class="icon"><use href="#i-sign"></use></svg><span>Señales</span>
-          <em class="rail-count" data-sign-count>354</em>
+          <em class="rail-count" data-sign-count><?= e((string) $catalog['signs']) ?></em>
         </button>
         <button class="rail-button rail-library" type="button" data-open-library="cad" data-tooltip="Biblioteca de equipamiento CAD" aria-label="Biblioteca de equipamiento CAD">
           <svg class="icon"><use href="#i-cad"></use></svg><span>Equipos</span>
@@ -200,7 +200,7 @@
             <div class="tool-group">
               <p class="tool-group-title">Insertar</p>
               <div class="tool-group-grid">
-                <button class="tool-choice" type="button" role="menuitem" data-open-library="sign"><span class="tool-choice-icon"><svg class="icon"><use href="#i-sign"></use></svg></span><span class="tool-choice-name">Señales</span><span class="tool-choice-badge">354</span></button>
+                <button class="tool-choice" type="button" role="menuitem" data-open-library="sign"><span class="tool-choice-icon"><svg class="icon"><use href="#i-sign"></use></svg></span><span class="tool-choice-name">Señales</span><span class="tool-choice-badge"><?= e((string) $catalog['signs']) ?></span></button>
                 <button class="tool-choice" type="button" role="menuitem" data-open-library="cad"><span class="tool-choice-icon"><svg class="icon"><use href="#i-cad"></use></svg></span><span class="tool-choice-name">Equipos</span><span class="tool-choice-badge">145</span></button>
               </div>
             </div>

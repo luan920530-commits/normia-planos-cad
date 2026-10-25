@@ -141,7 +141,7 @@ async function main() {
     report.check('El editor arranca con la aplicación real', Boolean(app && app.model && app.renderer), window.document.title);
     const signCodes = Object.keys(app.catalogs.signs);
     const serviceCodes = signCodes.filter((code) => code.startsWith('SVC_'));
-    report.check('Catálogo de señalización completo', signCodes.length === 354 && serviceCodes.length === 22, `${signCodes.length} · ${serviceCodes.length} de servicios`);
+    report.check('Catálogo de señalización completo', signCodes.length === 355 && serviceCodes.length === 23, `${signCodes.length} · ${serviceCodes.length} de servicios`);
     report.check('Señales de baño disponibles', ['SVC_WC_MEN', 'SVC_WC_WOMEN', 'SVC_WC_MIXED', 'SVC_WC_ACCESSIBLE', 'SVC_BABY'].every((code) => app.catalogs.signs[code]?.name),
       ['SVC_WC_MEN', 'SVC_WC_WOMEN', 'SVC_WC_MIXED', 'SVC_WC_ACCESSIBLE', 'SVC_BABY'].filter((code) => !app.catalogs.signs[code]).join(',') || 'todas');
     report.check('La familia de servicios está disponible', app.catalogs.signCategories.services?.label === 'Orientación y servicios', app.catalogs.signCategories.services?.label);
@@ -151,7 +151,7 @@ async function main() {
     report.check('Nuevas familias sectoriales disponibles', expectedFamilies.every((key) => app.catalogs.cadCategories[key]?.label), expectedFamilies.filter((key) => !app.catalogs.cadCategories[key]).join(',') || 'todas');
     report.check('Paleta de colores expuesta', window.Normia.COLORS.length === 29, String(window.Normia.COLORS.length));
     report.check('La barra lateral cuenta los equipos del catálogo', q(window, '[data-cad-count]')?.textContent === '145', q(window, '[data-cad-count]')?.textContent);
-    report.check('La barra lateral cuenta las señales del catálogo', q(window, '[data-sign-count]')?.textContent === '354', q(window, '[data-sign-count]')?.textContent);
+    report.check('La barra lateral cuenta las señales del catálogo', q(window, '[data-sign-count]')?.textContent === '355', q(window, '[data-sign-count]')?.textContent);
     report.check('Lienzo con el preset A4 horizontal', app.model.design.canvas.width === 1123 && app.model.design.canvas.height === 794, `${app.model.design.canvas.width}×${app.model.design.canvas.height}`);
     report.check('Barra de estado muestra el tamaño', q(window, '[data-canvas-size]').textContent.includes('794'), q(window, '[data-canvas-size]').textContent);
     report.check('Escala visible en la barra de estado', q(window, '[data-scale-label]').textContent.includes('1:100'), q(window, '[data-scale-label]').textContent);
@@ -510,7 +510,7 @@ async function main() {
     const signButton = q(window, '[data-open-library="sign"]');
     signButton?.click();
     app.library.open('sign');
-    report.check('La biblioteca de señalización muestra las 354 señales', q(window, '[data-library-families]').textContent.includes('354'), q(window, '[data-library-families]').textContent.slice(0, 80));
+    report.check('La biblioteca de señalización muestra las 355 señales', q(window, '[data-library-families]').textContent.includes('355'), q(window, '[data-library-families]').textContent.slice(0, 80));
     report.check('La biblioteca incluye la familia de servicios', q(window, '[data-library-families]').textContent.includes('Servicios'), q(window, '[data-library-families]').textContent.slice(0, 120));
     report.check('La biblioteca pinta pictogramas locales', qa(window, '[data-library-grid] .library-thumb svg').length > 0, String(qa(window, '[data-library-grid] .library-thumb svg').length));
     /* --------------- flujo real: tarjeta → insertar → clic en el plano --------------- */
@@ -1068,8 +1068,8 @@ async function main() {
         assetFailures.push(`${key}: ${error.message}`);
       }
     }
-    report.check('Los 354 pictogramas y 145 equipos se instancian sin errores', assetsOk === 499 && assetFailures.length === 0,
-      `${assetsOk}/499 · ${assetFailures.slice(0, 3).join(', ')}`);
+    report.check('Los 355 pictogramas y 145 equipos se instancian sin errores', assetsOk === 500 && assetFailures.length === 0,
+      `${assetsOk}/500 · ${assetFailures.slice(0, 3).join(', ')}`);
 
     const xlink = new window.DOMParser().parseFromString(
       '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 10 10"><defs><g id="marca"><rect width="10" height="10"/></g></defs><use xlink:href="#marca"/></svg>',
@@ -1086,6 +1086,82 @@ async function main() {
       namespaceError === '' && prefixed.startsWith('#') && prefixed !== '#marca' && /-a\d+-marca$/.test(prefixed)
       && !/a\d+-[^#]*-a\d+-marca$/.test(prefixed),
       namespaceError || prefixed);
+
+    /* --------------------- señal «Usted está aquí» en el catálogo --------------------- */
+    report.check('El catálogo local incluye la señal «Usted está aquí»',
+      app.catalogs.signs.SVC_AQUI?.name === 'Usted está aquí'
+      && app.catalogs.signs.SVC_AQUI?.category === 'location'
+      && app.catalogs.signColors?.location === '#1d4ed8',
+      `${app.catalogs.signs.SVC_AQUI?.name} · ${app.catalogs.signs.SVC_AQUI?.category}`);
+
+    /* ---------------------- cambio de señal desde el inspector ---------------------- */
+    app.model.select([signElement.id]);
+    app.renderNow();
+    const swapButton = q(window, '[data-section="appearance"] [data-action="swap-sign"]');
+    report.check('El inspector ofrece cambiar la señal desde Apariencia',
+      Boolean(swapButton) && /Cambiar señal/.test(swapButton.textContent), swapButton?.textContent.trim());
+    report.check('La apariencia muestra la miniatura de la señal actual',
+      qa(window, '[data-section="appearance"] .sign-swap-thumb > svg').length === 1,
+      String(qa(window, '[data-section="appearance"] .sign-swap-thumb > svg').length));
+    const beforeSwap = { x: signElement.x, y: signElement.y, w: signElement.w, h: signElement.h, rotation: signElement.rotation };
+    swapButton?.click();
+    report.check('Cambiar señal abre la biblioteca en modo reemplazo',
+      app.activeDrawer === 'library' && app.library.mode === 'replace'
+      && q(window, '[data-library-title]').textContent.includes('Cambiar señal')
+      && q(window, '[data-drawer="library"]')?.dataset.libraryMode === 'replace',
+      `${app.activeDrawer} · ${app.library.mode} · ${q(window, '[data-library-title]').textContent}`);
+    report.check('La señal actual queda resaltada en la biblioteca',
+      q(window, '[data-library-grid] .library-card.is-current')?.dataset.key === 'E002'
+      && /Señal actual/.test(q(window, '[data-library-grid] .library-card.is-current')?.textContent || ''),
+      q(window, '[data-library-grid] .library-card.is-current')?.dataset.key);
+    report.check('En modo reemplazo las tarjetas no se arrastran al plano',
+      q(window, '[data-library-grid] .library-card')?.draggable === false);
+    app.library.open('sign', { mode: 'replace', current: 'E002' });
+    app.library.family = 'location';
+    app.library.renderChips();
+    app.library.renderGrid();
+    report.check('La familia Ubicación agrupa la señal de posición',
+      q(window, '[data-library-families]').textContent.includes('Ubicación')
+      && qa(window, '[data-library-grid] .library-card').some((card) => card.dataset.key === 'SVC_AQUI'),
+      String(qa(window, '[data-library-grid] .library-card').length));
+    const aquiCard = qa(window, '[data-library-grid] .library-card').find((card) => card.dataset.key === 'SVC_AQUI');
+    aquiCard?.click();
+    report.check('La ficha cambia su acción a «Usar esta señal»',
+      /Usar esta señal/.test(q(window, '[data-library-detail] [data-insert]')?.textContent || ''),
+      q(window, '[data-library-detail] [data-insert]')?.textContent.trim());
+    q(window, '[data-library-detail] [data-insert]')?.click();
+    app.renderNow();
+    const swapped = elementById(app, signElement.id);
+    report.check('Elegir otra señal sustituye el pictograma sin mover el elemento',
+      swapped.type === 'sig_aqui'
+      && near(swapped.x, beforeSwap.x, 0.01) && near(swapped.y, beforeSwap.y, 0.01)
+      && near(swapped.w, beforeSwap.w, 0.01) && near(swapped.h, beforeSwap.h, 0.01)
+      && swapped.rotation === beforeSwap.rotation,
+      `${swapped.type} · ${Math.round(swapped.x)},${Math.round(swapped.y)} · ${Math.round(swapped.w)}×${Math.round(swapped.h)}`);
+    report.check('La señal nueva toma el color de su familia', swapped.color === '#1d4ed8', swapped.color);
+    report.check('El cajón se cierra y la herramienta vuelve a seleccionar',
+      app.activeDrawer === null && app.tool === 'select', `${app.activeDrawer} · ${app.tool}`);
+    report.check('El inspector muestra la señal nueva',
+      /Usted está aquí/.test(q(window, '[data-properties-title]').textContent)
+      && /Usted está aquí/.test(q(window, '[data-section="appearance"] .sign-swap-copy')?.textContent || ''),
+      q(window, '[data-properties-title]').textContent);
+    app.model.undo();
+    app.renderNow();
+    const restoredSign = elementById(app, signElement.id);
+    report.check('Deshacer devuelve la señal anterior',
+      restoredSign.type === 'iso_e002' && restoredSign.color === '#237f52', `${restoredSign.type} · ${restoredSign.color}`);
+    app.model.clearSelection();
+    app.renderNow();
+    report.check('Los elementos que no son señales no ofrecen cambiar de señal',
+      (() => {
+        const wallForSwap = app.model.design.elements.find((element) => element.type === 'wall');
+        app.model.select([wallForSwap.id]);
+        app.renderNow();
+        const hasSwap = Boolean(q(window, '[data-section="appearance"] [data-action="swap-sign"]'));
+        app.model.clearSelection();
+        app.renderNow();
+        return !hasSwap;
+      })());
 
     /* ----------------------- redes guardadas en el servidor ----------------------- */
     app.model.addElement('cad_elec_ac', { x: 740, y: 660, circuit: 'C9', load: 4000 });

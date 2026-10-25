@@ -80,8 +80,12 @@
           return;
         }
         const button = event.target.closest('[data-action]');
-        if (!button) return;
+        if (!button || button.disabled) return;
         event.preventDefault();
+        if (button.dataset.action === 'swap-sign') {
+          this.app.startSignSwap();
+          return;
+        }
         this.runAction(button.dataset.action, button);
       });
     }
@@ -135,7 +139,12 @@
     typeName(element) {
       const code = this.model.signCodeForType(element.type);
       if (code) {
-        const label = String(code).startsWith('SVC_') ? 'Señal de servicios' : TYPE_NAMES.sign;
+        // El nombre del catálogo es más útil que el código cuando se cambia la
+        // señal desde el inspector; el código sigue visible en la ficha y en la
+        // sección Apariencia.
+        const name = this.model.catalogs.signs?.[code]?.name;
+        if (name) return name;
+        const label = String(code).startsWith('SVC_') ? 'Señal de orientación' : TYPE_NAMES.sign;
         return `${label} · ${code}`;
       }
       if (element.type === 'pipe') {
@@ -310,6 +319,15 @@
       const basicTypes = root.BASIC_TYPES || ['wall', 'door', 'route', 'text', 'dimension', 'line', 'rect', 'ellipse'];
       const typeOptions = basicTypes.map((key) => `<option value="${key}" ${single && single.type === key ? 'selected' : ''}>${TYPE_NAMES[key] || key}</option>`).join('');
       const sign = single ? this.model.signCodeForType(single.type) : null;
+      const signElements = elements.filter((element) => this.model.signCodeForType(element.type));
+      const allSigns = signElements.length === elements.length && signElements.length > 0;
+      const swapCode = allSigns ? this.model.signCodeForType(elements[0].type) : null;
+      const swapSign = swapCode ? this.model.catalogs.signs[swapCode] : null;
+      const swapFamily = swapSign
+        ? (this.model.catalogs.signCategories?.[swapSign.category]?.short
+          || this.model.catalogs.signCategories?.[swapSign.category]?.label
+          || swapSign.category)
+        : '';
       const cad = single ? this.model.cadForType(single.type) : null;
       const disabled = canEdit ? '' : ' disabled';
       const color = this.colorOf(elements);
@@ -350,7 +368,18 @@
         ${hasPath ? `<p class="help-text">Trazo editable: arrastra los <strong>vértices</strong> del plano, haz <strong>doble clic</strong> sobre el trazo para añadir uno y <strong>Alt + clic</strong> para quitarlo. Ajustar la caja reescala el trazado completo.</p>` : ''}`;
 
       /* --------------------------- apariencia --------------------------- */
-      const appearance = `<div class="color-line">
+      const swapBlock = allSigns ? `<div class="sign-swap">
+          <span class="sign-swap-thumb" data-asset-preview="${esc(elements[0].type)}"></span>
+          <span class="sign-swap-copy">
+            <strong>${esc(elements.length === 1 ? (swapSign?.name || swapCode) : `${elements.length} señales`)}</strong>
+            <small>${esc(elements.length === 1 ? `${swapCode} · ${swapFamily}` : 'Se cambian todas a la vez')}</small>
+          </span>
+          <button class="button button-small button-soft sign-swap-button" type="button" data-action="swap-sign"${canEdit ? '' : ' disabled'}>
+            <svg class="icon"><use href="#i-swap"></use></svg>Cambiar señal
+          </button>
+        </div>
+        <p class="help-text">Elige otro pictograma de la biblioteca: se conservan la posición, el tamaño, la rotación y la capa. <strong>Usted está aquí</strong> está en la familia <em>Ubicación</em>.</p>` : '';
+      const appearance = `${swapBlock}<div class="color-line">
           <span class="color-chip" style="--swatch:${color || '#cbd5e1'}" aria-hidden="true"></span>
           <span class="color-label">Color</span>
           <code class="color-value">${esc(color || 'varios')}</code>

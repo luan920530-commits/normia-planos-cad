@@ -1,0 +1,36 @@
+Normia Planos CAD v1.0.8 · paquetes listos para desplegar
+=========================================================
+
+- normia-planos-cad-1.0.8.zip       aplicación completa (instalador web)
+- normia-planos-cad-demo-1.0.8.zip  igual, con el proyecto de demostración premarcado
+- SHA256SUMS.txt                    sumas de ambos ZIP
+- BUILD.txt                         resumen de la construcción
+
+Verificación de integridad:
+    sha256sum -c SHA256SUMS.txt
+
+Funciona sin conexión: no descarga fuentes, iconos, scripts ni datos. Puede
+instalarse en una red aislada; solo necesita el navegador y el servidor.
+
+Novedades de la 1.0.8:
+  · cambiar la señal de un elemento desde el inspector: en Apariencia,
+    botón «Cambiar señal» que abre la biblioteca con la señal actual
+    resaltada; al elegir otra se conservan posición, tamaño, rotación,
+    capa y opacidad, y el cambio se puede deshacer;
+  · nueva señal «Usted está aquí» (SVC_AQUI), en la familia Ubicación con
+    su azul propio, para marcar la posición actual del lector del plano;
+  · la biblioteca distingue insertar de sustituir (sin arrastre, botón
+    «Usar esta señal» e insignia «Actual»);
+  · los recuentos del catálogo se calculan en el servidor: 355 señales.
+
+Novedades de la 1.0.7:
+  · corrige el desplazamiento del inspector y de la barra lateral;
+
+Los cálculos de redes son estimaciones de referencia: no sustituyen la
+memoria de cálculo ni la revisión de un profesional competente.
+
+Contenido y requisitos: README.md del repositorio.
+Instalación rápida: LEEME-PRIMERO.txt dentro de cada ZIP.
+
+Los ZIP no incluyen bases de datos, sesiones, credenciales, logs ni carpetas de
+desarrollo. Los planos son esquemáticos: verifica dimensiones y escala en sitio.
