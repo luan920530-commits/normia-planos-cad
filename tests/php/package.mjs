@@ -163,6 +163,9 @@ async function main() {
       report.check('La demo arranca marcada como demostración', boot.demo === true);
       report.check('El plano de ejemplo tiene contenido', Array.isArray(design.elements) && design.elements.length >= 30, `${design.elements.length} elementos`);
       report.check('El plano de ejemplo usa señalización ISO 7010', design.elements.some((element) => String(element.type).startsWith('iso_')));
+      report.check('La demo incluye señales de baño y servicios',
+        design.elements.some((element) => ['sig_wc_men', 'sig_wc_women', 'sig_wc_accessible'].includes(element.type)),
+        design.elements.filter((element) => String(element.type).startsWith('sig_')).map((element) => element.type).join(','));
       const assetPaths = [...new Set(Array.from(editor.text.matchAll(/(?:href|src)="([^"]*\/assets\/[^"]+)"/g)).map((match) => match[1]))];
       report.check('La página del editor referencia assets locales', assetPaths.length >= 10, `${assetPaths.length} referencias`);
       const assetResults = [];

@@ -110,16 +110,19 @@
       this.limit = PAGE;
       this.selectedKey = null;
       if (this.search) this.search.value = '';
-      if (this.title) this.title.textContent = this.kind === 'sign' ? 'Señalización ISO 7010' : 'Equipamiento CAD';
+      if (this.title) this.title.textContent = this.kind === 'sign' ? 'Señalización y orientación' : 'Equipamiento CAD';
       if (this.eyebrow) {
         const total = this.kind === 'sign' ? Object.keys(this.app.catalogs.signs || {}).length : Object.keys(this.app.catalogs.cad || {}).length;
-        this.eyebrow.textContent = this.kind === 'sign'
-          ? `Biblioteca visual · ${total} señalizaciones`
-          : `Biblioteca visual · ${total} equipos`;
+        if (this.kind === 'sign') {
+          const service = Object.keys(this.app.catalogs.signs || {}).filter((code) => code.startsWith('SVC_')).length;
+          this.eyebrow.textContent = `Biblioteca visual · ${total - service} ISO 7010 + ${service} de servicios`;
+        } else {
+          this.eyebrow.textContent = `Biblioteca visual · ${total} equipos`;
+        }
       }
       if (this.attribution) {
         this.attribution.textContent = this.kind === 'sign'
-          ? 'Pictogramas ISO 7010 incluidos localmente. Licencia MIT de @iso-safety-signs/core © Karl Norling; atribución de Wikimedia Commons en NOTICE. Las señales son referencias gráficas: no sustituyen la señalización física normalizada.'
+          ? 'Pictogramas ISO 7010 incluidos localmente (licencia MIT de @iso-safety-signs/core © Karl Norling; atribución de Wikimedia Commons en NOTICE) y señales de orientación propias de Normia (GPL-3.0): baños, vestidores, cafetería y otros servicios. Las señales son referencias gráficas: no sustituyen la señalización física normalizada.'
           : 'Objetos CAD esquemáticos creados para Normia. Las dimensiones son aproximadas; verifica medidas y escala en sitio.';
       }
       this.buildItems();
@@ -134,7 +137,7 @@
         this.families = catalogs.signCategories || {};
         this.items = Object.entries(catalogs.signs || {}).map(([code, sign]) => ({
           key: code,
-          type: `iso_${code.toLowerCase()}`,
+          type: code.startsWith('SVC_') ? `sig_${code.slice(4).toLowerCase()}` : `iso_${code.toLowerCase()}`,
           name: sign.name || code,
           code,
           family: sign.category,

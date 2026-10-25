@@ -2,7 +2,7 @@
 
 Editor de planos de emergencia y evacuación, en español, pensado para pequeñas y medianas organizaciones que necesitan documentar plantas, rutas, señalización y equipamiento sin depender de software CAD de escritorio ni de servicios externos.
 
-- **Editor completo**: instalador web, cuentas, proyectos y pisos, editor SVG real, biblioteca ISO 7010 de 332 pictogramas, **90 objetos CAD esquemáticos de 15 familias** (restaurante, bodega, comercio, hospital, costura, asadero, supermercado, vivienda y deportes, entre otras), puertas de uno y dos batientes y portones, guardado con versiones, borradores automáticos, deshacer/rehacer y exportación SVG/JSON/PNG/impresión.
+- **Editor completo**: instalador web, cuentas, proyectos y pisos, editor SVG real, biblioteca de **354 pictogramas** (332 ISO 7010 + 22 señales de servicios como baños, vestidores y cafetería), **121 objetos CAD esquemáticos de 16 familias** (restaurante, bodega, comercio, hospital, costura, asadero, supermercado, vivienda, deportes y exteriores, entre otras), puertas de uno y dos batientes y portones, **rutas con vértices editables**, guardado con versiones, borradores automáticos, deshacer/rehacer y exportación SVG/JSON/PNG/impresión.
 - **PHP ≥ 8.1 + SQLite/PDO**, arquitectura MVC propia, sin Composer, sin `node_modules` en producción y sin CDN.
 - **100 % local**: las fuentes, los estilos, los iconos, los pictogramas y los catálogos viven en el paquete. La aplicación no hace llamadas a servicios de terceros.
 - **Licencia GPL-3.0**. Los pictogramas ISO 7010 conservan su licencia MIT y su atribución (ver [Créditos](#créditos-licencias-y-atribución)).
@@ -25,7 +25,7 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 10. [Arquitectura](#arquitectura)
 11. [Seguridad](#seguridad)
 12. [Pruebas](#pruebas)
-13. [Cambios de la versión 1.0.2](#cambios-de-la-versión-102)
+13. [Cambios de la versión 1.0.3](#cambios-de-la-versión-103)
 14. [Paquetes y verificación](#paquetes-y-verificación)
 15. [Limitaciones](#limitaciones)
 16. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
@@ -42,7 +42,7 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 | Pisos | Varios pisos por proyecto, orden, duplicación y protección del último piso. |
 | Editor | Lienzo SVG con rejilla, reglas, ajuste, zoom, paneo, selección múltiple, marquesina, capas y grupos. |
 | Herramientas | Muro, puerta sencilla, puerta doble, portón o reja, ruta de evacuación, texto, medida, línea, rectángulo y elipse. |
-| Bibliotecas | 332 señales ISO 7010 (5 familias) y 90 objetos CAD de 15 familias, con búsqueda y filtros por familia. |
+| Bibliotecas | 354 señales (332 ISO 7010 + 22 de orientación y servicios) en 6 familias y 121 objetos CAD en 16 familias, con búsqueda y filtros por familia. |
 | Propiedades | Posición, tamaño, rotación, sentido de apertura, color (paleta de 29), grosor, opacidad, texto, capa, bloqueo y cambio de tipo. |
 | Historial | Deshacer/rehacer con 120 pasos, duplicar, pegar, agrupar, alinear, distribuir y orden de dibujo. |
 | Persistencia | Guardado manual con nota, versiones inmutables, restaurar versión, borrador automático cada 30 s y detección de conflictos. |
@@ -141,7 +141,7 @@ Luego importa `resources/schema.sql` en el archivo SQLite y crea el usuario admi
 
 ### 5. Paquete de demostración
 
-`normia-planos-cad-demo-<versión>.zip` es la misma aplicación con el marcador `resources/demo/.demo-build`, que **premarca** la casilla de demostración en el instalador. El proyecto de ejemplo incluye cuatro pisos (“Planta baja”, “Mezzanine”, “Local comercial y cafetería” y “Zona recreativa”), capas de planta/equipos/señalización/rutas, muros, puertas sencillas y dobles, un portón de carga, mobiliario de restaurante, comercio, supermercado y hospital, una piscina, canchas y rutas de evacuación. También puedes cargar la demo desde el paquete de producción marcando la casilla.
+`normia-planos-cad-demo-<versión>.zip` es la misma aplicación con el marcador `resources/demo/.demo-build`, que **premarca** la casilla de demostración en el instalador. El proyecto de ejemplo incluye cuatro pisos (“Planta baja”, “Mezzanine”, “Local comercial y cafetería” y “Zona recreativa”), capas de planta/equipos/señalización/rutas, muros, puertas sencillas y dobles, un portón de carga, mobiliario de restaurante, comercio, supermercado y hospital, señales de baño, duchas y cafetería, una piscina, canchas, vegetación exterior y rutas de evacuación. También puedes cargar la demo desde el paquete de producción marcando la casilla.
 
 ### 6. Copias de seguridad y reinstalación
 
@@ -218,33 +218,49 @@ El inspector permite editar geometría (X, Y, ancho, alto, rotación), aparienci
 
 ## Bibliotecas de señalización y CAD
 
-### Señalización ISO 7010 (332 pictogramas)
+### Señalización: 332 ISO 7010 + 22 de servicios
+
+**ISO 7010 (332 pictogramas)**
 
 - Familias: emergencia/evacuación (`#237f52`), fuego (`#b71f2e`), obligación (`#005387`), prohibición (`#b71f2e`) y advertencia (`#f9a800`).
 - Identificador interno: `iso_<código en minúsculas>` (por ejemplo `iso_e002`).
-- Búsqueda por código, nombre, descripción, familia y alias heredados (`exit`, `extinguisher`, `first_aid`, `alarm`, `assembly`).
-- El color de las señales se deriva de su familia y no se edita con la paleta.
 - Origen y licencia: `resources/licenses/iso-safety-signs.LICENSE.txt` y `iso-safety-signs.NOTICE.txt`.
 
-### Equipamiento CAD (90 objetos en 15 familias)
+**Orientación y servicios (22 pictogramas propios)**
+
+- Familia `services` (`#0f766e`), identificador `sig_<nombre>` (por ejemplo `sig_wc_men` → `SVC_WC_MEN`).
+- Cubre lo que ISO 7010 no normaliza y faltaba en la biblioteca: **baño de hombres**, **baño de mujeres**, **baño mixto**, **baño accesible (PMR)**, **cambiador de bebés**, **lactario**, **duchas**, **vestidores**, **cafetería**, **comedor**, **recepción**, **sala de espera**, **farmacia**, **parqueadero**, **bicicletero**, **punto de carga**, **lavandería**, **depósito**, **zona de fumadores**, **vigilancia**, **ascensor** y **escaleras**.
+- Son pictogramas originales de este proyecto (GPL-3.0), no señales ISO 7010: se documenta así en la ficha de cada recurso para no atribuirles una norma que no les corresponde.
+- Búsqueda por código, nombre, descripción, familia y alias en español (`baño`, `bano`, `sanitario`, `wc`, `vestuario`, `cafeteria`, `parqueadero`, `discapacidad`, `pmr`…).
+- El color de las señales (ISO o de servicios) se deriva de su familia y no se edita con la paleta.
+
+**Rutas y trazos editables**
+
+- Cualquier ruta, muro, línea o medida seleccionada muestra un **tirador por vértice**: arrástralo para mover esa esquina (con `Shift` se alinea con el vértice anterior).
+- **Doble clic** sobre el trazo añade un vértice en el segmento más cercano y **`Alt`+clic** sobre un vértice lo elimina.
+- Al mover un vértice la caja del elemento se recalcula sola, la rotación se disuelve en los puntos y cada paso entra en el historial (deshacer/rehacer).
+- Las rutas de evacuación conservan el cierre en circuito: el primer y el último punto siguen unidos.
+
+### Equipamiento CAD (121 objetos en 16 familias)
 
 | Familia | Objetos | Ejemplos |
 | --- | --- | --- |
-| Mobiliario y estanterías | 6 | escritorio, mesa de reuniones, estantería, archivador |
-| Baños | 4 | inodoro, lavamanos, ducha, cambiador de bebés |
-| Cocinas | 4 | estufa, nevera, lavaplatos, campana |
-| Equipos industriales | 5 | compresor, caldera, tablero eléctrico, tanque |
-| Vehículos y maquinaria | 7 | automóvil, camioneta, montacargas, moto |
+| Mobiliario y estanterías | 8 | escritorio, mesa de reuniones, estantería, archivador |
+| Baños | 6 | inodoro, lavamanos, ducha, cambiador de bebés, baño accesible completo |
+| Cocinas | 5 | estufa, nevera, lavaplatos, campana extractora |
+| Equipos industriales | 8 | compresor, sierra circular, generador, bomba, tanque |
+| Vehículos y maquinaria | 7 | automóvil, camión, montacargas, retroexcavadora, grúa |
 | Conexiones entre pisos | 6 | escalera recta, escalera en L, rampa, ascensor |
-| Restaurante y cafetería | 6 | mesa de cuatro puestos, barra, cocina de línea, nevera de bebidas |
-| Bodega y logística | 6 | estantería de racks, palé, báscula, muelle de carga |
+| Restaurante y cafetería | 7 | mesa de cuatro puestos, barra, cocina de línea, nevera de bebidas |
+| Bodega y logística | 8 | racks, palé, báscula, muelle de carga, banda transportadora |
 | Comercio y centro comercial | 6 | vitrina, probador, caja registradora, isla de kiosco |
-| Salud y hospital | 7 | camilla, cama de hospital, sillón odontológico, equipo de rayos X |
+| Salud y hospital | 10 | camilla, cama, sillón odontológico, rayos X, incubadora, estación de enfermería |
 | Costura y confección | 6 | máquina plana, fileteadora, mesa de corte, maniquí |
-| Asadero y parrilla | 5 | parrilla, asador, campana extractora, mesa de preparación |
-| Supermercado | 6 | góndola, nevera mural, congelador, carrito, caja |
-| Vivienda y edificios residenciales | 8 | sofá, cama doble, cocina integral, lavadora, baño completo |
-| Deportes, canchas y piscinas | 8 | cancha de fútbol, cancha de baloncesto, piscina, trampolín, gradas |
+| Asadero y parrilla | 5 | parrilla, horno de asadero, campana, mesón, tanque de gas |
+| Supermercado | 7 | góndola, nevera mural, congelador, carrito, caja |
+| Vivienda y edificios residenciales | 9 | sofá, cama doble, cocina integral, lavadora, baño completo |
+| Deportes, canchas y piscinas | 11 | cancha de fútbol, de baloncesto, de tenis, piscina, trampolín, caminadora |
+| Exteriores y urbanismo | 15 | árbol, arbusto, luminaria, hidrante, fuente, bicicletero, bolardo, matera, plaza de parqueo, contenedor, pérgola |
 
 - Identificador `cad_*` (por ejemplo `cad_desk`, `cad_rest_bar`, `cad_sport_pool`).
 - Los objetos de agua (piscina, trampolín) usan un color propio del catálogo (`#0891b2`); el resto hereda el color del elemento.
@@ -267,7 +283,8 @@ El inspector permite editar geometría (X, Y, ancho, alto, rotación), aparienci
 | Archivo | Contenido |
 | --- | --- |
 | `resources/iso7010-catalog.json` | `{format, standard, source, license, categories, signs{CODE:{name,category,description,svg}}}` |
-| `resources/cad-objects.json` | `{version, categories{furniture,...}, objects{cad_*:{category,name,description,reference,color,svg}}}` — 90 objetos en 15 familias |
+| `resources/cad-objects.json` | `{version, categories{furniture,...}, objects{cad_*:{category,name,description,reference,color,svg}}}` — 121 objetos en 16 familias |
+| `resources/service-signs.json` | `{format, standard, license, categories{services}, signs{SVC_*:{name,category,description,aliases,svg}}}` — 22 señales propias |
 | `resources/sign-aliases.json` | Alias heredados → códigos ISO 7010 |
 | `resources/schema.sql` | Esquema SQLite |
 | `resources/demo/demo-project.json` | Proyecto de demostración (4 pisos) |
@@ -420,6 +437,7 @@ npm run test:js        # editor real en JSDOM (PHP 8.3)
 npm run test:package   # construye los ZIP y hace la instalación limpia de la demo
 npm run lint:php       # sintaxis de 51 archivos PHP en 8.1 y 8.3
 npm run lint:js        # sintaxis de todos los JS/MJS
+npm run test:offline   # verifica que no haya ningún recurso ni dato externo
 npm run preview        # vista previa real en http://localhost:8080 (PHP en WebAssembly)
 ```
 
@@ -427,14 +445,28 @@ npm run preview        # vista previa real en http://localhost:8080 (PHP en WebA
 
 El servidor HTTP se enlaza **antes** de cargar PHP a propósito: php-wasm abre un proxy WebSocket en un puerto efímero que, si se adelanta, responde 403 y deja la vista previa en blanco. Si el puerto elegido está ocupado, el script lo indica y sugiere `PORT=8080`.
 
+### Funcionamiento sin conexión
+
+La aplicación está pensada para redes aisladas y equipos sin internet:
+
+- **Todo se sirve desde el propio paquete**: hojas de estilo, scripts, iconos SVG, pictogramas ISO 7010, señales de servicios y catálogos CAD viven en `assets/` y `resources/`. No hay CDN, fuentes web ni imágenes remotas.
+- **Las fuentes son del sistema** (`-apple-system`, `Segoe UI`, `Roboto`, `Arial`), no se descargan.
+- **La política de seguridad del navegador** (`Content-Security-Policy`) limita `script-src`, `style-src`, `img-src`, `font-src` y `connect-src` a `'self'`; cualquier intento de cargar algo externo queda bloqueado por el propio navegador.
+- **El servidor no hace llamadas salientes**: no usa `curl`, `fsockopen`, `get_headers` ni `file_get_contents()` sobre URLs.
+- **Las exportaciones se generan en local**: el SVG y el JSON los produce PHP; el PNG lo dibuja el navegador sobre el propio SVG. La impresión usa `print.css` local.
+- **`npm run test:offline`** recorre los 75 archivos que se sirven al navegador y falla si aparece una petición externa. Forma parte de `node tests/run-all.mjs`.
+
+Lo único que no funciona sin red es la **vista previa de desarrollo** (`npm run preview`), que solo existe para revisar el editor en el equipo de desarrollo; nunca se incluye en los paquetes.
+
 ### Qué cubre cada bloque
 
 | Bloque | Comprobaciones |
 | --- | --- |
 | `tests/php/lint.mjs` | `php -l` sobre todo `app/`, `bootstrap.php` e `index.php` en 8.1 y 8.3. |
-| `tests/php/functional.mjs` | 132 comprobaciones: instalador, requisitos, contraseñas débiles, CSRF, sesión, autorización entre cuentas, CRUD de proyectos/pisos, duplicados, importación v1/v2, catálogos (90 objetos/15 familias), puertas y portones (geometría, sentidos de apertura, exportación con trazo), validaciones de la API, guardado/versiones/borradores/conflictos, exportaciones, ciclo de vida y logout. |
-| `tests/js/editor.mjs` | 122 comprobaciones de interfaz sobre la app real: arranque, 332 señales y 90 objetos, puertas dobles y portones, **posiciones reales del trazo**, **clic sobre muros finos**, **rotación**, **rutas cerradas**, **arrastrar y soltar desde la biblioteca sin que el cajón lo bloquee**, reglas, herramientas, inserción con puntero, selección, mover, escalar, rotar, color, cambio de tipo, deshacer/rehacer, duplicar, agrupar, bloquear, desplazar, texto y saneado, guardar, reabrir, borradores, conflictos, exportación SVG/JSON/PNG, tooltips sin acumulación, capas, versiones y límites. |
-| `tests/php/package.mjs` | 34 comprobaciones: construye ambos ZIP, verifica que no haya bases, sesiones, credenciales, logs ni carpetas de desarrollo, valida los SHA-256 y hace una instalación limpia de la demo comprobando assets (11), catálogos (332/90), los cuatro pisos del proyecto de ejemplo, editor, SVG, JSON e impresión. |
+| `tests/php/functional.mjs` | 137 comprobaciones: instalador, requisitos, contraseñas débiles, CSRF, sesión, autorización entre cuentas, CRUD de proyectos/pisos, duplicados, importación v1/v2, catálogos (354 señales y 121 objetos), señales de baño y de servicios (guardado, color de familia y exportación SVG), puertas y portones (geometría, sentidos de apertura, exportación con trazo), validaciones de la API, guardado/versiones/borradores/conflictos, exportaciones, ciclo de vida y logout. |
+| `tests/js/editor.mjs` | 137 comprobaciones de interfaz sobre la app real: arranque, 354 señales y 121 objetos, puertas dobles y portones, **vértices de ruta editables (arrastrar, doble clic, Alt+clic)**, **señal de baño insertada desde la biblioteca**, **posiciones reales del trazo**, **clic sobre muros finos**, **rotación**, **rutas cerradas**, **arrastrar y soltar desde la biblioteca sin que el cajón lo bloquee**, reglas, herramientas, inserción con puntero, selección, mover, escalar, rotar, color, cambio de tipo, deshacer/rehacer, duplicar, agrupar, bloquear, desplazar, texto y saneado, guardar, reabrir, borradores, conflictos, exportación SVG/JSON/PNG, tooltips sin acumulación, capas, versiones y límites. |
+| `tests/php/package.mjs` | 34 comprobaciones: construye ambos ZIP, verifica que no haya bases, sesiones, credenciales, logs ni carpetas de desarrollo, valida los SHA-256 y hace una instalación limpia de la demo comprobando assets (11), catálogos (354/121), los cuatro pisos del proyecto de ejemplo, señales de servicios en la demo, editor, SVG, JSON e impresión. |
+| `tests/js/offline.mjs` | 0 dependencias de red: revisa las vistas, los estilos, los scripts y los catálogos y falla si aparece un `fetch`, un `WebSocket`, un `src`/`href`/`url()` externo, una llamada de red desde PHP o un dominio no declarado. |
 
 Resultados esperados de la última ejecución completa:
 
@@ -442,17 +474,28 @@ Resultados esperados de la última ejecución completa:
 ✓ Sintaxis PHP 8.1 · 51 archivos, sin errores
 ✓ Sintaxis PHP 8.3 · 51 archivos, sin errores
 ✓ Sintaxis JavaScript · 16 archivos, sin errores
-✓ Funcional PHP 8.1 · 132/132
-✓ Funcional PHP 8.3 · 132/132
-✓ Interfaz (JSDOM) PHP 8.1 · 122/122
-✓ Interfaz (JSDOM) PHP 8.3 · 122/122
-✓ Paquetes y demo · 34/34
-8/8 pasos correctos
+✓ Funcionamiento sin conexión · 75 archivos, sin referencias externas
+✓ Funcional PHP 8.1 · 137/137
+✓ Funcional PHP 8.3 · 137/137
+✓ Interfaz (JSDOM) PHP 8.1 · 137/137
+✓ Interfaz (JSDOM) PHP 8.3 · 137/137
+✓ Paquetes y demo · 35/35
+9/9 pasos correctos
 ```
 
 Las pruebas trabajan sobre copias temporales: no escriben configuración ni bases en el repositorio. `node_modules` solo contiene dependencias de desarrollo y se excluye de los paquetes.
 
 ---
+
+## Cambios de la versión 1.0.3
+
+Ampliación de contenido y correcciones de la 1.0.2. Los planos guardados siguen abriendo sin cambios.
+
+- **Rutas y trazos editables.** Antes, una ruta de evacuación solo se podía mover o escalar como un bloque. Ahora, al seleccionarla, cada vértice tiene su tirador: arrástralo para mover esa esquina, haz doble clic sobre el trazo para añadir un vértice y `Alt`+clic para quitarlo. Funciona igual en muros, líneas y medidas.
+- **Señalización de baño.** La biblioteca no tenía baños porque **ISO 7010 no los normaliza** (la norma cubre seguridad, no orientación). Se añaden 22 señales de servicios propias: baño de hombres, de mujeres, mixto y accesible, cambiador de bebés, lactario, duchas, vestidores, cafetería, comedor, recepción, sala de espera, farmacia, parqueadero, bicicletero, punto de carga, lavandería, depósito, zona de fumadores, vigilancia, ascensor y escaleras. Se identifican como complementarias, no como ISO 7010.
+- **Catálogo CAD de 90 a 121 objetos.** Se añaden 31 equipos: archivador, mesa de reuniones, baño accesible completo, cambiador, campana de cocina, generador, bomba, tanque, muelle de carga, banda transportadora, nevera de bebidas, incubadora, sillón odontológico, estación de enfermería, caja de supermercado, cocina integral, cancha de fútbol, cancha de baloncesto, caminadora y una familia nueva de **exteriores y urbanismo** (árboles, luminarias, hidrantes, fuentes, bicicleteros, bolardos, materas, parqueo, contenedores, pérgola).
+- **Verificación sin conexión.** La suite gana un paso que revisa los 75 archivos servidos al navegador y falla si alguno pide recursos o datos a otro dominio, abre sockets o usa red desde el servidor. La aplicación funciona íntegramente en local: sin CDN, sin fuentes remotas y sin llamadas salientes.
+- **Demo de cuatro pisos actualizada** con señales de baño, de duchas y de cafetería y con el mobiliario exterior de la zona recreativa.
 
 ## Cambios de la versión 1.0.2
 
@@ -482,12 +525,12 @@ Versión de corrección sobre la 1.0.0. Reemplaza los paquetes anteriores: la 1.
 
 ## Paquetes y verificación
 
-La entrega v1.0.2 incluye los ZIP ya construidos en **`paquetes/v1.0.2/`** (misma composición que genera el script, verificada por `tests/php/package.mjs`):
+La entrega v1.0.3 incluye los ZIP ya construidos en **`paquetes/v1.0.3/`** (misma composición que genera el script, verificada por `tests/php/package.mjs`):
 
 ```text
-paquetes/v1.0.2/
-├── normia-planos-cad-1.0.2.zip
-├── normia-planos-cad-demo-1.0.2.zip
+paquetes/v1.0.3/
+├── normia-planos-cad-1.0.3.zip
+├── normia-planos-cad-demo-1.0.3.zip
 ├── SHA256SUMS.txt
 └── BUILD.txt
 ```
@@ -501,8 +544,8 @@ npm run build          # o: bash tools/build-packages.sh
 El script deja los artefactos en `dist/`:
 
 ```text
-normia-planos-cad-1.0.2.zip
-normia-planos-cad-demo-1.0.2.zip
+normia-planos-cad-1.0.3.zip
+normia-planos-cad-demo-1.0.3.zip
 SHA256SUMS.txt
 BUILD.txt
 ```
@@ -512,11 +555,11 @@ BUILD.txt
 - Verifica las sumas:
 
 ```bash
-cd paquetes/v1.0.2
+cd paquetes/v1.0.3
 sha256sum -c SHA256SUMS.txt
 ```
 
-Los hashes exactos de los ZIP publicados están en `paquetes/v1.0.2/SHA256SUMS.txt`; `dist/` es solo la salida de trabajo y está ignorada por Git.
+Los hashes exactos de los ZIP publicados están en `paquetes/v1.0.3/SHA256SUMS.txt`; `dist/` es solo la salida de trabajo y está ignorada por Git.
 
 ---
 

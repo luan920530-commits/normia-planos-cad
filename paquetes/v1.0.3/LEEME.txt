@@ -1,0 +1,32 @@
+Normia Planos CAD v1.0.3 · paquetes listos para desplegar
+=========================================================
+
+- normia-planos-cad-1.0.3.zip       aplicación completa (instalador web)
+- normia-planos-cad-demo-1.0.3.zip  igual, con el proyecto de demostración premarcado
+- SHA256SUMS.txt                    sumas de ambos ZIP
+- BUILD.txt                         resumen de la construcción
+
+Verificación de integridad:
+    sha256sum -c SHA256SUMS.txt
+
+Funciona sin conexión: no descarga fuentes, iconos, scripts ni datos. Puede
+instalarse en una red aislada; solo necesita el navegador y el servidor.
+
+Novedades de la 1.0.3:
+  · rutas y trazos editables vértice a vértice (arrastrar, doble clic para
+    añadir, Alt+clic para quitar) en rutas, muros, líneas y medidas;
+  · 22 señales de orientación y servicios: baño de hombres, de mujeres,
+    mixto y accesible, cambiador de bebés, lactario, duchas, vestidores,
+    cafetería, comedor, recepción, farmacia, parqueadero, bicicletero,
+    punto de carga, lavandería, depósito, zona de fumadores, vigilancia,
+    ascensor y escaleras (son propias, no ISO 7010);
+  · catálogo CAD de 90 a 121 objetos con una familia nueva de exteriores
+    (árboles, luminarias, hidrantes, fuentes, bicicleteros, materas…);
+  · verificación automática de que la aplicación no hace ninguna petición
+    externa.
+
+Contenido y requisitos: README.md del repositorio.
+Instalación rápida: LEEME-PRIMERO.txt dentro de cada ZIP.
+
+Los ZIP no incluyen bases de datos, sesiones, credenciales, logs ni carpetas de
+desarrollo. Los planos son esquemáticos: verifica dimensiones y escala en sitio.

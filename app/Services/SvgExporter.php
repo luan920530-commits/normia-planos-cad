@@ -183,10 +183,16 @@ final class SvgExporter
 
     private static function nestedSvg(string $asset, float $x, float $y, float $w, float $h, string $color): string
     {
-        if (DesignValidator::signCodeForType($asset) !== null) {
-            $definition = LibraryRepository::sign(strtoupper(substr($asset, 4)));
-        } elseif (preg_match('/^[EFMPW][0-9]{3}$/D', $asset) === 1) {
-            $definition = LibraryRepository::sign($asset);
+        // `$asset` puede ser un tipo del editor (iso_e002, sig_wc_men) o un
+        // código del catálogo (E002, SVC_WC_MEN); ambos deben resolverse igual.
+        $signCode = DesignValidator::signCodeForType($asset);
+        if ($signCode === null
+            && preg_match('/^(?:[EFMPW][0-9]{3}|SVC_[A-Z][A-Z0-9_]{1,40})$/D', $asset) === 1
+            && LibraryRepository::sign($asset) !== null) {
+            $signCode = $asset;
+        }
+        if ($signCode !== null) {
+            $definition = LibraryRepository::sign($signCode);
         } else {
             $definition = LibraryRepository::cadObject($asset);
         }

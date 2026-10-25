@@ -64,11 +64,11 @@
             "points": [
               {
                 "x": 0,
-                "y": 6.0
+                "y": 6
               },
               {
                 "x": 1480,
-                "y": 6.0
+                "y": 6
               }
             ]
           },
@@ -113,11 +113,11 @@
             "locked": false,
             "points": [
               {
-                "x": 6.0,
+                "x": 6,
                 "y": 0
               },
               {
-                "x": 6.0,
+                "x": 6,
                 "y": 880
               }
             ]
@@ -138,11 +138,11 @@
             "locked": false,
             "points": [
               {
-                "x": 6.0,
+                "x": 6,
                 "y": 0
               },
               {
-                "x": 6.0,
+                "x": 6,
                 "y": 880
               }
             ]
@@ -163,11 +163,11 @@
             "locked": false,
             "points": [
               {
-                "x": 6.0,
+                "x": 6,
                 "y": 0
               },
               {
-                "x": 6.0,
+                "x": 6,
                 "y": 240
               }
             ]
@@ -188,11 +188,11 @@
             "locked": false,
             "points": [
               {
-                "x": 6.0,
+                "x": 6,
                 "y": 0
               },
               {
-                "x": 6.0,
+                "x": 6,
                 "y": 560
               }
             ]
@@ -213,11 +213,11 @@
             "locked": false,
             "points": [
               {
-                "x": 6.0,
+                "x": 6,
                 "y": 0
               },
               {
-                "x": 6.0,
+                "x": 6,
                 "y": 540
               }
             ]
@@ -238,11 +238,11 @@
             "locked": false,
             "points": [
               {
-                "x": 6.0,
+                "x": 6,
                 "y": 0
               },
               {
-                "x": 6.0,
+                "x": 6,
                 "y": 260
               }
             ]
@@ -264,11 +264,11 @@
             "points": [
               {
                 "x": 0,
-                "y": 6.0
+                "y": 6
               },
               {
                 "x": 240,
-                "y": 6.0
+                "y": 6
               }
             ]
           },
@@ -289,11 +289,11 @@
             "points": [
               {
                 "x": 0,
-                "y": 6.0
+                "y": 6
               },
               {
                 "x": 240,
-                "y": 6.0
+                "y": 6
               }
             ]
           },
@@ -1142,14 +1142,74 @@
             "points": [
               {
                 "x": 0,
-                "y": 6.0
+                "y": 6
               },
               {
                 "x": 50,
-                "y": 6.0
+                "y": 6
               }
             ],
             "id": "el_062"
+          },
+          {
+            "id": "el_070",
+            "type": "sig_wc_men",
+            "layerId": "capa_senalizacion",
+            "x": 348,
+            "y": 470,
+            "w": 48,
+            "h": 48,
+            "rotation": 0,
+            "color": "#0f766e",
+            "stroke": 0,
+            "opacity": 1,
+            "label": "Baño hombres",
+            "locked": false
+          },
+          {
+            "id": "el_071",
+            "type": "sig_wc_women",
+            "layerId": "capa_senalizacion",
+            "x": 408,
+            "y": 470,
+            "w": 48,
+            "h": 48,
+            "rotation": 0,
+            "color": "#0f766e",
+            "stroke": 0,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_072",
+            "type": "sig_wc_accessible",
+            "layerId": "capa_senalizacion",
+            "x": 468,
+            "y": 470,
+            "w": 48,
+            "h": 48,
+            "rotation": 0,
+            "color": "#0f766e",
+            "stroke": 0,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "el_073",
+            "type": "sig_locker",
+            "layerId": "capa_senalizacion",
+            "x": 90,
+            "y": 470,
+            "w": 44,
+            "h": 44,
+            "rotation": 0,
+            "color": "#0f766e",
+            "stroke": 0,
+            "opacity": 1,
+            "label": "Vestidores",
+            "locked": false
           }
         ],
         "groups": [
@@ -1221,11 +1281,11 @@
             "points": [
               {
                 "x": 0,
-                "y": 6.0
+                "y": 6
               },
               {
                 "x": 1040,
-                "y": 6.0
+                "y": 6
               }
             ]
           },
@@ -1246,11 +1306,11 @@
             "points": [
               {
                 "x": 0,
-                "y": 6.0
+                "y": 6
               },
               {
                 "x": 1040,
-                "y": 6.0
+                "y": 6
               }
             ]
           },
@@ -1270,11 +1330,11 @@
             "locked": false,
             "points": [
               {
-                "x": 6.0,
+                "x": 6,
                 "y": 0
               },
               {
-                "x": 6.0,
+                "x": 6,
                 "y": 540
               }
             ]
@@ -1295,11 +1355,11 @@
             "locked": false,
             "points": [
               {
-                "x": 6.0,
+                "x": 6,
                 "y": 0
               },
               {
-                "x": 6.0,
+                "x": 6,
                 "y": 540
               }
             ]
@@ -1320,11 +1380,11 @@
             "locked": false,
             "points": [
               {
-                "x": 6.0,
+                "x": 6,
                 "y": 0
               },
               {
-                "x": 6.0,
+                "x": 6,
                 "y": 220
               }
             ]
@@ -1345,11 +1405,11 @@
             "locked": false,
             "points": [
               {
-                "x": 6.0,
+                "x": 6,
                 "y": 0
               },
               {
-                "x": 6.0,
+                "x": 6,
                 "y": 240
               }
             ]
@@ -1843,11 +1903,11 @@
             "points": [
               {
                 "x": 0,
-                "y": 6.0
+                "y": 6
               },
               {
                 "x": 1280,
-                "y": 6.0
+                "y": 6
               }
             ],
             "id": "cm_002"
@@ -1868,11 +1928,11 @@
             "points": [
               {
                 "x": 0,
-                "y": 6.0
+                "y": 6
               },
               {
                 "x": 1060,
-                "y": 6.0
+                "y": 6
               }
             ],
             "id": "cm_003"
@@ -1893,11 +1953,11 @@
             "points": [
               {
                 "x": 0,
-                "y": 6.0
+                "y": 6
               },
               {
                 "x": 60,
-                "y": 6.0
+                "y": 6
               }
             ],
             "id": "cm_004"
@@ -1917,11 +1977,11 @@
             "locked": false,
             "points": [
               {
-                "x": 6.0,
+                "x": 6,
                 "y": 0
               },
               {
-                "x": 6.0,
+                "x": 6,
                 "y": 595
               }
             ],
@@ -1942,11 +2002,11 @@
             "locked": false,
             "points": [
               {
-                "x": 6.0,
+                "x": 6,
                 "y": 0
               },
               {
-                "x": 6.0,
+                "x": 6,
                 "y": 95
               }
             ],
@@ -1967,11 +2027,11 @@
             "locked": false,
             "points": [
               {
-                "x": 6.0,
+                "x": 6,
                 "y": 0
               },
               {
-                "x": 6.0,
+                "x": 6,
                 "y": 780
               }
             ],
@@ -1992,11 +2052,11 @@
             "locked": false,
             "points": [
               {
-                "x": 6.0,
+                "x": 6,
                 "y": 0
               },
               {
-                "x": 6.0,
+                "x": 6,
                 "y": 340
               }
             ],
@@ -2017,11 +2077,11 @@
             "locked": false,
             "points": [
               {
-                "x": 6.0,
+                "x": 6,
                 "y": 0
               },
               {
-                "x": 6.0,
+                "x": 6,
                 "y": 320
               }
             ],
@@ -2567,16 +2627,61 @@
             "locked": false,
             "points": [
               {
-                "x": 6.0,
+                "x": 6,
                 "y": 0
               },
               {
-                "x": 6.0,
+                "x": 6,
                 "y": 320
               }
             ],
             "id": "cm_043",
             "fontSize": 14
+          },
+          {
+            "id": "cm_070",
+            "type": "sig_wc_mixed",
+            "layerId": "capa_senalizacion",
+            "x": 560,
+            "y": 96,
+            "w": 46,
+            "h": 46,
+            "rotation": 0,
+            "color": "#0f766e",
+            "stroke": 0,
+            "opacity": 1,
+            "label": "Baño",
+            "locked": false
+          },
+          {
+            "id": "cm_071",
+            "type": "sig_cafeteria",
+            "layerId": "capa_senalizacion",
+            "x": 900,
+            "y": 110,
+            "w": 46,
+            "h": 46,
+            "rotation": 0,
+            "color": "#0f766e",
+            "stroke": 0,
+            "opacity": 1,
+            "label": "Cafetería",
+            "locked": false
+          },
+          {
+            "id": "cm_072",
+            "type": "sig_baby",
+            "layerId": "capa_senalizacion",
+            "x": 640,
+            "y": 250,
+            "w": 46,
+            "h": 46,
+            "rotation": 0,
+            "color": "#0f766e",
+            "stroke": 0,
+            "opacity": 1,
+            "label": "",
+            "locked": false
           }
         ],
         "groups": []
@@ -2654,11 +2759,11 @@
             "points": [
               {
                 "x": 0,
-                "y": 6.0
+                "y": 6
               },
               {
                 "x": 1080,
-                "y": 6.0
+                "y": 6
               }
             ],
             "id": "rc_002"
@@ -2679,11 +2784,11 @@
             "points": [
               {
                 "x": 0,
-                "y": 6.0
+                "y": 6
               },
               {
                 "x": 60,
-                "y": 6.0
+                "y": 6
               }
             ],
             "id": "rc_003"
@@ -2704,11 +2809,11 @@
             "points": [
               {
                 "x": 0,
-                "y": 6.0
+                "y": 6
               },
               {
                 "x": 860,
-                "y": 6.0
+                "y": 6
               }
             ],
             "id": "rc_004"
@@ -2728,11 +2833,11 @@
             "locked": false,
             "points": [
               {
-                "x": 6.0,
+                "x": 6,
                 "y": 0
               },
               {
-                "x": 6.0,
+                "x": 6,
                 "y": 680
               }
             ],
@@ -2753,11 +2858,11 @@
             "locked": false,
             "points": [
               {
-                "x": 6.0,
+                "x": 6,
                 "y": 0
               },
               {
-                "x": 6.0,
+                "x": 6,
                 "y": 540
               }
             ],
@@ -2778,11 +2883,11 @@
             "locked": false,
             "points": [
               {
-                "x": 6.0,
+                "x": 6,
                 "y": 0
               },
               {
-                "x": 6.0,
+                "x": 6,
                 "y": 50
               }
             ],
@@ -2803,11 +2908,11 @@
             "locked": false,
             "points": [
               {
-                "x": 6.0,
+                "x": 6,
                 "y": 0
               },
               {
-                "x": 6.0,
+                "x": 6,
                 "y": 200
               }
             ],
@@ -2828,11 +2933,11 @@
             "locked": false,
             "points": [
               {
-                "x": 6.0,
+                "x": 6,
                 "y": 0
               },
               {
-                "x": 6.0,
+                "x": 6,
                 "y": 390
               }
             ],
@@ -3201,6 +3306,111 @@
               }
             ],
             "id": "rc_031"
+          },
+          {
+            "id": "rc_070",
+            "type": "sig_shower",
+            "layerId": "capa_senalizacion",
+            "x": 566,
+            "y": 96,
+            "w": 46,
+            "h": 46,
+            "rotation": 0,
+            "color": "#0f766e",
+            "stroke": 0,
+            "opacity": 1,
+            "label": "Duchas",
+            "locked": false
+          },
+          {
+            "id": "rc_071",
+            "type": "sig_locker",
+            "layerId": "capa_senalizacion",
+            "x": 566,
+            "y": 154,
+            "w": 46,
+            "h": 46,
+            "rotation": 0,
+            "color": "#0f766e",
+            "stroke": 0,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "rc_072",
+            "type": "cad_out_tree",
+            "layerId": "capa_planta",
+            "x": 140,
+            "y": 750,
+            "w": 44,
+            "h": 44,
+            "rotation": 0,
+            "color": "#15803d",
+            "stroke": 1.5,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "rc_073",
+            "type": "cad_out_tree",
+            "layerId": "capa_planta",
+            "x": 250,
+            "y": 754,
+            "w": 40,
+            "h": 40,
+            "rotation": 0,
+            "color": "#15803d",
+            "stroke": 1.5,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "rc_074",
+            "type": "cad_out_bush",
+            "layerId": "capa_planta",
+            "x": 330,
+            "y": 758,
+            "w": 48,
+            "h": 36,
+            "rotation": 0,
+            "color": "#65a30d",
+            "stroke": 1.5,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "rc_075",
+            "type": "cad_out_light",
+            "layerId": "capa_planta",
+            "x": 1090,
+            "y": 748,
+            "w": 32,
+            "h": 44,
+            "rotation": 0,
+            "color": "#ca8a04",
+            "stroke": 1.5,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "rc_076",
+            "type": "cad_out_bike_rack",
+            "layerId": "capa_planta",
+            "x": 1060,
+            "y": 596,
+            "w": 44,
+            "h": 44,
+            "rotation": 0,
+            "color": "#334155",
+            "stroke": 1.5,
+            "opacity": 1,
+            "label": "",
+            "locked": false
           }
         ],
         "groups": []

@@ -6,6 +6,7 @@
   const NS = 'http://www.w3.org/2000/svg';
   const XLINK_NS = 'http://www.w3.org/1999/xlink';
   const DOOR_TYPES = ['door', 'door_double', 'door_garage'];
+  const PATH_TYPES = ['wall', 'route', 'line', 'dimension'];
 
   const node = (name, attrs = {}, text = null) => {
     const element = document.createElementNS(NS, name);
@@ -53,8 +54,11 @@
     }
 
     signTypeToCode(type) {
-      const match = /^iso_([efmpw][0-9]{3})$/i.exec(type);
-      return match ? match[1].toUpperCase() : null;
+      const raw = String(type || '');
+      const iso = /^iso_([efmpw][0-9]{3})$/i.exec(raw);
+      if (iso) return iso[1].toUpperCase();
+      const own = /^sig_([a-z][a-z0-9_]{1,40})$/i.exec(raw);
+      return own ? `SVC_${own[1].toUpperCase()}` : null;
     }
 
     assetNode(type) {
@@ -459,6 +463,25 @@
         fill: 'none', stroke: editable ? '#2563eb' : '#f59e0b', 'stroke-width': 1.5 / zoom,
         'stroke-dasharray': editable ? 'none' : `${6 / zoom} ${4 / zoom}`, 'pointer-events': 'none',
       }));
+      // Vértices editables: arrastrar un punto mueve la esquina y el doble clic
+      // sobre un segmento añade uno nuevo.
+      const single = elements.length === 1 ? elements[0] : null;
+      if (single && PATH_TYPES.includes(single.type) && editable && ui.activeTool === 'select') {
+        const points = this.elementPoints(single);
+        const dot = 4.5 / zoom;
+        for (const [index, point] of points.entries()) {
+          const handle = node('circle', {
+            cx: point.x, cy: point.y, r: dot,
+            fill: '#ffffff', stroke: '#1d4ed8', 'stroke-width': 1.6 / zoom,
+            'data-point': String(index), class: 'vertex-handle',
+            'pointer-events': 'all',
+          });
+          handle.appendChild(node('title', {}, index === 0
+            ? 'Vértice inicial · arrastra para moverlo · Alt+clic para quitarlo'
+            : 'Vértice · arrastra para moverlo · Alt+clic para quitarlo'));
+          group.appendChild(handle);
+        }
+      }
       if (editable && ui.activeTool === 'select') {
         const handleSize = 9 / zoom;
         const handles = [

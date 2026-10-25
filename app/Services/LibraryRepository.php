@@ -14,7 +14,18 @@ final class LibraryRepository
         'mandatory' => '#005387',
         'prohibition' => '#b71f2e',
         'warning' => '#f9a800',
+        'services' => '#0f766e',
     ];
+
+    /** Señales de orientación propias (no ISO 7010): prefijo de código. */
+    public const SERVICE_PREFIX = 'SVC_';
+
+    /** Versión y mínimos de los catálogos locales. */
+    private const ISO_SIGNS = 332;
+    private const ISO_CATEGORIES = 5;
+    private const SERVICE_SIGNS = 22;
+    private const CAD_OBJECTS = 121;
+    private const CAD_CATEGORIES = 16;
 
     private static ?array $signs = null;
     private static ?array $signCategories = null;
@@ -64,6 +75,29 @@ final class LibraryRepository
         return self::$aliases;
     }
 
+    /** Tipo del editor para un código de señal (`iso_e002`, `sig_wc_men`). */
+    public static function typeForCode(string $code): string
+    {
+        if (str_starts_with($code, self::SERVICE_PREFIX)) {
+            return 'sig_' . strtolower(substr($code, strlen(self::SERVICE_PREFIX)));
+        }
+        return 'iso_' . strtolower($code);
+    }
+
+    /** Código del catálogo para un tipo del editor, o null si no es una señal. */
+    public static function codeForType(string $type): ?string
+    {
+        if (preg_match('/^iso_([efmpw][0-9]{3})$/iD', $type, $matches) === 1) {
+            $code = strtoupper($matches[1]);
+            return self::sign($code) !== null ? $code : null;
+        }
+        if (preg_match('/^sig_([a-z][a-z0-9_]{1,40})$/iD', $type, $matches) === 1) {
+            $code = self::SERVICE_PREFIX . strtoupper($matches[1]);
+            return self::sign($code) !== null ? $code : null;
+        }
+        return null;
+    }
+
     public static function sign(string $code): ?array
     {
         $signs = self::signs();
@@ -89,7 +123,7 @@ final class LibraryRepository
     {
         $types = ['wall', 'door', 'door_double', 'door_garage', 'route', 'text', 'dimension', 'line', 'rect', 'ellipse'];
         foreach (array_keys(self::signs()) as $code) {
-            $types[] = 'iso_' . strtolower($code);
+            $types[] = self::typeForCode($code);
         }
         foreach (array_keys(self::cad()) as $key) {
             $types[] = $key;
@@ -137,8 +171,8 @@ final class LibraryRepository
         }
         if (!is_array($catalog) || !isset($catalog['signs'], $catalog['categories'])
             || !is_array($catalog['signs']) || !is_array($catalog['categories'])
-            || count($catalog['signs']) !== 332 || count($catalog['categories']) !== 5) {
-            throw new RuntimeException('El catálogo local debe contener las 332 señales y sus 5 familias.');
+            || count($catalog['signs']) !== self::ISO_SIGNS || count($catalog['categories']) !== self::ISO_CATEGORIES) {
+            throw new RuntimeException('El catálogo local debe contener las 332 señales ISO 7010 y sus 5 familias.');
         }
         foreach ($catalog['signs'] as $code => $sign) {
             if (preg_match('/^[EFMPW][0-9]{3}$/D', (string) $code) !== 1 || !is_array($sign)
@@ -148,8 +182,48 @@ final class LibraryRepository
                 throw new RuntimeException('El catálogo local contiene una señal inválida: ' . (string) $code);
             }
         }
-        self::$signs = $catalog['signs'];
-        self::$signCategories = $catalog['categories'];
+        $signs = $catalog['signs'];
+        $categories = $catalog['categories'];
+        // Señales de orientación propias: se suman al mismo catálogo para que
+        // compartan búsqueda, inserción, validación y exportación.
+        $servicePath = BASE_PATH . '/resources/service-signs.json';
+        if (!is_file($servicePath)) {
+            throw new RuntimeException('Falta el catálogo local de señalización de servicios.');
+        }
+        try {
+            $service = json_decode((string) file_get_contents($servicePath), true, 16, JSON_THROW_ON_ERROR);
+        } catch (JsonException $exception) {
+            throw new RuntimeException('El catálogo de señalización de servicios no es válido.', 0, $exception);
+        }
+        if (!is_array($service) || !isset($service['signs'], $service['categories'])
+            || !is_array($service['signs']) || !is_array($service['categories'])
+            || count($service['signs']) < self::SERVICE_SIGNS) {
+            throw new RuntimeException('El catálogo de servicios debe contener al menos 22 señales.');
+        }
+        foreach ($service['categories'] as $key => $category) {
+            if (!is_array($category) || !isset($category['label'])) {
+                throw new RuntimeException('El catálogo de servicios contiene una familia inválida: ' . (string) $key);
+            }
+            if (isset($categories[$key])) {
+                throw new RuntimeException('La familia de servicios no puede repetir una familia ISO: ' . (string) $key);
+            }
+            $categories[$key] = $category;
+        }
+        foreach ($service['signs'] as $code => $sign) {
+            if (preg_match('/^SVC_[A-Z][A-Z0-9_]{1,40}$/D', (string) $code) !== 1 || !is_array($sign)
+                || !isset($sign['name'], $sign['category'], $sign['description'], $sign['svg'])
+                || !is_string($sign['name']) || !is_string($sign['description']) || !is_string($sign['svg'])
+                || !isset($categories[$sign['category']]) || !self::safeSvg($sign['svg'])) {
+                throw new RuntimeException('El catálogo de servicios contiene una señal inválida: ' . (string) $code);
+            }
+            if (isset($signs[$code])) {
+                throw new RuntimeException('Código de señal duplicado: ' . (string) $code);
+            }
+            $signs[$code] = $sign;
+        }
+        ksort($signs);
+        self::$signs = $signs;
+        self::$signCategories = $categories;
     }
 
     private static function loadCad(): void
@@ -168,8 +242,8 @@ final class LibraryRepository
         }
         if (!is_array($catalog) || !isset($catalog['objects'], $catalog['categories'])
             || !is_array($catalog['objects']) || !is_array($catalog['categories'])
-            || count($catalog['objects']) < 90 || count($catalog['categories']) < 15) {
-            throw new RuntimeException('El catálogo local debe contener al menos 90 objetos CAD y 15 familias.');
+            || count($catalog['objects']) < self::CAD_OBJECTS || count($catalog['categories']) < self::CAD_CATEGORIES) {
+            throw new RuntimeException('El catálogo local debe contener al menos 121 objetos CAD y 16 familias.');
         }
         foreach ($catalog['objects'] as $key => $object) {
             if (preg_match('/^cad_[a-z][a-z0-9_]{2,40}$/D', (string) $key) !== 1 || !is_array($object)

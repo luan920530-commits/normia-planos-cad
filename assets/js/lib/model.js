@@ -61,11 +61,29 @@
     }
 
     /* ----------------------------- catálogos ----------------------------- */
+    /**
+     * Traduce el tipo del editor al código del catálogo de señalización.
+     * ISO 7010 usa `iso_<código>` (iso_e002) y las señales de orientación
+     * propias usan `sig_<nombre>` (sig_wc_men → SVC_WC_MEN).
+     */
     signCodeForType(type) {
-      const match = /^iso_([efmpw][0-9]{3})$/i.exec(String(type || ''));
-      if (!match) return null;
-      const code = match[1].toUpperCase();
-      return this.catalogs.signs[code] ? code : null;
+      const raw = String(type || '');
+      const iso = /^iso_([efmpw][0-9]{3})$/i.exec(raw);
+      if (iso) {
+        const code = iso[1].toUpperCase();
+        return this.catalogs.signs[code] ? code : null;
+      }
+      const own = /^sig_([a-z][a-z0-9_]{1,40})$/i.exec(raw);
+      if (own) {
+        const code = `SVC_${own[1].toUpperCase()}`;
+        return this.catalogs.signs[code] ? code : null;
+      }
+      return null;
+    }
+
+    /** Código de catálogo → tipo del editor (lo usan la biblioteca y las pruebas). */
+    typeForSignCode(code) {
+      return String(code).startsWith('SVC_') ? `sig_${String(code).slice(4).toLowerCase()}` : `iso_${String(code).toLowerCase()}`;
     }
 
     cadForType(type) {
@@ -459,6 +477,85 @@
       }), element;
     }
 
+    /* --------------------------- edición de trazos --------------------------- */
+
+    /** Puntos absolutos (ya rotados) del trazo tal como se ven en el lienzo. */
+    visualPoints(element) {
+      if (!PATH_TYPES.includes(element.type)) return [];
+      const center = { x: element.x + element.w / 2, y: element.y + element.h / 2 };
+      const points = Array.isArray(element.points) && element.points.length >= 2
+        ? element.points
+        : [{ x: 0, y: 0 }, { x: element.w, y: element.h }];
+      return points.map((point) => G.rotatePoint(
+        { x: element.x + (Number(point.x) || 0), y: element.y + (Number(point.y) || 0) },
+        center,
+        element.rotation || 0,
+      ));
+    }
+
+    /**
+     * Reescribe la geometría de un trazo a partir de puntos absolutos. La caja
+     * se recalcula con los límites reales y la rotación se disuelve en los
+     * puntos para que mover un vértice no desplace el resto del trazo.
+     */
+    setPathPoints(id, points) {
+      const element = this.element(id);
+      if (!element || !PATH_TYPES.includes(element.type)) return false;
+      if (!Array.isArray(points) || points.length < 2 || points.length > 40) return false;
+      if (!this.canEdit()) return false;
+      const list = points.map((point) => ({
+        x: G.clamp(Number(point.x) || 0, 0, this.design.canvas.width),
+        y: G.clamp(Number(point.y) || 0, 0, this.design.canvas.height),
+      }));
+      return this.apply('points', () => {
+        element.rotation = 0;
+        const bounds = G.boundsOfPoints(list);
+        const w = G.clamp(Math.max(2, bounds.w), 2, this.design.canvas.width);
+        const h = G.clamp(Math.max(2, bounds.h), 2, this.design.canvas.height);
+        const x = G.clamp(bounds.x, 0, this.design.canvas.width - w);
+        const y = G.clamp(bounds.y, 0, this.design.canvas.height - h);
+        element.x = x;
+        element.y = y;
+        element.w = w;
+        element.h = h;
+        element.points = list.map((point) => ({
+          x: G.clamp(point.x - x, 0, w),
+          y: G.clamp(point.y - y, 0, h),
+        }));
+      }), true;
+    }
+
+    /** Mueve un vértice concreto conservando el resto del trazo. */
+    setPathPoint(id, index, point) {
+      const element = this.element(id);
+      if (!element) return false;
+      const points = this.visualPoints(element);
+      if (index < 0 || index >= points.length) return false;
+      points[index] = { x: Number(point.x) || 0, y: Number(point.y) || 0 };
+      return this.setPathPoints(id, points);
+    }
+
+    /** Inserta un vértice; `after` es el índice tras el que se añade. */
+    insertPathPoint(id, after, point) {
+      const element = this.element(id);
+      if (!element) return false;
+      const points = this.visualPoints(element);
+      if (points.length >= 40) return false;
+      const index = G.clamp(Number(after) + 1, 1, points.length);
+      points.splice(index, 0, { x: Number(point.x) || 0, y: Number(point.y) || 0 });
+      return this.setPathPoints(id, points);
+    }
+
+    /** Elimina un vértice manteniendo al menos dos (un trazo visible). */
+    removePathPoint(id, index) {
+      const element = this.element(id);
+      if (!element) return false;
+      const points = this.visualPoints(element);
+      if (points.length <= 2 || index < 0 || index >= points.length) return false;
+      points.splice(index, 1);
+      return this.setPathPoints(id, points);
+    }
+
     addPath(type, points, overrides = {}) {
       if (!PATH_TYPES.includes(type)) throw new Error('La herramienta no admite trazos.');
       if (!Array.isArray(points) || points.length < 2) throw new Error('El trazo debe tener al menos dos puntos.');
@@ -481,7 +578,7 @@
     }
 
     placeFromLibrary(kind, key, point) {
-      const type = kind === 'sign' ? `iso_${String(key).toLowerCase()}` : key;
+      const type = kind === 'sign' ? this.typeForSignCode(key) : key;
       if (!this.isKnownType(type)) throw new Error('El recurso no pertenece al catálogo local.');
       const base = this.defaultFor(type);
       const size = base.w;

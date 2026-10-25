@@ -11,7 +11,7 @@
     door: 'Puerta sencilla: haz clic sobre el muro; la hoja abre hacia arriba. Flip en el inspector para cambiar bisagra o lado.',
     door_double: 'Puerta doble: haz clic sobre el muro. Dos hojas encontradas; ajusta el ancho de la caja para el vano.',
     door_garage: 'Portón o reja de garaje: haz clic sobre el muro y ajusta el ancho de la caja al vano real.',
-    route: 'Ruta de evacuación: haz clic para añadir puntos. Enter o doble clic termina; Esc cancela.',
+    route: 'Ruta de evacuación: haz clic para añadir puntos. Enter o doble clic termina; Esc cancela. Al terminar podrás arrastrar sus vértices.',
     text: 'Texto: haz clic para insertar una etiqueta y edítala en el inspector.',
     dimension: 'Medida: arrastra entre dos puntos para acotar la distancia.',
     line: 'Línea: arrastra entre dos puntos.',
@@ -308,7 +308,7 @@
     }
 
     startPlacement(kind, key) {
-      const type = kind === 'sign' ? `iso_${String(key).toLowerCase()}` : key;
+      const type = kind === 'sign' ? this.model.typeForSignCode(key) : key;
       if (!this.model.isKnownType(type)) {
         this.toast('El recurso no pertenece a las bibliotecas locales.', 'error');
         return;
@@ -497,6 +497,30 @@
 
     /* -------------------------------- puntero -------------------------------- */
     onPointerDown(event) {
+      const pointNode = event.target.closest?.('.selection-frame .vertex-handle');
+      if (pointNode && this.tool === 'select') {
+        const element = this.model.selectedElements()[0];
+        if (!element || !this.model.canEdit()) return;
+        const index = Number(pointNode.dataset.point);
+        if (event.altKey) {
+          // Alt+clic quita el vértice sin abrir un arrastre.
+          if (this.model.removePathPoint(element.id, index)) {
+            this.toast('Vértice eliminado.', 'info', { duration: 1800 });
+            this.scheduleRender();
+          }
+          return;
+        }
+        this.pending = {
+          mode: 'vertex',
+          elementId: element.id,
+          index,
+          start: this.toCanvas(event),
+          startClient: { x: event.clientX, y: event.clientY },
+          pointerId: event.pointerId,
+        };
+        this.svg.setPointerCapture?.(event.pointerId);
+        return;
+      }
       const handleNode = event.target.closest?.('.selection-frame .handle');
       if (handleNode) {
         // No se transforma todavía: un clic simple sobre un tirador no debe
@@ -605,6 +629,47 @@
       this.svg.setPointerCapture?.(pending.pointerId);
     }
 
+    /**
+     * Arrastre de un vértice de ruta, muro, línea o medida. La rotación del
+     * elemento se disuelve en los puntos al empezar, así que el puntero se
+     * aplica directamente sobre las coordenadas del lienzo.
+     */
+    startVertex(pending) {
+      const element = this.model.element(pending.elementId);
+      if (!element) return;
+      this.model.begin();
+      this.drag = {
+        mode: 'vertex',
+        elementId: element.id,
+        index: pending.index,
+        startClient: { x: pending.startClient.x, y: pending.startClient.y },
+        pointerId: pending.pointerId,
+      };
+      this.svg.setPointerCapture?.(pending.pointerId);
+      this.updateVertex(this.clampPoint(this.toCanvas({ clientX: pending.startClient.x, clientY: pending.startClient.y })));
+    }
+
+    /** Aplica el puntero al vértice activo con ajuste opcional a la rejilla. */
+    updateVertex(point, event = {}) {
+      const drag = this.drag;
+      if (!drag || drag.mode !== 'vertex') return;
+      let target = this.snapPoint(point, event);
+      if (event.shiftKey) {
+        const points = this.model.visualPoints(this.model.element(drag.elementId));
+        const previous = points[drag.index - 1];
+        const next = points[drag.index + 1];
+        const anchor = previous || next;
+        if (anchor) {
+          const dx = Math.abs(target.x - anchor.x);
+          const dy = Math.abs(target.y - anchor.y);
+          if (dx >= dy) target = { x: target.x, y: anchor.y };
+          else target = { x: anchor.x, y: target.y };
+        }
+      }
+      this.model.setPathPoint(drag.elementId, drag.index, target);
+      this.scheduleRender();
+    }
+
     onPointerMove(event) {
       const point = this.clampPoint(this.toCanvas(event));
       const cursor = q('[data-cursor-position]');
@@ -616,6 +681,7 @@
         const pending = this.pending;
         this.pending = null;
         if (pending.mode === 'transform') this.startTransform(pending);
+        else if (pending.mode === 'vertex') this.startVertex(pending);
         else this.startMove(pending);
       }
       if (this.pan) {
@@ -664,6 +730,10 @@
       }
       if (this.drag?.mode === 'transform') {
         this.updateTransform(point, event);
+        return;
+      }
+      if (this.drag?.mode === 'vertex') {
+        this.updateVertex(point, event);
         return;
       }
       if (this.drag?.mode === 'draw') {
@@ -726,6 +796,12 @@
         this.scheduleRender();
         return;
       }
+      if (this.drag?.mode === 'vertex') {
+        this.drag = null;
+        this.model.end('points');
+        this.scheduleRender();
+        return;
+      }
       if (this.drag?.mode === 'draw') {
         const drag = this.drag;
         this.drag = null;
@@ -747,6 +823,25 @@
       if (!node || this.tool !== 'select') return;
       const element = this.model.element(node.dataset.id);
       if (!element) return;
+      // Doble clic sobre un muro o una ruta añade un vértice en el segmento
+      // más cercano: es la forma de crear esquinas nuevas sin salir del plano.
+      if ((element.type === 'wall' || element.type === 'route') && this.model.canEdit()) {
+        const point = this.snapPoint(this.clampPoint(this.toCanvas(event)), event);
+        const points = this.model.visualPoints(element);
+        let target = { index: 0, distance: Infinity };
+        for (let index = 0; index < points.length - 1; index += 1) {
+          const gap = G.distanceToSegment(point, points[index], points[index + 1]);
+          if (gap < target.distance) target = { index, distance: gap };
+        }
+        if (points.length < 40 && target.distance <= 24 / (this.view.zoom || 1)) {
+          this.model.select([element.id]);
+          if (this.model.insertPathPoint(element.id, target.index, point)) {
+            this.toast('Vértice añadido. Arrástralo para ajustar el trazo.', 'info', { duration: 2400 });
+            this.scheduleRender();
+            return;
+          }
+        }
+      }
       if (element.type === 'text' || element.type === 'dimension' || element.label) {
         q('[data-properties-panel]')?.classList.add('is-open');
         const field = q('[data-prop="label"]');
@@ -875,10 +970,14 @@
       try {
         this.model.addPath('route', points, {});
         this.toast(closed ? 'Ruta cerrada en circuito.' : 'Ruta de evacuación creada.', 'success', { duration: 2400 });
+        // Se selecciona la ruta recién creada para poder ajustar sus vértices
+        // sin tener que cambiar de herramienta a mano.
+        const created = this.model.design.elements.at(-1);
+        this.applyTool('select');
+        if (created) this.model.select([created.id]);
       } catch (error) {
         this.toast(error.message, 'error');
       }
-      if (this.tool === 'route') this.updateRouteHint();
       this.scheduleRender();
     }
 
@@ -968,7 +1067,7 @@
       const kind = payload.kind === 'cad' ? 'cad' : payload.kind === 'sign' ? 'sign' : null;
       const key = typeof payload.key === 'string' ? payload.key : '';
       if (!kind || !key) return;
-      const type = kind === 'sign' ? `iso_${key.toLowerCase()}` : key;
+      const type = kind === 'sign' ? this.model.typeForSignCode(key) : key;
       if (!this.model.isKnownType(type)) {
         this.toast('El recurso no pertenece a las bibliotecas locales.', 'error');
         return;
@@ -1715,6 +1814,8 @@
     // cifras fijas cuando se amplían las bibliotecas.
     const cadCount = q('[data-cad-count]');
     if (cadCount) cadCount.textContent = String(Object.keys(catalogs.cad || {}).length);
+    const signCount = q('[data-sign-count]');
+    if (signCount) signCount.textContent = String(Object.keys(catalogs.signs || {}).length);
     try {
       const app = new EditorApp(boot, design, catalogs);
       window.NormiaEditor = app;

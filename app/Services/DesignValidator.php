@@ -107,11 +107,7 @@ final class DesignValidator
 
     public static function signCodeForType(string $type): ?string
     {
-        if (preg_match('/^iso_([efmpw][0-9]{3})$/D', $type, $matches) !== 1) {
-            return null;
-        }
-        $code = strtoupper($matches[1]);
-        return LibraryRepository::sign($code) !== null ? $code : null;
+        return LibraryRepository::codeForType($type);
     }
 
     public static function isKnownType(string $type): bool

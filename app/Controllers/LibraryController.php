@@ -15,16 +15,28 @@ final class LibraryController extends BaseController
             $categories[$key]['color'] = LibraryRepository::SIGN_COLORS[$key] ?? '#334155';
         }
         $aliases = LibraryRepository::aliases();
+        $signs = LibraryRepository::signs();
+        $serviceCount = 0;
+        $search = $aliases['search'] ?? [];
+        foreach ($signs as $code => $sign) {
+            if (str_starts_with((string) $code, LibraryRepository::SERVICE_PREFIX)) {
+                $serviceCount++;
+                // Los alias propios de cada señal de servicio también alimentan la búsqueda.
+                $search[$code] = array_values(array_unique(array_merge($search[$code] ?? [], $sign['aliases'] ?? [])));
+            }
+        }
         Response::json([
             'ok' => true,
             'standard' => 'ISO 7010',
-            'count' => count(LibraryRepository::signs()),
+            'count' => count($signs),
+            'isoCount' => count($signs) - $serviceCount,
+            'serviceCount' => $serviceCount,
             'categories' => $categories,
             'colors' => LibraryRepository::SIGN_COLORS,
-            'signs' => LibraryRepository::signs(),
-            'aliases' => $aliases['search'] ?? [],
+            'signs' => $signs,
+            'aliases' => $search,
             'legacyTools' => $aliases['legacyTools'] ?? [],
-            'attribution' => 'Pictogramas ISO 7010 locales. Licencia MIT de @iso-safety-signs/core © Karl Norling; consulta el NOTICE de Wikimedia Commons.',
+            'attribution' => 'Pictogramas ISO 7010 locales (licencia MIT de @iso-safety-signs/core © Karl Norling; atribución de Wikimedia Commons en NOTICE) y señales de orientación propias de Normia (GPL-3.0).',
         ]);
     }
 

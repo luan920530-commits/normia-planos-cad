@@ -133,7 +133,7 @@ try {
   const designMatch = /<textarea id="editor-design" hidden>([\s\S]*?)<\/textarea>/.exec(editorHtml);
   let design = null;
   try { design = JSON.parse(decodeEntities(designMatch?.[1] || '')); } catch { design = null; }
-  report.check('Editor recibe el diseño guardado', design?.format === 2 && design?.elements?.length === 62, `${design?.elements?.length} elementos`);
+  report.check('Editor recibe el diseño guardado', design?.format === 2 && design?.elements?.length === 66, `${design?.elements?.length} elementos`);
 
   res = await client.get('/assets/js/editor.js');
   report.check('JS del editor se sirve completo', res.status === 200 && res.text.length > 20000, `${res.text.length} bytes`);
@@ -143,14 +143,17 @@ try {
   }
 
   let { response: catalogResponse, body: catalog } = await json('catalogs/signs');
-  report.check('Catálogo de señales con 332 entradas', catalogResponse.status === 200 && catalog.count === 332 && Object.keys(catalog.signs || {}).length === 332);
+  report.check('Catálogo de señales con 332 ISO 7010 y 22 de servicios',
+    catalogResponse.status === 200 && catalog.count === 354 && catalog.isoCount === 332 && catalog.serviceCount === 22
+    && Object.keys(catalog.signs || {}).length === 354);
   report.check('Señales con SVG seguro embebido', catalog.signs?.E002?.svg?.startsWith('<svg') && !/xlink:href="(?!#)/.test(catalog.signs?.E002?.svg || ''));
-  report.check('Familias de señalización completas', Object.keys(catalog.categories || {}).length === 5 && catalog.colors?.emergency === '#237f52');
+  report.check('Señales de baño disponibles', ['SVC_WC_MEN', 'SVC_WC_WOMEN', 'SVC_WC_MIXED', 'SVC_WC_ACCESSIBLE'].every((code) => catalog.signs?.[code]?.svg?.startsWith('<svg')));
+  report.check('Familias de señalización completas', Object.keys(catalog.categories || {}).length === 6 && catalog.colors?.emergency === '#237f52' && catalog.colors?.services === '#0f766e');
   report.check('Alias heredados disponibles', catalog.legacyTools?.extinguisher === 'F001' && catalog.legacyTools?.exit === 'E002');
   ({ response: catalogResponse, body: catalog } = await json('catalogs/cad'));
-  report.check('Catálogo CAD con 90 objetos', catalogResponse.status === 200 && catalog.count === 90 && Object.keys(catalog.objects || {}).length === 90);
-  report.check('Catálogo CAD con 15 familias sectoriales', Object.keys(catalog.categories || {}).length === 15
-    && ['restaurant', 'warehouse', 'retail', 'hospital', 'textile', 'grill', 'supermarket', 'residential', 'sports'].every((key) => catalog.categories?.[key]?.label),
+  report.check('Catálogo CAD con 121 objetos', catalogResponse.status === 200 && catalog.count === 121 && Object.keys(catalog.objects || {}).length === 121);
+  report.check('Catálogo CAD con 16 familias sectoriales', Object.keys(catalog.categories || {}).length === 16
+    && ['restaurant', 'warehouse', 'retail', 'hospital', 'textile', 'grill', 'supermarket', 'residential', 'sports', 'outdoor'].every((key) => catalog.categories?.[key]?.label),
     Object.keys(catalog.categories || {}).join(','));
   report.check('Cada familia CAD tiene objetos', Object.keys(catalog.categories || {}).every((key) => Object.values(catalog.objects || {}).some((object) => object.category === key)));
   report.check('Objetos CAD con SVG', Object.values(catalog.objects || {}).every((object) => String(object.svg || '').startsWith('<svg')));
@@ -158,7 +161,7 @@ try {
   /* ---------------------------- guardado y versiones ---------------------------- */
   ({ body: catalog } = await json(`api/floors/${floorId}`));
   let floor = catalog;
-  report.check('API del piso devuelve diseño y versión', floor.floor?.version === 1 && floor.design?.elements?.length === 62, `v${floor.floor?.version}`);
+  report.check('API del piso devuelve diseño y versión', floor.floor?.version === 1 && floor.design?.elements?.length === 66, `v${floor.floor?.version}`);
   const original = floor.design;
   const changed = JSON.parse(JSON.stringify(original));
   changed.elements[0].label = 'Prueba funcional';
@@ -237,6 +240,32 @@ try {
   res = await client.postJson(`api/floors/${floorId}/save`, { design: { ...doorDesign, elements: doorDesign.elements.map((element) => element.id === 'puerta_prueba' ? { ...element, flipY: 'sí' } : element) }, expected_version: catalog.floor.version });
   report.check('La API rechaza un sentido de apertura inválido', res.status === 422, String(res.status));
   report.check('El guardado anterior conserva las puertas', nowDoors >= 0 && savedDoors.length === 3);
+
+  /* --------------------------- señalización de servicios --------------------------- */
+  const serviceDesign = JSON.parse(JSON.stringify(catalog.design));
+  serviceDesign.elements = serviceDesign.elements.filter((element) => !String(element.type).startsWith('sig_'));
+  serviceDesign.elements.push(
+    { id: 'bano_hombres', type: 'sig_wc_men', layerId: doorLayer, x: 120, y: 420, w: 64, h: 64, rotation: 0, color: '#0f766e', stroke: 0, opacity: 1, label: 'Baño', locked: false },
+    { id: 'bano_mujeres', type: 'sig_wc_women', layerId: doorLayer, x: 200, y: 420, w: 64, h: 64, rotation: 0, color: '#0f766e', stroke: 0, opacity: 1, label: '', locked: false },
+    { id: 'bano_accesible', type: 'sig_wc_accessible', layerId: doorLayer, x: 280, y: 420, w: 64, h: 64, rotation: 0, color: '#0f766e', stroke: 0, opacity: 1, label: '', locked: false },
+  );
+  res = await client.postJson(`api/floors/${floorId}/save`, { design: serviceDesign, expected_version: (await json(`api/floors/${floorId}`)).body.floor.version });
+  report.check('La API acepta las señales de baño', res.status === 200, `${res.status} · ${res.text.slice(0, 120)}`);
+  ({ body: catalog } = await json(`api/floors/${floorId}`));
+  const savedService = (catalog.design?.elements || []).filter((element) => String(element.type).startsWith('sig_'));
+  report.check('Las señales de servicio se guardan con su color de familia',
+    savedService.length === 3 && savedService.every((element) => element.color === '#0f766e'),
+    savedService.map((element) => element.type).join(','));
+  res = await client.get(`projects/${projectId}/floors/${floorId}/export/svg`);
+  const serviceSvg = res.text;
+  report.check('El SVG exportado incluye las señales de baño',
+    /data-element="bano_hombres"/.test(serviceSvg) && /data-element="bano_accesible"/.test(serviceSvg)
+    && (serviceSvg.match(/<svg [^>]*color="#0f766e"/g) || []).length >= 3,
+    `${(serviceSvg.match(/<svg [^>]*color="#0f766e"/g) || []).length} símbolos`);
+  const serviceBad = JSON.parse(JSON.stringify(serviceDesign));
+  serviceBad.elements.push({ ...serviceDesign.elements[0], id: 'senal_inventada', type: 'sig_no_existe' });
+  res = await client.postJson(`api/floors/${floorId}/save`, { design: serviceBad, expected_version: (await json(`api/floors/${floorId}`)).body.floor.version });
+  report.check('La API rechaza una señal de servicio inexistente', res.status === 422, String(res.status));
 
   /* ---------------------------- validación y seguridad ---------------------------- */
   const invalidCases = [

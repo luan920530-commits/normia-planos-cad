@@ -137,13 +137,19 @@ async function main() {
 
     /* ------------------------------- arranque ------------------------------- */
     report.check('El editor arranca con la aplicación real', Boolean(app && app.model && app.renderer), window.document.title);
-    report.check('Catálogo de señalización completo', Object.keys(app.catalogs.signs).length === 332, String(Object.keys(app.catalogs.signs).length));
-    report.check('Catálogo CAD ampliado a 90 objetos', Object.keys(app.catalogs.cad).length === 90, String(Object.keys(app.catalogs.cad).length));
-    report.check('Familias CAD ampliadas a 15', Object.keys(app.catalogs.cadCategories).length === 15, Object.keys(app.catalogs.cadCategories).join(','));
-    const expectedFamilies = ['restaurant', 'warehouse', 'retail', 'hospital', 'textile', 'grill', 'supermarket', 'residential', 'sports'];
+    const signCodes = Object.keys(app.catalogs.signs);
+    const serviceCodes = signCodes.filter((code) => code.startsWith('SVC_'));
+    report.check('Catálogo de señalización completo', signCodes.length === 354 && serviceCodes.length === 22, `${signCodes.length} · ${serviceCodes.length} de servicios`);
+    report.check('Señales de baño disponibles', ['SVC_WC_MEN', 'SVC_WC_WOMEN', 'SVC_WC_MIXED', 'SVC_WC_ACCESSIBLE', 'SVC_BABY'].every((code) => app.catalogs.signs[code]?.name),
+      ['SVC_WC_MEN', 'SVC_WC_WOMEN', 'SVC_WC_MIXED', 'SVC_WC_ACCESSIBLE', 'SVC_BABY'].filter((code) => !app.catalogs.signs[code]).join(',') || 'todas');
+    report.check('La familia de servicios está disponible', app.catalogs.signCategories.services?.label === 'Orientación y servicios', app.catalogs.signCategories.services?.label);
+    report.check('Catálogo CAD ampliado a 121 objetos', Object.keys(app.catalogs.cad).length === 121, String(Object.keys(app.catalogs.cad).length));
+    report.check('Familias CAD ampliadas a 16', Object.keys(app.catalogs.cadCategories).length === 16, Object.keys(app.catalogs.cadCategories).join(','));
+    const expectedFamilies = ['restaurant', 'warehouse', 'retail', 'hospital', 'textile', 'grill', 'supermarket', 'residential', 'sports', 'outdoor'];
     report.check('Nuevas familias sectoriales disponibles', expectedFamilies.every((key) => app.catalogs.cadCategories[key]?.label), expectedFamilies.filter((key) => !app.catalogs.cadCategories[key]).join(',') || 'todas');
     report.check('Paleta de colores expuesta', window.Normia.COLORS.length === 29, String(window.Normia.COLORS.length));
-    report.check('La barra lateral cuenta los equipos del catálogo', q(window, '[data-cad-count]')?.textContent === '90', q(window, '[data-cad-count]')?.textContent);
+    report.check('La barra lateral cuenta los equipos del catálogo', q(window, '[data-cad-count]')?.textContent === '121', q(window, '[data-cad-count]')?.textContent);
+    report.check('La barra lateral cuenta las señales del catálogo', q(window, '[data-sign-count]')?.textContent === '354', q(window, '[data-sign-count]')?.textContent);
     report.check('Lienzo con el preset A4 horizontal', app.model.design.canvas.width === 1123 && app.model.design.canvas.height === 794, `${app.model.design.canvas.width}×${app.model.design.canvas.height}`);
     report.check('Barra de estado muestra el tamaño', q(window, '[data-canvas-size]').textContent.includes('794'), q(window, '[data-canvas-size]').textContent);
     report.check('Escala visible en la barra de estado', q(window, '[data-scale-label]').textContent.includes('1:100'), q(window, '[data-scale-label]').textContent);
@@ -168,7 +174,8 @@ async function main() {
     drag(window, app.svg, clientPoint(app, 200, 200), clientPoint(app, 420, 200));
     app.renderNow();
     report.check('Dibujar un muro añade un elemento', app.model.design.elements.length === beforeWall + 1, `${beforeWall} → ${app.model.design.elements.length}`);
-    const wall = app.model.design.elements[app.model.design.elements.length - 1];
+    let wall = app.model.design.elements[app.model.design.elements.length - 1];
+    const wallId = wall.id;
     report.check('El muro conserva dos puntos y su longitud', wall?.type === 'wall' && wall.points?.length === 2 && Math.round(wall.w) === 220, `${wall?.type} · ancho ${Math.round(wall?.w || 0)}`);
 
     /* ---------------- posiciones reales del trazo (no en el origen) ---------------- */
@@ -337,6 +344,54 @@ async function main() {
     report.check('La selección de la ruta abraza su caja real',
       near(app.model.selectionFrame().x, route.x, 0.5) && near(app.model.selectionFrame().y, route.y, 0.5),
       `${Math.round(app.model.selectionFrame().x)},${Math.round(app.model.selectionFrame().y)}`);
+
+    /* --------------------- edición de vértices de la ruta --------------------- */
+    app.model.select([route.id]);
+    app.applyTool('select');
+    app.renderNow();
+    const vertexHandles = () => qa(window, '.selection-frame .vertex-handle:not(.is-midpoint)');
+    report.check('La ruta seleccionada muestra un tirador por vértice', vertexHandles().length === 4, String(vertexHandles().length));
+
+    const beforeVertex = app.model.visualPoints(app.model.element(route.id));
+    const firstVertex = vertexHandles()[0];
+    const vertexStart = clientPoint(app, Number(firstVertex.getAttribute('cx')), Number(firstVertex.getAttribute('cy')));
+    pointer(window, firstVertex, 'pointerdown', vertexStart);
+    pointer(window, app.svg, 'pointermove', { clientX: vertexStart.clientX + 80, clientY: vertexStart.clientY + 60 });
+    pointer(window, app.svg, 'pointerup', { clientX: vertexStart.clientX + 80, clientY: vertexStart.clientY + 60 });
+    app.renderNow();
+    const afterVertex = app.model.visualPoints(app.model.element(route.id));
+    report.check('Arrastrar un vértice mueve solo ese punto',
+      afterVertex.length === 4 && Math.abs(afterVertex[0].x - beforeVertex[0].x) > 30
+      && near(afterVertex[1].x, beforeVertex[1].x, 0.5) && near(afterVertex[1].y, beforeVertex[1].y, 0.5),
+      `${Math.round(beforeVertex[0].x)},${Math.round(beforeVertex[0].y)} → ${Math.round(afterVertex[0].x)},${Math.round(afterVertex[0].y)}`);
+    report.check('La caja del trazo se recalcula al mover el vértice',
+      near(app.model.element(route.id).x, Math.min(...afterVertex.map((point) => point.x)), 1),
+      String(Math.round(app.model.element(route.id).x)));
+    app.model.undo();
+    app.renderNow();
+    const undone = app.model.visualPoints(app.model.element(route.id));
+    report.check('Deshacer devuelve el vértice a su sitio', near(undone[0].x, beforeVertex[0].x, 0.5) && near(undone[0].y, beforeVertex[0].y, 0.5),
+      `${Math.round(undone[0].x)},${Math.round(undone[0].y)}`);
+    // Deshacer reconstruye los elementos desde el historial: se refresca la
+    // referencia local para que las comprobaciones siguientes sigan siendo válidas.
+    wall = app.model.element(wallId);
+
+    const segmentPoint = clientPoint(app, beforeVertex[0].x + (beforeVertex[1].x - beforeVertex[0].x) / 2, beforeVertex[0].y);
+    const segmentNode = app.svg.querySelector(`.plan-element[data-id="${route.id}"] .hit-area`);
+    const dbl = new window.MouseEvent('dblclick', { bubbles: true, cancelable: true, view: window, button: 0, clientX: Math.round(segmentPoint.clientX), clientY: Math.round(segmentPoint.clientY) });
+    segmentNode.dispatchEvent(dbl);
+    app.renderNow();
+    const inserted = app.model.visualPoints(app.model.element(route.id));
+    report.check('Doble clic sobre el trazo añade un vértice nuevo', inserted.length === 5, `${inserted.length} puntos`);
+
+    const lastVertex = vertexHandles().at(-1);
+    const lastStart = clientPoint(app, Number(lastVertex.getAttribute('cx')), Number(lastVertex.getAttribute('cy')));
+    pointer(window, lastVertex, 'pointerdown', lastStart, { altKey: true });
+    pointer(window, lastVertex, 'pointerup', lastStart, { altKey: true });
+    app.renderNow();
+    report.check('Alt+clic elimina el vértice señalado', app.model.visualPoints(app.model.element(route.id)).length === 4,
+      String(app.model.visualPoints(app.model.element(route.id)).length));
+
     app.model.clearSelection();
     app.applyTool('select');
     app.renderNow();
@@ -352,7 +407,8 @@ async function main() {
     const signButton = q(window, '[data-open-library="sign"]');
     signButton?.click();
     app.library.open('sign');
-    report.check('La biblioteca de señalización muestra 332 resultados', q(window, '[data-library-families]').textContent.includes('332'), q(window, '[data-library-families]').textContent.slice(0, 80));
+    report.check('La biblioteca de señalización muestra las 354 señales', q(window, '[data-library-families]').textContent.includes('354'), q(window, '[data-library-families]').textContent.slice(0, 80));
+    report.check('La biblioteca incluye la familia de servicios', q(window, '[data-library-families]').textContent.includes('Servicios'), q(window, '[data-library-families]').textContent.slice(0, 120));
     report.check('La biblioteca pinta pictogramas locales', qa(window, '[data-library-grid] .library-thumb svg').length > 0, String(qa(window, '[data-library-grid] .library-thumb svg').length));
     /* --------------- flujo real: tarjeta → insertar → clic en el plano --------------- */
     const signCard = qa(window, '[data-library-grid] .library-card').find((card) => card.dataset.key === 'E002');
@@ -378,6 +434,31 @@ async function main() {
     report.check('La señal usa el color de su familia', signElement?.color === '#237f52', signElement?.color);
     const signNode = app.svg.querySelector(`.plan-element[data-id="${signElement.id}"]`);
     report.check('La señal se dibuja como pictograma local', Boolean(signNode?.querySelector('svg')) && signNode.querySelector('svg').getAttribute('width') === String(signElement.w));
+
+    /* ------------------- señal de baño desde la biblioteca ------------------- */
+    app.library.open('sign');
+    app.library.family = 'services';
+    app.library.renderChips();
+    app.library.renderGrid();
+    const serviceCard = qa(window, '[data-library-grid] .library-card').find((card) => card.dataset.key === 'SVC_WC_MEN');
+    report.check('La familia de servicios muestra la señal de baño', Boolean(serviceCard), String(qa(window, '[data-library-grid] .library-card').length));
+    app.library.select('SVC_WC_MEN');
+    app.startPlacement('sign', 'SVC_WC_MEN');
+    await sleep(20);
+    report.check('Colocar una señal de servicios activa el modo colocación', app.placement?.type === 'sig_wc_men', String(app.placement?.type));
+    pointer(window, app.svg, 'pointerdown', clientPoint(app, 980, 300));
+    pointer(window, app.svg, 'pointerup', clientPoint(app, 980, 300));
+    app.renderNow();
+    const bathSign = app.model.design.elements.at(-1);
+    report.check('La señal de baño se inserta y usa el color de servicios', bathSign.type === 'sig_wc_men' && bathSign.color === '#0f766e', `${bathSign.type} · ${bathSign.color}`);
+    const bathNode = app.svg.querySelector(`.plan-element[data-id="${bathSign.id}"]`);
+    report.check('La señal de baño se dibuja en el lienzo', Boolean(bathNode?.querySelector('svg rect')));
+    app.model.select([bathSign.id]);
+    app.renderNow();
+    report.check('El inspector reconoce la señal de servicios', q(window, '[data-properties-panel]')?.textContent.includes('Baño de hombres'),
+      q(window, '[data-properties-title]')?.textContent);
+    app.model.clearSelection();
+    app.applyTool('select');
 
     const cadKey = Object.keys(app.catalogs.cad)[0];
     const beforeCad = app.model.design.elements.length;
@@ -681,7 +762,7 @@ async function main() {
     const assetFailures = [];
     for (const code of Object.keys(app.catalogs.signs)) {
       try {
-        const thumb = app.renderer.thumbnail(`iso_${code.toLowerCase()}`);
+        const thumb = app.renderer.thumbnail(app.model.typeForSignCode(code));
         if (thumb.querySelector('svg')) assetsOk += 1;
         else assetFailures.push(code);
       } catch (error) {
@@ -697,8 +778,8 @@ async function main() {
         assetFailures.push(`${key}: ${error.message}`);
       }
     }
-    report.check('Los 332 pictogramas y 90 equipos se instancian sin errores', assetsOk === 422 && assetFailures.length === 0,
-      `${assetsOk}/422 · ${assetFailures.slice(0, 3).join(', ')}`);
+    report.check('Los 354 pictogramas y 121 equipos se instancian sin errores', assetsOk === 475 && assetFailures.length === 0,
+      `${assetsOk}/475 · ${assetFailures.slice(0, 3).join(', ')}`);
 
     const xlink = new window.DOMParser().parseFromString(
       '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 10 10"><defs><g id="marca"><rect width="10" height="10"/></g></defs><use xlink:href="#marca"/></svg>',

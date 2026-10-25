@@ -1,6 +1,6 @@
 {
   "name": "normia-planos-cad",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "private": true,
   "description": "Normia Planos CAD · suite de pruebas de desarrollo (no se requiere Node en producción).",
   "type": "module",
@@ -16,6 +16,7 @@
     "test:package": "node tests/php/package.mjs 8.3",
     "lint:php": "node tests/php/lint.mjs 8.1 && node tests/php/lint.mjs 8.3",
     "lint:js": "node tests/js/lint.mjs",
+    "test:offline": "node tests/js/offline.mjs",
     "build": "bash tools/build-packages.sh",
     "preview": "node tools/preview-server.mjs"
   },

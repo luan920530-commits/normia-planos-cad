@@ -112,11 +112,11 @@
         <span class="rail-separator" role="separator"></span>
         <button class="rail-button rail-library" type="button" data-open-library="sign" data-tooltip="Biblioteca de señalización ISO 7010" aria-label="Biblioteca de señalización ISO 7010">
           <svg class="icon"><use href="#i-sign"></use></svg><span>Señales</span>
-          <em class="rail-count">332</em>
+          <em class="rail-count" data-sign-count>354</em>
         </button>
         <button class="rail-button rail-library" type="button" data-open-library="cad" data-tooltip="Biblioteca de equipamiento CAD" aria-label="Biblioteca de equipamiento CAD">
           <svg class="icon"><use href="#i-cad"></use></svg><span>Equipos</span>
-          <em class="rail-count" data-cad-count>32</em>
+          <em class="rail-count" data-cad-count>121</em>
         </button>
       </div>
       <div class="rail-bottom">

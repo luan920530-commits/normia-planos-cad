@@ -14,7 +14,7 @@
   <article class="stat-card"><span class="stat-icon"><svg class="icon"><use href="#i-folder"></use></svg></span><div><strong><?= e($stats['projects']) ?></strong><small>Proyectos</small></div></article>
   <article class="stat-card"><span class="stat-icon"><svg class="icon"><use href="#i-layers"></use></svg></span><div><strong><?= e($stats['floors']) ?></strong><small>Pisos</small></div></article>
   <article class="stat-card"><span class="stat-icon"><svg class="icon"><use href="#i-history"></use></svg></span><div><strong><?= e($stats['versions']) ?></strong><small>Versiones guardadas</small></div></article>
-  <article class="stat-card stat-card-muted"><span class="stat-icon"><svg class="icon"><use href="#i-sign"></use></svg></span><div><strong>332</strong><small>Pictogramas ISO 7010</small></div></article>
+  <article class="stat-card stat-card-muted"><span class="stat-icon"><svg class="icon"><use href="#i-sign"></use></svg></span><div><strong>354</strong><small>Pictogramas ISO 7010 y de servicios</small></div></article>
 </section>
 
 <section class="section-block" aria-labelledby="projects-title">

@@ -122,8 +122,8 @@ Editor B: conserva el diseño, muestra aviso, permite recargar v6 o descargar co
 | `DesignFactory` | Diseño en blanco por preset (A4 horizontal/vertical, A3, planta amplia, lienzo libre) con capas iniciales. |
 | `DesignValidator` | Normalización y límites del esquema v2 (lienzo, capas, elementos, grupos, etiquetas, colores, puntos, tamaño JSON). |
 | `DesignImporter` | Importación del JSON propio (v2) y del formato heredado v1 con alias de herramientas y señales. |
-| `LibraryRepository` | Carga y **valida** los catálogos locales: 332 señales, 5 familias, 90 objetos CAD, 15 familias, SVG seguros, colores por familia u objeto. |
-| `SvgExporter` | Exportación SVG de la versión guardada, con identificadores únicos y símbolos incrustados. |
+| `LibraryRepository` | Carga y **valida** los catálogos locales: 332 señales ISO 7010 + 22 de servicios, 6 familias, 121 objetos CAD, 16 familias, SVG seguros, colores por familia u objeto. Expone `typeForCode()`/`codeForType()` para traducir `iso_*`/`sig_*` ↔ código de catálogo. |
+| `SvgExporter` | Exportación SVG de la versión guardada, con identificadores únicos y símbolos incrustados (señales ISO, de servicios y equipos CAD). |
 | `Installer` | Requisitos, validación de la cuenta, creación del esquema, usuario administrador, demo opcional y escritura atómica de `config/config.php`. |
 | `DemoSeeder` | Carga `resources/demo/demo-project.json` como proyecto de ejemplo con sus pisos. |
 

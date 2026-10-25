@@ -112,9 +112,9 @@ final class DesignImporter
             $tool = isset($raw['tool']) && is_string($raw['tool']) ? trim($raw['tool']) : '';
             $type = null;
             if (isset($legacyTools[$tool]) && is_string($legacyTools[$tool]) && LibraryRepository::sign($legacyTools[$tool]) !== null) {
-                $type = 'iso_' . strtolower($legacyTools[$tool]);
-            } elseif (preg_match('/^iso_([efmpw][0-9]{3})$/i', $tool, $m) === 1 && LibraryRepository::sign(strtoupper($m[1])) !== null) {
-                $type = 'iso_' . strtolower($m[1]);
+                $type = LibraryRepository::typeForCode($legacyTools[$tool]);
+            } elseif (LibraryRepository::codeForType($tool) !== null) {
+                $type = $tool;
             } elseif (in_array($tool, ['wall', 'door', 'door_double', 'door_garage', 'route', 'text', 'line', 'rect', 'ellipse', 'dimension'], true)) {
                 $type = $tool;
             } elseif (LibraryRepository::cadObject($tool) !== null) {

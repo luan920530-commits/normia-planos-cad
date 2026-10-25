@@ -108,7 +108,11 @@
     }
 
     typeName(element) {
-      if (this.model.signCodeForType(element.type)) return `${TYPE_NAMES.sign} · ${this.model.signCodeForType(element.type)}`;
+      const code = this.model.signCodeForType(element.type);
+      if (code) {
+        const label = String(code).startsWith('SVC_') ? 'Señal de servicios' : TYPE_NAMES.sign;
+        return `${label} · ${code}`;
+      }
       if (this.model.cadForType(element.type)) return TYPE_NAMES.cad;
       return TYPE_NAMES[element.type] || 'Elemento';
     }
@@ -167,7 +171,7 @@
       const sign = single ? this.model.signCodeForType(single.type) : null;
       const cad = single ? this.model.cadForType(single.type) : null;
       return `
-        ${sign ? `<div class="inspector-asset"><span class="inspector-asset-thumb" data-asset-preview="${esc(single.type)}"></span><div><strong>${esc(this.model.catalogs.signs[sign]?.name || sign)}</strong><small>${esc(sign)} · ${esc(this.model.catalogs.signCategories[this.model.catalogs.signs[sign]?.category]?.label || 'ISO 7010')}</small></div></div>` : ''}
+        ${sign ? `<div class="inspector-asset"><span class="inspector-asset-thumb" data-asset-preview="${esc(single.type)}"></span><div><strong>${esc(this.model.catalogs.signs[sign]?.name || sign)}</strong><small>${esc(sign)} · ${esc(this.model.catalogs.signCategories[this.model.catalogs.signs[sign]?.category]?.label || (String(sign).startsWith('SVC_') ? 'Orientación y servicios' : 'ISO 7010'))}</small></div></div>` : ''}
         ${cad ? `<div class="inspector-asset"><span class="inspector-asset-thumb" data-asset-preview="${esc(single.type)}"></span><div><strong>${esc(cad.name)}</strong><small>Equipo CAD esquemático</small></div></div>` : ''}
         ${!canEdit ? '<div class="notice notice-warning compact-notice"><svg class="icon"><use href="#i-lock"></use></svg><p>La selección está bloqueada o pertenece a una capa bloqueada. Desbloquea para editar.</p></div>' : ''}
         <section class="inspector-section">
@@ -179,7 +183,7 @@
             <label class="field compact"><span>Alto</span><input type="number" step="1" min="2" data-prop="h" value="${Math.round(frame.h)}" ${canEdit ? '' : 'disabled'}></label>
           </div>
           <label class="field compact"><span>Rotación (°)</span><input type="number" step="1" min="0" max="359" data-prop="rotation" value="${Math.round(frame.rotation || 0)}" ${canEdit ? '' : 'disabled'}></label>
-          ${hasPath ? '<p class="help-text">Este elemento tiene un trazo editable. Ajusta su caja para reescalarlo; el trazado se recalcula proporcionalmente al mover.</p>' : ''}
+          ${hasPath ? `<p class="help-text">Este elemento tiene un trazo editable: arrastra los <strong>vértices</strong> azules del plano para mover cada punto, haz <strong>doble clic</strong> sobre el trazo para añadir uno y usa <strong>Alt+clic</strong> sobre un vértice para quitarlo. Con Shift el vértice se alinea con el anterior. Ajustar la caja reescala el trazado completo.</p>` : ''}
         </section>
         <section class="inspector-section">
           <h3>Apariencia</h3>
