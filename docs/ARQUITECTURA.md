@@ -246,6 +246,27 @@ El cajón `assets/js/editor/audit.js` llama al endpoint (`boot.auditUrl`), pinta
 
 ---
 
+## Menús de las páginas fuera del editor
+
+`assets/js/ui.js` centraliza los tooltips, los avisos y los menús de acciones (`[data-menu-toggle]` → `.menu`). El menú **no** se abre dentro de su tarjeta:
+
+```text
+clic en la flecha
+  └─ openMenu(button, menu)
+       ├─ guarda dónde vivía el menú (envoltorio y posición)
+       ├─ lo monta en [data-menu-layer] al final del <body>
+       ├─ placeMenu(): fixed bajo el botón, o encima si no cabe,
+       │               con scroll interno y siempre dentro de la ventana
+       └─ aria-expanded="true"
+```
+
+Motivo: las tarjetas de *Mis planos* y de los pisos recortan su contenido (`overflow: hidden` para redondear la vista previa). Con `position: absolute` el panel quedaba fuera de la tarjeta: invisible pero con la zona bloqueada. La capa `[data-menu-layer]` es `position: fixed`, ocupa la ventana y no recibe punteros (`pointer-events: none`); solo el menú los recibe. Al cerrar, el menú vuelve a su sitio en el DOM para que el HTML siga siendo válido sin JavaScript.
+
+- `Esc` cierra y devuelve el foco a la flecha; `↑`/`↓`/`Inicio`/`Fin` recorren las opciones; un clic fuera cierra; elegir una opción recoge el menú.
+- Solo hay un menú abierto a la vez, y se recoloca al redimensionar o desplazar la página.
+- El mismo mecanismo sirve al selector **Cambiar piso** del editor, que vive en una barra superior recortada.
+- Las acciones destructivas son formularios POST con `data-confirm`, y `assets/js/app.js` los intercepta para pedir confirmación (`NormiaUI.confirm`) antes de enviarlos.
+
 ## Seguridad
 
 | Amenaza | Mitigación |
@@ -270,6 +291,7 @@ La suite es parte del repositorio y no del paquete de producción:
 - `tests/php/functional.mjs` recorre instalación, autenticación, autorización, proyectos, pisos, editor, guardado, versiones, borradores, conflictos, validaciones, importación, exportación, **auditor y medición de evacuación** e informe imprimible.
 - `tests/js/boot.mjs` crea un JSDOM con el HTML real del editor, conecta `window.fetch` al cliente PHP y suple lo que JSDOM no implementa (medidas del SVG, Canvas, descargas, `window.open`).
 - `tests/js/editor.mjs` ejecuta el editor real y comprueba interacciones de puntero, teclado, bibliotecas, guardado, reapertura, exportaciones y saneado.
+- `tests/js/pages.mjs` abre *Mis planos* y la ficha del proyecto reales, y comprueba los menús de acciones (capa fija, colocación, teclado, un solo menú), la confirmación y el borrado de pisos y proyectos.
 - `tests/php/package.mjs` construye los ZIP, verifica su contenido y sumas, y hace una **instalación limpia** del paquete de demostración comprobando assets, catálogos y exportaciones.
 
 Cada prueba corre en PHP 8.1 y 8.3 (la de paquetes en 8.3), sin instalar PHP en el equipo. Los resultados esperados están en el README.

@@ -35,7 +35,14 @@ Normia Planos CAD · instalación rápida
    - Los umbrales están en resources/audit-criteria.json y son referencias
      configurables: ajústalos a la norma aplicable antes de usarlos.
 
-6. Aviso
+6. Gestionar y borrar
+   - En «Mis planos», la flecha de cada tarjeta abre el menú: editar, duplicar y
+     eliminar el proyecto (con confirmación).
+   - En la ficha del proyecto hay un botón «Eliminar proyecto» siempre visible y,
+     en cada piso, la flecha del plano ofrece imprimir, exportar, el informe de
+     revisión, duplicar y eliminar el piso. Un proyecto conserva al menos un piso.
+
+7. Aviso
    - Los planos son esquemáticos. No sustituyen planos de obra, memorias de cálculo
      ni certificaciones. Verifica dimensiones, rutas y escala en el sitio.
    - El auditor y la medición de evacuación son de referencia: no son un dictamen,
@@ -46,7 +53,7 @@ Normia Planos CAD · instalación rápida
      aquí», etc.) son pictogramas propios de Normia: complementan la señalización pero
      no son ISO 7010.
 
-7. Sin conexión
+8. Sin conexión
    - La aplicación funciona en una red aislada: no descarga fuentes, iconos, scripts ni
      datos. Solo necesita el navegador y el servidor donde está publicada.
 

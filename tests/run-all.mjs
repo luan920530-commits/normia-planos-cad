@@ -20,6 +20,8 @@ const steps = [
   { name: 'Funcional PHP 8.3', script: 'tests/php/functional.mjs', args: ['8.3'] },
   { name: 'Interfaz (JSDOM) PHP 8.1', script: 'tests/js/editor.mjs', args: ['8.1'] },
   { name: 'Interfaz (JSDOM) PHP 8.3', script: 'tests/js/editor.mjs', args: ['8.3'] },
+  { name: 'Páginas y menús PHP 8.1', script: 'tests/js/pages.mjs', args: ['8.1'] },
+  { name: 'Páginas y menús PHP 8.3', script: 'tests/js/pages.mjs', args: ['8.3'] },
   { name: 'Paquetes y demo', script: 'tests/php/package.mjs', args: ['8.3'], package: true },
 ];
 

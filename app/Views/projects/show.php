@@ -16,6 +16,10 @@
       <?= csrf_field() ?>
       <button class="button button-ghost" type="submit"><svg class="icon"><use href="#i-duplicate"></use></svg>Duplicar</button>
     </form>
+    <form method="post" action="<?= e(url('projects/' . (int) $project['id'] . '/delete')) ?>" data-confirm="Se eliminará el proyecto «<?= e($project['name']) ?>» con sus <?= count($floors) ?> <?= count($floors) === 1 ? 'piso' : 'pisos' ?> y todas sus versiones. Esta acción no se puede deshacer.">
+      <?= csrf_field() ?>
+      <button class="button button-danger" type="submit"><svg class="icon"><use href="#i-trash"></use></svg>Eliminar proyecto</button>
+    </form>
   </div>
 </section>
 
@@ -39,18 +43,25 @@
             <a class="button button-small button-primary" href="<?= e(url('projects/' . (int) $project['id'] . '/floors/' . (int) $floor['id'] . '/editor')) ?>">Abrir editor</a>
             <a class="button button-small button-ghost" href="<?= e(url('projects/' . (int) $project['id'] . '/floors/' . (int) $floor['id'] . '/export/svg')) ?>">SVG</a>
             <div class="menu-wrap">
-              <button class="icon-button" type="button" data-menu-toggle aria-label="Más acciones de <?= e($floor['name']) ?>" aria-expanded="false"><svg class="icon"><use href="#i-chevron-down"></use></svg></button>
+              <button class="icon-button" type="button" data-menu-toggle aria-haspopup="true" aria-label="Más acciones de <?= e($floor['name']) ?>" aria-expanded="false" data-tooltip="Más acciones"><svg class="icon"><use href="#i-chevron-down"></use></svg></button>
               <div class="menu" hidden>
+                <span class="menu-label">Plano · <?= e($floor['name']) ?></span>
                 <a class="menu-item" href="<?= e(url('projects/' . (int) $project['id'] . '/floors/' . (int) $floor['id'] . '/print')) ?>" target="_blank" rel="noopener"><svg class="icon"><use href="#i-print"></use></svg>Imprimir o PDF</a>
                 <a class="menu-item" href="<?= e(url('projects/' . (int) $project['id'] . '/floors/' . (int) $floor['id'] . '/export/json')) ?>"><svg class="icon"><use href="#i-file"></use></svg>Exportar JSON</a>
+                <a class="menu-item" href="<?= e(url('projects/' . (int) $project['id'] . '/floors/' . (int) $floor['id'] . '/audit')) ?>" target="_blank" rel="noopener"><svg class="icon"><use href="#i-audit"></use></svg>Informe de revisión</a>
                 <form method="post" action="<?= e(url('projects/' . (int) $project['id'] . '/floors/' . (int) $floor['id'] . '/duplicate')) ?>">
                   <?= csrf_field() ?>
                   <button class="menu-item" type="submit"><svg class="icon"><use href="#i-duplicate"></use></svg>Duplicar piso</button>
                 </form>
-                <form method="post" action="<?= e(url('projects/' . (int) $project['id'] . '/floors/' . (int) $floor['id'] . '/delete')) ?>" data-confirm="Se eliminará el piso, su diseño actual y todas sus versiones. Esta acción no se puede deshacer.">
-                  <?= csrf_field() ?>
-                  <button class="menu-item menu-item-danger" type="submit" <?= count($floors) <= 1 ? 'disabled' : '' ?>><svg class="icon"><use href="#i-trash"></use></svg>Eliminar piso</button>
-                </form>
+                <span class="menu-separator" aria-hidden="true"></span>
+                <?php if (count($floors) <= 1): ?>
+                  <span class="menu-item menu-item-muted" role="note"><svg class="icon"><use href="#i-info"></use></svg>Único piso: el proyecto conserva al menos uno</span>
+                <?php else: ?>
+                  <form method="post" action="<?= e(url('projects/' . (int) $project['id'] . '/floors/' . (int) $floor['id'] . '/delete')) ?>" data-confirm="Se eliminará el piso «<?= e($floor['name']) ?>» con su diseño actual y todas sus versiones. Esta acción no se puede deshacer.">
+                    <?= csrf_field() ?>
+                    <button class="menu-item menu-item-danger" type="submit"><svg class="icon"><use href="#i-trash"></use></svg>Eliminar piso</button>
+                  </form>
+                <?php endif; ?>
               </div>
             </div>
           </div>

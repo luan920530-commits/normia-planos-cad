@@ -48,7 +48,6 @@
           <div class="project-body">
             <div class="project-title-row">
               <h3><a href="<?= e(url('projects/' . $project['id'])) ?>"><?= e($project['name']) ?></a></h3>
-              <span class="project-menu-hint" data-tooltip="Proyecto">•••</span>
             </div>
             <p class="project-meta"><?= e($project['site'] !== '' ? $project['site'] : 'Sin sede') ?><?= $project['workplace'] !== '' ? ' · ' . e($project['workplace']) : '' ?></p>
             <p class="project-updated">Actualizado <?= e(format_date($project['floor_updated_at'] ?? $project['updated_at'])) ?> · <?= e($project['version_count']) ?> versiones</p>
@@ -56,13 +55,16 @@
               <a class="button button-small" href="<?= e(url('projects/' . $project['id'])) ?>">Abrir</a>
               <a class="button button-small button-ghost" href="<?= e(url('projects/' . $project['id'] . '/edit')) ?>">Editar</a>
               <div class="menu-wrap">
-                <button class="icon-button" type="button" data-menu-toggle aria-label="Más acciones de <?= e($project['name']) ?>" aria-expanded="false"><svg class="icon"><use href="#i-chevron-down"></use></svg></button>
+                <button class="icon-button" type="button" data-menu-toggle aria-haspopup="true" aria-label="Más acciones de <?= e($project['name']) ?>" aria-expanded="false" data-tooltip="Más acciones"><svg class="icon"><use href="#i-chevron-down"></use></svg></button>
                 <div class="menu" hidden>
+                  <span class="menu-label">Proyecto</span>
+                  <a class="menu-item" href="<?= e(url('projects/' . $project['id'] . '/edit')) ?>"><svg class="icon"><use href="#i-settings"></use></svg>Editar datos</a>
                   <form method="post" action="<?= e(url('projects/' . $project['id'] . '/duplicate')) ?>">
                     <?= csrf_field() ?>
                     <button class="menu-item" type="submit"><svg class="icon"><use href="#i-duplicate"></use></svg>Duplicar proyecto</button>
                   </form>
-                  <form method="post" action="<?= e(url('projects/' . $project['id'] . '/delete')) ?>" data-confirm="Se eliminarán el proyecto, sus pisos y todas sus versiones. Esta acción no se puede deshacer.">
+                  <span class="menu-separator" aria-hidden="true"></span>
+                  <form method="post" action="<?= e(url('projects/' . $project['id'] . '/delete')) ?>" data-confirm="Se eliminará el proyecto «<?= e($project['name']) ?>» con sus <?= (int) $project['floor_count'] ?> <?= (int) $project['floor_count'] === 1 ? 'piso' : 'pisos' ?> y todas sus versiones. Esta acción no se puede deshacer.">
                     <?= csrf_field() ?>
                     <button class="menu-item menu-item-danger" type="submit"><svg class="icon"><use href="#i-trash"></use></svg>Eliminar proyecto</button>
                   </form>

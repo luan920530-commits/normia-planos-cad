@@ -554,6 +554,7 @@ Lo único que no funciona sin red es la **vista previa de desarrollo** (`npm run
 | `tests/php/lint.mjs` | `php -l` sobre todo `app/`, `bootstrap.php` e `index.php` en 8.1 y 8.3. |
 | `tests/php/functional.mjs` | 174 comprobaciones: instalador, requisitos, contraseñas débiles, CSRF, sesión, autorización entre cuentas, CRUD de proyectos/pisos, duplicados, importación v1/v2, catálogos (355 señales y 145 objetos), catálogo y guardado de redes, señales de baño y de servicios (guardado, color de familia y exportación SVG), **auditor y medición de evacuación** (salidas, recorrido máximo, zonas inalcanzables, rutas que cruzan muros o no llegan a la salida, ocupación declarada y estimada, señalización, validación de `isExit`, informe imprimible y demo coherente), puertas y portones (geometría, sentidos de apertura, exportación con trazo), validaciones de la API, guardado/versiones/borradores/conflictos, exportaciones, ciclo de vida y logout. |
 | `tests/js/editor.mjs` | 246 comprobaciones de interfaz sobre la app real: arranque, 355 señales y 145 objetos, **trazado de tuberías y circuitos, inspector de red y panel de redes**, **mano y paneo, selección de superpuestos, inspector plegable y paleta de herramientas**, puertas dobles y portones, **vértices de ruta editables (arrastrar, doble clic, Alt+clic)**, **señal de baño insertada desde la biblioteca**, **posiciones reales del trazo**, **clic sobre muros finos, pictogramas y equipos**, **cambio de señal y de equipo desde el inspector**, **auditor de planos** (interruptor de salida, ocupación declarada, cajón de revisión, contador, filtros, «Ver en el plano», cierre sin dejar el fondo bloqueado), **rotación**, **rutas cerradas**, **arrastrar y soltar desde la biblioteca sin que el cajón lo bloquee**, reglas, herramientas, inserción con puntero, selección, mover, escalar, rotar, color, cambio de tipo, deshacer/rehacer, duplicar, agrupar, bloquear, desplazar, texto y saneado, guardar, reabrir, borradores, conflictos, exportación SVG/JSON/PNG, tooltips sin acumulación, capas, versiones y límites. |
+| `tests/js/pages.mjs` | 29 comprobaciones de las páginas fuera del editor: menú de acciones de proyectos y pisos (capa fija, colocación, teclado, un solo menú), confirmación de borrado y borrado real de piso y proyecto, con la protección del último piso. |
 | `tests/php/package.mjs` | 39 comprobaciones: construye ambos ZIP, verifica que no haya bases, sesiones, credenciales, logs ni carpetas de desarrollo, valida los SHA-256 y hace una instalación limpia de la demo comprobando assets, catálogos (355/145), los cuatro pisos del proyecto de ejemplo, señales de servicios y redes en la demo, la señal «Usted está aquí», **el auditor y su informe en la demo empaquetada**, editor, SVG, JSON e impresión. |
 | `tests/js/offline.mjs` | 0 dependencias de red: revisa las vistas, los estilos, los scripts y los catálogos y falla si aparece un `fetch`, un `WebSocket`, un `src`/`href`/`url()` externo, una llamada de red desde PHP o un dominio no declarado. |
 
@@ -568,13 +569,26 @@ Resultados esperados de la última ejecución completa:
 ✓ Funcional PHP 8.3 · 174/174
 ✓ Interfaz (JSDOM) PHP 8.1 · 246/246
 ✓ Interfaz (JSDOM) PHP 8.3 · 246/246
+✓ Páginas y menús PHP 8.1 · 29/29
+✓ Páginas y menús PHP 8.3 · 29/29
 ✓ Paquetes y demo · 39/39
-9/9 pasos correctos
+11/11 pasos correctos
 ```
 
 Las pruebas trabajan sobre copias temporales: no escriben configuración ni bases en el repositorio. `node_modules` solo contiene dependencias de desarrollo y se excluye de los paquetes.
 
 ---
+
+## Cambios de la versión 1.1.1
+
+Versión de corrección de la 1.1.0. Los planos, proyectos y versiones guardados siguen abriendo sin cambios.
+
+- **La flecha de acciones ya abre su menú.** El botón de los tres puntos de *Mis planos* y de la ficha del proyecto dejaba la vista bloqueada: el menú se abría dentro de la tarjeta y la tarjeta recorta su contenido (`overflow: hidden`), así que el panel quedaba fuera de la vista y los clics siguientes parecían muertos. Ahora el menú se monta en una **capa fija sobre el `<body>`** mientras está abierto, se coloca junto al botón (abajo o arriba según el espacio), se desplaza si no cabe y vuelve a su sitio al cerrarse. Ningún contenedor puede recortarlo.
+- **Menú con teclado y sin estados pegados.** `Esc` cierra y devuelve el foco a la flecha, `↑`/`↓`/`Inicio`/`Fin` recorren las opciones, un clic fuera lo cierra y al elegir una opción el menú se recoge. Solo puede haber un menú abierto a la vez, y el mismo mecanismo arregla el selector **Cambiar piso** del editor.
+- **Eliminar proyecto, visible y con contexto.** La ficha del proyecto estrena un botón **Eliminar proyecto** en la cabecera, en rojo y con confirmación que nombra el proyecto, sus pisos y sus versiones. El menú de cada tarjeta de *Mis planos* añade *Editar datos* y muestra un separador antes de la acción destructiva.
+- **Eliminar piso, visible y honesto.** El menú de cada piso incluye ahora **Eliminar piso** con confirmación que nombra el plano, además de *Imprimir o PDF*, *Exportar JSON*, *Informe de revisión* y *Duplicar piso*. Cuando el proyecto tiene un solo piso, en lugar de un botón desactivado sin explicación aparece la nota *Único piso: el proyecto conserva al menos uno*.
+- **Sin controles decorativos.** Se retira el indicador `•••` de las tarjetas, que aparentaba ser un menú y no hacía nada.
+- **Pruebas nuevas de las páginas.** `tests/js/pages.mjs` (29 comprobaciones en PHP 8.1 y 8.3) abre el panel y la ficha reales en JSDOM y verifica apertura y cierre del menú, que se monte fuera de la tarjeta, la colocación, `Esc`, clic fuera, un solo menú abierto, la confirmación de borrado (cancelar no envía, confirmar sí), el borrado real de un piso y de un proyecto con su aviso, y la protección del último piso.
 
 ## Cambios de la versión 1.1.0
 
@@ -685,14 +699,14 @@ Versión de corrección sobre la 1.0.0. Reemplaza los paquetes anteriores: la 1.
 
 ## Paquetes y verificación
 
-Las versiones publicadas están en la página de **[Liberaciones](https://github.com/luan920530-commits/normia-planos-cad/releases)**. La versión vigente es la **v1.1.0**, con sus notas, sus sumas SHA-256 y los enlaces de descarga de los paquetes que viven en `paquetes/v1.1.0/`. Las entregas v1.0.4 a v1.0.9 y las v1.0.0 a v1.0.3 no deben usarse: la v1.1.0 las reemplaza.
+Las versiones publicadas están en la página de **[Liberaciones](https://github.com/luan920530-commits/normia-planos-cad/releases)**. La versión vigente es la **v1.1.1**, con sus notas, sus sumas SHA-256 y los enlaces de descarga de los paquetes que viven en `paquetes/v1.1.1/`. Las entregas anteriores (v1.0.0 a v1.0.9 y la v1.1.0) no deben usarse: la v1.1.1 las reemplaza.
 
-La entrega v1.1.0 incluye los ZIP ya construidos en **`paquetes/v1.1.0/`** (misma composición que genera el script, verificada por `tests/php/package.mjs`):
+La entrega v1.1.1 incluye los ZIP ya construidos en **`paquetes/v1.1.1/`** (misma composición que genera el script, verificada por `tests/php/package.mjs`):
 
 ```text
-paquetes/v1.1.0/
-├── normia-planos-cad-1.1.0.zip
-├── normia-planos-cad-demo-1.1.0.zip
+paquetes/v1.1.1/
+├── normia-planos-cad-1.1.1.zip
+├── normia-planos-cad-demo-1.1.1.zip
 ├── SHA256SUMS.txt
 ├── BUILD.txt
 └── LEEME.txt
@@ -707,8 +721,8 @@ npm run build          # o: bash tools/build-packages.sh
 El script deja los artefactos en `dist/`:
 
 ```text
-normia-planos-cad-1.1.0.zip
-normia-planos-cad-demo-1.1.0.zip
+normia-planos-cad-1.1.1.zip
+normia-planos-cad-demo-1.1.1.zip
 SHA256SUMS.txt
 BUILD.txt
 ```
@@ -718,11 +732,11 @@ BUILD.txt
 - Verifica las sumas:
 
 ```bash
-cd paquetes/v1.1.0
+cd paquetes/v1.1.1
 sha256sum -c SHA256SUMS.txt
 ```
 
-Los hashes exactos de los ZIP publicados están en `paquetes/v1.1.0/SHA256SUMS.txt`; `dist/` es solo la salida de trabajo y está ignorada por Git.
+Los hashes exactos de los ZIP publicados están en `paquetes/v1.1.1/SHA256SUMS.txt`; `dist/` es solo la salida de trabajo y está ignorada por Git.
 
 ---
 
