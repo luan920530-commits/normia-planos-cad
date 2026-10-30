@@ -142,15 +142,15 @@
         if (this.kind === 'sign') {
           const service = Object.keys(this.app.catalogs.signs || {}).filter((code) => code.startsWith('SVC_')).length;
           this.eyebrow.textContent = this.mode === 'replace'
-            ? `Sustituir la señal · ${total - service} ISO 7010 + ${service} de servicios y orientación`
-            : `Biblioteca visual · ${total - service} ISO 7010 + ${service} de servicios y orientación`;
+            ? `Sustituir la señal · ${total - service} ISO 7010 + ${service} propias (servicios y tránsito)`
+            : `Biblioteca visual · ${total - service} ISO 7010 + ${service} propias (servicios y tránsito)`;
         } else {
           this.eyebrow.textContent = this.mode === 'replace' ? `Sustituir el equipo · ${total} equipos` : `Biblioteca visual · ${total} equipos`;
         }
       }
       if (this.attribution) {
         this.attribution.textContent = this.kind === 'sign'
-          ? 'Pictogramas ISO 7010 incluidos localmente (licencia MIT de @iso-safety-signs/core © Karl Norling; atribución de Wikimedia Commons en NOTICE) y señales de orientación propias de Normia (GPL-3.0): baños, vestidores, cafetería y otros servicios. Las señales son referencias gráficas: no sustituyen la señalización física normalizada.'
+          ? 'Pictogramas ISO 7010 incluidos localmente (licencia MIT de @iso-safety-signs/core © Karl Norling; atribución de Wikimedia Commons en NOTICE) y señales propias de Normia (GPL-3.0): servicios y orientación (baños, vestidores, cafetería…) y señalización de tránsito para accesos y parqueaderos. Las señales son referencias gráficas: no sustituyen la señalización física normalizada.'
           : 'Objetos CAD esquemáticos creados para Normia. Las dimensiones son aproximadas; verifica medidas y escala en sitio.';
       }
       this.buildItems();

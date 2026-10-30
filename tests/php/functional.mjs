@@ -156,21 +156,23 @@ try {
   }
 
   let { response: catalogResponse, body: catalog } = await json('catalogs/signs');
-  report.check('Catálogo de señales con 332 ISO 7010 y 23 de servicios y orientación',
-    catalogResponse.status === 200 && catalog.count === 355 && catalog.isoCount === 332 && catalog.serviceCount === 23
-    && Object.keys(catalog.signs || {}).length === 355);
+  report.check('Catálogo de señales con 332 ISO 7010 y 57 de servicios, orientación y tránsito',
+    catalogResponse.status === 200 && catalog.count === 389 && catalog.isoCount === 332 && catalog.serviceCount === 57
+    && Object.keys(catalog.signs || {}).length === 389);
   report.check('Señales con SVG seguro embebido', catalog.signs?.E002?.svg?.startsWith('<svg') && !/xlink:href="(?!#)/.test(catalog.signs?.E002?.svg || ''));
   report.check('Señales de baño disponibles', ['SVC_WC_MEN', 'SVC_WC_WOMEN', 'SVC_WC_MIXED', 'SVC_WC_ACCESSIBLE'].every((code) => catalog.signs?.[code]?.svg?.startsWith('<svg')));
   report.check('Familias de señalización completas',
-    Object.keys(catalog.categories || {}).length === 7 && catalog.colors?.emergency === '#237f52'
+    Object.keys(catalog.categories || {}).length === 8 && catalog.colors?.emergency === '#237f52'
     && catalog.colors?.services === '#0f766e' && catalog.colors?.location === '#1d4ed8'
-    && catalog.categories?.location?.label === 'Ubicación en el plano',
+    && catalog.colors?.traffic === '#b45309'
+    && catalog.categories?.location?.label === 'Ubicación en el plano'
+    && catalog.categories?.traffic?.label === 'Señalización de tránsito',
     Object.keys(catalog.categories || {}).join(','));
   report.check('Alias heredados disponibles', catalog.legacyTools?.extinguisher === 'F001' && catalog.legacyTools?.exit === 'E002');
   ({ response: catalogResponse, body: catalog } = await json('catalogs/cad'));
-  report.check('Catálogo CAD con 145 objetos', catalogResponse.status === 200 && catalog.count === 145 && Object.keys(catalog.objects || {}).length === 145);
-  report.check('Catálogo CAD con 18 familias sectoriales', Object.keys(catalog.categories || {}).length === 18
-    && ['restaurant', 'warehouse', 'retail', 'hospital', 'textile', 'grill', 'supermarket', 'residential', 'sports', 'outdoor', 'electrico', 'hidraulico'].every((key) => catalog.categories?.[key]?.label),
+  report.check('Catálogo CAD con 301 objetos', catalogResponse.status === 200 && catalog.count === 301 && Object.keys(catalog.objects || {}).length === 301);
+  report.check('Catálogo CAD con 23 familias sectoriales', Object.keys(catalog.categories || {}).length === 23
+    && ['restaurant', 'warehouse', 'retail', 'hospital', 'textile', 'grill', 'supermarket', 'residential', 'sports', 'outdoor', 'electrico', 'hidraulico', 'eds', 'drogueria', 'gimnasio', 'colegio', 'cafeteria'].every((key) => catalog.categories?.[key]?.label),
     Object.keys(catalog.categories || {}).join(','));
   report.check('Cada familia CAD tiene objetos', Object.keys(catalog.categories || {}).every((key) => Object.values(catalog.objects || {}).some((object) => object.category === key)));
   report.check('Objetos CAD con SVG', Object.values(catalog.objects || {}).every((object) => String(object.svg || '').startsWith('<svg')));

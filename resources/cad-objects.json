@@ -1,21 +1,91 @@
 {
   "version": 1,
   "categories": {
+    "cafeteria": {
+      "label": "Cafetería y panadería",
+      "short": "Cafetería",
+      "description": "Barra de café, vitrinas, mesas y zonas de una cafetería o panadería con consumo en sitio."
+    },
+    "colegio": {
+      "label": "Colegio y universidad",
+      "short": "Colegio",
+      "description": "Aulas, laboratorios, biblioteca, comedor y zonas comunes de un colegio o universidad."
+    },
+    "drogueria": {
+      "label": "Droguería y farmacia",
+      "short": "Droguería",
+      "description": "Mostradores, estanterías, cadena de frío y áreas de atención de una droguería o farmacia."
+    },
+    "eds": {
+      "label": "Estación de servicio (EDS)",
+      "short": "EDS",
+      "description": "Surtidores, tanques, islas, servicios y zonas de una estación de servicio. Ubicaciones esquemáticas para el plano de emergencia del establecimiento."
+    },
+    "electrico": {
+      "label": "Instalaciones eléctricas",
+      "short": "Eléctrico"
+    },
     "furniture": {
       "label": "Mobiliario y estanterías",
       "short": "Mobiliario"
     },
-    "sanitary": {
-      "label": "Baños",
-      "short": "Baños"
+    "gimnasio": {
+      "label": "Gimnasio y fitness",
+      "short": "Gimnasio",
+      "description": "Máquinas de fuerza y cardio, salas dirigidas, vestidores y áreas de recuperación de un gimnasio."
+    },
+    "grill": {
+      "label": "Asadero y parrilla",
+      "short": "Asadero"
+    },
+    "hidraulico": {
+      "label": "Redes hidrosanitarias",
+      "short": "Hidráulico"
+    },
+    "hospital": {
+      "label": "Salud y hospital",
+      "short": "Salud"
+    },
+    "industrial": {
+      "label": "Equipos industriales",
+      "short": "Industrial"
     },
     "kitchen": {
       "label": "Cocinas",
       "short": "Cocinas"
     },
-    "industrial": {
-      "label": "Equipos industriales",
-      "short": "Industrial"
+    "outdoor": {
+      "label": "Exteriores y urbanismo",
+      "short": "Exteriores",
+      "description": "Árboles, luminarias, hidrantes y mobiliario urbano para patios, jardines y parqueaderos."
+    },
+    "residential": {
+      "label": "Vivienda y edificios residenciales",
+      "short": "Vivienda"
+    },
+    "restaurant": {
+      "label": "Restaurante y cafetería",
+      "short": "Restaurante"
+    },
+    "retail": {
+      "label": "Comercio y centro comercial",
+      "short": "Comercio"
+    },
+    "sanitary": {
+      "label": "Baños",
+      "short": "Baños"
+    },
+    "sports": {
+      "label": "Deportes, canchas y piscinas",
+      "short": "Deportes"
+    },
+    "supermarket": {
+      "label": "Supermercado",
+      "short": "Supermercado"
+    },
+    "textile": {
+      "label": "Costura y confección",
+      "short": "Costura"
     },
     "vehicles": {
       "label": "Vehículos y maquinaria",
@@ -25,54 +95,9 @@
       "label": "Conexiones entre pisos",
       "short": "Entre pisos"
     },
-    "restaurant": {
-      "label": "Restaurante y cafetería",
-      "short": "Restaurante"
-    },
     "warehouse": {
       "label": "Bodega y logística",
       "short": "Bodega"
-    },
-    "retail": {
-      "label": "Comercio y centro comercial",
-      "short": "Comercio"
-    },
-    "hospital": {
-      "label": "Salud y hospital",
-      "short": "Salud"
-    },
-    "textile": {
-      "label": "Costura y confección",
-      "short": "Costura"
-    },
-    "grill": {
-      "label": "Asadero y parrilla",
-      "short": "Asadero"
-    },
-    "supermarket": {
-      "label": "Supermercado",
-      "short": "Supermercado"
-    },
-    "residential": {
-      "label": "Vivienda y edificios residenciales",
-      "short": "Vivienda"
-    },
-    "sports": {
-      "label": "Deportes, canchas y piscinas",
-      "short": "Deportes"
-    },
-    "outdoor": {
-      "label": "Exteriores y urbanismo",
-      "short": "Exteriores",
-      "description": "Árboles, luminarias, hidrantes y mobiliario urbano para patios, jardines y parqueaderos."
-    },
-    "electrico": {
-      "label": "Instalaciones eléctricas",
-      "short": "Eléctrico"
-    },
-    "hidraulico": {
-      "label": "Redes hidrosanitarias",
-      "short": "Hidráulico"
     }
   },
   "objects": {
@@ -107,6 +132,182 @@
       "reference": "CAD",
       "color": "#ca8a04",
       "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"21\" y=\"62\" width=\"59\" height=\"24\" rx=\"12\" fill=\"currentColor\" fill-opacity=\".09\"/><circle cx=\"33\" cy=\"74\" r=\"7\" fill=\"none\"/><circle cx=\"50\" cy=\"74\" r=\"7\" fill=\"none\"/><circle cx=\"68\" cy=\"74\" r=\"7\" fill=\"none\"/><rect x=\"30\" y=\"36\" width=\"40\" height=\"29\" rx=\"3\" fill=\"currentColor\" fill-opacity=\".09\"/><rect x=\"42\" y=\"19\" width=\"24\" height=\"20\" rx=\"2\" fill=\"currentColor\" fill-opacity=\".09\"/><path d=\"M10 43L21 49V85L8 79Z\" fill=\"currentColor\" fill-opacity=\".09\"/><line x1=\"20\" y1=\"55\" x2=\"36\" y2=\"65\" fill=\"none\"/><line x1=\"20\" y1=\"75\" x2=\"35\" y2=\"72\" fill=\"none\"/></svg>"
+    },
+    "cad_caf_bar": {
+      "category": "cafeteria",
+      "name": "Barra de café",
+      "description": "Barra con máquina de espresso, molino y caja. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#b45309",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"10\" y=\"40\" width=\"68\" height=\"20\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.08\"/><path d=\"M10 50L78 50\" opacity=\".3\"/><rect x=\"16\" y=\"26\" width=\"18\" height=\"12\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.12\"/><circle cx=\"74\" cy=\"30\" r=\"6\"/><rect x=\"60\" y=\"32\" width=\"10\" height=\"6\" rx=\"1\" fill=\"currentColor\" fill-opacity=\"0.2\" stroke=\"none\"/></svg>"
+    },
+    "cad_caf_bathroom": {
+      "category": "cafeteria",
+      "name": "Baño de cafetería",
+      "description": "Baño individual accesible con lavamanos. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#b45309",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"24\" y=\"24\" width=\"52\" height=\"52\" rx=\"4\" fill=\"currentColor\" fill-opacity=\"0.05\"/><circle cx=\"44\" cy=\"44\" r=\"8\"/><circle cx=\"60\" cy=\"62\" r=\"5\"/><path d=\"M34 66L54 66\" opacity=\".35\"/></svg>"
+    },
+    "cad_caf_bench": {
+      "category": "cafeteria",
+      "name": "Banca corrida",
+      "description": "Banca de madera con respaldo y mesa baja. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#b45309",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"12\" y=\"44\" width=\"76\" height=\"12\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.09\"/><path d=\"M12 36L88 36\" opacity=\".5\"/><circle cx=\"20\" cy=\"64\" r=\"4\"/><circle cx=\"50\" cy=\"64\" r=\"4\"/><circle cx=\"80\" cy=\"64\" r=\"4\"/></svg>"
+    },
+    "cad_caf_chair": {
+      "category": "cafeteria",
+      "name": "Silla",
+      "description": "Silla individual con respaldo curvo. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#b45309",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"38\" y=\"30\" width=\"24\" height=\"22\" rx=\"6\" fill=\"currentColor\" fill-opacity=\"0.09\"/><path d=\"M34 54q16 14 32 0\" opacity=\".5\"/></svg>"
+    },
+    "cad_caf_coffee_station": {
+      "category": "cafeteria",
+      "name": "Estación de insumos",
+      "description": "Estación con azucarero, servilletas y dispensador. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#b45309",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"20\" y=\"36\" width=\"60\" height=\"24\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.07\"/><circle cx=\"34\" cy=\"44\" r=\"5\"/><circle cx=\"50\" cy=\"44\" r=\"5\"/><circle cx=\"66\" cy=\"44\" r=\"5\"/><path d=\"M20 66L80 66\" opacity=\".3\"/></svg>"
+    },
+    "cad_caf_counter_pickup": {
+      "category": "cafeteria",
+      "name": "Barra de recogida",
+      "description": "Mostrador de recogida de pedidos con bandeja. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#b45309",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"16\" y=\"42\" width=\"64\" height=\"18\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.08\"/><rect x=\"24\" y=\"48\" width=\"34\" height=\"6\" rx=\"1\" fill=\"currentColor\" fill-opacity=\"0.18\" stroke=\"none\"/><path d=\"M20 66h56\" stroke-dasharray=\"3 3\" opacity=\".4\"/></svg>"
+    },
+    "cad_caf_delivery": {
+      "category": "cafeteria",
+      "name": "Zona de domicilios",
+      "description": "Mostrador de despacho con repisas y bolsas. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#b45309",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"14\" y=\"38\" width=\"46\" height=\"20\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.08\"/><rect x=\"66\" y=\"28\" width=\"20\" height=\"44\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.06\"/><path d=\"M66 44L86 44\" opacity=\".4\"/><path d=\"M66 58L86 58\" opacity=\".4\"/></svg>"
+    },
+    "cad_caf_display_fridge": {
+      "category": "cafeteria",
+      "name": "Nevera exhibidora",
+      "description": "Nevera vertical con puerta de cristal y estantes. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#b45309",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"30\" y=\"20\" width=\"40\" height=\"60\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.07\"/><rect x=\"38\" y=\"28\" width=\"24\" height=\"44\" rx=\"2\"/><path d=\"M38 42L62 42\" opacity=\".4\"/><path d=\"M38 56L62 56\" opacity=\".4\"/></svg>"
+    },
+    "cad_caf_espresso": {
+      "category": "cafeteria",
+      "name": "Máquina de espresso",
+      "description": "Máquina de dos grupos con bandeja y vaporizador. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#b45309",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"20\" y=\"30\" width=\"52\" height=\"30\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.09\"/><circle cx=\"34\" cy=\"45\" r=\"6\"/><circle cx=\"56\" cy=\"45\" r=\"6\"/><path d=\"M78 36c8 2 8 14 0 16\"/><rect x=\"28\" y=\"62\" width=\"36\" height=\"8\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.06\"/></svg>"
+    },
+    "cad_caf_grinder": {
+      "category": "cafeteria",
+      "name": "Molino de café",
+      "description": "Molino con tolva, dosificador y base. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#b45309",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"38\" y=\"24\" width=\"24\" height=\"14\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.1\"/><rect x=\"42\" y=\"38\" width=\"16\" height=\"16\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.08\"/><circle cx=\"50\" cy=\"62\" r=\"8\"/><path d=\"M42 62L58 62\" opacity=\".35\"/></svg>"
+    },
+    "cad_caf_ice": {
+      "category": "cafeteria",
+      "name": "Máquina de hielo",
+      "description": "Máquina de hielo con tolva y depósito. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#b45309",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"28\" y=\"26\" width=\"44\" height=\"44\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.08\"/><path d=\"M32 32L32 32\" opacity=\".5\"/><path d=\"M50 32L50 32\" opacity=\".5\"/><path d=\"M68 32L68 32\" opacity=\".5\"/><rect x=\"36\" y=\"56\" width=\"28\" height=\"8\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.16\" stroke=\"none\"/></svg>"
+    },
+    "cad_caf_kneader": {
+      "category": "cafeteria",
+      "name": "Amasadora",
+      "description": "Amasadora con cuba, brazo y cabezal. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#b45309",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"40\" cy=\"50\" r=\"18\" fill=\"currentColor\" fill-opacity=\"0.06\"/><circle cx=\"40\" cy=\"50\" r=\"6\"/><rect x=\"58\" y=\"34\" width=\"18\" height=\"22\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.1\"/><path d=\"M30 68L50 68\" opacity=\".4\"/></svg>"
+    },
+    "cad_caf_oven": {
+      "category": "cafeteria",
+      "name": "Horno de panadería",
+      "description": "Horno con cámara, puerta y extractor. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#b45309",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"20\" y=\"26\" width=\"60\" height=\"38\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.07\"/><rect x=\"28\" y=\"34\" width=\"44\" height=\"22\" rx=\"2\"/><circle cx=\"50\" cy=\"45\" r=\"6\" fill=\"currentColor\" fill-opacity=\"0.1\"/><rect x=\"24\" y=\"68\" width=\"52\" height=\"8\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.06\"/></svg>"
+    },
+    "cad_caf_pastry": {
+      "category": "cafeteria",
+      "name": "Vitrina de repostería",
+      "description": "Vitrina refrigerada con tres niveles de producto. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#b45309",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"14\" y=\"24\" width=\"72\" height=\"52\" rx=\"4\" fill=\"currentColor\" fill-opacity=\"0.06\"/><path d=\"M14 40L14 40\" opacity=\".5\"/><path d=\"M50 40L50 40\" opacity=\".5\"/><path d=\"M86 40L86 40\" opacity=\".5\"/><circle cx=\"32\" cy=\"32\" r=\"4\" fill=\"currentColor\" fill-opacity=\"0.2\"/><circle cx=\"50\" cy=\"32\" r=\"4\" fill=\"currentColor\" fill-opacity=\"0.2\"/><circle cx=\"68\" cy=\"32\" r=\"4\" fill=\"currentColor\" fill-opacity=\"0.2\"/></svg>"
+    },
+    "cad_caf_service_door": {
+      "category": "cafeteria",
+      "name": "Puerta de servicio",
+      "description": "Puerta de servicio con zona de carga y descarga. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#b45309",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"14\" y=\"20\" width=\"30\" height=\"60\" rx=\"3\" fill=\"currentColor\" fill-opacity=\".04\" stroke-dasharray=\"5 4\"/><rect x=\"48\" y=\"32\" width=\"34\" height=\"10\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.12\"/><path d=\"M52 56h26M72 50l6 6-6 6\" opacity=\".6\"/></svg>"
+    },
+    "cad_caf_sink": {
+      "category": "cafeteria",
+      "name": "Poceta de barra",
+      "description": "Poceta doble con grifería y escurridor. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#b45309",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"22\" y=\"34\" width=\"30\" height=\"32\" rx=\"6\" fill=\"currentColor\" fill-opacity=\"0.07\"/><rect x=\"56\" y=\"34\" width=\"22\" height=\"32\" rx=\"6\" fill=\"currentColor\" fill-opacity=\"0.07\"/><path d=\"M50 40L50 60\" opacity=\".3\"/><circle cx=\"66\" cy=\"30\" r=\"3\"/><path d=\"M66 30L66 38\"/></svg>"
+    },
+    "cad_caf_table2": {
+      "category": "cafeteria",
+      "name": "Mesa para dos",
+      "description": "Mesa redonda pequeña con dos sillas. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#b45309",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"50\" cy=\"50\" r=\"14\" fill=\"currentColor\" fill-opacity=\"0.07\"/><circle cx=\"24\" cy=\"50\" r=\"6\"/><circle cx=\"76\" cy=\"50\" r=\"6\"/></svg>"
+    },
+    "cad_caf_table4": {
+      "category": "cafeteria",
+      "name": "Mesa para cuatro",
+      "description": "Mesa cuadrada con cuatro sillas. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#b45309",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"32\" y=\"32\" width=\"36\" height=\"36\" rx=\"6\" fill=\"currentColor\" fill-opacity=\"0.07\"/><circle cx=\"50\" cy=\"20\" r=\"6\"/><circle cx=\"50\" cy=\"80\" r=\"6\"/><circle cx=\"20\" cy=\"50\" r=\"6\"/><circle cx=\"80\" cy=\"50\" r=\"6\"/></svg>"
+    },
+    "cad_caf_terrace": {
+      "category": "cafeteria",
+      "name": "Terraza",
+      "description": "Terraza con mesas, sombrillas y jardinera. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#b45309",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"10\" y=\"18\" width=\"80\" height=\"64\" rx=\"6\" fill=\"currentColor\" fill-opacity=\".04\" stroke-dasharray=\"5 4\"/><circle cx=\"32\" cy=\"40\" r=\"12\" fill=\"currentColor\" fill-opacity=\"0.07\"/><circle cx=\"68\" cy=\"40\" r=\"12\" fill=\"currentColor\" fill-opacity=\"0.07\"/><circle cx=\"32\" cy=\"40\" r=\"14\"/><circle cx=\"68\" cy=\"40\" r=\"14\"/><rect x=\"14\" y=\"70\" width=\"72\" height=\"8\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.06\"/></svg>"
+    },
+    "cad_caf_trash": {
+      "category": "cafeteria",
+      "name": "Estación de residuos",
+      "description": "Tres canecas con tapa para separación en la fuente. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#b45309",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"18\" y=\"34\" width=\"18\" height=\"34\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.08\"/><rect x=\"41\" y=\"34\" width=\"18\" height=\"34\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.08\"/><rect x=\"64\" y=\"34\" width=\"18\" height=\"34\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.08\"/><path d=\"M14 34L86 34\" opacity=\".35\"/></svg>"
+    },
+    "cad_caf_waiting": {
+      "category": "cafeteria",
+      "name": "Zona de espera",
+      "description": "Dos sillones y mesa auxiliar junto al acceso. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#b45309",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"20\" y=\"40\" width=\"22\" height=\"20\" rx=\"6\" fill=\"currentColor\" fill-opacity=\"0.08\"/><rect x=\"58\" y=\"40\" width=\"22\" height=\"20\" rx=\"6\" fill=\"currentColor\" fill-opacity=\"0.08\"/><circle cx=\"50\" cy=\"68\" r=\"6\"/><circle cx=\"50\" cy=\"24\" r=\"3\" fill=\"currentColor\" fill-opacity=\"0.2\"/></svg>"
+    },
+    "cad_caf_wifi": {
+      "category": "cafeteria",
+      "name": "Punto de trabajo",
+      "description": "Mesa alta con conexiones y banco. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#b45309",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"28\" y=\"36\" width=\"44\" height=\"16\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.08\"/><path d=\"M50 62a10 10 0 0 1 10 10M50 62a18 18 0 0 1 18 18\" opacity=\".6\"/><circle cx=\"50\" cy=\"62\" r=\"2.5\" fill=\"currentColor\" fill-opacity=\"0.5\"/></svg>"
     },
     "cad_car": {
       "category": "vehicles",
@@ -164,6 +365,358 @@
       "color": "#334155",
       "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M15 20H82V43H42V82H15Z\" fill=\"currentColor\" fill-opacity=\".09\"/><line x1=\"28\" y1=\"43\" x2=\"28\" y2=\"82\" fill=\"none\"/><line x1=\"42\" y1=\"55\" x2=\"70\" y2=\"55\" fill=\"none\"/><circle cx=\"62\" cy=\"31\" r=\"4\" fill=\"none\"/></svg>"
     },
+    "cad_drg_ambulance_access": {
+      "category": "drogueria",
+      "name": "Acceso de emergencia",
+      "description": "Puerta de acceso rápido con zona libre demarcada. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"16\" y=\"20\" width=\"68\" height=\"60\" rx=\"3\" fill=\"currentColor\" fill-opacity=\".04\" stroke-dasharray=\"5 4\"/><rect x=\"38\" y=\"20\" width=\"24\" height=\"8\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.15\"/><path d=\"M50 32v34M40 56l10 10 10-10\" opacity=\".7\"/><path d=\"M24 74L76 74\" opacity=\".3\"/></svg>"
+    },
+    "cad_drg_archive": {
+      "category": "drogueria",
+      "name": "Archivador de fórmulas",
+      "description": "Archivador de dos cuerpos con cajones y rotulación. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"28\" y=\"16\" width=\"44\" height=\"66\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.08\"/><path d=\"M28 38L72 38\" opacity=\".55\"/><path d=\"M28 60L72 60\" opacity=\".55\"/><path d=\"M40 28L60 28\" opacity=\".55\"/><path d=\"M40 50L60 50\" opacity=\".55\"/><path d=\"M40 72L60 72\" opacity=\".55\"/></svg>"
+    },
+    "cad_drg_baby_scale": {
+      "category": "drogueria",
+      "name": "Báscula pediátrica",
+      "description": "Báscula con bandeja cóncava y columna de lectura. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><ellipse cx=\"50\" cy=\"58\" rx=\"30\" ry=\"14\" fill=\"currentColor\" fill-opacity=\"0.07\"/><rect x=\"38\" y=\"26\" width=\"24\" height=\"12\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.09\"/><path d=\"M50 38L50 46\"/><path d=\"M30 72h40\" opacity=\".4\"/></svg>"
+    },
+    "cad_drg_blue_point": {
+      "category": "drogueria",
+      "name": "Punto azul (posconsumo)",
+      "description": "Recipiente de medicamentos vencidos con tapa y rótulo. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"32\" y=\"32\" width=\"36\" height=\"48\" rx=\"5\" fill=\"currentColor\" fill-opacity=\"0.1\"/><path d=\"M28 32L72 32\"/><path d=\"M44 24L56 24\"/><path d=\"M50 22L50 32\"/><path d=\"M50 44v20\"/><path d=\"M42 54l8 10 8-10\"/></svg>"
+    },
+    "cad_drg_bp_monitor": {
+      "category": "drogueria",
+      "name": "Tensiómetro de pie",
+      "description": "Tensiómetro con brazalete y soporte rodante. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"40\" y=\"22\" width=\"20\" height=\"16\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.1\"/><path d=\"M50 38L50 52\"/><circle cx=\"50\" cy=\"58\" r=\"6\"/><path d=\"M60 52c10 6 8 20-4 24\"/><path d=\"M40 78L60 78\"/><circle cx=\"50\" cy=\"44\" r=\"3\" fill=\"currentColor\" fill-opacity=\"0.25\"/></svg>"
+    },
+    "cad_drg_checkout_self": {
+      "category": "drogueria",
+      "name": "Caja de autoservicio",
+      "description": "Caja autoservicio con pantalla, balanza y bolsas. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"20\" y=\"30\" width=\"30\" height=\"44\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.07\"/><rect x=\"25\" y=\"36\" width=\"20\" height=\"12\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.18\" stroke=\"none\"/><rect x=\"25\" y=\"54\" width=\"20\" height=\"10\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.12\" stroke=\"none\"/><circle cx=\"64\" cy=\"44\" r=\"9\"/><path d=\"M64 44L74 36\"/><rect x=\"56\" y=\"60\" width=\"26\" height=\"14\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.09\"/></svg>"
+    },
+    "cad_drg_cold_chain": {
+      "category": "drogueria",
+      "name": "Nevera de cadena de frío",
+      "description": "Nevera con termómetro visible y puerta de cristal. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"22\" y=\"16\" width=\"56\" height=\"68\" rx=\"4\" fill=\"currentColor\" fill-opacity=\"0.09\"/><rect x=\"30\" y=\"24\" width=\"40\" height=\"30\" rx=\"2\"/><path d=\"M30 60L70 60\" opacity=\".55\"/><circle cx=\"66\" cy=\"30\" r=\"5\"/><path d=\"M66 30L66 24\"/><path d=\"M66 30L70 33\"/><path d=\"M30 74L70 74\" opacity=\".55\"/></svg>"
+    },
+    "cad_drg_consult": {
+      "category": "drogueria",
+      "name": "Consultorio farmacéutico",
+      "description": "Escritorio de asesoría con dos sillas y equipo de cómputo. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"16\" y=\"36\" width=\"40\" height=\"18\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.09\"/><rect x=\"24\" y=\"24\" width=\"16\" height=\"8\" rx=\"2\"/><circle cx=\"38\" cy=\"62\" r=\"7\"/><circle cx=\"72\" cy=\"52\" r=\"7\"/><path d=\"M30 66L30 74\" opacity=\".55\"/><path d=\"M46 66L46 74\" opacity=\".55\"/></svg>"
+    },
+    "cad_drg_counseling": {
+      "category": "drogueria",
+      "name": "Box de asesoría",
+      "description": "Box cerrado con sillas, mesa y cortina. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"16\" y=\"22\" width=\"68\" height=\"56\" rx=\"4\" fill=\"currentColor\" fill-opacity=\"0.05\"/><path d=\"M16 34L84 34\" stroke-dasharray=\"4 3\" opacity=\".6\"/><rect x=\"28\" y=\"44\" width=\"22\" height=\"12\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.09\"/><circle cx=\"34\" cy=\"68\" r=\"6\"/><circle cx=\"72\" cy=\"56\" r=\"6\"/></svg>"
+    },
+    "cad_drg_counter": {
+      "category": "drogueria",
+      "name": "Mostrador de atención",
+      "description": "Mostrador con banda de despacho, caja y separador de clientes. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"12\" y=\"40\" width=\"62\" height=\"22\" rx=\"4\" fill=\"currentColor\" fill-opacity=\"0.1\"/><path d=\"M12 51L74 51\" opacity=\".55\"/><rect x=\"78\" y=\"36\" width=\"12\" height=\"30\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.07\"/><path d=\"M12 68h62\" stroke-dasharray=\"3 3\" opacity=\".6\"/></svg>"
+    },
+    "cad_drg_delivery": {
+      "category": "drogueria",
+      "name": "Mostrador de entregas",
+      "description": "Mostrador bajo con reja de entrega y fila de espera. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"14\" y=\"40\" width=\"48\" height=\"22\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.09\"/><path d=\"M14 51L62 51\" opacity=\".35\"/><path d=\"M62 40L62 40\" opacity=\".5\"/><path d=\"M62 45.5L62 45.5\" opacity=\".5\"/><path d=\"M62 51L62 51\" opacity=\".5\"/><path d=\"M62 56.5L62 56.5\" opacity=\".5\"/><path d=\"M62 62L62 62\" opacity=\".5\"/><path d=\"M16 70h46\" stroke-dasharray=\"3 3\" opacity=\".4\"/></svg>"
+    },
+    "cad_drg_delivery_cart": {
+      "category": "drogueria",
+      "name": "Carro de medicamentos",
+      "description": "Carro de transporte con tres bandejas y ruedas. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"22\" y=\"30\" width=\"56\" height=\"8\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.1\"/><rect x=\"22\" y=\"46\" width=\"56\" height=\"8\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.08\"/><rect x=\"22\" y=\"62\" width=\"56\" height=\"8\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.08\"/><path d=\"M26 30L26 78\"/><path d=\"M74 30L74 78\"/><circle cx=\"32\" cy=\"80\" r=\"3\"/><circle cx=\"68\" cy=\"80\" r=\"3\"/></svg>"
+    },
+    "cad_drg_display": {
+      "category": "drogueria",
+      "name": "Vitrina de exhibición",
+      "description": "Vitrina acristalada con dos niveles de producto. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"14\" y=\"24\" width=\"72\" height=\"52\" rx=\"4\" fill=\"currentColor\" fill-opacity=\"0.08\"/><rect x=\"20\" y=\"30\" width=\"60\" height=\"18\" rx=\"2\"/><rect x=\"20\" y=\"54\" width=\"60\" height=\"16\" rx=\"2\"/><path d=\"M22 39L78 39\" opacity=\".55\"/><path d=\"M22 62L78 62\" opacity=\".55\"/></svg>"
+    },
+    "cad_drg_emergency_kit": {
+      "category": "drogueria",
+      "name": "Kit de emergencias",
+      "description": "Carro de paro con cajones y tablero de medicamentos. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"24\" y=\"26\" width=\"52\" height=\"56\" rx=\"4\" fill=\"currentColor\" fill-opacity=\"0.08\"/><path d=\"M24 42L24 42\" opacity=\".5\"/><path d=\"M41.33333333333333 42L41.33333333333333 42\" opacity=\".5\"/><path d=\"M58.666666666666664 42L58.666666666666664 42\" opacity=\".5\"/><path d=\"M76 42L76 42\" opacity=\".5\"/><rect x=\"30\" y=\"30\" width=\"40\" height=\"4\" rx=\"1\" fill=\"currentColor\" fill-opacity=\"0.18\" stroke=\"none\"/><circle cx=\"34\" cy=\"86\" r=\"3\"/><circle cx=\"66\" cy=\"86\" r=\"3\"/></svg>"
+    },
+    "cad_drg_extinguisher": {
+      "category": "drogueria",
+      "name": "Extintor de la droguería",
+      "description": "Extintor multipropósito junto al acceso del personal. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"42\" y=\"30\" width=\"18\" height=\"40\" rx=\"6\" fill=\"currentColor\" fill-opacity=\"0.1\"/><rect x=\"46\" y=\"22\" width=\"10\" height=\"8\" rx=\"2\"/><path d=\"M51 22L51 16\"/><path d=\"M51 16L62 16\"/><path d=\"M62 16L62 24\"/><rect x=\"36\" y=\"70\" width=\"30\" height=\"6\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.06\"/></svg>"
+    },
+    "cad_drg_first_aid": {
+      "category": "drogueria",
+      "name": "Botiquín",
+      "description": "Botiquín de primeros auxilios con cruz y asa. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"24\" y=\"32\" width=\"52\" height=\"38\" rx=\"5\" fill=\"currentColor\" fill-opacity=\"0.1\"/><path d=\"M44 24L56 24\"/><path d=\"M48 21L48 32\"/><path d=\"M50 44v16M42 52h16\" stroke-width=\"3\"/></svg>"
+    },
+    "cad_drg_glucometer": {
+      "category": "drogueria",
+      "name": "Glucómetro",
+      "description": "Glucómetro con tira reactiva y linterna. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"30\" y=\"32\" width=\"22\" height=\"44\" rx=\"4\" fill=\"currentColor\" fill-opacity=\"0.08\"/><rect x=\"34\" y=\"38\" width=\"14\" height=\"10\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.25\" stroke=\"none\"/><path d=\"M41 76L41 82\" opacity=\".4\"/><path d=\"M64 42L78 42\"/><rect x=\"78\" y=\"36\" width=\"10\" height=\"12\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.12\"/></svg>"
+    },
+    "cad_drg_hydration": {
+      "category": "drogueria",
+      "name": "Punto de hidratación",
+      "description": "Dispensador de agua con vasos y bandeja. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"34\" y=\"30\" width=\"32\" height=\"44\" rx=\"6\" fill=\"currentColor\" fill-opacity=\"0.08\"/><rect x=\"40\" y=\"38\" width=\"20\" height=\"18\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.16\" stroke=\"none\"/><path d=\"M50 56v8M42 64h16\" opacity=\".4\"/><rect x=\"38\" y=\"76\" width=\"24\" height=\"6\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.06\"/></svg>"
+    },
+    "cad_drg_information": {
+      "category": "drogueria",
+      "name": "Punto de información",
+      "description": "Tótem informativo con pantalla y folletos. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"40\" y=\"22\" width=\"20\" height=\"50\" rx=\"4\" fill=\"currentColor\" fill-opacity=\"0.08\"/><rect x=\"44\" y=\"28\" width=\"12\" height=\"16\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.2\" stroke=\"none\"/><path d=\"M50 72L50 80\"/><path d=\"M36 82L64 82\"/><rect x=\"64\" y=\"34\" width=\"12\" height=\"16\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.07\"/></svg>"
+    },
+    "cad_drg_injection": {
+      "category": "drogueria",
+      "name": "Área de inyectología",
+      "description": "Camilla de procedimientos con mesa auxiliar y lavamanos. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"16\" y=\"30\" width=\"34\" height=\"60\" rx=\"6\" fill=\"currentColor\" fill-opacity=\"0.09\"/><rect x=\"66\" y=\"30\" width=\"18\" height=\"14\" rx=\"2\"/><circle cx=\"75\" cy=\"60\" r=\"7\"/><path d=\"M69 60L81 60\"/><path d=\"M75 54L75 66\" opacity=\".55\"/><path d=\"M50 44L60 44\" stroke-dasharray=\"3 3\" opacity=\".6\"/></svg>"
+    },
+    "cad_drg_nebulizer": {
+      "category": "drogueria",
+      "name": "Nebulizador",
+      "description": "Nebulizador con mascarilla y compresor. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"28\" y=\"44\" width=\"30\" height=\"22\" rx=\"4\" fill=\"currentColor\" fill-opacity=\"0.08\"/><circle cx=\"72\" cy=\"50\" r=\"10\"/><path d=\"M72 40c6 4 6 12 0 16\" opacity=\".5\"/><path d=\"M58 55L64 55\" stroke-dasharray=\"3 2\"/></svg>"
+    },
+    "cad_drg_nursery": {
+      "category": "drogueria",
+      "name": "Lactario y baño familiar",
+      "description": "Lactario con cambiador, silla y lavamanos. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"18\" y=\"24\" width=\"60\" height=\"52\" rx=\"4\" fill=\"currentColor\" fill-opacity=\"0.05\"/><rect x=\"26\" y=\"34\" width=\"30\" height=\"14\" rx=\"2\"/><circle cx=\"72\" cy=\"44\" r=\"6\"/><path d=\"M30 68h24\" opacity=\".4\"/><ellipse cx=\"56\" cy=\"66\" rx=\"10\" ry=\"5\"/></svg>"
+    },
+    "cad_drg_ortho": {
+      "category": "drogueria",
+      "name": "Ortopedia y ayudas técnicas",
+      "description": "Zona de ayudas técnicas con bastones y andadera. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"12\" y=\"26\" width=\"34\" height=\"48\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.05\"/><path d=\"M20 34L20 66\" opacity=\".5\"/><path d=\"M30 34L30 66\" opacity=\".5\"/><path d=\"M20 34L30 34\" opacity=\".5\"/><rect x=\"56\" y=\"36\" width=\"30\" height=\"28\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.09\"/><circle cx=\"62\" cy=\"70\" r=\"3\"/><circle cx=\"80\" cy=\"70\" r=\"3\"/></svg>"
+    },
+    "cad_drg_packaging_line": {
+      "category": "drogueria",
+      "name": "Línea de empaque",
+      "description": "Banda de empaque con estaciones y lector de códigos. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"10\" y=\"44\" width=\"76\" height=\"14\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.09\"/><path d=\"M10 51L86 51\" stroke-dasharray=\"4 3\" opacity=\".4\"/><circle cx=\"24\" cy=\"51\" r=\"3\" fill=\"currentColor\" fill-opacity=\"0.25\"/><circle cx=\"44\" cy=\"51\" r=\"3\" fill=\"currentColor\" fill-opacity=\"0.25\"/><circle cx=\"64\" cy=\"51\" r=\"3\" fill=\"currentColor\" fill-opacity=\"0.25\"/><rect x=\"70\" y=\"26\" width=\"16\" height=\"12\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.12\"/><path d=\"M78 38L78 44\"/></svg>"
+    },
+    "cad_drg_packing": {
+      "category": "drogueria",
+      "name": "Zona de empaque",
+      "description": "Mesa de empaque con bolsas, etiquetas y lector. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"16\" y=\"42\" width=\"50\" height=\"20\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.09\"/><path d=\"M20 42l6-12h20l6 12\"/><circle cx=\"74\" cy=\"38\" r=\"6\"/><path d=\"M74 44L74 62\"/><path d=\"M66 70L82 70\"/></svg>"
+    },
+    "cad_drg_patient_chair": {
+      "category": "drogueria",
+      "name": "Silla de ruedas",
+      "description": "Silla de ruedas plegada junto a la zona de atención. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"32\" cy=\"62\" r=\"12\"/><circle cx=\"64\" cy=\"62\" r=\"12\"/><path d=\"M32 50h26q6 0 6 6v10H38\"/><path d=\"M58 40L58 50\"/><path d=\"M50 34L66 34\"/><circle cx=\"46\" cy=\"34\" r=\"4\"/></svg>"
+    },
+    "cad_drg_perfume": {
+      "category": "drogueria",
+      "name": "Exhibidor de perfumería",
+      "description": "Exhibidor de dos caras con probadores y espejo. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"20\" y=\"22\" width=\"60\" height=\"56\" rx=\"4\" fill=\"currentColor\" fill-opacity=\"0.07\"/><path d=\"M50 22L50 78\"/><circle cx=\"32\" cy=\"36\" r=\"5\"/><circle cx=\"68\" cy=\"36\" r=\"5\"/><circle cx=\"32\" cy=\"56\" r=\"5\"/><circle cx=\"68\" cy=\"56\" r=\"5\"/><path d=\"M24 68L44 68\" opacity=\".55\"/><path d=\"M56 68L76 68\" opacity=\".55\"/></svg>"
+    },
+    "cad_drg_pill_counter": {
+      "category": "drogueria",
+      "name": "Contador de pastillas",
+      "description": "Contador manual con tolva y bandeja de salida. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"24\" y=\"36\" width=\"36\" height=\"30\" rx=\"6\" fill=\"currentColor\" fill-opacity=\"0.08\"/><path d=\"M24 46l-8 6 8 6\" opacity=\".6\"/><circle cx=\"52\" cy=\"51\" r=\"4\" fill=\"currentColor\" fill-opacity=\"0.2\"/><path d=\"M60 51L84 51\"/><path d=\"M76 46L84 51\" opacity=\".4\"/></svg>"
+    },
+    "cad_drg_pos": {
+      "category": "drogueria",
+      "name": "Caja registradora",
+      "description": "Punto de pago con terminal, lector y cajón de dinero. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"20\" y=\"42\" width=\"44\" height=\"20\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.1\"/><rect x=\"68\" y=\"30\" width=\"14\" height=\"12\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.12\"/><path d=\"M68 42L64 46\"/><path d=\"M16 70h60\" stroke-dasharray=\"3 3\" opacity=\".6\"/><circle cx=\"30\" cy=\"34\" r=\"4\" fill=\"currentColor\" fill-opacity=\"0.12\"/></svg>"
+    },
+    "cad_drg_refill": {
+      "category": "drogueria",
+      "name": "Punto de reenvase",
+      "description": "Mesa de reenvase con dispensadores y balanza. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"16\" y=\"40\" width=\"46\" height=\"22\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.09\"/><circle cx=\"28\" cy=\"34\" r=\"6\"/><circle cx=\"46\" cy=\"34\" r=\"6\"/><path d=\"M28 48L28 52\"/><circle cx=\"70\" cy=\"46\" r=\"8\"/><circle cx=\"70\" cy=\"46\" r=\"3\" fill=\"currentColor\" fill-opacity=\"0.3\"/></svg>"
+    },
+    "cad_drg_sample": {
+      "category": "drogueria",
+      "name": "Muestras médicas",
+      "description": "Exhibidor de muestras médicas con cajoneras. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"22\" y=\"24\" width=\"56\" height=\"52\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.06\"/><path d=\"M22 40L22 40\" opacity=\".5\"/><path d=\"M50 40L50 40\" opacity=\".5\"/><path d=\"M78 40L78 40\" opacity=\".5\"/><circle cx=\"34\" cy=\"32\" r=\"3\" fill=\"currentColor\" fill-opacity=\"0.2\"/><circle cx=\"50\" cy=\"32\" r=\"3\" fill=\"currentColor\" fill-opacity=\"0.2\"/><circle cx=\"66\" cy=\"32\" r=\"3\" fill=\"currentColor\" fill-opacity=\"0.2\"/></svg>"
+    },
+    "cad_drg_scale": {
+      "category": "drogueria",
+      "name": "Báscula de mostrador",
+      "description": "Báscula digital con plataforma y columna de lectura. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"26\" y=\"48\" width=\"48\" height=\"14\" rx=\"4\" fill=\"currentColor\" fill-opacity=\"0.1\"/><rect x=\"40\" y=\"26\" width=\"20\" height=\"12\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.09\"/><path d=\"M50 38L50 48\"/><circle cx=\"50\" cy=\"55\" r=\"3\" fill=\"currentColor\" fill-opacity=\"0.3\"/><path d=\"M30 62L30 70\" opacity=\".55\"/><path d=\"M70 62L70 70\" opacity=\".55\"/></svg>"
+    },
+    "cad_drg_sharps": {
+      "category": "drogueria",
+      "name": "Guardían de punzocortantes",
+      "description": "Contenedor rígido de residuos biosanitarios con tapa de seguridad. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"34\" y=\"30\" width=\"32\" height=\"48\" rx=\"4\" fill=\"currentColor\" fill-opacity=\"0.1\"/><rect x=\"42\" y=\"22\" width=\"16\" height=\"8\" rx=\"2\"/><path d=\"M42 40l16 16M58 40L42 56\" opacity=\".55\"/><path d=\"M30 78L70 78\"/></svg>"
+    },
+    "cad_drg_shelf": {
+      "category": "drogueria",
+      "name": "Estantería de medicamentos",
+      "description": "Estantería de cuatro módulos con entrepaños marcados. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"12\" y=\"18\" width=\"76\" height=\"64\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.05\"/><path d=\"M31 18L31 82\" opacity=\".55\"/><path d=\"M50 18L50 82\" opacity=\".55\"/><path d=\"M69 18L69 82\" opacity=\".55\"/><path d=\"M12 34L88 34\" opacity=\".55\"/><path d=\"M12 50L88 50\" opacity=\".55\"/><path d=\"M12 66L88 66\" opacity=\".55\"/></svg>"
+    },
+    "cad_drg_shelf_roller": {
+      "category": "drogueria",
+      "name": "Estantería de rodillos",
+      "description": "Estantería rodante compacta con cuatro módulos. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"10\" y=\"20\" width=\"80\" height=\"60\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.05\"/><path d=\"M30 50L30 50\" opacity=\".5\"/><path d=\"M50 20L50 80\" opacity=\".5\"/><path d=\"M70 20L70 80\" opacity=\".5\"/><circle cx=\"18\" cy=\"88\" r=\"2.5\"/><circle cx=\"50\" cy=\"88\" r=\"2.5\"/><circle cx=\"82\" cy=\"88\" r=\"2.5\"/></svg>"
+    },
+    "cad_drg_storage": {
+      "category": "drogueria",
+      "name": "Depósito de medicamentos",
+      "description": "Depósito con estibas y estantería de cajas. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"12\" y=\"20\" width=\"76\" height=\"60\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.05\"/><rect x=\"20\" y=\"28\" width=\"24\" height=\"20\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.09\"/><rect x=\"56\" y=\"28\" width=\"24\" height=\"20\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.09\"/><rect x=\"20\" y=\"56\" width=\"24\" height=\"18\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.09\"/><rect x=\"56\" y=\"56\" width=\"24\" height=\"18\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.09\"/><path d=\"M32 28L32 48\" opacity=\".55\"/><path d=\"M68 56L68 74\" opacity=\".55\"/></svg>"
+    },
+    "cad_drg_supplies": {
+      "category": "drogueria",
+      "name": "Insumos y dispositivos",
+      "description": "Estantería de insumos con cajas y dispositivos médicos. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"12\" y=\"22\" width=\"76\" height=\"56\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.05\"/><path d=\"M12 40L12 40\" opacity=\".5\"/><path d=\"M50 40L50 40\" opacity=\".5\"/><path d=\"M88 40L88 40\" opacity=\".5\"/><path d=\"M38 22L38 78\" opacity=\".4\"/><path d=\"M62 22L62 78\" opacity=\".4\"/></svg>"
+    },
+    "cad_drg_temperature": {
+      "category": "drogueria",
+      "name": "Registro de temperatura",
+      "description": "Panel de monitoreo de frío con sensor y registrador. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"24\" y=\"28\" width=\"52\" height=\"40\" rx=\"4\" fill=\"currentColor\" fill-opacity=\"0.06\"/><path d=\"M34 56l8-12 6 8 6-14 6 18\" opacity=\".7\"/><circle cx=\"68\" cy=\"34\" r=\"3.5\"/><path d=\"M68 34L68 44\"/></svg>"
+    },
+    "cad_drg_waiting": {
+      "category": "drogueria",
+      "name": "Sillas de espera",
+      "description": "Banca de tres puestos para la sala de espera. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"14\" y=\"38\" width=\"72\" height=\"12\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.1\"/><path d=\"M14 50L14 60\" opacity=\".55\"/><path d=\"M86 50L86 60\" opacity=\".55\"/><path d=\"M36 38L36 50\" opacity=\".55\"/><path d=\"M58 38L58 50\" opacity=\".55\"/><path d=\"M80 38L80 50\" opacity=\".55\"/></svg>"
+    },
+    "cad_drg_waiting_bench": {
+      "category": "drogueria",
+      "name": "Banca de espera",
+      "description": "Banca corrida de cuatro puestos con apoyabrazos. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"10\" y=\"40\" width=\"80\" height=\"12\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.09\"/><path d=\"M10 52L10 62\" opacity=\".5\"/><path d=\"M90 52L90 62\" opacity=\".5\"/><path d=\"M28 46L28 46\" opacity=\".4\"/><path d=\"M48 40L48 52\" opacity=\".4\"/><path d=\"M68 40L68 52\" opacity=\".4\"/></svg>"
+    },
+    "cad_drg_washbasin": {
+      "category": "drogueria",
+      "name": "Lavamanos",
+      "description": "Lavamanos de pared con dispensador de jabón y secador. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"24\" y=\"34\" width=\"42\" height=\"26\" rx=\"8\" fill=\"currentColor\" fill-opacity=\"0.09\"/><circle cx=\"45\" cy=\"47\" r=\"4\"/><path d=\"M70 30L70 44\"/><path d=\"M66 30L74 30\"/><path d=\"M70 44c0 4 4 6 8 6\"/><path d=\"M30 66L30 78\"/><path d=\"M60 66L60 78\"/></svg>"
+    },
+    "cad_drg_waste": {
+      "category": "drogueria",
+      "name": "Caneca de residuos comunes",
+      "description": "Caneca con tapa de pedal y bolsa visible. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"34\" y=\"32\" width=\"32\" height=\"46\" rx=\"4\" fill=\"currentColor\" fill-opacity=\"0.1\"/><path d=\"M30 32L70 32\"/><path d=\"M42 26L58 26\"/><path d=\"M40 44v20M50 44v20M60 44v20\" opacity=\".55\"/><path d=\"M66 78L74 84\"/></svg>"
+    },
+    "cad_drg_wheelchair_zone": {
+      "category": "drogueria",
+      "name": "Zona de silla de ruedas",
+      "description": "Espacio reservado para silla de ruedas junto a la espera. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"20\" y=\"24\" width=\"60\" height=\"52\" rx=\"4\" fill=\"currentColor\" fill-opacity=\".04\" stroke-dasharray=\"5 4\"/><circle cx=\"38\" cy=\"60\" r=\"12\"/><circle cx=\"70\" cy=\"60\" r=\"12\"/><path d=\"M38 48h24q6 0 6 6v8H44\"/><path d=\"M62 36L62 48\"/></svg>"
+    },
+    "cad_drg_window": {
+      "category": "drogueria",
+      "name": "Ventanilla de despacho",
+      "description": "Ventanilla con bandeja y mampara de protección. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"20\" y=\"34\" width=\"60\" height=\"30\" rx=\"4\" fill=\"currentColor\" fill-opacity=\"0.09\"/><path d=\"M20 49L80 49\" opacity=\".35\"/><rect x=\"26\" y=\"40\" width=\"18\" height=\"6\" rx=\"1\" fill=\"currentColor\" fill-opacity=\"0.18\" stroke=\"none\"/><rect x=\"52\" y=\"40\" width=\"22\" height=\"6\" rx=\"1\" fill=\"currentColor\" fill-opacity=\"0.18\" stroke=\"none\"/><path d=\"M50 64v10\" opacity=\".4\"/></svg>"
+    },
     "cad_drill_press": {
       "category": "industrial",
       "name": "Taladro de banco",
@@ -171,6 +724,306 @@
       "reference": "CAD",
       "color": "#334155",
       "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"20\" y=\"82\" width=\"60\" height=\"10\" rx=\"2\" fill=\"currentColor\" fill-opacity=\".09\"/><rect x=\"40\" y=\"14\" width=\"45\" height=\"18\" rx=\"3\" fill=\"currentColor\" fill-opacity=\".09\"/><rect x=\"25\" y=\"54\" width=\"45\" height=\"8\" rx=\"1\" fill=\"currentColor\" fill-opacity=\".09\"/><line x1=\"65\" y1=\"32\" x2=\"65\" y2=\"82\" fill=\"none\"/><line x1=\"50\" y1=\"32\" x2=\"50\" y2=\"54\" fill=\"none\"/><polygon points=\"46,54,54,54,50,62\" fill=\"none\"/><circle cx=\"78\" cy=\"23\" r=\"5\" fill=\"none\"/><line x1=\"78\" y1=\"28\" x2=\"78\" y2=\"38\" fill=\"none\"/></svg>"
+    },
+    "cad_eds_air": {
+      "category": "eds",
+      "name": "Punto de aire y agua",
+      "description": "Poste de servicio con dos tomas, manómetro, carrete de manguera y bandeja de goteo. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0e7490",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"24\" y=\"16\" width=\"52\" height=\"26\" rx=\"4\" fill=\"currentColor\" fill-opacity=\"0.1\"/><rect x=\"30\" y=\"22\" width=\"18\" height=\"14\" rx=\"2\"/><rect x=\"52\" y=\"22\" width=\"18\" height=\"14\" rx=\"2\"/><circle cx=\"39\" cy=\"29\" r=\"4\"/><circle cx=\"61\" cy=\"29\" r=\"4\"/><path d=\"M39 36L39 44\"/><path d=\"M61 44L61 36\"/><rect x=\"30\" y=\"48\" width=\"40\" height=\"28\" rx=\"4\" fill=\"currentColor\" fill-opacity=\"0.06\"/><circle cx=\"50\" cy=\"62\" r=\"11\"/><circle cx=\"50\" cy=\"62\" r=\"4\"/><path d=\"M50 73q10 4 10 12\"/><path d=\"M30 82L70 82\" opacity=\".55\"/><path d=\"M34 86L66 86\" opacity=\".55\"/></svg>"
+    },
+    "cad_eds_canopy": {
+      "category": "eds",
+      "name": "Cubierta de surtidores",
+      "description": "Cubierta (canopy) con columnas y área de surtido bajo techo. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0e7490",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"8\" y=\"18\" width=\"84\" height=\"58\" rx=\"6\" fill=\"currentColor\" fill-opacity=\".04\" stroke-dasharray=\"5 4\"/><circle cx=\"24\" cy=\"46\" r=\"4\" fill=\"currentColor\" fill-opacity=\"0.2\"/><circle cx=\"76\" cy=\"46\" r=\"4\" fill=\"currentColor\" fill-opacity=\"0.2\"/><rect x=\"40\" y=\"34\" width=\"20\" height=\"34\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.1\"/><path d=\"M40 44L60 44\" opacity=\".55\"/></svg>"
+    },
+    "cad_eds_car_bay": {
+      "category": "eds",
+      "name": "Bahía de servicio liviano",
+      "description": "Plaza de servicio para vehículo liviano con isla lateral. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0e7490",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"18\" y=\"12\" width=\"64\" height=\"76\" rx=\"3\" fill=\"currentColor\" fill-opacity=\".05\" stroke-dasharray=\"4 3\"/><path d=\"M30 26h40q6 0 6 6v10H24V32q0-6 6-6Z\"/><circle cx=\"36\" cy=\"56\" r=\"5\"/><circle cx=\"64\" cy=\"56\" r=\"5\"/><path d=\"M32 50h36q4 0 4 4v6H28v-6q0-4 4-4Z\"/><path d=\"M24 12L24 88\" opacity=\".55\"/><path d=\"M76 12L76 88\" opacity=\".55\"/></svg>"
+    },
+    "cad_eds_compressor": {
+      "category": "eds",
+      "name": "Compresor",
+      "description": "Compresor de aire con volante, motor y tanque pulmón. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0e7490",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"18\" y=\"34\" width=\"44\" height=\"34\" rx=\"4\" fill=\"currentColor\" fill-opacity=\"0.09\"/><circle cx=\"32\" cy=\"51\" r=\"10\"/><path d=\"M32 41L32 61\"/><path d=\"M22 51L42 51\"/><rect x=\"62\" y=\"42\" width=\"20\" height=\"26\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.09\"/><path d=\"M62 55h-0\"/><path d=\"M56 55L62 55\"/><path d=\"M18 74L18 80\"/><path d=\"M28 74L28 80\"/><path d=\"M72 74L72 80\"/></svg>"
+    },
+    "cad_eds_dispenser": {
+      "category": "eds",
+      "name": "Surtidor de combustible",
+      "description": "Surtidor de dos caras con pantalla, mangueras y boquillas. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0e7490",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"34\" y=\"16\" width=\"32\" height=\"68\" rx=\"6\" fill=\"currentColor\" fill-opacity=\"0.1\"/><rect x=\"40\" y=\"22\" width=\"20\" height=\"13\" rx=\"3\"/><path d=\"M46 28L54 28\"/><path d=\"M34 44c-9 3-9 15 0 18\"/><path d=\"M66 44c9 3 9 15 0 18\"/><circle cx=\"30\" cy=\"41\" r=\"3\"/><circle cx=\"70\" cy=\"41\" r=\"3\"/><path d=\"M38 76L62 76\"/><path d=\"M38 70L62 70\"/></svg>"
+    },
+    "cad_eds_dispenser_diesel": {
+      "category": "eds",
+      "name": "Surtidor de diésel",
+      "description": "Surtidor de diésel con manguera de alto caudal y bandeja de goteo. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0e7490",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"36\" y=\"14\" width=\"28\" height=\"62\" rx=\"5\" fill=\"currentColor\" fill-opacity=\"0.1\"/><rect x=\"42\" y=\"20\" width=\"16\" height=\"11\" rx=\"2\"/><path d=\"M64 40c10 2 10 16 0 18\"/><circle cx=\"69\" cy=\"38\" r=\"3\"/><rect x=\"30\" y=\"76\" width=\"40\" height=\"10\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.06\"/><path d=\"M36 81L64 81\"/></svg>"
+    },
+    "cad_eds_dispenser_glp": {
+      "category": "eds",
+      "name": "Surtidor de GLP",
+      "description": "Surtidor de gas licuado con manguera reforzada y válvula de corte. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0e7490",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"38\" y=\"30\" width=\"24\" height=\"46\" rx=\"10\" fill=\"currentColor\" fill-opacity=\"0.1\"/><circle cx=\"50\" cy=\"24\" r=\"6\"/><path d=\"M50 30L50 38\"/><path d=\"M62 46c9 3 9 15 0 18\"/><circle cx=\"66\" cy=\"44\" r=\"3\"/><rect x=\"42\" y=\"44\" width=\"16\" height=\"12\" rx=\"2\"/><path d=\"M38 76L62 76\"/></svg>"
+    },
+    "cad_eds_extinguisher": {
+      "category": "eds",
+      "name": "Extintor ABC",
+      "description": "Extintor multipropósito sobre soporte de pared. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0e7490",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"40\" y=\"30\" width=\"20\" height=\"44\" rx=\"7\" fill=\"currentColor\" fill-opacity=\"0.1\"/><rect x=\"45\" y=\"22\" width=\"10\" height=\"8\" rx=\"2\"/><path d=\"M50 22L50 16\"/><path d=\"M50 16L62 16\"/><path d=\"M62 16L62 24\"/><rect x=\"34\" y=\"74\" width=\"32\" height=\"6\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.06\"/><path d=\"M44 40L56 40\" opacity=\".55\"/></svg>"
+    },
+    "cad_eds_fill_point": {
+      "category": "eds",
+      "name": "Boca de llenado",
+      "description": "Boca de llenado de tanque con tapa roscada y collarín. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0e7490",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"50\" cy=\"50\" r=\"20\" fill=\"currentColor\" fill-opacity=\"0.1\"/><circle cx=\"50\" cy=\"50\" r=\"12\"/><circle cx=\"50\" cy=\"50\" r=\"4\" fill=\"currentColor\" fill-opacity=\"0.45\"/><path d=\"M50 26v-8M50 82v-8M26 50h-8M82 50h-8\"/></svg>"
+    },
+    "cad_eds_guard": {
+      "category": "eds",
+      "name": "Caseta de vigilancia",
+      "description": "Caseta de control con ventanilla y barrera de acceso. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0e7490",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"22\" y=\"26\" width=\"36\" height=\"36\" rx=\"4\" fill=\"currentColor\" fill-opacity=\"0.08\"/><path d=\"M22 40L58 40\" opacity=\".55\"/><path d=\"M40 26L40 62\" opacity=\".55\"/><path d=\"M64 62h24\"/><path d=\"M64 62l18-10\"/><circle cx=\"66\" cy=\"62\" r=\"3\"/><path d=\"M30 70L30 80\" opacity=\".55\"/></svg>"
+    },
+    "cad_eds_island": {
+      "category": "eds",
+      "name": "Isla de surtidores",
+      "description": "Isla con dos surtidores y defensas laterales. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0e7490",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"8\" y=\"44\" width=\"84\" height=\"14\" rx=\"4\" fill=\"currentColor\" fill-opacity=\"0.1\"/><rect x=\"22\" y=\"26\" width=\"16\" height=\"44\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.08\"/><rect x=\"62\" y=\"26\" width=\"16\" height=\"44\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.08\"/><path d=\"M8 51L22 51\" opacity=\".55\"/><path d=\"M78 51L92 51\" opacity=\".55\"/><circle cx=\"14\" cy=\"66\" r=\"2.4\" fill=\"currentColor\" fill-opacity=\"0.5\"/><circle cx=\"86\" cy=\"66\" r=\"2.4\" fill=\"currentColor\" fill-opacity=\"0.5\"/></svg>"
+    },
+    "cad_eds_moto_bay": {
+      "category": "eds",
+      "name": "Plaza de motos",
+      "description": "Plazoleta de motos con separadores y moto en planta. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0e7490",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"16\" y=\"16\" width=\"68\" height=\"68\" rx=\"3\" fill=\"currentColor\" fill-opacity=\".05\" stroke-dasharray=\"4 3\"/><circle cx=\"34\" cy=\"62\" r=\"8\"/><circle cx=\"66\" cy=\"62\" r=\"8\"/><path d=\"M34 62L50 40\"/><path d=\"M50 40L66 62\"/><path d=\"M44 34L56 34\"/><path d=\"M40 30h20\"/></svg>"
+    },
+    "cad_eds_office": {
+      "category": "eds",
+      "name": "Oficina de la estación",
+      "description": "Oficina con escritorio, silla, equipo y archivador lateral. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0e7490",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"12\" y=\"28\" width=\"44\" height=\"18\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.09\"/><path d=\"M12 46L56 46\" opacity=\".55\"/><rect x=\"18\" y=\"22\" width=\"16\" height=\"6\" rx=\"2\"/><rect x=\"66\" y=\"34\" width=\"20\" height=\"40\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.07\"/><path d=\"M66 46L86 46\" opacity=\".55\"/><path d=\"M66 60L86 60\" opacity=\".55\"/><circle cx=\"34\" cy=\"62\" r=\"8\" fill=\"currentColor\" fill-opacity=\"0.08\"/><path d=\"M26 72h16\" opacity=\".55\"/></svg>"
+    },
+    "cad_eds_pos": {
+      "category": "eds",
+      "name": "Caja y punto de pago",
+      "description": "Mostrador de caja con terminal, cajón y fila de espera. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0e7490",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"16\" y=\"34\" width=\"56\" height=\"22\" rx=\"4\" fill=\"currentColor\" fill-opacity=\"0.1\"/><path d=\"M16 45L72 45\" opacity=\".55\"/><rect x=\"22\" y=\"22\" width=\"14\" height=\"8\" rx=\"2\"/><rect x=\"66\" y=\"26\" width=\"16\" height=\"12\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.12\"/><path d=\"M12 62h64\" stroke-dasharray=\"3 3\" opacity=\".6\"/><circle cx=\"30\" cy=\"68\" r=\"3\"/><circle cx=\"50\" cy=\"68\" r=\"3\"/></svg>"
+    },
+    "cad_eds_separator": {
+      "category": "eds",
+      "name": "Separador de grasas",
+      "description": "Trampa de grasas con deflectores y registros de inspección. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0e7490",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"14\" y=\"34\" width=\"72\" height=\"32\" rx=\"4\" fill=\"currentColor\" fill-opacity=\"0.07\"/><path d=\"M14 46L86 46\" opacity=\".55\"/><path d=\"M14 54L86 54\" opacity=\".55\"/><path d=\"M38 34L38 66\"/><path d=\"M62 34L62 66\"/><circle cx=\"26\" cy=\"30\" r=\"3\"/><circle cx=\"74\" cy=\"30\" r=\"3\"/><path d=\"M14 72h72\" stroke-dasharray=\"3 3\" opacity=\".6\"/></svg>"
+    },
+    "cad_eds_spill_kit": {
+      "category": "eds",
+      "name": "Kit antiderrames",
+      "description": "Estación de contención con kit antiderrames y señalización. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0e7490",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"10\" y=\"44\" width=\"38\" height=\"30\" rx=\"4\" fill=\"currentColor\" fill-opacity=\"0.1\"/><path d=\"M10 56L48 56\" opacity=\".55\"/><path d=\"M74 26l18 32H56Z\"/><path d=\"M74 42L74 50\"/><circle cx=\"74\" cy=\"54\" r=\"1.6\" fill=\"currentColor\" fill-opacity=\"0.8\"/><rect x=\"10\" y=\"44\" width=\"38\" height=\"6\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.09\"/></svg>"
+    },
+    "cad_eds_store": {
+      "category": "eds",
+      "name": "Tienda de conveniencia",
+      "description": "Tienda con dos góndolas y nevera mural. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0e7490",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"10\" y=\"18\" width=\"80\" height=\"66\" rx=\"4\" fill=\"currentColor\" fill-opacity=\"0.05\"/><rect x=\"20\" y=\"28\" width=\"12\" height=\"44\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.09\"/><rect x=\"44\" y=\"28\" width=\"12\" height=\"44\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.09\"/><rect x=\"70\" y=\"28\" width=\"12\" height=\"44\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.09\"/><path d=\"M20 40L32 40\" opacity=\".55\"/><path d=\"M44 40L56 40\" opacity=\".55\"/><path d=\"M70 40L82 40\" opacity=\".55\"/><path d=\"M20 58L32 58\" opacity=\".55\"/><path d=\"M44 58L56 58\" opacity=\".55\"/><path d=\"M70 58L82 58\" opacity=\".55\"/></svg>"
+    },
+    "cad_eds_tank": {
+      "category": "eds",
+      "name": "Tanque enterrado",
+      "description": "Tanque de combustible bajo tierra con boca de inspección. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0e7490",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"16\" y=\"32\" width=\"68\" height=\"36\" rx=\"18\" fill=\"currentColor\" fill-opacity=\".07\" stroke-dasharray=\"4 3\"/><circle cx=\"50\" cy=\"50\" r=\"6\"/><path d=\"M44 50L56 50\"/><path d=\"M50 44L50 56\"/><path d=\"M22 72L22 80\" opacity=\".55\"/><path d=\"M78 72L78 80\" opacity=\".55\"/></svg>"
+    },
+    "cad_eds_truck_lane": {
+      "category": "eds",
+      "name": "Carril de camiones",
+      "description": "Carril exclusivo para vehículos pesados con carril de salida. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0e7490",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"20\" y=\"10\" width=\"60\" height=\"80\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.04\"/><rect x=\"30\" y=\"22\" width=\"40\" height=\"18\" rx=\"2\"/><rect x=\"30\" y=\"44\" width=\"18\" height=\"12\" rx=\"2\"/><path d=\"M48 50L70 50\"/><path d=\"M24 10L24 90\" stroke-dasharray=\"3 3\" opacity=\".6\"/><path d=\"M76 10L76 90\" stroke-dasharray=\"3 3\" opacity=\".6\"/></svg>"
+    },
+    "cad_eds_vacuum": {
+      "category": "eds",
+      "name": "Aspiradora industrial",
+      "description": "Aspiradora de pie con depósito cilíndrico, manguera flexible y boquilla de piso. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0e7490",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"38\" cy=\"50\" r=\"17\" fill=\"currentColor\" fill-opacity=\"0.1\"/><circle cx=\"38\" cy=\"50\" r=\"6\"/><path d=\"M46 36v-6h10q3 0 3 3v6\"/><path d=\"M45 66L45 84\"/><path d=\"M31 66L31 84\"/><path d=\"M26 84L50 84\"/><path d=\"M55 60q14 8 10 20\"/><rect x=\"58\" y=\"78\" width=\"20\" height=\"8\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.09\"/></svg>"
+    },
+    "cad_eds_vent": {
+      "category": "eds",
+      "name": "Venteo de tanques",
+      "description": "Tubería de venteo con sombrerete y codos de salida. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0e7490",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"46\" y=\"30\" width=\"8\" height=\"50\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.08\"/><rect x=\"38\" y=\"18\" width=\"24\" height=\"10\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.09\"/><path d=\"M38 24L62 24\"/><path d=\"M46 80h8\"/><path d=\"M30 23L38 23\"/><path d=\"M62 23L70 23\"/></svg>"
+    },
+    "cad_eds_wash": {
+      "category": "eds",
+      "name": "Lavadero de vehículos",
+      "description": "Bahía de lavado con ducha, desagüe central y vehículo en posición. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0e7490",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"10\" y=\"16\" width=\"80\" height=\"68\" rx=\"4\" fill=\"currentColor\" fill-opacity=\".05\" stroke-dasharray=\"4 3\"/><path d=\"M34 26h32q6 0 6 6v14H28V32q0-6 6-6Z\" fill=\"none\"/><circle cx=\"40\" cy=\"60\" r=\"4\"/><circle cx=\"60\" cy=\"60\" r=\"4\"/><path d=\"M36 54h28q4 0 4 4v6H32v-6q0-4 4-4Z\"/><path d=\"M46 76L54 76\"/><path d=\"M50 72L50 80\"/><path d=\"M14 20c4 3 4 7 0 10\"/><path d=\"M18 20c4 3 4 7 0 10\" opacity=\".55\"/></svg>"
+    },
+    "cad_eds_waste": {
+      "category": "eds",
+      "name": "Residuos peligrosos",
+      "description": "Caneca de residuos peligrosos con rótulo de riesgo. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0e7490",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"34\" y=\"30\" width=\"32\" height=\"50\" rx=\"4\" fill=\"currentColor\" fill-opacity=\"0.1\"/><path d=\"M30 30L70 30\"/><path d=\"M44 24L56 24\"/><path d=\"M50 22L50 30\"/><path d=\"M50 42l10 16H40Z\"/><path d=\"M50 50L50 54\"/></svg>"
+    },
+    "cad_eds_wc": {
+      "category": "eds",
+      "name": "Baños públicos",
+      "description": "Dos cubículos con lavamanos común. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0e7490",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"14\" y=\"22\" width=\"72\" height=\"58\" rx=\"4\" fill=\"currentColor\" fill-opacity=\"0.05\"/><path d=\"M50 22L50 80\"/><rect x=\"24\" y=\"34\" width=\"14\" height=\"20\" rx=\"2\"/><rect x=\"62\" y=\"34\" width=\"14\" height=\"20\" rx=\"2\"/><circle cx=\"31\" cy=\"44\" r=\"4\"/><circle cx=\"69\" cy=\"44\" r=\"4\"/><path d=\"M28 66L40 66\"/><path d=\"M60 66L72 66\"/></svg>"
+    },
+    "cad_elec_ac": {
+      "category": "electrico",
+      "name": "Aire acondicionado",
+      "description": "Unidad interior tipo split con rejilla y flujo de aire. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
+      "reference": "Instalaciones · símbolo propio Normia",
+      "color": "#334155",
+      "load": 3500,
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"14\" y=\"30\" width=\"72\" height=\"26\" rx=\"6\" fill=\"currentColor\" fill-opacity=\".09\"/><path d=\"M22 42h56M22 48h56\" opacity=\".7\"/><path d=\"M26 62c4 6 12 6 16 0M50 62c4 6 12 6 16 0M66 62c4 6 10 6 14 0\" opacity=\".8\"/></svg>"
+    },
+    "cad_elec_ceiling": {
+      "category": "electrico",
+      "name": "Salida de techo",
+      "description": "Punto de techo para lámpara colgante o roseta. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
+      "reference": "Instalaciones · símbolo propio Normia",
+      "color": "#334155",
+      "load": 100,
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"50\" cy=\"50\" r=\"18\"/><circle cx=\"50\" cy=\"50\" r=\"5\" fill=\"currentColor\"/><path d=\"M50 20v10M50 70v10M20 50h10M70 50h10\"/></svg>"
+    },
+    "cad_elec_data": {
+      "category": "electrico",
+      "name": "Salida de datos",
+      "description": "Punto de red RJ45 para datos o voz. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
+      "reference": "Instalaciones · símbolo propio Normia",
+      "color": "#334155",
+      "load": 0,
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"26\" y=\"32\" width=\"48\" height=\"36\" rx=\"5\" fill=\"currentColor\" fill-opacity=\".09\"/><rect x=\"38\" y=\"42\" width=\"24\" height=\"16\" rx=\"2\"/><path d=\"M42 42v-4h16v4\" opacity=\".7\"/><path d=\"M42 50h16M42 54h16\" opacity=\".6\"/></svg>"
+    },
+    "cad_elec_emergency": {
+      "category": "electrico",
+      "name": "Luminaria de emergencia",
+      "description": "Luminaria autónoma con dos cabezales orientables. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
+      "reference": "Instalaciones · símbolo propio Normia",
+      "color": "#334155",
+      "load": 30,
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"16\" y=\"44\" width=\"68\" height=\"24\" rx=\"5\" fill=\"currentColor\" fill-opacity=\".09\"/><circle cx=\"30\" cy=\"56\" r=\"7\"/><circle cx=\"70\" cy=\"56\" r=\"7\"/><path d=\"M24 44l-5-9M76 44l5-9M38 44l-3-9M62 44l3-9\"/><circle cx=\"50\" cy=\"56\" r=\"2\" fill=\"currentColor\"/></svg>"
+    },
+    "cad_elec_extractor": {
+      "category": "electrico",
+      "name": "Extractor de aire",
+      "description": "Extractor axial de muro o ducto. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
+      "reference": "Instalaciones · símbolo propio Normia",
+      "color": "#334155",
+      "load": 250,
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"50\" cy=\"50\" r=\"26\" fill=\"currentColor\" fill-opacity=\".09\"/><circle cx=\"50\" cy=\"50\" r=\"5\" fill=\"currentColor\"/><path d=\"M50 45C38 42 34 30 44 25c8-4 12 6 6 20zM55 51c3 11 15 16 20 6 4-8-6-12-20-6zM44 54c-10 5-11 18 0 20 9 2 10-9 0-20z\"/></svg>"
+    },
+    "cad_elec_floorbox": {
+      "category": "electrico",
+      "name": "Caja de piso",
+      "description": "Caja de piso con tomacorriente y tapa. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
+      "reference": "Instalaciones · símbolo propio Normia",
+      "color": "#334155",
+      "load": 180,
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"26\" y=\"26\" width=\"48\" height=\"48\" rx=\"4\" fill=\"currentColor\" fill-opacity=\".09\"/><circle cx=\"50\" cy=\"50\" r=\"14\"/><circle cx=\"45\" cy=\"46\" r=\"1.8\" fill=\"currentColor\"/><circle cx=\"55\" cy=\"46\" r=\"1.8\" fill=\"currentColor\"/><path d=\"M50 52v6\"/></svg>"
+    },
+    "cad_elec_luminaire": {
+      "category": "electrico",
+      "name": "Luminaria LED",
+      "description": "Salida de iluminación en techo. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
+      "reference": "Instalaciones · símbolo propio Normia",
+      "color": "#334155",
+      "load": 60,
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"50\" cy=\"50\" r=\"24\" fill=\"currentColor\" fill-opacity=\".09\"/><path d=\"M33 33l34 34M67 33L33 67\"/><circle cx=\"50\" cy=\"50\" r=\"4\" fill=\"currentColor\"/></svg>"
+    },
+    "cad_elec_outlet": {
+      "category": "electrico",
+      "name": "Tomacorriente doble",
+      "description": "Tomacorriente doble polarizado para muro. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
+      "reference": "Instalaciones · símbolo propio Normia",
+      "color": "#334155",
+      "load": 180,
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"34\" y=\"22\" width=\"32\" height=\"56\" rx=\"6\" fill=\"currentColor\" fill-opacity=\".09\"/><rect x=\"41\" y=\"31\" width=\"18\" height=\"15\" rx=\"2\"/><circle cx=\"46\" cy=\"37\" r=\"1.7\" fill=\"currentColor\"/><circle cx=\"54\" cy=\"37\" r=\"1.7\" fill=\"currentColor\"/><path d=\"M50 41v3\"/><rect x=\"41\" y=\"54\" width=\"18\" height=\"15\" rx=\"2\"/><circle cx=\"46\" cy=\"60\" r=\"1.7\" fill=\"currentColor\"/><circle cx=\"54\" cy=\"60\" r=\"1.7\" fill=\"currentColor\"/><path d=\"M50 64v3\"/></svg>"
+    },
+    "cad_elec_outlet_220": {
+      "category": "electrico",
+      "name": "Tomacorriente 220 V",
+      "description": "Salida especial bifásica para equipos de mayor consumo. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
+      "reference": "Instalaciones · símbolo propio Normia",
+      "color": "#334155",
+      "load": 2400,
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"34\" y=\"24\" width=\"32\" height=\"52\" rx=\"6\" fill=\"currentColor\" fill-opacity=\".09\"/><circle cx=\"50\" cy=\"50\" r=\"16\"/><path d=\"M50 34v8M42 50h-5M63 50h5\"/><path d=\"M42 60l-3 5M58 60l3 5\"/></svg>"
+    },
+    "cad_elec_panel": {
+      "category": "electrico",
+      "name": "Tablero de distribución",
+      "description": "Tablero de breakers con puerta y circuitos. Agrupa los tramos de la red eléctrica. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
+      "reference": "Instalaciones · símbolo propio Normia",
+      "color": "#334155",
+      "load": 0,
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"24\" y=\"14\" width=\"52\" height=\"72\" rx=\"4\" fill=\"currentColor\" fill-opacity=\".09\"/><rect x=\"32\" y=\"22\" width=\"36\" height=\"24\" rx=\"2\"/><path d=\"M38 22v24M46 22v24M54 22v24M62 22v24\"/><path d=\"M32 54h36M32 62h36M32 70h36\" opacity=\".65\"/><circle cx=\"43\" cy=\"58\" r=\"1.6\" fill=\"currentColor\"/><circle cx=\"57\" cy=\"58\" r=\"1.6\" fill=\"currentColor\"/></svg>"
+    },
+    "cad_elec_switch": {
+      "category": "electrico",
+      "name": "Interruptor sencillo",
+      "description": "Interruptor de pared de un polo. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
+      "reference": "Instalaciones · símbolo propio Normia",
+      "color": "#334155",
+      "load": 0,
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"38\" y=\"22\" width=\"24\" height=\"56\" rx=\"5\" fill=\"currentColor\" fill-opacity=\".09\"/><rect x=\"45\" y=\"34\" width=\"10\" height=\"32\" rx=\"2\" fill=\"currentColor\" fill-opacity=\".18\"/><path d=\"M45 50h10\"/></svg>"
+    },
+    "cad_elec_switch_double": {
+      "category": "electrico",
+      "name": "Interruptor doble",
+      "description": "Interruptor de pared de dos polos o de dos teclas. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
+      "reference": "Instalaciones · símbolo propio Normia",
+      "color": "#334155",
+      "load": 0,
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"34\" y=\"22\" width=\"32\" height=\"56\" rx=\"5\" fill=\"currentColor\" fill-opacity=\".09\"/><rect x=\"39\" y=\"33\" width=\"10\" height=\"34\" rx=\"2\" fill=\"currentColor\" fill-opacity=\".18\"/><rect x=\"51\" y=\"33\" width=\"10\" height=\"34\" rx=\"2\" fill=\"currentColor\" fill-opacity=\".18\"/></svg>"
     },
     "cad_elevator": {
       "category": "vertical",
@@ -252,6 +1105,190 @@
       "color": "#334155",
       "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"10\" y=\"30\" width=\"80\" height=\"40\" rx=\"3\" fill=\"currentColor\" fill-opacity=\".09\"/><rect x=\"18\" y=\"38\" width=\"28\" height=\"22\" rx=\"2\"/><path d=\"M32 38v22\" opacity=\".3\"/><path d=\"M54 44l20 6-2 6-20-6z\" fill=\"currentColor\" fill-opacity=\".09\"/><circle cx=\"72\" cy=\"62\" r=\"5\"/></svg>"
     },
+    "cad_gym_bench": {
+      "category": "gimnasio",
+      "name": "Banco de pesas",
+      "description": "Banco plano con soportes y barra. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#7c3aed",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"30\" y=\"40\" width=\"40\" height=\"20\" rx=\"6\" fill=\"currentColor\" fill-opacity=\"0.1\"/><path d=\"M50 24L50 40\"/><path d=\"M30 24L70 24\"/><circle cx=\"28\" cy=\"24\" r=\"4\"/><circle cx=\"72\" cy=\"24\" r=\"4\"/><path d=\"M36 60L36 70\" opacity=\".4\"/><path d=\"M64 60L64 70\" opacity=\".4\"/></svg>"
+    },
+    "cad_gym_bike": {
+      "category": "gimnasio",
+      "name": "Bicicleta estática",
+      "description": "Bicicleta estática con sillín, manillar y volante. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#7c3aed",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"42\" cy=\"54\" r=\"14\"/><circle cx=\"42\" cy=\"54\" r=\"4\" fill=\"currentColor\" fill-opacity=\"0.25\"/><circle cx=\"72\" cy=\"60\" r=\"10\"/><path d=\"M46 40L58 34\"/><path d=\"M60 30L72 30\"/><path d=\"M30 66L22 76\" opacity=\".5\"/></svg>"
+    },
+    "cad_gym_box": {
+      "category": "gimnasio",
+      "name": "Zona de boxeo",
+      "description": "Ring con cuerdas y saco de entrenamiento. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#7c3aed",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"16\" y=\"26\" width=\"48\" height=\"46\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.05\"/><path d=\"M16 34L64 34\" opacity=\".5\"/><path d=\"M16 40L64 40\" opacity=\".5\"/><circle cx=\"80\" cy=\"44\" r=\"8\"/><path d=\"M80 52L80 76\" opacity=\".4\"/></svg>"
+    },
+    "cad_gym_class_room": {
+      "category": "gimnasio",
+      "name": "Sala de clases dirigidas",
+      "description": "Sala con tarima, parlante y colchonetas alineadas. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#7c3aed",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"14\" y=\"20\" width=\"72\" height=\"60\" rx=\"4\" fill=\"currentColor\" fill-opacity=\"0.04\"/><rect x=\"30\" y=\"22\" width=\"40\" height=\"10\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.12\"/><circle cx=\"20\" cy=\"30\" r=\"4\"/><path d=\"M24 44L24 44\" opacity=\".5\"/><path d=\"M24 58L24 58\" opacity=\".5\"/><path d=\"M24 72L24 72\" opacity=\".5\"/><path d=\"M24 46L76 46\" opacity=\".3\"/><path d=\"M24 58L76 58\" opacity=\".3\"/></svg>"
+    },
+    "cad_gym_dumbbell_rack": {
+      "category": "gimnasio",
+      "name": "Rack de mancuernas",
+      "description": "Rack inclinado con tres niveles de mancuernas. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#7c3aed",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"14\" y=\"30\" width=\"72\" height=\"44\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.06\"/><path d=\"M14 44L14 44\" opacity=\".5\"/><path d=\"M50 44L50 44\" opacity=\".5\"/><path d=\"M86 44L86 44\" opacity=\".5\"/><path d=\"M20 34L20 34\" opacity=\".35\"/><path d=\"M20 41.2L20 41.2\" opacity=\".35\"/><path d=\"M20 48.4L20 48.4\" opacity=\".35\"/><path d=\"M20 55.599999999999994L20 55.599999999999994\" opacity=\".35\"/><path d=\"M20 62.8L20 62.8\" opacity=\".35\"/><path d=\"M20 70L20 70\" opacity=\".35\"/></svg>"
+    },
+    "cad_gym_elliptical": {
+      "category": "gimnasio",
+      "name": "Elíptica",
+      "description": "Elíptica con pedales, brazos móviles y volante. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#7c3aed",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><ellipse cx=\"50\" cy=\"56\" rx=\"24\" ry=\"12\" fill=\"currentColor\" fill-opacity=\"0.07\"/><circle cx=\"50\" cy=\"30\" r=\"8\"/><path d=\"M50 38L50 46\"/><path d=\"M30 40L36 56\"/><path d=\"M70 40L64 56\"/><circle cx=\"50\" cy=\"74\" r=\"4\"/></svg>"
+    },
+    "cad_gym_kids": {
+      "category": "gimnasio",
+      "name": "Zona infantil",
+      "description": "Área de juegos con colchonetas y valla perimetral. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#7c3aed",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"14\" y=\"22\" width=\"72\" height=\"58\" rx=\"6\" fill=\"currentColor\" fill-opacity=\".04\" stroke-dasharray=\"5 4\"/><circle cx=\"32\" cy=\"44\" r=\"10\"/><rect x=\"54\" y=\"34\" width=\"22\" height=\"20\" rx=\"4\" fill=\"currentColor\" fill-opacity=\"0.09\"/><circle cx=\"64\" cy=\"66\" r=\"8\"/><path d=\"M24 74c4-6 12-6 16 0\" opacity=\".4\"/></svg>"
+    },
+    "cad_gym_locker": {
+      "category": "gimnasio",
+      "name": "Vestidores con casilleros",
+      "description": "Dos filas de casilleros con banco central. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#7c3aed",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"14\" y=\"20\" width=\"72\" height=\"20\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.07\"/><rect x=\"14\" y=\"60\" width=\"72\" height=\"20\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.07\"/><path d=\"M20 20L20 20\" opacity=\".4\"/><path d=\"M20 24L20 24\" opacity=\".4\"/><path d=\"M20 28L20 28\" opacity=\".4\"/><path d=\"M20 32L20 32\" opacity=\".4\"/><path d=\"M20 36L20 36\" opacity=\".4\"/><path d=\"M20 40L20 40\" opacity=\".4\"/><path d=\"M20 60L20 60\" opacity=\".4\"/><path d=\"M20 64L20 64\" opacity=\".4\"/><path d=\"M20 68L20 68\" opacity=\".4\"/><path d=\"M20 72L20 72\" opacity=\".4\"/><path d=\"M20 76L20 76\" opacity=\".4\"/><path d=\"M20 80L20 80\" opacity=\".4\"/><rect x=\"24\" y=\"44\" width=\"52\" height=\"12\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.09\"/></svg>"
+    },
+    "cad_gym_mat": {
+      "category": "gimnasio",
+      "name": "Colchoneta",
+      "description": "Colchoneta enrollable con marcas de uso. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#7c3aed",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"20\" y=\"34\" width=\"60\" height=\"32\" rx=\"4\" fill=\"currentColor\" fill-opacity=\"0.08\"/><path d=\"M26 42L74 42\" opacity=\".3\"/><path d=\"M26 58L74 58\" opacity=\".3\"/><circle cx=\"20\" cy=\"50\" r=\"6\"/></svg>"
+    },
+    "cad_gym_mirror": {
+      "category": "gimnasio",
+      "name": "Espejo de sala",
+      "description": "Muro de espejos con perfilería. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#7c3aed",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"14\" y=\"16\" width=\"72\" height=\"8\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.12\"/><path d=\"M20 16L20 16\" opacity=\".4\"/><path d=\"M20 17.6L20 17.6\" opacity=\".4\"/><path d=\"M20 19.2L20 19.2\" opacity=\".4\"/><path d=\"M20 20.8L20 20.8\" opacity=\".4\"/><path d=\"M20 22.4L20 22.4\" opacity=\".4\"/><path d=\"M20 24L20 24\" opacity=\".4\"/><path d=\"M14 30L86 30\" opacity=\".25\"/></svg>"
+    },
+    "cad_gym_multi": {
+      "category": "gimnasio",
+      "name": "Máquina multifunción",
+      "description": "Estación de poleas con torre, banco y discos. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#7c3aed",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"18\" y=\"20\" width=\"16\" height=\"64\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.08\"/><rect x=\"66\" y=\"20\" width=\"16\" height=\"64\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.08\"/><path d=\"M34 30L66 30\" opacity=\".5\"/><circle cx=\"14\" cy=\"40\" r=\"5\"/><circle cx=\"86\" cy=\"40\" r=\"5\"/><rect x=\"34\" y=\"52\" width=\"32\" height=\"12\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.09\"/></svg>"
+    },
+    "cad_gym_physio": {
+      "category": "gimnasio",
+      "name": "Zona de fisioterapia",
+      "description": "Camilla, pelotas y módulo de recuperación. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#7c3aed",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"16\" y=\"34\" width=\"44\" height=\"20\" rx=\"6\" fill=\"currentColor\" fill-opacity=\"0.09\"/><circle cx=\"70\" cy=\"44\" r=\"10\"/><circle cx=\"50\" cy=\"68\" r=\"8\"/><path d=\"M16 64L44 64\" opacity=\".3\"/></svg>"
+    },
+    "cad_gym_rack": {
+      "category": "gimnasio",
+      "name": "Rack de sentadillas",
+      "description": "Rack con barras, topes y discos laterales. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#7c3aed",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"24\" y=\"18\" width=\"8\" height=\"66\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.1\"/><rect x=\"68\" y=\"18\" width=\"8\" height=\"66\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.1\"/><path d=\"M32 34L68 34\"/><circle cx=\"20\" cy=\"30\" r=\"5\"/><circle cx=\"80\" cy=\"30\" r=\"5\"/><path d=\"M32 36L32 60\" opacity=\".3\"/><path d=\"M68 36L68 60\" opacity=\".3\"/></svg>"
+    },
+    "cad_gym_reception": {
+      "category": "gimnasio",
+      "name": "Recepción del gimnasio",
+      "description": "Mostrador curvo con torniquetes y báscula corporal. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#7c3aed",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><ellipse cx=\"44\" cy=\"44\" rx=\"26\" ry=\"14\" fill=\"currentColor\" fill-opacity=\"0.07\"/><path d=\"M18 62L70 62\" opacity=\".4\"/><circle cx=\"80\" cy=\"40\" r=\"6\"/><circle cx=\"80\" cy=\"60\" r=\"6\"/><rect x=\"72\" y=\"70\" width=\"16\" height=\"12\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.08\"/></svg>"
+    },
+    "cad_gym_rower": {
+      "category": "gimnasio",
+      "name": "Remo ergómetro",
+      "description": "Remo con riel, asiento deslizante y volante. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#7c3aed",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"12\" y=\"48\" width=\"50\" height=\"8\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.09\"/><rect x=\"20\" y=\"40\" width=\"16\" height=\"12\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.1\"/><circle cx=\"76\" cy=\"52\" r=\"12\"/><path d=\"M62 52L68 52\"/></svg>"
+    },
+    "cad_gym_sauna": {
+      "category": "gimnasio",
+      "name": "Sauna",
+      "description": "Sauna con bancas escalonadas y estufa. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#7c3aed",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"18\" y=\"22\" width=\"64\" height=\"56\" rx=\"4\" fill=\"currentColor\" fill-opacity=\"0.06\"/><rect x=\"26\" y=\"30\" width=\"48\" height=\"12\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.08\"/><rect x=\"26\" y=\"50\" width=\"48\" height=\"12\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.08\"/><circle cx=\"70\" cy=\"68\" r=\"5\"/><path d=\"M66 72L74 72\" opacity=\".4\"/></svg>"
+    },
+    "cad_gym_shower": {
+      "category": "gimnasio",
+      "name": "Duchas",
+      "description": "Batería de duchas con separadores y desagüe. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#7c3aed",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"12\" y=\"24\" width=\"76\" height=\"52\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.04\"/><path d=\"M24 24L24 24\" opacity=\".5\"/><path d=\"M24 50L24 50\" opacity=\".5\"/><path d=\"M24 76L24 76\" opacity=\".5\"/><circle cx=\"50\" cy=\"40\" r=\"4\"/><path d=\"M50 40L50 30\"/><circle cx=\"80\" cy=\"40\" r=\"4\"/><path d=\"M80 40L80 30\"/><path d=\"M44 72L56 72\" opacity=\".35\"/></svg>"
+    },
+    "cad_gym_spinning": {
+      "category": "gimnasio",
+      "name": "Salón de spinning",
+      "description": "Bicicletas de spinning en dos filas frente a tarima. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#7c3aed",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"20\" y=\"18\" width=\"60\" height=\"8\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.12\"/><path d=\"M20 34L20 34\" opacity=\".5\"/><path d=\"M20 46.666666666666664L20 46.666666666666664\" opacity=\".5\"/><path d=\"M20 59.33333333333333L20 59.33333333333333\" opacity=\".5\"/><path d=\"M20 72L20 72\" opacity=\".5\"/><path d=\"M50 34L50 34\" opacity=\".5\"/><path d=\"M50 46.666666666666664L50 46.666666666666664\" opacity=\".5\"/><path d=\"M50 59.33333333333333L50 59.33333333333333\" opacity=\".5\"/><path d=\"M50 72L50 72\" opacity=\".5\"/><path d=\"M80 34L80 72\" opacity=\".4\"/></svg>"
+    },
+    "cad_gym_supplement": {
+      "category": "gimnasio",
+      "name": "Punto de suplementos",
+      "description": "Vitrina con productos y caja de cobro. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#7c3aed",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"18\" y=\"30\" width=\"40\" height=\"40\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.06\"/><path d=\"M18 44L18 44\" opacity=\".5\"/><path d=\"M38 44L38 44\" opacity=\".5\"/><path d=\"M58 44L58 44\" opacity=\".5\"/><circle cx=\"70\" cy=\"40\" r=\"8\"/><path d=\"M70 48L70 60\" opacity=\".4\"/><rect x=\"62\" y=\"62\" width=\"18\" height=\"10\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.09\"/></svg>"
+    },
+    "cad_gym_trash": {
+      "category": "gimnasio",
+      "name": "Caneca del gimnasio",
+      "description": "Caneca con tapa y bolsa. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#7c3aed",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"36\" y=\"32\" width=\"28\" height=\"44\" rx=\"4\" fill=\"currentColor\" fill-opacity=\"0.1\"/><path d=\"M32 32L68 32\"/><path d=\"M44 26L56 26\"/><path d=\"M42 44v20M50 44v20M58 44v20\" opacity=\".35\"/></svg>"
+    },
+    "cad_gym_treadmill": {
+      "category": "gimnasio",
+      "name": "Caminadora",
+      "description": "Caminadora con banda, consola y barandas. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#7c3aed",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"16\" y=\"44\" width=\"58\" height=\"22\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.09\"/><path d=\"M20 55L70 55\" stroke-dasharray=\"4 3\" opacity=\".4\"/><rect x=\"74\" y=\"34\" width=\"10\" height=\"22\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.09\"/><path d=\"M30 76L30 84\" opacity=\".4\"/><path d=\"M64 76L64 84\" opacity=\".4\"/></svg>"
+    },
+    "cad_gym_water": {
+      "category": "gimnasio",
+      "name": "Fuente de agua",
+      "description": "Bebedero doble con pedestal y desagüe. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#7c3aed",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><ellipse cx=\"50\" cy=\"44\" rx=\"22\" ry=\"12\" fill=\"currentColor\" fill-opacity=\"0.08\"/><path d=\"M34 52L34 74\" opacity=\".4\"/><path d=\"M66 52L66 74\" opacity=\".4\"/><path d=\"M44 40c0-6 12-6 12 0\" opacity=\".5\"/></svg>"
+    },
+    "cad_gym_weights": {
+      "category": "gimnasio",
+      "name": "Zona de peso libre",
+      "description": "Plataforma de peso muerto con barras y discos. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#7c3aed",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"16\" y=\"22\" width=\"68\" height=\"58\" rx=\"3\" fill=\"currentColor\" fill-opacity=\".04\" stroke-dasharray=\"5 4\"/><path d=\"M26 50L74 50\"/><circle cx=\"22\" cy=\"50\" r=\"7\"/><circle cx=\"78\" cy=\"50\" r=\"7\"/><circle cx=\"50\" cy=\"72\" r=\"6\" fill=\"currentColor\" fill-opacity=\"0.1\"/><rect x=\"44\" y=\"66\" width=\"12\" height=\"12\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.08\"/></svg>"
+    },
     "cad_hosp_bed": {
       "category": "hospital",
       "name": "Cama hospitalaria",
@@ -332,6 +1369,102 @@
       "color": "#334155",
       "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M26 20v40a24 24 0 0 0 48 0V38\"/><rect x=\"30\" y=\"50\" width=\"14\" height=\"22\" rx=\"2\"/><circle cx=\"72\" cy=\"70\" r=\"8\"/><path d=\"M14 84h30\" opacity=\".6\"/><path d=\"M60 40h10\" opacity=\".4\"/></svg>"
     },
+    "cad_hyd_booster": {
+      "category": "hidraulico",
+      "name": "Equipo hidroneumático",
+      "description": "Bomba con tanque de presión para impulsión de agua. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
+      "reference": "Instalaciones · símbolo propio Normia",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"22\" y=\"30\" width=\"26\" height=\"42\" rx=\"9\" fill=\"currentColor\" fill-opacity=\".09\"/><rect x=\"56\" y=\"38\" width=\"24\" height=\"18\" rx=\"3\"/><circle cx=\"68\" cy=\"47\" r=\"5\"/><path d=\"M48 46h8M22 72h60M36 30V18M56 24v14\"/></svg>"
+    },
+    "cad_hyd_cabinet": {
+      "category": "hidraulico",
+      "name": "Gabinete contra incendios",
+      "description": "Gabinete con manguera y válvula para la red contra incendios. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
+      "reference": "Instalaciones · símbolo propio Normia",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"22\" y=\"16\" width=\"56\" height=\"68\" rx=\"4\" fill=\"currentColor\" fill-opacity=\".09\"/><circle cx=\"50\" cy=\"46\" r=\"16\"/><circle cx=\"50\" cy=\"46\" r=\"6\"/><path d=\"M50 62v10M38 80h24M34 30h32\" opacity=\".7\"/></svg>"
+    },
+    "cad_hyd_check": {
+      "category": "hidraulico",
+      "name": "Válvula de retención",
+      "description": "Válvula de chequeo para evitar el retorno del flujo. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
+      "reference": "Instalaciones · símbolo propio Normia",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M26 34l24 16-24 16z\"/><path d=\"M74 34L50 50l24 16z\"/><path d=\"M50 50l8-5v10z\" fill=\"currentColor\" fill-opacity=\".2\"/><path d=\"M50 34v32\" opacity=\".5\"/></svg>"
+    },
+    "cad_hyd_cleanout": {
+      "category": "hidraulico",
+      "name": "Caja de inspección",
+      "description": "Caja o registro de inspección para la red de desagüe. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
+      "reference": "Instalaciones · símbolo propio Normia",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"22\" y=\"22\" width=\"56\" height=\"56\" rx=\"4\" fill=\"currentColor\" fill-opacity=\".09\"/><path d=\"M22 34h56M22 66h56\" opacity=\".55\"/><circle cx=\"50\" cy=\"50\" r=\"11\"/><path d=\"M42 50h16\"/></svg>"
+    },
+    "cad_hyd_floor_drain": {
+      "category": "hidraulico",
+      "name": "Rejilla de piso",
+      "description": "Desagüe de piso con rejilla removible. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
+      "reference": "Instalaciones · símbolo propio Normia",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"26\" y=\"26\" width=\"48\" height=\"48\" rx=\"4\" fill=\"currentColor\" fill-opacity=\".09\"/><circle cx=\"50\" cy=\"50\" r=\"14\"/><path d=\"M40 44h20M40 50h20M40 56h20\" opacity=\".8\"/></svg>"
+    },
+    "cad_hyd_gas_meter": {
+      "category": "hidraulico",
+      "name": "Medidor de gas",
+      "description": "Medidor de gas combustible con conexión y regulador. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
+      "reference": "Instalaciones · símbolo propio Normia",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"26\" y=\"28\" width=\"48\" height=\"44\" rx=\"6\" fill=\"currentColor\" fill-opacity=\".09\"/><circle cx=\"50\" cy=\"48\" r=\"12\"/><path d=\"M50 48l7-6\"/><path d=\"M34 72v8M66 72v8M22 56h4M74 56h4\"/></svg>"
+    },
+    "cad_hyd_gate": {
+      "category": "hidraulico",
+      "name": "Válvula de compuerta",
+      "description": "Válvula de compuerta de accionamiento manual. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
+      "reference": "Instalaciones · símbolo propio Normia",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M28 36l22 14-22 14z\"/><path d=\"M72 36L50 50l22 14z\"/><path d=\"M50 36V22M41 22h18\"/><path d=\"M46 30h8\" opacity=\".7\"/></svg>"
+    },
+    "cad_hyd_meter": {
+      "category": "hidraulico",
+      "name": "Medidor de agua",
+      "description": "Contador de agua potable con carátula y conexiones. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
+      "reference": "Instalaciones · símbolo propio Normia",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"50\" cy=\"50\" r=\"20\" fill=\"currentColor\" fill-opacity=\".09\"/><path d=\"M30 50H16M70 50h14\"/><path d=\"M50 50l9-8\"/><circle cx=\"50\" cy=\"50\" r=\"3\" fill=\"currentColor\"/><path d=\"M40 38a14 14 0 0 1 20 0\" opacity=\".6\"/></svg>"
+    },
+    "cad_hyd_roof_drain": {
+      "category": "hidraulico",
+      "name": "Bajante de cubierta",
+      "description": "Desagüe de cubierta con domo y rejilla. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
+      "reference": "Instalaciones · símbolo propio Normia",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"50\" cy=\"46\" r=\"24\" fill=\"currentColor\" fill-opacity=\".09\"/><path d=\"M32 46a18 18 0 0 1 36 0\" /><path d=\"M40 34h20M36 42h28M36 50h28M44 58h12\" opacity=\".7\"/><path d=\"M50 70v14\"/></svg>"
+    },
+    "cad_hyd_sprinkler": {
+      "category": "hidraulico",
+      "name": "Rociador contra incendios",
+      "description": "Rociador colgante de la red de supresión. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
+      "reference": "Instalaciones · símbolo propio Normia",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M50 14v26\" /><path d=\"M34 44h32\" /><path d=\"M40 52l-8 12M50 54v12M60 52l8 12\" opacity=\".85\"/><circle cx=\"50\" cy=\"42\" r=\"4\" fill=\"currentColor\" fill-opacity=\".2\"/></svg>"
+    },
+    "cad_hyd_tank": {
+      "category": "hidraulico",
+      "name": "Tanque de almacenamiento",
+      "description": "Tanque de reserva de agua con nivel y salida. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
+      "reference": "Instalaciones · símbolo propio Normia",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"24\" y=\"24\" width=\"52\" height=\"52\" rx=\"4\" fill=\"currentColor\" fill-opacity=\".09\"/><path d=\"M24 46c9 6 17-6 26 0s17-6 26 0\" opacity=\".8\"/><path d=\"M24 58c9 6 17-6 26 0s17-6 26 0\" opacity=\".5\"/><path d=\"M50 24V12M40 76h20\"/></svg>"
+    },
+    "cad_hyd_valve": {
+      "category": "hidraulico",
+      "name": "Válvula de bola",
+      "description": "Válvula de corte de bola en la red de tubería. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
+      "reference": "Instalaciones · símbolo propio Normia",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M26 34l24 16-24 16z\" fill=\"currentColor\" fill-opacity=\".09\"/><path d=\"M74 34L50 50l24 16z\" fill=\"currentColor\" fill-opacity=\".09\"/><circle cx=\"50\" cy=\"50\" r=\"5\"/><path d=\"M50 45V30M42 30h16\"/></svg>"
+    },
     "cad_kitchen_hood": {
       "category": "kitchen",
       "name": "Campana extractora",
@@ -372,6 +1505,30 @@
       "color": "#334155",
       "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"18\" y=\"30\" width=\"64\" height=\"40\" rx=\"8\" fill=\"currentColor\" fill-opacity=\".09\"/><rect x=\"32\" y=\"14\" width=\"16\" height=\"10\" rx=\"3\"/><rect x=\"52\" y=\"14\" width=\"16\" height=\"10\" rx=\"3\"/><rect x=\"32\" y=\"76\" width=\"16\" height=\"10\" rx=\"3\"/><rect x=\"52\" y=\"76\" width=\"16\" height=\"10\" rx=\"3\"/><rect x=\"4\" y=\"40\" width=\"10\" height=\"20\" rx=\"3\"/><rect x=\"86\" y=\"40\" width=\"10\" height=\"20\" rx=\"3\"/></svg>"
     },
+    "cad_mkt_aisle": {
+      "category": "supermarket",
+      "name": "Pasillo de góndolas",
+      "description": "Par de góndolas enfrentadas con pasillo central de circulación. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"8\" y=\"20\" width=\"84\" height=\"60\" rx=\"3\" fill=\"currentColor\" fill-opacity=\".04\" stroke-dasharray=\"5 4\"/><rect x=\"16\" y=\"26\" width=\"14\" height=\"48\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.09\"/><rect x=\"70\" y=\"26\" width=\"14\" height=\"48\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.09\"/><path d=\"M20 30L20 30\" opacity=\".5\"/><path d=\"M20 43.33333333333333L20 43.33333333333333\" opacity=\".5\"/><path d=\"M20 56.666666666666664L20 56.666666666666664\" opacity=\".5\"/><path d=\"M20 70L20 70\" opacity=\".5\"/><path d=\"M74 30L74 30\" opacity=\".5\"/><path d=\"M74 43.33333333333333L74 43.33333333333333\" opacity=\".5\"/><path d=\"M74 56.666666666666664L74 56.666666666666664\" opacity=\".5\"/><path d=\"M74 70L74 70\" opacity=\".5\"/><path d=\"M48 50h4M42 50h2M56 50h2\" opacity=\".5\"/></svg>"
+    },
+    "cad_mkt_bagger": {
+      "category": "supermarket",
+      "name": "Zona de empaque",
+      "description": "Mesa de empaque junto a las cajas con bolsas y cinta. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"16\" y=\"40\" width=\"58\" height=\"22\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.09\"/><path d=\"M16 51L74 51\" opacity=\".35\"/><path d=\"M78 34l10 8-10 8z\" opacity=\".5\"/><path d=\"M24 70L24 78\" opacity=\".4\"/><path d=\"M66 70L66 78\" opacity=\".4\"/></svg>"
+    },
+    "cad_mkt_bakery": {
+      "category": "supermarket",
+      "name": "Panadería y repostería",
+      "description": "Vitrina de panadería con bandejas y horno de apoyo. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"14\" y=\"36\" width=\"46\" height=\"26\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.09\"/><path d=\"M18 40L18 40\" opacity=\".5\"/><path d=\"M37 40L37 40\" opacity=\".5\"/><path d=\"M56 40L56 40\" opacity=\".5\"/><rect x=\"66\" y=\"30\" width=\"24\" height=\"30\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.1\"/><circle cx=\"78\" cy=\"45\" r=\"7\"/><path d=\"M70 64L86 64\" opacity=\".5\"/></svg>"
+    },
     "cad_mkt_basket": {
       "category": "supermarket",
       "name": "Canastilla",
@@ -379,6 +1536,22 @@
       "reference": "CAD",
       "color": "#334155",
       "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M22 42h56l-8 34H30z\" fill=\"currentColor\" fill-opacity=\".09\"/><path d=\"M36 42c0-12 28-12 28 0\"/><path d=\"M34 52v16M46 52v16M58 52v16M70 52v16\" opacity=\".35\"/></svg>"
+    },
+    "cad_mkt_bathroom_access": {
+      "category": "supermarket",
+      "name": "Baños del supermercado",
+      "description": "Acceso a baños con dos cubículos y lavamanos. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"18\" y=\"26\" width=\"64\" height=\"48\" rx=\"4\" fill=\"currentColor\" fill-opacity=\"0.05\"/><path d=\"M50 26L50 74\"/><rect x=\"26\" y=\"36\" width=\"16\" height=\"22\" rx=\"2\"/><rect x=\"58\" y=\"36\" width=\"16\" height=\"22\" rx=\"2\"/><circle cx=\"34\" cy=\"60\" r=\"3\"/><circle cx=\"66\" cy=\"60\" r=\"3\"/></svg>"
+    },
+    "cad_mkt_butcher": {
+      "category": "supermarket",
+      "name": "Cárcel de carnes",
+      "description": "Mostrador refrigerado de carnicería con cámara posterior. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"12\" y=\"40\" width=\"52\" height=\"24\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.09\"/><path d=\"M12 52L64 52\" opacity=\".4\"/><rect x=\"70\" y=\"26\" width=\"22\" height=\"44\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.08\"/><path d=\"M70 40L92 40\" opacity=\".5\"/><circle cx=\"20\" cy=\"34\" r=\"3\" fill=\"currentColor\" fill-opacity=\"0.25\"/></svg>"
     },
     "cad_mkt_cart": {
       "category": "supermarket",
@@ -388,6 +1561,14 @@
       "color": "#334155",
       "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M24 30h52l-8 34H32z\" fill=\"currentColor\" fill-opacity=\".09\"/><path d=\"M18 30h6M78 30h6\"/><circle cx=\"36\" cy=\"76\" r=\"5\"/><circle cx=\"64\" cy=\"76\" r=\"5\"/><path d=\"M32 54h36\" opacity=\".45\"/></svg>"
     },
+    "cad_mkt_cart_corral": {
+      "category": "supermarket",
+      "name": "Corral de carros",
+      "description": "Corral de carritos con separadores y carro dentro. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"14\" y=\"30\" width=\"72\" height=\"46\" rx=\"4\" fill=\"currentColor\" fill-opacity=\"0.05\"/><path d=\"M14 44L86 44\" stroke-dasharray=\"4 3\" opacity=\".6\"/><rect x=\"24\" y=\"50\" width=\"20\" height=\"18\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.09\"/><rect x=\"56\" y=\"50\" width=\"20\" height=\"18\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.09\"/><circle cx=\"28\" cy=\"72\" r=\"2.5\"/><circle cx=\"40\" cy=\"72\" r=\"2.5\"/><circle cx=\"60\" cy=\"72\" r=\"2.5\"/><circle cx=\"72\" cy=\"72\" r=\"2.5\"/></svg>"
+    },
     "cad_mkt_checkout": {
       "category": "supermarket",
       "name": "Caja de supermercado",
@@ -395,6 +1576,46 @@
       "reference": "CAD",
       "color": "#334155",
       "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"6\" y=\"44\" width=\"58\" height=\"26\" rx=\"4\" fill=\"currentColor\" fill-opacity=\".1\"/><path d=\"M6 57h58\" opacity=\".4\"/><rect x=\"66\" y=\"30\" width=\"24\" height=\"18\" rx=\"3\" opacity=\".8\"/><path d=\"M70 48v26M86 48v26\" opacity=\".55\"/><path d=\"M20 38h12v6H20z\" opacity=\".6\"/><path d=\"M40 38h18v6H40z\" opacity=\".6\"/></svg>"
+    },
+    "cad_mkt_customer_service": {
+      "category": "supermarket",
+      "name": "Servicio al cliente",
+      "description": "Mostrador de atención con dos puestos y sillas. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"14\" y=\"30\" width=\"46\" height=\"18\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.09\"/><rect x=\"20\" y=\"20\" width=\"12\" height=\"8\" rx=\"2\"/><rect x=\"38\" y=\"20\" width=\"12\" height=\"8\" rx=\"2\"/><circle cx=\"28\" cy=\"60\" r=\"6\"/><circle cx=\"52\" cy=\"60\" r=\"6\"/><path d=\"M14 68L60 60\" stroke-dasharray=\"3 3\" opacity=\".4\"/></svg>"
+    },
+    "cad_mkt_deli": {
+      "category": "supermarket",
+      "name": "Delicatessen",
+      "description": "Mostrador de fiambres con balanza y rebanadora. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"16\" y=\"42\" width=\"50\" height=\"20\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.09\"/><rect x=\"60\" y=\"34\" width=\"12\" height=\"12\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.12\"/><circle cx=\"30\" cy=\"52\" r=\"4\" fill=\"currentColor\" fill-opacity=\"0.2\"/><path d=\"M16 70L66 70\" stroke-dasharray=\"3 3\" opacity=\".5\"/></svg>"
+    },
+    "cad_mkt_drinks": {
+      "category": "supermarket",
+      "name": "Nevera de bebidas",
+      "description": "Mural de neveras con puertas de cristal. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"10\" y=\"26\" width=\"80\" height=\"20\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.08\"/><path d=\"M30 26L30 46\" opacity=\".5\"/><path d=\"M50 26L50 46\" opacity=\".5\"/><path d=\"M70 26L70 46\" opacity=\".5\"/><path d=\"M14 36L26 36\" opacity=\".3\"/><path d=\"M34 36L46 36\" opacity=\".3\"/><path d=\"M54 36L66 36\" opacity=\".3\"/><path d=\"M74 36L86 36\" opacity=\".3\"/><rect x=\"10\" y=\"56\" width=\"80\" height=\"18\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.05\"/></svg>"
+    },
+    "cad_mkt_elevator": {
+      "category": "supermarket",
+      "name": "Ascensor de carga",
+      "description": "Caja de ascensor con puertas y botonera. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"28\" y=\"24\" width=\"44\" height=\"52\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.07\"/><path d=\"M50 24L50 76\"/><path d=\"M42 50h-8M38 46l-4 4 4 4\" opacity=\".6\"/><path d=\"M58 50h8M62 46l4 4-4 4\" opacity=\".6\"/><circle cx=\"50\" cy=\"70\" r=\"2\" fill=\"currentColor\" fill-opacity=\"0.3\"/></svg>"
+    },
+    "cad_mkt_fish": {
+      "category": "supermarket",
+      "name": "Pescadería",
+      "description": "Isla de pescadería con hielo y desagüe. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><ellipse cx=\"50\" cy=\"52\" rx=\"32\" ry=\"22\" fill=\"currentColor\" fill-opacity=\"0.06\"/><rect x=\"24\" y=\"38\" width=\"22\" height=\"12\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.09\"/><rect x=\"54\" y=\"38\" width=\"22\" height=\"12\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.09\"/><rect x=\"24\" y=\"56\" width=\"22\" height=\"12\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.09\"/><rect x=\"54\" y=\"56\" width=\"22\" height=\"12\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.09\"/><path d=\"M46 74l8-8 8 8\" opacity=\".4\"/></svg>"
     },
     "cad_mkt_freezer": {
       "category": "supermarket",
@@ -404,6 +1625,14 @@
       "color": "#334155",
       "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"14\" y=\"28\" width=\"72\" height=\"48\" rx=\"4\" fill=\"currentColor\" fill-opacity=\".09\"/><path d=\"M14 44h72\"/><path d=\"M38 58h24M50 50v16M43 52l14 12M57 52L43 64\" opacity=\".45\"/></svg>"
     },
+    "cad_mkt_fruit": {
+      "category": "supermarket",
+      "name": "Isla de frutas y verduras",
+      "description": "Isla central con cajones inclinados y balanza. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><ellipse cx=\"50\" cy=\"52\" rx=\"34\" ry=\"24\" fill=\"currentColor\" fill-opacity=\"0.06\"/><rect x=\"26\" y=\"34\" width=\"20\" height=\"14\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.09\"/><rect x=\"54\" y=\"34\" width=\"20\" height=\"14\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.09\"/><rect x=\"26\" y=\"56\" width=\"20\" height=\"14\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.09\"/><rect x=\"54\" y=\"56\" width=\"20\" height=\"14\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.09\"/><circle cx=\"50\" cy=\"52\" r=\"4\" fill=\"currentColor\" fill-opacity=\"0.2\"/></svg>"
+    },
     "cad_mkt_gondola": {
       "category": "supermarket",
       "name": "Góndola",
@@ -411,6 +1640,30 @@
       "reference": "CAD",
       "color": "#334155",
       "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"10\" y=\"38\" width=\"80\" height=\"24\" rx=\"2\" fill=\"currentColor\" fill-opacity=\".09\"/><path d=\"M18 38v-9M34 38v-9M50 38v-9M66 38v-9M82 38v-9\" opacity=\".5\"/><path d=\"M18 62v9M34 62v9M50 62v9M66 62v9M82 62v9\" opacity=\".5\"/><path d=\"M10 50h80\" opacity=\".35\"/></svg>"
+    },
+    "cad_mkt_loading": {
+      "category": "supermarket",
+      "name": "Muelle de carga",
+      "description": "Muelle con rampa, tope y zona de maniobra demarcada. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"10\" y=\"34\" width=\"40\" height=\"32\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.08\"/><path d=\"M50 34L50 66\"/><rect x=\"54\" y=\"26\" width=\"36\" height=\"48\" rx=\"2\" fill=\"currentColor\" fill-opacity=\".04\" stroke-dasharray=\"5 4\"/><path d=\"M60 50h20M74 44l8 6-8 6\" opacity=\".6\"/></svg>"
+    },
+    "cad_mkt_pallet": {
+      "category": "supermarket",
+      "name": "Estiba de mercancía",
+      "description": "Estiba con cajas apiladas y flejes. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"24\" y=\"30\" width=\"52\" height=\"44\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.07\"/><path d=\"M24 44L76 44\" opacity=\".5\"/><path d=\"M24 58L76 58\" opacity=\".5\"/><path d=\"M40 30L40 74\" opacity=\".3\"/><path d=\"M60 30L60 74\" opacity=\".3\"/></svg>"
+    },
+    "cad_mkt_pharmacy": {
+      "category": "supermarket",
+      "name": "Farmacia del supermercado",
+      "description": "Mostrador de farmacia con estantería posterior. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"12\" y=\"44\" width=\"46\" height=\"20\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.09\"/><path d=\"M12 54L58 54\" opacity=\".35\"/><rect x=\"64\" y=\"20\" width=\"26\" height=\"56\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.07\"/><path d=\"M64 30L64 30\" opacity=\".5\"/><path d=\"M72.66666666666667 30L72.66666666666667 30\" opacity=\".5\"/><path d=\"M81.33333333333333 30L81.33333333333333 30\" opacity=\".5\"/><path d=\"M90 30L90 30\" opacity=\".5\"/><path d=\"M77 40v12M71 46h12\" stroke-width=\"3\"/></svg>"
     },
     "cad_mkt_scale": {
       "category": "supermarket",
@@ -420,6 +1673,38 @@
       "color": "#334155",
       "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"22\" y=\"46\" width=\"56\" height=\"30\" rx=\"4\" fill=\"currentColor\" fill-opacity=\".09\"/><path d=\"M32 46v-8h36v8\"/><circle cx=\"50\" cy=\"61\" r=\"8\"/><path d=\"M50 61l6-5\"/></svg>"
     },
+    "cad_mkt_scale_platform": {
+      "category": "supermarket",
+      "name": "Báscula de plataforma",
+      "description": "Báscula para carros y bultos con indicador en columna. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"24\" y=\"44\" width=\"52\" height=\"30\" rx=\"4\" fill=\"currentColor\" fill-opacity=\"0.09\"/><path d=\"M28 54L72 54\" opacity=\".35\"/><rect x=\"60\" y=\"22\" width=\"18\" height=\"14\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.12\"/><path d=\"M69 36L69 44\"/></svg>"
+    },
+    "cad_mkt_security": {
+      "category": "supermarket",
+      "name": "Control de seguridad",
+      "description": "Arco detector con torniquete y mesa de monitoreo. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M26 26L26 74\"/><path d=\"M38 26L38 74\"/><path d=\"M26 26L38 26\"/><path d=\"M26 74L38 74\"/><rect x=\"56\" y=\"34\" width=\"30\" height=\"16\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.08\"/><path d=\"M48 42L56 42\" stroke-dasharray=\"3 3\" opacity=\".5\"/><path d=\"M48 58L56 58\" stroke-dasharray=\"3 3\" opacity=\".5\"/></svg>"
+    },
+    "cad_mkt_stairs": {
+      "category": "supermarket",
+      "name": "Escaleras mecánicas",
+      "description": "Tramo de escaleras mecánicas con barandas y peine. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"20\" y=\"18\" width=\"24\" height=\"64\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.06\"/><rect x=\"56\" y=\"18\" width=\"24\" height=\"64\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.06\"/><path d=\"M26 24L26 24\" opacity=\".5\"/><path d=\"M26 32.666666666666664L26 32.666666666666664\" opacity=\".5\"/><path d=\"M26 41.33333333333333L26 41.33333333333333\" opacity=\".5\"/><path d=\"M26 50L26 50\" opacity=\".5\"/><path d=\"M26 58.666666666666664L26 58.666666666666664\" opacity=\".5\"/><path d=\"M26 67.33333333333334L26 67.33333333333334\" opacity=\".5\"/><path d=\"M26 76L26 76\" opacity=\".5\"/><path d=\"M62 24L62 24\" opacity=\".5\"/><path d=\"M62 32.666666666666664L62 32.666666666666664\" opacity=\".5\"/><path d=\"M62 41.33333333333333L62 41.33333333333333\" opacity=\".5\"/><path d=\"M62 50L62 50\" opacity=\".5\"/><path d=\"M62 58.666666666666664L62 58.666666666666664\" opacity=\".5\"/><path d=\"M62 67.33333333333334L62 67.33333333333334\" opacity=\".5\"/><path d=\"M62 76L62 76\" opacity=\".5\"/><path d=\"M44 18L56 18\" opacity=\".3\"/></svg>"
+    },
+    "cad_mkt_textile": {
+      "category": "supermarket",
+      "name": "Textil y hogar",
+      "description": "Isla de textil con mesas de plegado y percheros. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"14\" y=\"24\" width=\"30\" height=\"26\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.08\"/><rect x=\"56\" y=\"24\" width=\"30\" height=\"26\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.08\"/><path d=\"M44 62L84 62\" opacity=\".5\"/><path d=\"M44 70L84 70\" opacity=\".5\"/><circle cx=\"50\" cy=\"66\" r=\"2.2\" fill=\"currentColor\" fill-opacity=\"0.4\"/><circle cx=\"58\" cy=\"66\" r=\"2.2\" fill=\"currentColor\" fill-opacity=\"0.4\"/><circle cx=\"66\" cy=\"66\" r=\"2.2\" fill=\"currentColor\" fill-opacity=\"0.4\"/></svg>"
+    },
     "cad_mkt_wall_fridge": {
       "category": "supermarket",
       "name": "Nevera mural",
@@ -427,6 +1712,14 @@
       "reference": "CAD",
       "color": "#334155",
       "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"12\" y=\"24\" width=\"76\" height=\"44\" rx=\"3\" fill=\"currentColor\" fill-opacity=\".09\"/><path d=\"M50 24v44\"/><rect x=\"20\" y=\"32\" width=\"20\" height=\"28\" rx=\"2\" stroke-dasharray=\"4 3\" opacity=\".6\"/><rect x=\"60\" y=\"32\" width=\"20\" height=\"28\" rx=\"2\" stroke-dasharray=\"4 3\" opacity=\".6\"/><path d=\"M46 42h-6M54 42h6\" opacity=\".5\"/><path d=\"M12 76h76\" stroke-dasharray=\"4 3\" opacity=\".35\"/></svg>"
+    },
+    "cad_mkt_waste": {
+      "category": "supermarket",
+      "name": "Compactador de residuos",
+      "description": "Compactador con tolva, pistón y boca de carga. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"20\" y=\"30\" width=\"44\" height=\"40\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.08\"/><rect x=\"64\" y=\"38\" width=\"18\" height=\"24\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.09\"/><path d=\"M30 40v20M40 40v20\" opacity=\".4\"/><circle cx=\"73\" cy=\"50\" r=\"4\" fill=\"currentColor\" fill-opacity=\"0.2\"/></svg>"
     },
     "cad_out_bike_rack": {
       "category": "outdoor",
@@ -740,6 +2033,190 @@
       "color": "#334155",
       "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"12\" y=\"34\" width=\"76\" height=\"30\" rx=\"6\" fill=\"currentColor\" fill-opacity=\".09\"/><rect x=\"18\" y=\"40\" width=\"64\" height=\"18\" rx=\"4\" opacity=\".65\"/><path d=\"M18 20h14a10 10 0 0 1 10 10v4\" opacity=\".6\"/><circle cx=\"62\" cy=\"24\" r=\"5\" opacity=\".7\"/><path d=\"M52 30q10-6 18 0\" opacity=\".7\"/><path d=\"M12 64v16M88 64v16\" opacity=\".45\"/></svg>"
     },
+    "cad_sch_admin": {
+      "category": "colegio",
+      "name": "Administración",
+      "description": "Oficina administrativa con módulos de trabajo. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#1d4ed8",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"14\" y=\"30\" width=\"26\" height=\"40\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.07\"/><rect x=\"60\" y=\"30\" width=\"26\" height=\"40\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.07\"/><rect x=\"20\" y=\"36\" width=\"14\" height=\"8\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.18\" stroke=\"none\"/><rect x=\"66\" y=\"36\" width=\"14\" height=\"8\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.18\" stroke=\"none\"/><rect x=\"44\" y=\"44\" width=\"12\" height=\"12\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.06\"/></svg>"
+    },
+    "cad_sch_art_room": {
+      "category": "colegio",
+      "name": "Aula de arte",
+      "description": "Mesa de trabajo con caballetes y lavadero. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#1d4ed8",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"20\" y=\"34\" width=\"40\" height=\"22\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.08\"/><path d=\"M70 30l14 22M84 30L70 52\" opacity=\".7\"/><circle cx=\"30\" cy=\"68\" r=\"8\"/><path d=\"M30 68L40 60\" opacity=\".4\"/></svg>"
+    },
+    "cad_sch_auditorium": {
+      "category": "colegio",
+      "name": "Auditorio",
+      "description": "Auditorio con tarima y filas de butacas. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#1d4ed8",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"14\" y=\"18\" width=\"72\" height=\"14\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.1\"/><path d=\"M16 40L16 40\" opacity=\".4\"/><path d=\"M16 52L16 52\" opacity=\".4\"/><path d=\"M16 64L16 64\" opacity=\".4\"/><path d=\"M16 76L16 76\" opacity=\".4\"/><path d=\"M34 40L34 40\" opacity=\".4\"/><path d=\"M34 52L34 52\" opacity=\".4\"/><path d=\"M34 64L34 64\" opacity=\".4\"/><path d=\"M34 76L34 76\" opacity=\".4\"/><path d=\"M52 40L52 40\" opacity=\".4\"/><path d=\"M52 52L52 52\" opacity=\".4\"/><path d=\"M52 64L52 64\" opacity=\".4\"/><path d=\"M52 76L52 76\" opacity=\".4\"/><path d=\"M70 40L70 40\" opacity=\".4\"/><path d=\"M70 52L70 52\" opacity=\".4\"/><path d=\"M70 64L70 64\" opacity=\".4\"/><path d=\"M70 76L70 76\" opacity=\".4\"/></svg>"
+    },
+    "cad_sch_blackboard": {
+      "category": "colegio",
+      "name": "Tablero",
+      "description": "Tablero de pared con bandeja de tizas. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#1d4ed8",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"12\" y=\"16\" width=\"76\" height=\"10\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.12\"/><path d=\"M12 30L88 30\" opacity=\".3\"/><rect x=\"30\" y=\"33\" width=\"14\" height=\"2\" rx=\"1\" fill=\"currentColor\" fill-opacity=\"0.35\" stroke=\"none\"/><rect x=\"52\" y=\"33\" width=\"10\" height=\"2\" rx=\"1\" fill=\"currentColor\" fill-opacity=\"0.25\" stroke=\"none\"/></svg>"
+    },
+    "cad_sch_bus_stop": {
+      "category": "colegio",
+      "name": "Paradero escolar",
+      "description": "Paradero con cubierta, banco y zona de ascenso. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#1d4ed8",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"16\" y=\"24\" width=\"68\" height=\"12\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.1\"/><rect x=\"16\" y=\"44\" width=\"68\" height=\"10\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.06\"/><rect x=\"10\" y=\"60\" width=\"80\" height=\"20\" rx=\"3\" fill=\"currentColor\" fill-opacity=\".04\" stroke-dasharray=\"5 4\"/><path d=\"M20 70h40M54 66l8 4-8 4\" opacity=\".6\"/></svg>"
+    },
+    "cad_sch_cafeteria": {
+      "category": "colegio",
+      "name": "Comedor escolar",
+      "description": "Mesas corridas con bancas y línea de servicio. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#1d4ed8",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"12\" y=\"20\" width=\"76\" height=\"12\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.1\"/><rect x=\"16\" y=\"40\" width=\"68\" height=\"12\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.08\"/><rect x=\"16\" y=\"58\" width=\"68\" height=\"12\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.08\"/><circle cx=\"30\" cy=\"74\" r=\"4\"/><circle cx=\"50\" cy=\"74\" r=\"4\"/><circle cx=\"70\" cy=\"74\" r=\"4\"/></svg>"
+    },
+    "cad_sch_computer": {
+      "category": "colegio",
+      "name": "Sala de cómputo",
+      "description": "Puesto de cómputo con monitor, CPU y silla. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#1d4ed8",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"20\" y=\"30\" width=\"44\" height=\"26\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.07\"/><rect x=\"26\" y=\"36\" width=\"32\" height=\"14\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.16\" stroke=\"none\"/><rect x=\"70\" y=\"32\" width=\"8\" height=\"22\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.1\"/><circle cx=\"42\" cy=\"70\" r=\"6\"/><path d=\"M20 64L64 64\" opacity=\".25\"/></svg>"
+    },
+    "cad_sch_court_outdoor": {
+      "category": "colegio",
+      "name": "Cancha exterior",
+      "description": "Cancha al aire libre con cerramiento perimetral. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#1d4ed8",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"8\" y=\"18\" width=\"84\" height=\"64\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.03\"/><path d=\"M8 50L92 50\" opacity=\".5\"/><circle cx=\"50\" cy=\"50\" r=\"10\"/><path d=\"M14 18L14 18\" opacity=\".2\"/><path d=\"M14 30.8L14 30.8\" opacity=\".2\"/><path d=\"M14 43.6L14 43.6\" opacity=\".2\"/><path d=\"M14 56.4L14 56.4\" opacity=\".2\"/><path d=\"M14 69.2L14 69.2\" opacity=\".2\"/><path d=\"M14 82L14 82\" opacity=\".2\"/></svg>"
+    },
+    "cad_sch_desk": {
+      "category": "colegio",
+      "name": "Pupitre",
+      "description": "Pupitre individual con silla y tablero. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#1d4ed8",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"24\" y=\"40\" width=\"36\" height=\"16\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.1\"/><circle cx=\"50\" cy=\"68\" r=\"6\"/><path d=\"M38 60L44 62\" opacity=\".5\"/><path d=\"M24 46L18 52\" opacity=\".4\"/></svg>"
+    },
+    "cad_sch_desk_pair": {
+      "category": "colegio",
+      "name": "Pupitres dobles",
+      "description": "Dos pupitres con sillas orientadas al tablero. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#1d4ed8",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"18\" y=\"40\" width=\"28\" height=\"14\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.09\"/><rect x=\"54\" y=\"40\" width=\"28\" height=\"14\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.09\"/><circle cx=\"32\" cy=\"66\" r=\"5\"/><circle cx=\"68\" cy=\"66\" r=\"5\"/></svg>"
+    },
+    "cad_sch_digital_board": {
+      "category": "colegio",
+      "name": "Tablero digital",
+      "description": "Pantalla interactiva de pared con módulo de control. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#1d4ed8",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"12\" y=\"14\" width=\"76\" height=\"12\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.1\"/><rect x=\"18\" y=\"17\" width=\"64\" height=\"6\" rx=\"1\" fill=\"currentColor\" fill-opacity=\"0.2\" stroke=\"none\"/><rect x=\"30\" y=\"33\" width=\"40\" height=\"3\" rx=\"1\" fill=\"currentColor\" fill-opacity=\"0.14\" stroke=\"none\"/><path d=\"M50 28L50 33\" opacity=\".3\"/></svg>"
+    },
+    "cad_sch_gym": {
+      "category": "colegio",
+      "name": "Coliseo o cancha cubierta",
+      "description": "Cancha con demarcación, gradas y aros. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#1d4ed8",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"10\" y=\"20\" width=\"80\" height=\"60\" rx=\"4\" fill=\"currentColor\" fill-opacity=\"0.04\"/><path d=\"M50 20L50 80\" stroke-dasharray=\"5 4\" opacity=\".5\"/><circle cx=\"50\" cy=\"50\" r=\"12\"/><circle cx=\"20\" cy=\"50\" r=\"7\"/><circle cx=\"80\" cy=\"50\" r=\"7\"/></svg>"
+    },
+    "cad_sch_kitchen": {
+      "category": "colegio",
+      "name": "Cocina del colegio",
+      "description": "Cocina con estufa, campana y mesón de preparación. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#1d4ed8",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"14\" y=\"24\" width=\"40\" height=\"26\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.08\"/><circle cx=\"22\" cy=\"32\" r=\"3\"/><circle cx=\"32\" cy=\"32\" r=\"3\"/><circle cx=\"42\" cy=\"32\" r=\"3\"/><rect x=\"60\" y=\"24\" width=\"26\" height=\"26\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.06\"/><rect x=\"14\" y=\"56\" width=\"72\" height=\"18\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.05\"/></svg>"
+    },
+    "cad_sch_lab_bench": {
+      "category": "colegio",
+      "name": "Mesa de laboratorio",
+      "description": "Mesa de laboratorio con servicios de agua y gas. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#1d4ed8",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"14\" y=\"34\" width=\"72\" height=\"28\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.09\"/><path d=\"M14 48L86 48\" opacity=\".35\"/><circle cx=\"28\" cy=\"28\" r=\"4\"/><circle cx=\"72\" cy=\"28\" r=\"4\"/><path d=\"M28 28L28 22\"/><path d=\"M72 28L72 22\"/></svg>"
+    },
+    "cad_sch_library": {
+      "category": "colegio",
+      "name": "Biblioteca",
+      "description": "Estantería doble con pasillo y mesa de lectura. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#1d4ed8",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"12\" y=\"22\" width=\"30\" height=\"56\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.07\"/><rect x=\"58\" y=\"22\" width=\"30\" height=\"56\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.07\"/><path d=\"M12 36L12 36\" opacity=\".4\"/><path d=\"M27 36L27 36\" opacity=\".4\"/><path d=\"M42 36L42 36\" opacity=\".4\"/><path d=\"M58 36L58 36\" opacity=\".4\"/><path d=\"M73 36L73 36\" opacity=\".4\"/><path d=\"M88 36L88 36\" opacity=\".4\"/><rect x=\"36\" y=\"62\" width=\"28\" height=\"14\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.09\"/></svg>"
+    },
+    "cad_sch_locker": {
+      "category": "colegio",
+      "name": "Casilleros",
+      "description": "Batería de casilleros con puertas y banco. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#1d4ed8",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"14\" y=\"24\" width=\"72\" height=\"20\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.07\"/><rect x=\"14\" y=\"60\" width=\"72\" height=\"20\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.07\"/><path d=\"M20 24L20 24\" opacity=\".4\"/><path d=\"M20 28L20 28\" opacity=\".4\"/><path d=\"M20 32L20 32\" opacity=\".4\"/><path d=\"M20 36L20 36\" opacity=\".4\"/><path d=\"M20 40L20 40\" opacity=\".4\"/><path d=\"M20 44L20 44\" opacity=\".4\"/><path d=\"M20 60L20 60\" opacity=\".4\"/><path d=\"M20 64L20 64\" opacity=\".4\"/><path d=\"M20 68L20 68\" opacity=\".4\"/><path d=\"M20 72L20 72\" opacity=\".4\"/><path d=\"M20 76L20 76\" opacity=\".4\"/><path d=\"M20 80L20 80\" opacity=\".4\"/><rect x=\"26\" y=\"46\" width=\"48\" height=\"10\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.09\"/></svg>"
+    },
+    "cad_sch_music_room": {
+      "category": "colegio",
+      "name": "Aula de música",
+      "description": "Aula con piano, atriles y tarima pequeña. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#1d4ed8",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"12\" y=\"30\" width=\"34\" height=\"18\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.1\"/><path d=\"M16 34L16 34\" opacity=\".5\"/><path d=\"M23 34L23 34\" opacity=\".5\"/><path d=\"M30 34L30 34\" opacity=\".5\"/><path d=\"M37 34L37 34\" opacity=\".5\"/><path d=\"M44 34L44 34\" opacity=\".5\"/><circle cx=\"70\" cy=\"42\" r=\"7\"/><circle cx=\"82\" cy=\"54\" r=\"7\"/><path d=\"M58 66L86 44\" opacity=\".3\"/></svg>"
+    },
+    "cad_sch_nurse": {
+      "category": "colegio",
+      "name": "Enfermería",
+      "description": "Enfermería con camilla, botiquín y escritorio. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#1d4ed8",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"16\" y=\"30\" width=\"30\" height=\"48\" rx=\"6\" fill=\"currentColor\" fill-opacity=\"0.08\"/><rect x=\"56\" y=\"26\" width=\"26\" height=\"20\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.1\"/><path d=\"M69 32v8M65 36h8\" stroke-width=\"2.5\"/><circle cx=\"40\" cy=\"84\" r=\"3\"/><circle cx=\"24\" cy=\"84\" r=\"3\"/></svg>"
+    },
+    "cad_sch_playground": {
+      "category": "colegio",
+      "name": "Patio de recreo",
+      "description": "Patio con juegos infantiles y zona de sombra. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#1d4ed8",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"12\" y=\"22\" width=\"76\" height=\"58\" rx=\"8\" fill=\"currentColor\" fill-opacity=\".04\" stroke-dasharray=\"5 4\"/><circle cx=\"32\" cy=\"40\" r=\"8\"/><path d=\"M56 40L76 40\"/><path d=\"M56 34l20 12\"/><circle cx=\"66\" cy=\"68\" r=\"6\"/><path d=\"M28 68c4-8 16-8 20 0\" opacity=\".4\"/></svg>"
+    },
+    "cad_sch_psych": {
+      "category": "colegio",
+      "name": "Orientación escolar",
+      "description": "Oficina de orientación con dos sillas y mesa. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#1d4ed8",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"24\" y=\"40\" width=\"40\" height=\"16\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.08\"/><circle cx=\"34\" cy=\"64\" r=\"6\"/><circle cx=\"60\" cy=\"62\" r=\"6\"/><rect x=\"72\" y=\"30\" width=\"16\" height=\"28\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.06\"/><path d=\"M72 44L88 44\" opacity=\".4\"/></svg>"
+    },
+    "cad_sch_reading_room": {
+      "category": "colegio",
+      "name": "Sala de lectura",
+      "description": "Cuatro mesas de lectura con sillas enfrentadas. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#1d4ed8",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"24\" y=\"30\" width=\"24\" height=\"16\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.08\"/><rect x=\"56\" y=\"30\" width=\"24\" height=\"16\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.08\"/><rect x=\"24\" y=\"56\" width=\"24\" height=\"16\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.08\"/><rect x=\"56\" y=\"56\" width=\"24\" height=\"16\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.08\"/><circle cx=\"18\" cy=\"38\" r=\"4\"/><circle cx=\"86\" cy=\"38\" r=\"4\"/><circle cx=\"18\" cy=\"64\" r=\"4\"/><circle cx=\"86\" cy=\"64\" r=\"4\"/></svg>"
+    },
+    "cad_sch_teacher_desk": {
+      "category": "colegio",
+      "name": "Escritorio del docente",
+      "description": "Escritorio con silla, equipo y taburete auxiliar. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#1d4ed8",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"20\" y=\"34\" width=\"44\" height=\"18\" rx=\"3\" fill=\"currentColor\" fill-opacity=\"0.09\"/><rect x=\"28\" y=\"28\" width=\"16\" height=\"6\" rx=\"1\" fill=\"currentColor\" fill-opacity=\"0.2\" stroke=\"none\"/><circle cx=\"76\" cy=\"46\" r=\"7\"/><path d=\"M20 60L64 60\" opacity=\".3\"/><circle cx=\"34\" cy=\"66\" r=\"5\" fill=\"currentColor\" fill-opacity=\"0.1\"/></svg>"
+    },
+    "cad_sch_workshop": {
+      "category": "colegio",
+      "name": "Taller",
+      "description": "Taller con bancos de trabajo y panel de herramientas. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#1d4ed8",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"14\" y=\"24\" width=\"72\" height=\"12\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.08\"/><rect x=\"20\" y=\"46\" width=\"26\" height=\"16\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.07\"/><rect x=\"54\" y=\"46\" width=\"26\" height=\"16\" rx=\"2\" fill=\"currentColor\" fill-opacity=\"0.07\"/><path d=\"M20 46L20 46\" opacity=\".3\"/><path d=\"M20 51.333333333333336L20 51.333333333333336\" opacity=\".3\"/><path d=\"M20 56.666666666666664L20 56.666666666666664\" opacity=\".3\"/><path d=\"M20 62L20 62\" opacity=\".3\"/></svg>"
+    },
     "cad_shelf": {
       "category": "furniture",
       "name": "Estantería",
@@ -1043,210 +2520,6 @@
       "reference": "CAD",
       "color": "#334155",
       "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"16\" y=\"26\" width=\"68\" height=\"44\" rx=\"4\" fill=\"currentColor\" fill-opacity=\".09\"/><circle cx=\"26\" cy=\"80\" r=\"3\"/><circle cx=\"74\" cy=\"80\" r=\"3\"/><rect x=\"68\" y=\"12\" width=\"22\" height=\"12\" rx=\"2\"/><path d=\"M79 24v2\" opacity=\".6\"/><path d=\"M28 38h30\" opacity=\".35\"/></svg>"
-    },
-    "cad_elec_outlet": {
-      "category": "electrico",
-      "name": "Tomacorriente doble",
-      "description": "Tomacorriente doble polarizado para muro. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
-      "reference": "Instalaciones · símbolo propio Normia",
-      "color": "#334155",
-      "load": 180,
-      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"34\" y=\"22\" width=\"32\" height=\"56\" rx=\"6\" fill=\"currentColor\" fill-opacity=\".09\"/><rect x=\"41\" y=\"31\" width=\"18\" height=\"15\" rx=\"2\"/><circle cx=\"46\" cy=\"37\" r=\"1.7\" fill=\"currentColor\"/><circle cx=\"54\" cy=\"37\" r=\"1.7\" fill=\"currentColor\"/><path d=\"M50 41v3\"/><rect x=\"41\" y=\"54\" width=\"18\" height=\"15\" rx=\"2\"/><circle cx=\"46\" cy=\"60\" r=\"1.7\" fill=\"currentColor\"/><circle cx=\"54\" cy=\"60\" r=\"1.7\" fill=\"currentColor\"/><path d=\"M50 64v3\"/></svg>"
-    },
-    "cad_elec_outlet_220": {
-      "category": "electrico",
-      "name": "Tomacorriente 220 V",
-      "description": "Salida especial bifásica para equipos de mayor consumo. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
-      "reference": "Instalaciones · símbolo propio Normia",
-      "color": "#334155",
-      "load": 2400,
-      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"34\" y=\"24\" width=\"32\" height=\"52\" rx=\"6\" fill=\"currentColor\" fill-opacity=\".09\"/><circle cx=\"50\" cy=\"50\" r=\"16\"/><path d=\"M50 34v8M42 50h-5M63 50h5\"/><path d=\"M42 60l-3 5M58 60l3 5\"/></svg>"
-    },
-    "cad_elec_switch": {
-      "category": "electrico",
-      "name": "Interruptor sencillo",
-      "description": "Interruptor de pared de un polo. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
-      "reference": "Instalaciones · símbolo propio Normia",
-      "color": "#334155",
-      "load": 0,
-      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"38\" y=\"22\" width=\"24\" height=\"56\" rx=\"5\" fill=\"currentColor\" fill-opacity=\".09\"/><rect x=\"45\" y=\"34\" width=\"10\" height=\"32\" rx=\"2\" fill=\"currentColor\" fill-opacity=\".18\"/><path d=\"M45 50h10\"/></svg>"
-    },
-    "cad_elec_switch_double": {
-      "category": "electrico",
-      "name": "Interruptor doble",
-      "description": "Interruptor de pared de dos polos o de dos teclas. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
-      "reference": "Instalaciones · símbolo propio Normia",
-      "color": "#334155",
-      "load": 0,
-      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"34\" y=\"22\" width=\"32\" height=\"56\" rx=\"5\" fill=\"currentColor\" fill-opacity=\".09\"/><rect x=\"39\" y=\"33\" width=\"10\" height=\"34\" rx=\"2\" fill=\"currentColor\" fill-opacity=\".18\"/><rect x=\"51\" y=\"33\" width=\"10\" height=\"34\" rx=\"2\" fill=\"currentColor\" fill-opacity=\".18\"/></svg>"
-    },
-    "cad_elec_panel": {
-      "category": "electrico",
-      "name": "Tablero de distribución",
-      "description": "Tablero de breakers con puerta y circuitos. Agrupa los tramos de la red eléctrica. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
-      "reference": "Instalaciones · símbolo propio Normia",
-      "color": "#334155",
-      "load": 0,
-      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"24\" y=\"14\" width=\"52\" height=\"72\" rx=\"4\" fill=\"currentColor\" fill-opacity=\".09\"/><rect x=\"32\" y=\"22\" width=\"36\" height=\"24\" rx=\"2\"/><path d=\"M38 22v24M46 22v24M54 22v24M62 22v24\"/><path d=\"M32 54h36M32 62h36M32 70h36\" opacity=\".65\"/><circle cx=\"43\" cy=\"58\" r=\"1.6\" fill=\"currentColor\"/><circle cx=\"57\" cy=\"58\" r=\"1.6\" fill=\"currentColor\"/></svg>"
-    },
-    "cad_elec_luminaire": {
-      "category": "electrico",
-      "name": "Luminaria LED",
-      "description": "Salida de iluminación en techo. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
-      "reference": "Instalaciones · símbolo propio Normia",
-      "color": "#334155",
-      "load": 60,
-      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"50\" cy=\"50\" r=\"24\" fill=\"currentColor\" fill-opacity=\".09\"/><path d=\"M33 33l34 34M67 33L33 67\"/><circle cx=\"50\" cy=\"50\" r=\"4\" fill=\"currentColor\"/></svg>"
-    },
-    "cad_elec_ceiling": {
-      "category": "electrico",
-      "name": "Salida de techo",
-      "description": "Punto de techo para lámpara colgante o roseta. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
-      "reference": "Instalaciones · símbolo propio Normia",
-      "color": "#334155",
-      "load": 100,
-      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"50\" cy=\"50\" r=\"18\"/><circle cx=\"50\" cy=\"50\" r=\"5\" fill=\"currentColor\"/><path d=\"M50 20v10M50 70v10M20 50h10M70 50h10\"/></svg>"
-    },
-    "cad_elec_emergency": {
-      "category": "electrico",
-      "name": "Luminaria de emergencia",
-      "description": "Luminaria autónoma con dos cabezales orientables. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
-      "reference": "Instalaciones · símbolo propio Normia",
-      "color": "#334155",
-      "load": 30,
-      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"16\" y=\"44\" width=\"68\" height=\"24\" rx=\"5\" fill=\"currentColor\" fill-opacity=\".09\"/><circle cx=\"30\" cy=\"56\" r=\"7\"/><circle cx=\"70\" cy=\"56\" r=\"7\"/><path d=\"M24 44l-5-9M76 44l5-9M38 44l-3-9M62 44l3-9\"/><circle cx=\"50\" cy=\"56\" r=\"2\" fill=\"currentColor\"/></svg>"
-    },
-    "cad_elec_data": {
-      "category": "electrico",
-      "name": "Salida de datos",
-      "description": "Punto de red RJ45 para datos o voz. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
-      "reference": "Instalaciones · símbolo propio Normia",
-      "color": "#334155",
-      "load": 0,
-      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"26\" y=\"32\" width=\"48\" height=\"36\" rx=\"5\" fill=\"currentColor\" fill-opacity=\".09\"/><rect x=\"38\" y=\"42\" width=\"24\" height=\"16\" rx=\"2\"/><path d=\"M42 42v-4h16v4\" opacity=\".7\"/><path d=\"M42 50h16M42 54h16\" opacity=\".6\"/></svg>"
-    },
-    "cad_elec_ac": {
-      "category": "electrico",
-      "name": "Aire acondicionado",
-      "description": "Unidad interior tipo split con rejilla y flujo de aire. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
-      "reference": "Instalaciones · símbolo propio Normia",
-      "color": "#334155",
-      "load": 3500,
-      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"14\" y=\"30\" width=\"72\" height=\"26\" rx=\"6\" fill=\"currentColor\" fill-opacity=\".09\"/><path d=\"M22 42h56M22 48h56\" opacity=\".7\"/><path d=\"M26 62c4 6 12 6 16 0M50 62c4 6 12 6 16 0M66 62c4 6 10 6 14 0\" opacity=\".8\"/></svg>"
-    },
-    "cad_elec_extractor": {
-      "category": "electrico",
-      "name": "Extractor de aire",
-      "description": "Extractor axial de muro o ducto. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
-      "reference": "Instalaciones · símbolo propio Normia",
-      "color": "#334155",
-      "load": 250,
-      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"50\" cy=\"50\" r=\"26\" fill=\"currentColor\" fill-opacity=\".09\"/><circle cx=\"50\" cy=\"50\" r=\"5\" fill=\"currentColor\"/><path d=\"M50 45C38 42 34 30 44 25c8-4 12 6 6 20zM55 51c3 11 15 16 20 6 4-8-6-12-20-6zM44 54c-10 5-11 18 0 20 9 2 10-9 0-20z\"/></svg>"
-    },
-    "cad_elec_floorbox": {
-      "category": "electrico",
-      "name": "Caja de piso",
-      "description": "Caja de piso con tomacorriente y tapa. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
-      "reference": "Instalaciones · símbolo propio Normia",
-      "color": "#334155",
-      "load": 180,
-      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"26\" y=\"26\" width=\"48\" height=\"48\" rx=\"4\" fill=\"currentColor\" fill-opacity=\".09\"/><circle cx=\"50\" cy=\"50\" r=\"14\"/><circle cx=\"45\" cy=\"46\" r=\"1.8\" fill=\"currentColor\"/><circle cx=\"55\" cy=\"46\" r=\"1.8\" fill=\"currentColor\"/><path d=\"M50 52v6\"/></svg>"
-    },
-    "cad_hyd_valve": {
-      "category": "hidraulico",
-      "name": "Válvula de bola",
-      "description": "Válvula de corte de bola en la red de tubería. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
-      "reference": "Instalaciones · símbolo propio Normia",
-      "color": "#334155",
-      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M26 34l24 16-24 16z\" fill=\"currentColor\" fill-opacity=\".09\"/><path d=\"M74 34L50 50l24 16z\" fill=\"currentColor\" fill-opacity=\".09\"/><circle cx=\"50\" cy=\"50\" r=\"5\"/><path d=\"M50 45V30M42 30h16\"/></svg>"
-    },
-    "cad_hyd_gate": {
-      "category": "hidraulico",
-      "name": "Válvula de compuerta",
-      "description": "Válvula de compuerta de accionamiento manual. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
-      "reference": "Instalaciones · símbolo propio Normia",
-      "color": "#334155",
-      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M28 36l22 14-22 14z\"/><path d=\"M72 36L50 50l22 14z\"/><path d=\"M50 36V22M41 22h18\"/><path d=\"M46 30h8\" opacity=\".7\"/></svg>"
-    },
-    "cad_hyd_check": {
-      "category": "hidraulico",
-      "name": "Válvula de retención",
-      "description": "Válvula de chequeo para evitar el retorno del flujo. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
-      "reference": "Instalaciones · símbolo propio Normia",
-      "color": "#334155",
-      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M26 34l24 16-24 16z\"/><path d=\"M74 34L50 50l24 16z\"/><path d=\"M50 50l8-5v10z\" fill=\"currentColor\" fill-opacity=\".2\"/><path d=\"M50 34v32\" opacity=\".5\"/></svg>"
-    },
-    "cad_hyd_meter": {
-      "category": "hidraulico",
-      "name": "Medidor de agua",
-      "description": "Contador de agua potable con carátula y conexiones. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
-      "reference": "Instalaciones · símbolo propio Normia",
-      "color": "#334155",
-      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"50\" cy=\"50\" r=\"20\" fill=\"currentColor\" fill-opacity=\".09\"/><path d=\"M30 50H16M70 50h14\"/><path d=\"M50 50l9-8\"/><circle cx=\"50\" cy=\"50\" r=\"3\" fill=\"currentColor\"/><path d=\"M40 38a14 14 0 0 1 20 0\" opacity=\".6\"/></svg>"
-    },
-    "cad_hyd_gas_meter": {
-      "category": "hidraulico",
-      "name": "Medidor de gas",
-      "description": "Medidor de gas combustible con conexión y regulador. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
-      "reference": "Instalaciones · símbolo propio Normia",
-      "color": "#334155",
-      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"26\" y=\"28\" width=\"48\" height=\"44\" rx=\"6\" fill=\"currentColor\" fill-opacity=\".09\"/><circle cx=\"50\" cy=\"48\" r=\"12\"/><path d=\"M50 48l7-6\"/><path d=\"M34 72v8M66 72v8M22 56h4M74 56h4\"/></svg>"
-    },
-    "cad_hyd_booster": {
-      "category": "hidraulico",
-      "name": "Equipo hidroneumático",
-      "description": "Bomba con tanque de presión para impulsión de agua. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
-      "reference": "Instalaciones · símbolo propio Normia",
-      "color": "#334155",
-      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"22\" y=\"30\" width=\"26\" height=\"42\" rx=\"9\" fill=\"currentColor\" fill-opacity=\".09\"/><rect x=\"56\" y=\"38\" width=\"24\" height=\"18\" rx=\"3\"/><circle cx=\"68\" cy=\"47\" r=\"5\"/><path d=\"M48 46h8M22 72h60M36 30V18M56 24v14\"/></svg>"
-    },
-    "cad_hyd_tank": {
-      "category": "hidraulico",
-      "name": "Tanque de almacenamiento",
-      "description": "Tanque de reserva de agua con nivel y salida. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
-      "reference": "Instalaciones · símbolo propio Normia",
-      "color": "#334155",
-      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"24\" y=\"24\" width=\"52\" height=\"52\" rx=\"4\" fill=\"currentColor\" fill-opacity=\".09\"/><path d=\"M24 46c9 6 17-6 26 0s17-6 26 0\" opacity=\".8\"/><path d=\"M24 58c9 6 17-6 26 0s17-6 26 0\" opacity=\".5\"/><path d=\"M50 24V12M40 76h20\"/></svg>"
-    },
-    "cad_hyd_floor_drain": {
-      "category": "hidraulico",
-      "name": "Rejilla de piso",
-      "description": "Desagüe de piso con rejilla removible. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
-      "reference": "Instalaciones · símbolo propio Normia",
-      "color": "#334155",
-      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"26\" y=\"26\" width=\"48\" height=\"48\" rx=\"4\" fill=\"currentColor\" fill-opacity=\".09\"/><circle cx=\"50\" cy=\"50\" r=\"14\"/><path d=\"M40 44h20M40 50h20M40 56h20\" opacity=\".8\"/></svg>"
-    },
-    "cad_hyd_roof_drain": {
-      "category": "hidraulico",
-      "name": "Bajante de cubierta",
-      "description": "Desagüe de cubierta con domo y rejilla. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
-      "reference": "Instalaciones · símbolo propio Normia",
-      "color": "#334155",
-      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"50\" cy=\"46\" r=\"24\" fill=\"currentColor\" fill-opacity=\".09\"/><path d=\"M32 46a18 18 0 0 1 36 0\" /><path d=\"M40 34h20M36 42h28M36 50h28M44 58h12\" opacity=\".7\"/><path d=\"M50 70v14\"/></svg>"
-    },
-    "cad_hyd_cabinet": {
-      "category": "hidraulico",
-      "name": "Gabinete contra incendios",
-      "description": "Gabinete con manguera y válvula para la red contra incendios. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
-      "reference": "Instalaciones · símbolo propio Normia",
-      "color": "#334155",
-      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"22\" y=\"16\" width=\"56\" height=\"68\" rx=\"4\" fill=\"currentColor\" fill-opacity=\".09\"/><circle cx=\"50\" cy=\"46\" r=\"16\"/><circle cx=\"50\" cy=\"46\" r=\"6\"/><path d=\"M50 62v10M38 80h24M34 30h32\" opacity=\".7\"/></svg>"
-    },
-    "cad_hyd_sprinkler": {
-      "category": "hidraulico",
-      "name": "Rociador contra incendios",
-      "description": "Rociador colgante de la red de supresión. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
-      "reference": "Instalaciones · símbolo propio Normia",
-      "color": "#334155",
-      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M50 14v26\" /><path d=\"M34 44h32\" /><path d=\"M40 52l-8 12M50 54v12M60 52l8 12\" opacity=\".85\"/><circle cx=\"50\" cy=\"42\" r=\"4\" fill=\"currentColor\" fill-opacity=\".2\"/></svg>"
-    },
-    "cad_hyd_cleanout": {
-      "category": "hidraulico",
-      "name": "Caja de inspección",
-      "description": "Caja o registro de inspección para la red de desagüe. Representación CAD esquemática; verifica dimensiones y escala en sitio. Símbolo de instalación, no certifica la norma.",
-      "reference": "Instalaciones · símbolo propio Normia",
-      "color": "#334155",
-      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"22\" y=\"22\" width=\"56\" height=\"56\" rx=\"4\" fill=\"currentColor\" fill-opacity=\".09\"/><path d=\"M22 34h56M22 66h56\" opacity=\".55\"/><circle cx=\"50\" cy=\"50\" r=\"11\"/><path d=\"M42 50h16\"/></svg>"
     }
   }
 }

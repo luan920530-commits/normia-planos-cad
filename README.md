@@ -2,7 +2,7 @@
 
 Editor de planos de emergencia y evacuación, en español, pensado para pequeñas y medianas organizaciones que necesitan documentar plantas, rutas, señalización y equipamiento sin depender de software CAD de escritorio ni de servicios externos.
 
-- **Editor completo**: instalador web, cuentas, proyectos y pisos, editor SVG real, biblioteca de **355 pictogramas** (332 ISO 7010 + 23 señales de orientación como baños, vestidores, cafetería y **«Usted está aquí»**), **145 objetos CAD esquemáticos de 18 familias** (restaurante, bodega, comercio, hospital, costura, asadero, supermercado, vivienda, deportes, exteriores, instalaciones eléctricas y redes hidrosanitarias, entre otras), puertas de uno y dos batientes y portones, **rutas con vértices editables**, **redes de tubería (agua, gas, desagües e incendio) y circuitos eléctricos**, cambio de señal y de equipo desde el inspector, guardado con versiones, borradores automáticos, deshacer/rehacer y exportación SVG/JSON/PNG/impresión.
+- **Editor completo**: instalador web, cuentas, proyectos y pisos, editor SVG real, biblioteca de **389 pictogramas** (332 ISO 7010 + 23 de orientación y servicios como baños, vestidores, cafetería y **«Usted está aquí»** + **34 de señalización de tránsito**), **301 objetos CAD esquemáticos de 23 familias** (estación de servicio, droguería, gimnasio, colegio, cafetería, supermercado, restaurante, bodega, comercio, hospital, costura, asadero, vivienda, deportes, exteriores, instalaciones eléctricas y redes hidrosanitarias, entre otras), puertas de uno y dos batientes y portones, **rutas con vértices editables**, **redes de tubería (agua, gas, desagües e incendio) y circuitos eléctricos**, cambio de señal y de equipo desde el inspector, guardado con versiones, borradores automáticos, deshacer/rehacer y exportación SVG/JSON/PNG/impresión.
 - **Auditor de planos y evacuación**: el cajón **Revisión** mide el recorrido más largo hasta las salidas marcadas, cuenta salidas y anchos útiles, estima la ocupación (declarada o por densidad), calcula el ancho requerido y el tiempo de evacuación, y lista los hallazgos por severidad con un botón para verlos en el plano. Los umbrales viven en `resources/audit-criteria.json`, el cálculo también corre en el servidor y el informe se imprime o se guarda como PDF.
 - **Instalaciones**: tuberías de agua, gas, desagües e incendio y red eléctrica con longitudes, diámetros, circuitos, cargas y caída de tensión estimada.
 - **PHP ≥ 8.1 + SQLite/PDO**, arquitectura MVC propia, sin Composer, sin `node_modules` en producción y sin CDN.
@@ -28,7 +28,7 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 11. [Arquitectura](#arquitectura)
 12. [Seguridad](#seguridad)
 13. [Pruebas](#pruebas)
-14. [Cambios de la versión 1.1.3](#cambios-de-la-versión-113)
+14. [Cambios de la versión 1.2.0](#cambios-de-la-versión-120)
 15. [Paquetes y verificación](#paquetes-y-verificación)
 16. [Limitaciones](#limitaciones)
 17. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
@@ -45,7 +45,7 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 | Pisos | Varios pisos por proyecto, orden, duplicación y protección del último piso. |
 | Editor | Lienzo SVG con rejilla, reglas, ajuste, zoom, paneo, selección múltiple, marquesina, capas y grupos. |
 | Herramientas | Muro, puerta sencilla, puerta doble, portón o reja, ruta de evacuación, texto, medida, línea, rectángulo, elipse, **tubería** y **tubería eléctrica**. |
-| Bibliotecas | 355 señales (332 ISO 7010 + 23 de orientación y servicios) en 7 familias y 145 objetos CAD en 18 familias, con búsqueda y filtros por familia. |
+| Bibliotecas | 389 señales (332 ISO 7010 + 23 de orientación y servicios + 34 de tránsito) en 8 familias y 301 objetos CAD en 23 familias, con búsqueda y filtros por familia. |
 | Propiedades | Posición, tamaño, rotación, sentido de apertura, color (paleta de 29), grosor, opacidad, texto, capa, bloqueo, cambio de tipo y, en redes, **sistema, diámetro, material, pendiente, presión, circuito, tensión, calibre, fases y carga**. |
 | Historial | Deshacer/rehacer con 120 pasos, duplicar, pegar, agrupar, alinear, distribuir y orden de dibujo. |
 | Redes | Panel **Redes y circuitos** con longitudes por sistema, diámetros usados, pendientes, cargas por circuito, breaker y calibre sugeridos y caída de tensión estimada. |
@@ -230,7 +230,7 @@ El inspector se organiza en una ficha superior con la miniatura, el tipo y las a
 
 ## Bibliotecas de señalización y CAD
 
-### Señalización: 332 ISO 7010 + 23 de orientación y servicios
+### Señalización: 332 ISO 7010 + 57 propias (orientación, servicios y tránsito)
 
 **ISO 7010 (332 pictogramas)**
 
@@ -245,7 +245,15 @@ El inspector se organiza en una ficha superior con la miniatura, el tipo y las a
 - **Ubicación (`location`, `#1d4ed8`)**: el marcador **«Usted está aquí»** (`SVC_AQUI` → `sig_aqui`), que sitúa la posición de quien lee el plano. Es la señal que acompaña al pie de evolución y se puede colocar en cualquier punto, con el tamaño que se quiera.
 - Son pictogramas originales de este proyecto (GPL-3.0), no señales ISO 7010: se documenta así en la ficha de cada recurso para no atribuirles una norma que no les corresponde.
 - Búsqueda por código, nombre, descripción, familia y alias en español (`baño`, `bano`, `sanitario`, `wc`, `vestuario`, `cafeteria`, `parqueadero`, `discapacidad`, `pmr`…).
-- El color de las señales (ISO o de servicios) se deriva de su familia y no se edita con la paleta.
+- El color de las señales (ISO o propias) se deriva de su familia y no se edita con la paleta.
+
+**Señalización de tránsito (34 pictogramas propios, familia `traffic`, `#b45309`)**
+
+- **Reglamentación**: pare, ceda el paso, velocidad máxima 30 y 50, prohibido el paso, prohibido parquear, prohibido girar a izquierda y derecha, prohibido devolverse, prohibido adelantar, prohibido el paso de peatones, prohibido el paso de camiones y prohibido pitar.
+- **Obligación**: sentido único, giro obligatorio a izquierda y derecha, siga de frente, glorieta, parqueadero y parqueadero accesible.
+- **Prevención**: cruce de peatones, zona escolar, paso de ciclistas, resalto o reductor, semáforo, obras en la vía, piso resbaloso.
+- **Demarcación e información**: cebra peatonal, flecha de carril, resalto demarcado, andén o acera, zona de carga y descarga, parada de transporte y vía sin salida.
+- Son **pictogramas esquemáticos propios** (GPL-3.0) para accesos, parqueaderos y vías internas: no reproducen láminas oficiales de ningún manual de señalización ni certifican cumplimiento. Cada ficha lo dice y la descripción lo repite.
 
 **Rutas y trazos editables**
 
@@ -254,7 +262,7 @@ El inspector se organiza en una ficha superior con la miniatura, el tipo y las a
 - Al mover un vértice la caja del elemento se recalcula sola, la rotación se disuelve en los puntos y cada paso entra en el historial (deshacer/rehacer).
 - Las rutas de evacuación conservan el cierre en circuito: el primer y el último punto siguen unidos.
 
-### Equipamiento CAD (145 objetos en 18 familias)
+### Equipamiento CAD (301 objetos en 23 familias)
 
 | Familia | Objetos | Ejemplos |
 | --- | --- | --- |
@@ -270,14 +278,20 @@ El inspector se organiza en una ficha superior con la miniatura, el tipo y las a
 | Salud y hospital | 10 | camilla, cama, sillón odontológico, rayos X, incubadora, estación de enfermería |
 | Costura y confección | 6 | máquina plana, fileteadora, mesa de corte, maniquí |
 | Asadero y parrilla | 5 | parrilla, horno de asadero, campana, mesón, tanque de gas |
-| Supermercado | 7 | góndola, nevera mural, congelador, carrito, caja |
+| Supermercado | 27 | góndola, pasillo de góndolas, isla de frutas, cárcel de carnes, panadería, pescadería, nevera de bebidas, báscula de plataforma, corral de carros, seguridad, muelle de carga |
 | Vivienda y edificios residenciales | 9 | sofá, cama doble, cocina integral, lavadora, baño completo |
 | Deportes, canchas y piscinas | 11 | cancha de fútbol, de baloncesto, de tenis, piscina, trampolín, caminadora |
 | Exteriores y urbanismo | 15 | árbol, arbusto, luminaria, hidrante, fuente, bicicletero, bolardo, matera, plaza de parqueo, contenedor, pérgola |
 | Instalaciones eléctricas | 12 | tomacorriente, tomacorriente 220 V, interruptor, interruptor doble, tablero, luminaria, salida de techo, luminaria de emergencia, salida de datos, aire acondicionado, extractor, caja de piso |
 | Redes hidrosanitarias | 12 | válvula de bola, válvula de compuerta, válvula de retención, medidor de agua, medidor de gas, equipo hidroneumático, tanque, rejilla de piso, bajante de cubierta, gabinete contra incendios, rociador, caja de inspección |
+| **Estación de servicio (EDS)** | 24 | surtidor de gasolina, diésel y GLP, isla de surtidores, tanque enterrado, boca de llenado, venteo, punto de aire y agua, compresor, lavadero, aspiradora, oficina, tienda de conveniencia, baños, caja, bahías de servicio liviano y motos, carril de camiones, kit antiderrames, extintor, separador de grasas, residuos peligrosos, cubierta y caseta de vigilancia |
+| **Droguería y farmacia** | 44 | mostrador de atención y de entregas, estantería de medicamentos y de rodillos, vitrina, nevera de cadena de frío, caja, sillas y banca de espera, inyectología, lavamanos, punto azul de posconsumo, guardián de punzocortantes, consultorio y box de asesoría, báscula, tensiómetro, glucómetro, nebulizador, área de empaque y línea de empaque, caja de autoservicio, lactario, ortopedia, acceso de emergencia |
+| **Gimnasio y fitness** | 23 | caminadora, elíptica, bicicleta estática, remo, multifunción, banco de pesas, rack de sentadillas y de mancuernas, zona de peso libre, colchoneta, sala de clases dirigidas, spinning, boxeo, vestidores, duchas, sauna, recepción, zona infantil, fisioterapia, fuente de agua y suplementos |
+| **Colegio y universidad** | 23 | pupitre y pupitres dobles, tablero y tablero digital, escritorio del docente, laboratorio, sala de cómputo, biblioteca y sala de lectura, comedor, cocina, coliseo, cancha exterior, patio de recreo, casilleros, enfermería, orientación escolar, administración, auditorio, aulas de arte, música y taller, paradero escolar |
+| **Cafetería y panadería** | 22 | barra de café, máquina de espresso, molino, vitrina de repostería, horno, amasadora, mesas para dos y cuatro, banca, silla, barra de recogida, nevera exhibidora, poceta, máquina de hielo, estación de insumos, residuos, espera, punto de trabajo, baño, domicilios, terraza, puerta de servicio |
 
-- Identificador `cad_*` (por ejemplo `cad_desk`, `cad_rest_bar`, `cad_sport_pool`).
+- Identificador `cad_*` (por ejemplo `cad_desk`, `cad_rest_bar`, `cad_sport_pool`, `cad_eds_dispenser`, `cad_drg_cold_chain`, `cad_gym_treadmill`, `cad_sch_desk`, `cad_caf_bar`).
+- Los 301 objetos se generan y verifican con `tools/build-sector-catalogs.mjs` (mantenimiento; `tools/` no se distribuye).
 - Los objetos de agua (piscina, trampolín) usan un color propio del catálogo (`#0891b2`); el resto hereda el color del elemento.
 - Son **esquemáticos**: no representan medidas certificadas; la descripción y la referencia están en `resources/cad-objects.json`. Verifica siempre las dimensiones en el sitio.
 - **Cambiar un equipo:** selecciónalo y pulsa **Cambiar equipo** en *Apariencia*. La biblioteca abre en modo sustitución con el equipo actual resaltado; al elegir otro se conservan posición, tamaño, rotación, capa, opacidad y bloqueo, y el nuevo objeto toma el color de su familia. También se puede hacer con varios equipos a la vez y se deshace con `Ctrl/⌘ + Z`.
@@ -324,7 +338,7 @@ El panel **Redes y circuitos** (barra lateral inferior) resume el piso:
 | Archivo | Contenido |
 | --- | --- |
 | `resources/iso7010-catalog.json` | `{format, standard, source, license, categories, signs{CODE:{name,category,description,svg}}}` |
-| `resources/cad-objects.json` | `{version, categories{furniture,...}, objects{cad_*:{category,name,description,reference,color,load?,svg}}}` — 145 objetos en 18 familias |
+| `resources/cad-objects.json` | `{version, categories{furniture,...}, objects{cad_*:{category,name,description,reference,color,load?,svg}}}` — 301 objetos en 23 familias |
 | `resources/service-signs.json` | `{format, standard, license, categories{services,location}, signs{SVC_*:{name,category,description,aliases,svg}}}` — 23 señales propias |
 | `resources/mep-networks.json` | `{hydraulic{clave:{label,short,color,dash,stroke,diameter,material,gravity,pressureKpa,reference}},diameters[],materials{},slopes{},electrical{...}}` — valores de referencia de redes y circuitos |
 | `resources/audit-criteria.json` | `{version, notice, grid, egress, occupancy, signs}` — umbrales del auditor y de la medición de evacuación |
@@ -552,10 +566,10 @@ Lo único que no funciona sin red es la **vista previa de desarrollo** (`npm run
 | Bloque | Comprobaciones |
 | --- | --- |
 | `tests/php/lint.mjs` | `php -l` sobre todo `app/`, `bootstrap.php` e `index.php` en 8.1 y 8.3. |
-| `tests/php/functional.mjs` | 174 comprobaciones: instalador, requisitos, contraseñas débiles, CSRF, sesión, autorización entre cuentas, CRUD de proyectos/pisos, duplicados, importación v1/v2, catálogos (355 señales y 145 objetos), catálogo y guardado de redes, señales de baño y de servicios (guardado, color de familia y exportación SVG), **auditor y medición de evacuación** (salidas, recorrido máximo, zonas inalcanzables, rutas que cruzan muros o no llegan a la salida, ocupación declarada y estimada, señalización, validación de `isExit`, informe imprimible y demo coherente), puertas y portones (geometría, sentidos de apertura, exportación con trazo), validaciones de la API, guardado/versiones/borradores/conflictos, exportaciones, ciclo de vida y logout. |
-| `tests/js/editor.mjs` | 246 comprobaciones de interfaz sobre la app real: arranque, 355 señales y 145 objetos, **trazado de tuberías y circuitos, inspector de red y panel de redes**, **mano y paneo, selección de superpuestos, inspector plegable y paleta de herramientas**, puertas dobles y portones, **vértices de ruta editables (arrastrar, doble clic, Alt+clic)**, **señal de baño insertada desde la biblioteca**, **posiciones reales del trazo**, **clic sobre muros finos, pictogramas y equipos**, **cambio de señal y de equipo desde el inspector**, **auditor de planos** (interruptor de salida, ocupación declarada, cajón de revisión, contador, filtros, «Ver en el plano», cierre sin dejar el fondo bloqueado), **rotación**, **rutas cerradas**, **arrastrar y soltar desde la biblioteca sin que el cajón lo bloquee**, reglas, herramientas, inserción con puntero, selección, mover, escalar, rotar, color, cambio de tipo, deshacer/rehacer, duplicar, agrupar, bloquear, desplazar, texto y saneado, guardar, reabrir, borradores, conflictos, exportación SVG/JSON/PNG, tooltips sin acumulación, capas, versiones y límites. |
+| `tests/php/functional.mjs` | 174 comprobaciones: instalador, requisitos, contraseñas débiles, CSRF, sesión, autorización entre cuentas, CRUD de proyectos/pisos, duplicados, importación v1/v2, catálogos (389 señales y 301 objetos), catálogo y guardado de redes, señales de baño y de servicios (guardado, color de familia y exportación SVG), **auditor y medición de evacuación** (salidas, recorrido máximo, zonas inalcanzables, rutas que cruzan muros o no llegan a la salida, ocupación declarada y estimada, señalización, validación de `isExit`, informe imprimible y demo coherente), puertas y portones (geometría, sentidos de apertura, exportación con trazo), validaciones de la API, guardado/versiones/borradores/conflictos, exportaciones, ciclo de vida y logout. |
+| `tests/js/editor.mjs` | 246 comprobaciones de interfaz sobre la app real: arranque, 389 señales y 301 objetos, **trazado de tuberías y circuitos, inspector de red y panel de redes**, **mano y paneo, selección de superpuestos, inspector plegable y paleta de herramientas**, puertas dobles y portones, **vértices de ruta editables (arrastrar, doble clic, Alt+clic)**, **señal de baño insertada desde la biblioteca**, **posiciones reales del trazo**, **clic sobre muros finos, pictogramas y equipos**, **cambio de señal y de equipo desde el inspector**, **auditor de planos** (interruptor de salida, ocupación declarada, cajón de revisión, contador, filtros, «Ver en el plano», cierre sin dejar el fondo bloqueado), **rotación**, **rutas cerradas**, **arrastrar y soltar desde la biblioteca sin que el cajón lo bloquee**, reglas, herramientas, inserción con puntero, selección, mover, escalar, rotar, color, cambio de tipo, deshacer/rehacer, duplicar, agrupar, bloquear, desplazar, texto y saneado, guardar, reabrir, borradores, conflictos, exportación SVG/JSON/PNG, tooltips sin acumulación, capas, versiones y límites. |
 | `tests/js/pages.mjs` | 29 comprobaciones de las páginas fuera del editor: menú de acciones de proyectos y pisos (capa fija, colocación, teclado, un solo menú), confirmación de borrado y borrado real de piso y proyecto, con la protección del último piso. |
-| `tests/php/package.mjs` | 39 comprobaciones: construye ambos ZIP, verifica que no haya bases, sesiones, credenciales, logs ni carpetas de desarrollo, valida los SHA-256 y hace una instalación limpia de la demo comprobando assets, catálogos (355/145), los cuatro pisos del proyecto de ejemplo, señales de servicios y redes en la demo, la señal «Usted está aquí», **el auditor y su informe en la demo empaquetada**, editor, SVG, JSON e impresión. |
+| `tests/php/package.mjs` | 39 comprobaciones: construye ambos ZIP, verifica que no haya bases, sesiones, credenciales, logs ni carpetas de desarrollo, valida los SHA-256 y hace una instalación limpia de la demo comprobando assets, catálogos (389/301), los cuatro pisos del proyecto de ejemplo, señales de servicios y redes en la demo, la señal «Usted está aquí», **el auditor y su informe en la demo empaquetada**, editor, SVG, JSON e impresión. |
 | `tests/js/offline.mjs` | 0 dependencias de red: revisa las vistas, los estilos, los scripts y los catálogos y falla si aparece un `fetch`, un `WebSocket`, un `src`/`href`/`url()` externo, una llamada de red desde PHP o un dominio no declarado. |
 
 Resultados esperados de la última ejecución completa:
@@ -578,6 +592,17 @@ Resultados esperados de la última ejecución completa:
 Las pruebas trabajan sobre copias temporales: no escriben configuración ni bases en el repositorio. `node_modules` solo contiene dependencias de desarrollo y se excluye de los paquetes.
 
 ---
+
+## Cambios de la versión 1.2.0
+
+La entrega de **bibliotecas sectoriales**. Los catálogos crecen de 355 a **389 señales** y de 145 a **301 objetos CAD**; los planos guardados siguen abriendo igual porque solo se añaden recursos nuevos.
+
+- **Cinco sectores completos, con 20 a 44 objetos cada uno.** Estación de servicio (24), droguería y farmacia (44), gimnasio y fitness (23), colegio y universidad (23) y cafetería y panadería (22). Cada familia se dibuja en planta, con la misma retícula, trazo y relleno duotono del catálogo, y aparece como chip propio en la biblioteca de equipos.
+- **Supermercado, de 7 a 27 objetos.** Pasillo de góndolas, isla de frutas y verduras, cárcel de carnes, panadería, pescadería, nevera de bebidas, báscula de plataforma, corral de carros, zona de empaque, servicio al cliente, farmacia, textil, control de seguridad, baños, muelle de carga, compactador, estiba, escaleras mecánicas y ascensor de carga.
+- **Señalización de tránsito propia: 34 señales nuevas** en la familia `traffic` (`#b45309`). Reglamentación (pare, ceda el paso, velocidades máximas, prohibiciones de giro, de parqueo, de adelantamiento, de paso de camiones y de pitar), obligación (sentido único, giros obligatorios, siga de frente, glorieta, parqueadero y parqueadero accesible), prevención (peatones, zona escolar, ciclistas, resalto, semáforo, obras, piso resbaloso) y demarcación (cebra, flecha de carril, resalto demarcado, andén, carga y descarga, parada de transporte y vía sin salida).
+- **Todo se comporta igual que lo anterior.** Las señales nuevas usan el mismo flujo de inserción, cambio desde el inspector, color por familia, leyenda MEP y exportación SVG; los objetos nuevos se pueden arrastrar al plano, rotar, escalar, cambiar desde *Apariencia* y entran en el historial.
+- **Honestidad de alcance.** Las señales de tránsito son pictogramas esquemáticos propios: no reproducen láminas oficiales de ningún manual y cada ficha lo indica. Los 301 objetos siguen siendo representaciones esquemáticas: verifica dimensiones y escala en sitio.
+- **Generador reproducible.** `tools/build-sector-catalogs.mjs` y `tools/sector-data/` dibujan y validan los catálogos nuevos; las pruebas comprueban que todo SVG carece de texto incrustado, referencias externas y colores fijos.
 
 ## Cambios de la versión 1.1.3
 
@@ -630,7 +655,7 @@ La entrega grande de esta versión: un **auditor de planos** y una **medición d
 
 ## Cambios de la versión 1.0.9
 
-- **Cambiar el equipo CAD desde el inspector.** Igual que las señales, cualquier equipo seleccionado muestra en **Apariencia** su miniatura, su familia y un botón **Cambiar equipo**. Abre la biblioteca de los 145 objetos en modo sustitución, con el equipo actual resaltado y la insignia *Equipo actual*: al elegir otro se conservan posición, tamaño, rotación, capa, opacidad y bloqueo, y el objeto toma el color de su nueva familia. Entra en el historial y funciona con varios equipos a la vez.
+- **Cambiar el equipo CAD desde el inspector.** Igual que las señales, cualquier equipo seleccionado muestra en **Apariencia** su miniatura, su familia y un botón **Cambiar equipo**. Abre la biblioteca de los 301 objetos en modo sustitución, con el equipo actual resaltado y la insignia *Equipo actual*: al elegir otro se conservan posición, tamaño, rotación, capa, opacidad y bloqueo, y el objeto toma el color de su nueva familia. Entra en el historial y funciona con varios equipos a la vez.
 - **Seleccionar un solo objeto con un clic.** El problema real era que los pictogramas y los equipos se dibujan con trazos finos dentro de un SVG incrustado que ignora el puntero: al hacer clic en su interior no había nodo bajo el cursor, el editor lo interpretaba como un clic en el vacío y abría la caja de selección. Ahora el clic se resuelve contra la **pila geométrica real** (`hitStack`) con una tolerancia de 8 píxeles de pantalla, prefiere el objeto visible que queda encima y recurre al nodo SVG cuando el puntero acierta una forma pintada o su etiqueta. Un clic sencillo basta para muros finos, tuberías, textos, pictogramas y equipos; `Ctrl/⌘ + clic` sigue bajando en la pila y `Shift` sigue añadiendo a la selección.
 - **Pista visual antes de hacer clic.** El cursor cambia a la cruz de movimiento cuando hay un elemento seleccionable bajo el puntero y vuelve a la flecha sobre el lienzo vacío. Las etiquetas y los textos de los elementos también reciben el clic, sin seleccionar el objeto equivocado.
 - **Biblioteca con el vocabulario correcto.** En modo sustitución el cajón distingue señal y equipo: título *Cambiar equipo*, insignia *Equipo actual*, botón **Usar este equipo** y una nota propia que recuerda que los objetos CAD son esquemáticos y que las medidas y la escala se verifican en sitio.
@@ -721,14 +746,14 @@ Versión de corrección sobre la 1.0.0. Reemplaza los paquetes anteriores: la 1.
 
 ## Paquetes y verificación
 
-Las versiones publicadas están en la página de **[Liberaciones](https://github.com/luan920530-commits/normia-planos-cad/releases)**. La versión vigente es la **v1.1.3**, con sus notas, sus sumas SHA-256 y los enlaces de descarga de los paquetes que viven en `paquetes/v1.1.3/`. Las entregas anteriores (v1.0.0 a v1.0.9, la v1.1.0, la v1.1.1 y la v1.1.2) no deben usarse: la v1.1.3 las reemplaza.
+Las versiones publicadas están en la página de **[Liberaciones](https://github.com/luan920530-commits/normia-planos-cad/releases)**. La versión vigente es la **v1.2.0**, con sus notas, sus sumas SHA-256 y los enlaces de descarga de los paquetes que viven en `paquetes/v1.2.0/`. Las entregas anteriores (v1.0.0 a v1.0.9 y las v1.1.0 a v1.1.3) no deben usarse: la v1.2.0 las reemplaza.
 
-La entrega v1.1.3 incluye los ZIP ya construidos en **`paquetes/v1.1.3/`** (misma composición que genera el script, verificada por `tests/php/package.mjs`):
+La entrega v1.2.0 incluye los ZIP ya construidos en **`paquetes/v1.2.0/`** (misma composición que genera el script, verificada por `tests/php/package.mjs`):
 
 ```text
-paquetes/v1.1.3/
-├── normia-planos-cad-1.1.3.zip
-├── normia-planos-cad-demo-1.1.3.zip
+paquetes/v1.2.0/
+├── normia-planos-cad-1.2.0.zip
+├── normia-planos-cad-demo-1.2.0.zip
 ├── SHA256SUMS.txt
 ├── BUILD.txt
 └── LEEME.txt
@@ -743,8 +768,8 @@ npm run build          # o: bash tools/build-packages.sh
 El script deja los artefactos en `dist/`:
 
 ```text
-normia-planos-cad-1.1.3.zip
-normia-planos-cad-demo-1.1.3.zip
+normia-planos-cad-1.2.0.zip
+normia-planos-cad-demo-1.2.0.zip
 SHA256SUMS.txt
 BUILD.txt
 ```
@@ -758,7 +783,7 @@ cd paquetes/v1.1.2
 sha256sum -c SHA256SUMS.txt
 ```
 
-Los hashes exactos de los ZIP publicados están en `paquetes/v1.1.3/SHA256SUMS.txt`; `dist/` es solo la salida de trabajo y está ignorada por Git.
+Los hashes exactos de los ZIP publicados están en `paquetes/v1.2.0/SHA256SUMS.txt`; `dist/` es solo la salida de trabajo y está ignorada por Git.
 
 ---
 

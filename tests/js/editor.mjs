@@ -141,17 +141,17 @@ async function main() {
     report.check('El editor arranca con la aplicación real', Boolean(app && app.model && app.renderer), window.document.title);
     const signCodes = Object.keys(app.catalogs.signs);
     const serviceCodes = signCodes.filter((code) => code.startsWith('SVC_'));
-    report.check('Catálogo de señalización completo', signCodes.length === 355 && serviceCodes.length === 23, `${signCodes.length} · ${serviceCodes.length} de servicios`);
+    report.check('Catálogo de señalización completo', signCodes.length === 389 && serviceCodes.length === 57, `${signCodes.length} · ${serviceCodes.length} de servicios`);
     report.check('Señales de baño disponibles', ['SVC_WC_MEN', 'SVC_WC_WOMEN', 'SVC_WC_MIXED', 'SVC_WC_ACCESSIBLE', 'SVC_BABY'].every((code) => app.catalogs.signs[code]?.name),
       ['SVC_WC_MEN', 'SVC_WC_WOMEN', 'SVC_WC_MIXED', 'SVC_WC_ACCESSIBLE', 'SVC_BABY'].filter((code) => !app.catalogs.signs[code]).join(',') || 'todas');
     report.check('La familia de servicios está disponible', app.catalogs.signCategories.services?.label === 'Orientación y servicios', app.catalogs.signCategories.services?.label);
-    report.check('Catálogo CAD ampliado a 145 objetos', Object.keys(app.catalogs.cad).length === 145, String(Object.keys(app.catalogs.cad).length));
-    report.check('Familias CAD ampliadas a 18', Object.keys(app.catalogs.cadCategories).length === 18, Object.keys(app.catalogs.cadCategories).join(','));
-    const expectedFamilies = ['restaurant', 'warehouse', 'retail', 'hospital', 'textile', 'grill', 'supermarket', 'residential', 'sports', 'outdoor', 'electrico', 'hidraulico'];
+    report.check('Catálogo CAD ampliado a 301 objetos', Object.keys(app.catalogs.cad).length === 301, String(Object.keys(app.catalogs.cad).length));
+    report.check('Familias CAD ampliadas a 23', Object.keys(app.catalogs.cadCategories).length === 23, Object.keys(app.catalogs.cadCategories).join(','));
+    const expectedFamilies = ['restaurant', 'warehouse', 'retail', 'hospital', 'textile', 'grill', 'supermarket', 'residential', 'sports', 'outdoor', 'electrico', 'hidraulico', 'eds', 'drogueria', 'gimnasio', 'colegio', 'cafeteria'];
     report.check('Nuevas familias sectoriales disponibles', expectedFamilies.every((key) => app.catalogs.cadCategories[key]?.label), expectedFamilies.filter((key) => !app.catalogs.cadCategories[key]).join(',') || 'todas');
     report.check('Paleta de colores expuesta', window.Normia.COLORS.length === 29, String(window.Normia.COLORS.length));
-    report.check('La barra lateral cuenta los equipos del catálogo', q(window, '[data-cad-count]')?.textContent === '145', q(window, '[data-cad-count]')?.textContent);
-    report.check('La barra lateral cuenta las señales del catálogo', q(window, '[data-sign-count]')?.textContent === '355', q(window, '[data-sign-count]')?.textContent);
+    report.check('La barra lateral cuenta los equipos del catálogo', q(window, '[data-cad-count]')?.textContent === '301', q(window, '[data-cad-count]')?.textContent);
+    report.check('La barra lateral cuenta las señales del catálogo', q(window, '[data-sign-count]')?.textContent === '389', q(window, '[data-sign-count]')?.textContent);
     report.check('Lienzo con el preset A4 horizontal', app.model.design.canvas.width === 1123 && app.model.design.canvas.height === 794, `${app.model.design.canvas.width}×${app.model.design.canvas.height}`);
     report.check('Barra de estado muestra el tamaño', q(window, '[data-canvas-size]').textContent.includes('794'), q(window, '[data-canvas-size]').textContent);
     report.check('Escala visible en la barra de estado', q(window, '[data-scale-label]').textContent.includes('1:100'), q(window, '[data-scale-label]').textContent);
@@ -510,7 +510,7 @@ async function main() {
     const signButton = q(window, '[data-open-library="sign"]');
     signButton?.click();
     app.library.open('sign');
-    report.check('La biblioteca de señalización muestra las 355 señales', q(window, '[data-library-families]').textContent.includes('355'), q(window, '[data-library-families]').textContent.slice(0, 80));
+    report.check('La biblioteca de señalización muestra las 389 señales', q(window, '[data-library-families]').textContent.includes('389'), q(window, '[data-library-families]').textContent.slice(0, 80));
     report.check('La biblioteca incluye la familia de servicios', q(window, '[data-library-families]').textContent.includes('Servicios'), q(window, '[data-library-families]').textContent.slice(0, 120));
     report.check('La biblioteca pinta pictogramas locales', qa(window, '[data-library-grid] .library-thumb svg').length > 0, String(qa(window, '[data-library-grid] .library-thumb svg').length));
     /* --------------- flujo real: tarjeta → insertar → clic en el plano --------------- */
@@ -1068,7 +1068,7 @@ async function main() {
         assetFailures.push(`${key}: ${error.message}`);
       }
     }
-    report.check('Los 355 pictogramas y 145 equipos se instancian sin errores', assetsOk === 500 && assetFailures.length === 0,
+    report.check('Los 389 pictogramas y 301 equipos se instancian sin errores', assetsOk === 690 && assetFailures.length === 0,
       `${assetsOk}/500 · ${assetFailures.slice(0, 3).join(', ')}`);
 
     const xlink = new window.DOMParser().parseFromString(
