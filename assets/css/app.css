@@ -60,7 +60,12 @@ h3 { font-size: 1.05rem; }
 p { margin: 0; }
 
 .icon-sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
-.icon { width: 20px; height: 20px; flex: 0 0 auto; display: block; }
+/* Trazo redondeado y esquinas suaves: herencia del set «normia-2». */
+.icon {
+  width: 20px; height: 20px; flex: 0 0 auto; display: block;
+  stroke-linecap: round; stroke-linejoin: round;
+  shape-rendering: geometricPrecision;
+}
 
 .skip-link {
   position: absolute; left: 12px; top: -60px; z-index: 200;
@@ -84,11 +89,22 @@ p { margin: 0; }
 .site-header .brand { display: flex; align-items: center; gap: 10px; color: var(--ink); }
 .site-header .brand:hover { text-decoration: none; }
 .brand-mark {
+  position: relative; isolation: isolate;
   width: 36px; height: 36px; display: grid; place-items: center;
-  border-radius: 11px; color: #fff;
-  background: linear-gradient(160deg, #2f7dfa, #0a4fbf);
-  box-shadow: 0 6px 16px rgba(10, 108, 245, .28);
+  border-radius: 28%; color: #fff;
+  background: linear-gradient(158deg, #5aa2ff 0%, #1168f0 45%, #0a44a8 100%);
+  box-shadow: 0 6px 16px rgba(10, 82, 200, .34), inset 0 1px 0 rgba(255, 255, 255, .55),
+              inset 0 -1px 1px rgba(3, 24, 64, .45);
+  overflow: hidden;
 }
+/* Brillo de cristal tipo icono de iOS. */
+.brand-mark::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
+  background:
+    radial-gradient(120% 80% at 22% 4%, rgba(255, 255, 255, .55), rgba(255, 255, 255, 0) 58%),
+    linear-gradient(180deg, rgba(255, 255, 255, .22), rgba(255, 255, 255, 0) 46%);
+}
+.brand-mark .icon { position: relative; z-index: 1; filter: drop-shadow(0 1px 1px rgba(4, 26, 66, .45)); }
 .brand-mark .icon { width: 21px; height: 21px; }
 .brand-text { display: flex; flex-direction: column; line-height: 1.15; }
 .brand-text strong { font-size: .98rem; letter-spacing: -.01em; }
@@ -151,9 +167,11 @@ p { margin: 0; }
 .inline-form { display: inline; margin: 0; }
 .icon-button {
   width: 38px; height: 38px; display: inline-grid; place-items: center;
-  border-radius: 11px; border: 1px solid transparent; background: transparent; color: var(--ink-soft);
-  cursor: pointer; transition: background .15s ease;
+  border-radius: 12px; border: 1px solid transparent; background: transparent; color: var(--ink-soft);
+  cursor: pointer;
+  transition: background .16s ease, color .16s ease, transform .3s cubic-bezier(.34, 1.56, .64, 1);
 }
+.icon-button:active:not(:disabled) { transform: scale(.94); }
 .icon-button:hover { background: var(--surface-sunken); }
 .icon-button:disabled { opacity: .35; cursor: not-allowed; }
 .icon-button.danger:hover { background: var(--red-soft); color: var(--red); }

@@ -28,7 +28,7 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 11. [Arquitectura](#arquitectura)
 12. [Seguridad](#seguridad)
 13. [Pruebas](#pruebas)
-14. [Cambios de la versión 1.1.0](#cambios-de-la-versión-110)
+14. [Cambios de la versión 1.1.2](#cambios-de-la-versión-112)
 15. [Paquetes y verificación](#paquetes-y-verificación)
 16. [Limitaciones](#limitaciones)
 17. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
@@ -579,6 +579,16 @@ Las pruebas trabajan sobre copias temporales: no escriben configuración ni base
 
 ---
 
+## Cambios de la versión 1.1.2
+
+Entrega visual. Solo cambian los iconos y su presentación: los planos, proyectos, versiones y datos guardados siguen abriendo sin cambios.
+
+- **Set de iconos «Normia 2.0».** Los 88 símbolos del sprite local se redibujaron sobre la misma retícula de 24 × 24, con trazo de 1,7 px, remates y uniones redondeados y un relleno duotono suave (12 % de opacidad) que da volumen sin ensuciar a tamaño pequeño. Las formas se simplificaron para que se lean a 17–20 px: menos líneas, más aire y siluetas reconocibles de un vistazo.
+- **Acabado tipo iOS en la barra de herramientas.** Cada botón del rail es ahora un chip *squircle* con cristal (`backdrop-filter` con desenfoque y saturación), brillo interior en el borde superior y sombra corta. El botón activo se tiñe con el degradado azul de la marca, borde luminoso y halo; el indicador lateral se mantiene. Las transiciones usan un muelle suave (`cubic-bezier(.34, 1.56, .64, 1)`) y respetan `prefers-reduced-motion`.
+- **Menús flotantes coherentes.** Los desplegables de puertas, tubería y formas, y el botón de la paleta *Todas las herramientas*, comparten ya el mismo lenguaje: radio grande, cristal, borde translúcido y una entrada de 0,18 s.
+- **Marca y botones de icono.** El logotipo pasa a un icono de app con degradado, brillo de cristal y esquinas de squircle; los botones de icono del editor ganan un hundimiento al pulsarlos.
+- **Nada se movió de sitio.** La barra lateral conserva su ancho, su orden y su desplazamiento; en pantallas bajas sigue el modo compacto de solo iconos. Ningún icono se añadió ni se retiró: los 88 identificadores `#i-…` siguen siendo los mismos, así que no hay referencias rotas.
+
 ## Cambios de la versión 1.1.1
 
 Versión de corrección de la 1.1.0. Los planos, proyectos y versiones guardados siguen abriendo sin cambios.
@@ -646,7 +656,7 @@ Entrega de interfaz sobre la 1.0.4. Los planos guardados siguen abriendo sin cam
 - **Selección de elementos superpuestos.** Antes sólo se podía seleccionar lo que estuviera encima. Ahora `Ctrl/⌘ + clic` baja al siguiente elemento de la pila y `Ctrl/⌘ + Shift + clic` sube; la barra de estado muestra cuántos hay en ese punto y el inspector añade la sección **Elementos superpuestos** para cambiarlos con un clic.
 - **Inspector rediseñado.** Ficha de selección con miniatura y acciones rápidas, secciones plegables con iconos, campos numéricos con unidad y contador, rotación en pasos de 90°, controles de opacidad y color más compactos, rejilla de alineación y orden con iconos, y un estado vacío con resumen del piso.
 - **Paleta «Todas las herramientas».** Un panel agrupado (seleccionar, dibujar, insertar) con icono, nombre y atajo de cada herramienta, al estilo de las barras profesionales modernas.
-- **Iconos nuevos y coherentes.** Mover, paleta, pila, organizar, traer adelante y atrás, girar a izquierda y derecha y reglas ocultas; todos con la misma retícula de 24 px, trazo redondeado y peso uniforme. El interruptor de reglas cambia de icono y de tooltip según su estado.
+- **Iconos nuevos y coherentes.** Mover, paleta, pila, organizar, traer adelante y atrás, girar a izquierda y derecha y reglas ocultas; todos con la misma retícula de 24 px, trazo redondeado y peso uniforme. El interruptor de reglas cambia de icono y de tooltip según su estado. (En la v1.1.2 el conjunto se redibujó completo con el estilo «Normia 2.0».)
 - **Corrección de cursores.** El cursor de cada herramienta ya no se perdía al repintar el lienzo; la mano muestra `grab`/`grabbing` y las herramientas de dibujo, la cruz.
 
 ## Cambios de la versión 1.0.4
@@ -699,14 +709,14 @@ Versión de corrección sobre la 1.0.0. Reemplaza los paquetes anteriores: la 1.
 
 ## Paquetes y verificación
 
-Las versiones publicadas están en la página de **[Liberaciones](https://github.com/luan920530-commits/normia-planos-cad/releases)**. La versión vigente es la **v1.1.1**, con sus notas, sus sumas SHA-256 y los enlaces de descarga de los paquetes que viven en `paquetes/v1.1.1/`. Las entregas anteriores (v1.0.0 a v1.0.9 y la v1.1.0) no deben usarse: la v1.1.1 las reemplaza.
+Las versiones publicadas están en la página de **[Liberaciones](https://github.com/luan920530-commits/normia-planos-cad/releases)**. La versión vigente es la **v1.1.2**, con sus notas, sus sumas SHA-256 y los enlaces de descarga de los paquetes que viven en `paquetes/v1.1.2/`. Las entregas anteriores (v1.0.0 a v1.0.9, la v1.1.0 y la v1.1.1) no deben usarse: la v1.1.2 las reemplaza.
 
-La entrega v1.1.1 incluye los ZIP ya construidos en **`paquetes/v1.1.1/`** (misma composición que genera el script, verificada por `tests/php/package.mjs`):
+La entrega v1.1.2 incluye los ZIP ya construidos en **`paquetes/v1.1.2/`** (misma composición que genera el script, verificada por `tests/php/package.mjs`):
 
 ```text
-paquetes/v1.1.1/
-├── normia-planos-cad-1.1.1.zip
-├── normia-planos-cad-demo-1.1.1.zip
+paquetes/v1.1.2/
+├── normia-planos-cad-1.1.2.zip
+├── normia-planos-cad-demo-1.1.2.zip
 ├── SHA256SUMS.txt
 ├── BUILD.txt
 └── LEEME.txt
@@ -721,8 +731,8 @@ npm run build          # o: bash tools/build-packages.sh
 El script deja los artefactos en `dist/`:
 
 ```text
-normia-planos-cad-1.1.1.zip
-normia-planos-cad-demo-1.1.1.zip
+normia-planos-cad-1.1.2.zip
+normia-planos-cad-demo-1.1.2.zip
 SHA256SUMS.txt
 BUILD.txt
 ```
@@ -732,11 +742,11 @@ BUILD.txt
 - Verifica las sumas:
 
 ```bash
-cd paquetes/v1.1.1
+cd paquetes/v1.1.2
 sha256sum -c SHA256SUMS.txt
 ```
 
-Los hashes exactos de los ZIP publicados están en `paquetes/v1.1.1/SHA256SUMS.txt`; `dist/` es solo la salida de trabajo y está ignorada por Git.
+Los hashes exactos de los ZIP publicados están en `paquetes/v1.1.2/SHA256SUMS.txt`; `dist/` es solo la salida de trabajo y está ignorada por Git.
 
 ---
 
