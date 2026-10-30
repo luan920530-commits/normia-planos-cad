@@ -138,6 +138,7 @@ Editor B: conserva el diseño, muestra aviso, permite recargar v6 o descargar co
 
 - Vistas PHP con `layout.php` (panel, proyectos, cuenta) y layouts propios para acceso, instalador, editor e impresión.
 - `partials/icons.php` contiene el sprite completo de iconos (`<symbol id="i-*">`, 88 símbolos, retícula de 24 × 24). Desde la v1.1.2 el conjunto usa el estilo «Normia 2.0»: trazo de 1,7 px con remates redondeados, relleno duotono al 12 % y formas simplificadas para leerse a 20 px. No se usan fuentes de iconos ni imágenes remotas; el CSS los presenta como chips con cristal (`assets/css/editor.css`, `.rail-button`).
+- Desde la v1.1.3 el editor se compone como una aplicación de escritorio: chrome oscuro continuo (`.editor-topbar` + `.rail`), lienzo como hoja sobre un escritorio con degradado (`.canvas-shell`), barra de herramientas flotante (`.stage-toolbar`) e inspector flotante (`.properties-panel`). Los cajones se separan 10 px de los bordes.
 - Toda salida dinámica pasa por `e()` (`htmlspecialchars` con `ENT_QUOTES`).
 - Los formularios incluyen `_token` (helper `csrf_field()`); los formularios con acciones destructivas piden confirmación con `data-confirm` y `ui.js`.
 

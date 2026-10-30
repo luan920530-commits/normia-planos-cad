@@ -28,7 +28,7 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 11. [Arquitectura](#arquitectura)
 12. [Seguridad](#seguridad)
 13. [Pruebas](#pruebas)
-14. [Cambios de la versión 1.1.2](#cambios-de-la-versión-112)
+14. [Cambios de la versión 1.1.3](#cambios-de-la-versión-113)
 15. [Paquetes y verificación](#paquetes-y-verificación)
 16. [Limitaciones](#limitaciones)
 17. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
@@ -579,6 +579,18 @@ Las pruebas trabajan sobre copias temporales: no escriben configuración ni base
 
 ---
 
+## Cambios de la versión 1.1.3
+
+Entrega de aspecto. El editor pasa a leerse como una **aplicación de escritorio**: un chrome oscuro continuo arriba, el lienzo como una hoja sobre el escritorio y el inspector como un panel flotante. No cambia ningún dato guardado ni el funcionamiento.
+
+- **Barra superior oscura de ventana.** La cabecera del editor deja el blanco y se alinea con el rail: degradado azul noche, filo superior de luz, cristal (`backdrop-filter`) y texto claro. El título del plano, el selector **Cambiar piso**, el estado de guardado, deshacer/rehacer, *Exportar* y *Guardar* se reestilizan para ese fondo, con el botón primario en azul con brillo y el secundario en cristal. El menú de pisos que se abre desde ahí usa el mismo cristal oscuro.
+- **El lienzo es una hoja sobre el escritorio.** El área de trabajo tiene un fondo con degradado suave y el lienzo se separa como una hoja: borde redondeado de 16 px, filete de 1 px y sombra larga y difusa. Las reglas y la barra de estado acompañan ese marco.
+- **Barra de herramientas flotante.** Las herramientas del lienzo (paleta, zoom, cuadrícula, ajuste y reglas) dejan de ser una franja pegada al borde y pasan a una **píldora de cristal** con margen, borde luminoso y sombra corta, como la barra de una app nativa. Los interruptores activos se tiñen de azul translúcido.
+- **Inspector flotante.** El panel de propiedades gana margen, esquinas de 16 px, cristal claro y sombra propia; su cabecera se vuelve translúcida. En pantallas estrechas sigue entrando como panel deslizante desde la derecha.
+- **Cajones como hojas de app.** Los cajones (bibliotecas, redes, capas, versiones, pie, ajustes, atajos, revisión y exportación) se separan 10 px de los bordes, con esquinas de 18 px, cristal y sombra profunda, en lugar de ocupar todo el alto de la ventana. El fondo oscurecido gana un desenfoque leve.
+- **Avisos integrados.** Las franjas de aviso (borrador, conflicto, guardado) se apoyan sobre una continuación del chrome oscuro para que la transición entre cabecera y lienzo no se corte.
+- **Sin cambios de contrato.** Los tests de estructura del editor (fila acotada, rail con scroll propio, menús anclados a la ventana, panel y cuerpo desplazables) siguen verificándose igual, y en móvil se mantiene el rail inferior y el panel deslizante.
+
 ## Cambios de la versión 1.1.2
 
 Entrega visual. Solo cambian los iconos y su presentación: los planos, proyectos, versiones y datos guardados siguen abriendo sin cambios.
@@ -709,14 +721,14 @@ Versión de corrección sobre la 1.0.0. Reemplaza los paquetes anteriores: la 1.
 
 ## Paquetes y verificación
 
-Las versiones publicadas están en la página de **[Liberaciones](https://github.com/luan920530-commits/normia-planos-cad/releases)**. La versión vigente es la **v1.1.2**, con sus notas, sus sumas SHA-256 y los enlaces de descarga de los paquetes que viven en `paquetes/v1.1.2/`. Las entregas anteriores (v1.0.0 a v1.0.9, la v1.1.0 y la v1.1.1) no deben usarse: la v1.1.2 las reemplaza.
+Las versiones publicadas están en la página de **[Liberaciones](https://github.com/luan920530-commits/normia-planos-cad/releases)**. La versión vigente es la **v1.1.3**, con sus notas, sus sumas SHA-256 y los enlaces de descarga de los paquetes que viven en `paquetes/v1.1.3/`. Las entregas anteriores (v1.0.0 a v1.0.9, la v1.1.0, la v1.1.1 y la v1.1.2) no deben usarse: la v1.1.3 las reemplaza.
 
-La entrega v1.1.2 incluye los ZIP ya construidos en **`paquetes/v1.1.2/`** (misma composición que genera el script, verificada por `tests/php/package.mjs`):
+La entrega v1.1.3 incluye los ZIP ya construidos en **`paquetes/v1.1.3/`** (misma composición que genera el script, verificada por `tests/php/package.mjs`):
 
 ```text
-paquetes/v1.1.2/
-├── normia-planos-cad-1.1.2.zip
-├── normia-planos-cad-demo-1.1.2.zip
+paquetes/v1.1.3/
+├── normia-planos-cad-1.1.3.zip
+├── normia-planos-cad-demo-1.1.3.zip
 ├── SHA256SUMS.txt
 ├── BUILD.txt
 └── LEEME.txt
@@ -731,8 +743,8 @@ npm run build          # o: bash tools/build-packages.sh
 El script deja los artefactos en `dist/`:
 
 ```text
-normia-planos-cad-1.1.2.zip
-normia-planos-cad-demo-1.1.2.zip
+normia-planos-cad-1.1.3.zip
+normia-planos-cad-demo-1.1.3.zip
 SHA256SUMS.txt
 BUILD.txt
 ```
@@ -746,7 +758,7 @@ cd paquetes/v1.1.2
 sha256sum -c SHA256SUMS.txt
 ```
 
-Los hashes exactos de los ZIP publicados están en `paquetes/v1.1.2/SHA256SUMS.txt`; `dist/` es solo la salida de trabajo y está ignorada por Git.
+Los hashes exactos de los ZIP publicados están en `paquetes/v1.1.3/SHA256SUMS.txt`; `dist/` es solo la salida de trabajo y está ignorada por Git.
 
 ---
 
