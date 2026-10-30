@@ -1,0 +1,62 @@
+Normia Planos CAD v1.1.3 · paquetes listos para desplegar
+=========================================================
+
+- normia-planos-cad-1.1.3.zip       aplicación completa (instalador web)
+- normia-planos-cad-demo-1.1.3.zip  igual, con el proyecto de demostración premarcado
+- SHA256SUMS.txt                    sumas de ambos ZIP
+- BUILD.txt                         resumen de la construcción
+
+Verificación de integridad:
+    sha256sum -c SHA256SUMS.txt
+
+Funciona sin conexión: no descarga fuentes, iconos, scripts ni datos. Puede
+instalarse en una red aislada; solo necesita el navegador y el servidor.
+
+Novedades de la 1.1.3 (aspecto, sin cambios en los datos guardados):
+  · el editor se lee como una aplicación de escritorio: barra superior oscura
+    continua con el rail, lienzo como hoja sobre un escritorio con degradado,
+    barra de herramientas flotante de cristal e inspector también flotante;
+  · el menú «Cambiar piso» de la cabecera usa cristal oscuro y el botón
+    primario conserva el azul de la marca con brillo;
+  · los cajones se separan 10 px de los bordes con esquinas de 18 px, cristal
+    y sombra profunda, y el fondo oscurecido gana un desenfoque leve;
+  · los avisos de borrador, conflicto y guardado se apoyan sobre el chrome
+    oscuro para que la transición con el lienzo no se corte;
+  · en móvil se mantiene el rail inferior y el panel deslizante.
+
+Novedades de la 1.1.2:
+  · set de iconos «Normia 2.0»: los 88 símbolos del sprite local se redibujaron
+    sobre la retícula de 24 × 24 con trazo de 1,7 px, remates redondeados y un
+    relleno duotono suave, con formas más simples para leerse a 17–20 px;
+  · cada icono del rail vive en un chip con esquinas de squircle, cristal,
+    brillo interior y sombra corta; el botón activo toma el degradado azul;
+  · los menús flotantes y la paleta «Todas las herramientas» comparten cristal.
+
+Nota de corrección: los paquetes de la 1.1.2 publicados en esta entrega se
+reconstruyeron para excluir dos archivos de trabajo que se colaron en el ZIP
+original. Las sumas de `paquetes/v1.1.2/SHA256SUMS.txt` son las nuevas.
+
+Novedades de la 1.1.1:
+  · la flecha de acciones de «Mis planos» y de la ficha del proyecto ya abre
+    su menú: antes se dibujaba dentro de la tarjeta, que recorta su contenido,
+    y quedaba invisible bloqueando la vista; ahora se monta en una capa fija,
+    se coloca junto al botón y se cierra con Escape, con un clic fuera o al
+    elegir una opción (el selector «Cambiar piso» del editor usa lo mismo);
+  · borrar proyecto visible: botón rojo «Eliminar proyecto» en la cabecera de
+    la ficha y opción en el menú de cada tarjeta, siempre con confirmación que
+    nombra el proyecto, sus pisos y sus versiones;
+  · borrar piso visible: el menú de cada piso ofrece imprimir, exportar JSON,
+    informe de revisión, duplicar y eliminar, con confirmación que nombra el
+    plano; si es el único piso se explica por qué no se puede borrar.
+
+Novedades de la 1.1.0:
+  · auditor de planos y medición de evacuación (recorrido máximo, salidas,
+    aforo, ancho requerido y tiempo estimado), salidas de emergencia marcadas
+    desde el inspector, criterios configurables e informe imprimible.
+
+El auditor y la medición de evacuación son de referencia: no son un dictamen,
+no certifican cumplimiento normativo y no sustituyen la verificación en sitio
+ni la revisión de un profesional competente.
+
+Los cálculos de redes son estimaciones de referencia: no sustituyen la
+memoria de cálculo ni la revisión de un profesional competente.

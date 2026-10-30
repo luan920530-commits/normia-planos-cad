@@ -3,8 +3,6 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use RuntimeException;
-
 /**
  * Genera una representación SVG limpia del diseño guardado.
  * No incluye cuadrícula, guías, selección ni controles del editor.
@@ -18,7 +16,15 @@ final class SvgExporter
         $canvas = $design['canvas'];
         $width = (float) $canvas['width'];
         $height = (float) $canvas['height'];
-        $frameHeight = $withFrame ? 64.0 : 0.0;
+        /* La leyenda de redes se dibuja sólo en la exportación con marco (no en la vista previa). */
+        $mepItems = $withFrame ? self::mepLegend($design) : [];
+        $mepColumns = $mepItems === [] ? 1 : self::legendColumns($width);
+        $mepRows = $mepItems === [] ? [] : array_chunk($mepItems, $mepColumns);
+        $footer = $withFrame ? PlanFooter::payload($design, $meta) : null;
+        $bandHeight = $withFrame ? PlanFooter::bandHeight($width) : 0.0;
+        $dataHeight = $withFrame ? PlanFooter::dataHeight($width, (array) $footer) : 0.0;
+        $mepHeight = $withFrame && $mepRows !== [] ? 10.0 + 15.0 * count($mepRows) : 0.0;
+        $frameHeight = $withFrame ? 2.0 + $bandHeight + $dataHeight + $mepHeight + 8.0 : 0.0;
         $totalHeight = $height + $frameHeight;
         $title = trim((string) ($meta['floor_name'] ?? 'Plano de emergencia'));
         $project = trim((string) ($meta['project_name'] ?? ''));
@@ -61,10 +67,19 @@ final class SvgExporter
         if ($withFrame) {
             $svg .= '<g id="leyenda" font-family="Helvetica, Arial, sans-serif">' . "\n";
             $svg .= '<line x1="0" y1="' . self::n($height + 0.5) . '" x2="' . self::n($width) . '" y2="' . self::n($height + 0.5) . '" stroke="#e2e8f0" stroke-width="1"/>' . "\n";
-            $svg .= '<text x="18" y="' . self::n($height + 26) . '" font-size="13" font-weight="600" fill="#0f172a">' . self::x($title) . '</text>' . "\n";
-            $svg .= '<text x="18" y="' . self::n($height + 44) . '" font-size="10" fill="#64748b">' . self::x($project !== '' ? $project : 'Normia Planos CAD') . ' · Escala de referencia ' . self::x($scale) . ' · Unidad ' . self::x($unit) . '</text>' . "\n";
-            $svg .= '<text x="' . self::n($width - 18) . '" y="' . self::n($height + 26) . '" text-anchor="end" font-size="9" fill="#64748b">Representación esquemática · verifica dimensiones y escala en sitio</text>' . "\n";
-            $svg .= '<text x="' . self::n($width - 18) . '" y="' . self::n($height + 44) . '" text-anchor="end" font-size="9" fill="#94a3b8">Pictogramas ISO 7010 · Normia Planos CAD</text>' . "\n";
+            $svg .= PlanFooter::render($width, $height + 2, (array) $footer);
+            $mepTop = $height + 2 + $bandHeight + $dataHeight;
+            foreach ($mepRows as $rowIndex => $row) {
+                $rowY = $mepTop + 12 + 15 * $rowIndex;
+                foreach ($row as $columnIndex => $item) {
+                    $itemX = PlanFooter::PAD + self::legendColumnWidth($width) * $columnIndex;
+                    $svg .= '<g data-mep-legend="' . self::x($item['key']) . '">';
+                    $svg .= '<line x1="' . self::n($itemX) . '" y1="' . self::n($rowY - 3) . '" x2="' . self::n($itemX + 20) . '" y2="' . self::n($rowY - 3) . '" stroke="' . self::x($item['color']) . '" stroke-width="2.4" stroke-linecap="round"'
+                        . ($item['dash'] !== '' ? ' stroke-dasharray="' . self::x($item['dash']) . '"' : '') . '/>';
+                    $svg .= '<text x="' . self::n($itemX + 26) . '" y="' . self::n($rowY) . '" font-size="9" fill="#475569">' . self::x($item['text']) . '</text>';
+                    $svg .= '</g>' . "\n";
+                }
+            }
             $svg .= '</g>' . "\n";
         }
 
@@ -128,12 +143,9 @@ final class SvgExporter
                 }
                 break;
             case 'door':
-                $flip = !empty($element['flipX']) ? ' transform="translate(' . self::n($w) . ' 0) scale(-1 1)"' : '';
-                $out .= '<g' . $flip . '>' . "\n";
-                $out .= '<line x1="' . self::n($x) . '" y1="' . self::n($y + $h) . '" x2="' . self::n($x + $w) . '" y2="' . self::n($y + $h) . '" stroke="' . self::x($color) . '" stroke-width="' . self::n(max(1.5, $stroke)) . '" stroke-linecap="round"/>' . "\n";
-                $out .= '<line x1="' . self::n($x) . '" y1="' . self::n($y + $h) . '" x2="' . self::n($x) . '" y2="' . self::n($y) . '" stroke="' . self::x($color) . '" stroke-width="' . self::n(max(1.5, $stroke)) . '" stroke-linecap="round"/>' . "\n";
-                $out .= '<path d="M ' . self::n($x) . ' ' . self::n($y) . ' A ' . self::n($w) . ' ' . self::n(max(4, $h)) . ' 0 0 1 ' . self::n($x + $w) . ' ' . self::n($y + $h) . '" fill="none" stroke="' . self::x($color) . '" stroke-width="' . self::n(max(1, $stroke * 0.7)) . '" stroke-dasharray="3 4" opacity=".7"/>' . "\n";
-                $out .= '</g>' . "\n";
+            case 'door_double':
+            case 'door_garage':
+                $out .= self::doorMarkup($element, $x, $y, $w, $h, $color, $stroke);
                 break;
             case 'text':
                 $fontSize = (float) ($element['fontSize'] ?? 14);
@@ -160,6 +172,29 @@ final class SvgExporter
                     $out .= '<text x="' . self::n(($ax + $bx) / 2) . '" y="' . self::n(($ay + $by) / 2 - 7) . '" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="' . self::n((float) ($element['fontSize'] ?? 12)) . '" fill="' . self::x($color) . '">' . self::x($caption) . '</text>' . "\n";
                 }
                 break;
+            case 'pipe':
+            case 'conduit':
+                $points = self::pointList($element);
+                $isPipe = $type === 'pipe';
+                $definition = $isPipe ? (LibraryRepository::networks()[$element['network'] ?? ''] ?? null) : null;
+                $width = max(1.5, $stroke);
+                $dash = $isPipe && is_array($definition['dash'] ?? null) && $definition['dash'] !== []
+                    ? ' stroke-dasharray="' . implode(' ', array_map(static fn ($value): string => self::n((float) $value), $definition['dash'])) . '"'
+                    : '';
+                $out .= '<polyline fill="none" stroke="' . self::x($color) . '" stroke-width="' . self::n($width) . '" stroke-linecap="round" stroke-linejoin="round" opacity="0.92"' . $dash . ' points="'
+                    . self::points($element, $x, $y) . '"/>' . "\n";
+                $joint = max(2.0, min(5.0, $width * 0.95));
+                foreach ($points as $point) {
+                    $out .= '<circle cx="' . self::n($x + (float) $point['x']) . '" cy="' . self::n($y + (float) $point['y']) . '" r="' . self::n($joint) . '" fill="#ffffff" stroke="' . self::x($color) . '" stroke-width="' . self::n(max(1, $width * 0.45)) . '"/>' . "\n";
+                }
+                $caption = self::mepCaption($element, $canvas);
+                if ($caption !== '') {
+                    $middle = $points[(int) floor((count($points) - 1) / 2)];
+                    $next = $points[(int) floor((count($points) - 1) / 2) + 1] ?? $middle;
+                    $out .= '<text x="' . self::n($x + ((float) $middle['x'] + (float) $next['x']) / 2 + 6) . '" y="' . self::n($y + ((float) $middle['y'] + (float) $next['y']) / 2 - 6)
+                        . '" font-size="10" font-family="Helvetica, Arial, sans-serif" fill="' . self::x($color) . '" stroke="#ffffff" stroke-width="3" stroke-linejoin="round" paint-order="stroke">' . self::x($caption) . '</text>' . "\n";
+                }
+                break;
             case 'line':
                 $points = self::pointList($element);
                 $start = $points[0];
@@ -178,34 +213,51 @@ final class SvgExporter
         return $out . '</g>' . "\n";
     }
 
+    /**
+     * Rótulo de un tramo de red. Es informativo y esquemático: no sustituye
+     * la memoria de cálculo ni la revisión de un profesional competente.
+     */
+    private static function mepCaption(array $element, array $canvas): string
+    {
+        if ((string) ($element['label'] ?? '') !== '') {
+            return self::firstLine((string) $element['label']);
+        }
+        if ($element['type'] === 'conduit') {
+            $circuit = (string) ($element['circuit'] ?? 'C1');
+            $gauge = (string) ($element['gauge'] ?? '');
+            $voltage = (string) ($element['voltage'] ?? '');
+            return trim($circuit . ' · ' . ($gauge !== '' ? $gauge . ' AWG' : '') . ' · ' . ($voltage !== '' ? $voltage . ' V' : ''), ' ·');
+        }
+        $networks = LibraryRepository::networks();
+        $network = $networks[(string) ($element['network'] ?? '')] ?? null;
+        if ($network === null) {
+            return '';
+        }
+        $parts = [$network['short'] . ' Ø ' . (string) ($element['diameter'] ?? $network['diameter'])];
+        $points = self::pointList($element);
+        if (count($points) >= 2) {
+            $length = 0.0;
+            for ($index = 1; $index < count($points); $index++) {
+                $length += hypot((float) $points[$index]['x'] - (float) $points[$index - 1]['x'], (float) $points[$index]['y'] - (float) $points[$index - 1]['y']);
+            }
+            $factor = MepCalculator::unitsToMeters((string) $canvas['unit'], (string) $canvas['scale']);
+            $parts[] = self::meters($length * $factor);
+        }
+        if (!empty($network['gravity'])) {
+            $parts[] = 'i=' . self::n((float) ($element['slope'] ?? 0)) . ' %';
+        }
+        return implode(' · ', $parts);
+    }
+
+    private static function meters(float $value): string
+    {
+        $digits = $value >= 100 ? 0 : 1;
+        return number_format($value, $digits, ',', '.') . ' m';
+    }
+
     private static function nestedSvg(string $asset, float $x, float $y, float $w, float $h, string $color): string
     {
-        if (DesignValidator::signCodeForType($asset) !== null) {
-            $definition = LibraryRepository::sign(strtoupper(substr($asset, 4)));
-        } elseif (preg_match('/^[EFMPW][0-9]{3}$/D', $asset) === 1) {
-            $definition = LibraryRepository::sign($asset);
-        } else {
-            $definition = LibraryRepository::cadObject($asset);
-        }
-        if ($definition === null) {
-            throw new RuntimeException('El recurso no pertenece al catálogo local.');
-        }
-        $raw = (string) $definition['svg'];
-        if (!LibraryRepository::safeSvg($raw)) {
-            throw new RuntimeException('El recurso local no supera la validación de seguridad.');
-        }
-        if (preg_match('/<svg\b[^>]*\bviewBox="([^"]+)"/i', $raw, $match) === 1) {
-            $viewBox = $match[1];
-        } else {
-            $viewBox = '0 0 100 100';
-        }
-        $inner = '';
-        if (preg_match('/<svg\b[^>]*>(.*)<\/svg>\s*$/is', $raw, $match) === 1) {
-            $inner = $match[1];
-        }
-        return '<svg x="' . self::n($x) . '" y="' . self::n($y) . '" width="' . self::n($w) . '" height="' . self::n($h)
-            . '" viewBox="' . self::x($viewBox) . '" preserveAspectRatio="xMidYMid meet" color="' . self::x($color) . '">'
-            . $inner . '</svg>' . "\n";
+        return SvgAsset::nested($asset, $x, $y, $w, $h, $color);
     }
 
     /** @param array<int,array{x:float|int,y:float|int}> $points */
@@ -219,6 +271,55 @@ final class SvgExporter
     }
 
     /** @return array<int,array{x:float,y:float}> */
+    /** Símbolo de puerta en planta; mismas geometría que el editor. */
+    private static function doorMarkup(array $element, float $x, float $y, float $w, float $h, string $color, float $stroke): string
+    {
+        $type = (string) ($element['type'] ?? 'door');
+        $edge = $y + $h;
+        $flipX = !empty($element['flipX']);
+        $flipY = !empty($element['flipY']);
+        $out = '';
+        if ($flipX || $flipY) {
+            $px = $x + $w / 2;
+            $out .= '<g transform="translate(' . self::n($px) . ' ' . self::n($edge) . ') scale(' . ($flipX ? '-1' : '1') . ' ' . ($flipY ? '-1' : '1') . ') translate(' . self::n(-$px) . ' ' . self::n(-$edge) . ')">' . "\n";
+        } else {
+            $out .= '<g class="door">' . "\n";
+        }
+        $jamb = min(14.0, max(5.0, $h * 0.16));
+        $frame = max(1.8, $stroke * 1.15);
+        $thin = max(1.0, $stroke * 0.65);
+        $out .= '<line x1="' . self::n($x) . '" y1="' . self::n($edge) . '" x2="' . self::n($x) . '" y2="' . self::n($edge - $jamb) . '" stroke="' . self::x($color) . '" stroke-width="' . self::n($frame) . '" stroke-linecap="round"/>' . "\n";
+        $out .= '<line x1="' . self::n($x + $w) . '" y1="' . self::n($edge) . '" x2="' . self::n($x + $w) . '" y2="' . self::n($edge - $jamb) . '" stroke="' . self::x($color) . '" stroke-width="' . self::n($frame) . '" stroke-linecap="round"/>' . "\n";
+        $out .= '<line x1="' . self::n($x) . '" y1="' . self::n($edge) . '" x2="' . self::n($x + $w) . '" y2="' . self::n($edge) . '" stroke="' . self::x($color) . '" stroke-width="' . self::n($thin) . '" stroke-dasharray="4 4" opacity=".5"/>' . "\n";
+        if ($type === 'door_garage') {
+            $panel = min(30.0, max(10.0, $h * 0.55));
+            $panelTop = $edge - $panel;
+            $out .= '<rect x="' . self::n($x + 3) . '" y="' . self::n($panelTop) . '" width="' . self::n(max(6, $w - 6)) . '" height="' . self::n($panel) . '" rx="' . self::n(min(3, $panel / 3)) . '" fill="' . self::x($color) . '" fill-opacity=".1" stroke="' . self::x($color) . '" stroke-width="' . self::n(max(1.2, $stroke * 0.75)) . '"/>' . "\n";
+            $bars = (int) max(3, min(14, round($w / 16)));
+            for ($index = 1; $index < $bars; $index++) {
+                $barX = $x + 3 + (($w - 6) * $index) / $bars;
+                $out .= '<line x1="' . self::n($barX) . '" y1="' . self::n($panelTop + 1.5) . '" x2="' . self::n($barX) . '" y2="' . self::n($edge - 1.5) . '" stroke="' . self::x($color) . '" stroke-width="' . self::n(max(0.9, $stroke * 0.55)) . '" opacity=".75"/>' . "\n";
+            }
+            $railY = $panelTop + $panel / 2;
+            $out .= '<line x1="' . self::n($x + 3) . '" y1="' . self::n($railY) . '" x2="' . self::n($x + $w - 3) . '" y2="' . self::n($railY) . '" stroke="' . self::x($color) . '" stroke-width="' . self::n(max(0.9, $stroke * 0.5)) . '" opacity=".65"/>' . "\n";
+            $out .= '<line x1="' . self::n($x + 3) . '" y1="' . self::n($edge) . '" x2="' . self::n($x + 3) . '" y2="' . self::n($panelTop + $panel + 2) . '" stroke="' . self::x($color) . '" stroke-width="' . self::n($thin) . '" opacity=".75"/>' . "\n";
+            $out .= '<line x1="' . self::n($x + $w - 3) . '" y1="' . self::n($edge) . '" x2="' . self::n($x + $w - 3) . '" y2="' . self::n($panelTop + $panel + 2) . '" stroke="' . self::x($color) . '" stroke-width="' . self::n($thin) . '" opacity=".75"/>' . "\n";
+            $out .= '</g>' . "\n";
+            return $out;
+        }
+        $leaf = max(8.0, min($type === 'door_double' ? $w / 2 : $w, $h));
+        $leafWidth = max(2.2, $stroke * 1.2);
+        $leaves = $type === 'door_double' ? [[$x, $x + $leaf], [$x + $w, $x + $w - $leaf]] : [[$x, $x + $leaf]];
+        foreach ($leaves as [$hingeX, $reachX]) {
+            $out .= '<line x1="' . self::n($hingeX) . '" y1="' . self::n($edge) . '" x2="' . self::n($hingeX) . '" y2="' . self::n($edge - $leaf) . '" stroke="' . self::x($color) . '" stroke-width="' . self::n($leafWidth) . '" stroke-linecap="round"/>' . "\n";
+            $out .= '<circle cx="' . self::n($hingeX) . '" cy="' . self::n($edge) . '" r="' . self::n(max(2, $stroke * 1.1)) . '" fill="' . self::x($color) . '"/>' . "\n";
+            $sweep = $reachX >= $hingeX ? 1 : 0;
+            $out .= '<path d="M ' . self::n($hingeX) . ' ' . self::n($edge - $leaf) . ' A ' . self::n($leaf) . ' ' . self::n($leaf) . ' 0 0 ' . $sweep . ' ' . self::n($reachX) . ' ' . self::n($edge) . '" fill="none" stroke="' . self::x($color) . '" stroke-width="' . self::n(max(1, $stroke * 0.6)) . '" opacity=".55"/>' . "\n";
+        }
+        $out .= '</g>' . "\n";
+        return $out;
+    }
+
     private static function pointList(array $element): array
     {
         $points = $element['points'] ?? [['x' => 0, 'y' => 0], ['x' => $element['w'], 'y' => $element['h']]];
@@ -260,6 +361,61 @@ final class SvgExporter
         $distance = hypot((float) $b['x'] - (float) $a['x'], (float) $b['y'] - (float) $a['y']);
         $unit = (string) ($canvas['unit'] ?? 'cm');
         return number_format($distance, 1, ',', '.') . ' ' . $unit;
+    }
+
+    /**
+     * Entradas de leyenda con los sistemas de tubería y los circuitos
+     * presentes en el plano. El resultado es visual: los detalles numéricos se
+     * muestran en la vista de impresión y en el panel de redes.
+     *
+     * @return list<array{key:string,color:string,dash:string,text:string}>
+     */
+    private static function mepLegend(array $design): array
+    {
+        $items = [];
+        $seen = [];
+        foreach ($design['elements'] ?? [] as $element) {
+            $type = $element['type'] ?? '';
+            if ($type === 'pipe') {
+                $key = (string) ($element['network'] ?? '');
+                $network = LibraryRepository::networks()[$key] ?? null;
+                if ($network === null || isset($seen['pipe:' . $key])) {
+                    continue;
+                }
+                $seen['pipe:' . $key] = true;
+                $items[] = [
+                    'key' => 'pipe:' . $key,
+                    'color' => (string) $network['color'],
+                    'dash' => implode(' ', array_map(static fn ($value): string => self::n((float) $value), is_array($network['dash'] ?? null) ? $network['dash'] : [])),
+                    'text' => $network['short'] . ' · ' . $network['label'],
+                ];
+            } elseif ($type === 'conduit') {
+                $key = (string) ($element['circuit'] ?? '');
+                if ($key === '' || isset($seen['conduit:' . $key])) {
+                    continue;
+                }
+                $seen['conduit:' . $key] = true;
+                $items[] = [
+                    'key' => 'conduit:' . $key,
+                    'color' => (string) $element['color'],
+                    'dash' => '',
+                    'text' => 'Circuito ' . $key . ' · ' . (int) ($element['voltage'] ?? 0) . ' V',
+                ];
+            }
+        }
+        return $items;
+    }
+
+    /** Columnas de la leyenda de redes que caben en el ancho del plano. */
+    private static function legendColumns(float $width): int
+    {
+        return max(1, min(6, (int) floor(($width - PlanFooter::PAD * 2) / self::legendColumnWidth($width))));
+    }
+
+    private static function legendColumnWidth(float $width): float
+    {
+        $columns = max(1, min(6, (int) floor(($width - PlanFooter::PAD * 2) / 168.0)));
+        return round(($width - PlanFooter::PAD * 2) / $columns, 2);
     }
 
     private static function firstLine(string $value): string

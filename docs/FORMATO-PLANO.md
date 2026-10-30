@@ -13,7 +13,8 @@ Normia Planos CAD guarda cada piso como un documento JSON normalizado. El mismo 
     "grid": 20,
     "unit": "cm",
     "scale": "1:100",
-    "background": "#ffffff"
+    "background": "#ffffff",
+    "occupancy": 40
   },
   "layers": [
     { "id": "capa_planta", "name": "Planta", "visible": true, "locked": false },
@@ -32,6 +33,7 @@ Normia Planos CAD guarda cada piso como un documento JSON normalizado. El mismo 
 | `canvas.unit` | texto | `cm`, `m` o `mm`. |
 | `canvas.scale` | texto | `1:<1–99999>`. Es una referencia declarada. |
 | `canvas.background` | color | `#ffffff` o `#f8fafc`. |
+| `canvas.occupancy` | entero | 0–10 000 personas. `0` (o ausente) = sin declarar: el auditor estima la ocupación por superficie y lo advierte. |
 | `layers` | arreglo | 1–24 capas; la primera es la capa inicial. |
 | `elements` | arreglo | 0–1200 elementos. |
 | `groups` | arreglo | 0–80 grupos con 2–80 miembros existentes. |
@@ -48,6 +50,8 @@ Normia Planos CAD guarda cada piso como un documento JSON normalizado. El mismo 
 - `locked: true` impide mover, borrar o modificar; bloquea también el cambio de capa.
 - No se puede eliminar la última capa. Al eliminar una capa, sus elementos pasan a la primera capa restante.
 
+`isExit` solo se conserva en `door`, `door_double` y `door_garage`; el validador rechaza con `422` cualquier otro valor que no sea booleano y elimina la marca de los demás tipos. Es la referencia que usa el auditor para medir el recorrido de evacuación.
+
 ## Elementos
 
 Todos los elementos comparten:
@@ -60,7 +64,7 @@ Todos los elementos comparten:
 | `x`, `y` | número | Esquina superior izquierda de la caja, dentro del lienzo. |
 | `w`, `h` | número | ≥ 2; no puede exceder el lienzo desde `x`/`y`. |
 | `rotation` | número | 0–359. |
-| `color` | color | Uno de los 28 de la paleta (las señales ISO usan el color de su familia). |
+| `color` | color | Uno de los 29 de la paleta (las señales ISO usan el color de su familia). |
 | `stroke` | número | 0–40. |
 | `opacity` | número | 0.1–1. |
 | `label` | texto | Hasta 240 caracteres, máximo 6 líneas, sin `<` ni `>`. |
@@ -71,21 +75,44 @@ Todos los elementos comparten:
 | `type` | Geometría | Campos propios |
 | --- | --- | --- |
 | `wall` | Trazo | `points` (2–40), `stroke` grueso. |
-| `door` | Puerta | `flipX` para cambiar el sentido. |
+| `door` | Puerta de un batiente (90 × 90 por defecto) | `flipX` y `flipY` para cambiar el sentido de apertura; `isExit` para marcarla como salida de emergencia. |
+| `door_double` | Puerta de dos batientes (120 × 60) | `flipX`, `flipY` e `isExit`. |
+| `door_garage` | Portón o reja de garaje (160 × 50) | `flipX`, `flipY` e `isExit`. |
 | `route` | Ruta de evacuación | `points` (2–40), flechas. Un circuito cerrado repite el primer punto al final. |
 | `text` | Texto | `fontSize` 8–160, `label` obligatoria. |
 | `dimension` | Medida | `points` exactamente 2; `label` opcional. |
 | `line` | Línea | `points` exactamente 2. |
 | `rect` | Rectángulo | — |
 | `ellipse` | Elipse | — |
+| `pipe` | Tubería hidrosanitaria, de gas o de incendio | `network`, `diameter`, `material`, `slope` (0–15 %), `pressure` (0–5000 kPa) y `points` (2–40). |
+| `conduit` | Tubería eléctrica de un circuito | `circuit` (1–12 caracteres `A-Z 0-9 . -`), `voltage`, `gauge`, `phases` (1 o 3) y `points` (2–40). |
 
 Los tipos con trazo guardan `points` **en coordenadas locales** a la caja (`0..w`, `0..h`). Mover o escalar la caja transforma el trazo de forma proporcional.
 
 ### Señales y equipos
 
-- Señales: `iso_<código en minúsculas>`, por ejemplo `iso_e002` (salida de emergencia) o `iso_f001` (extintor). Se validan contra `resources/iso7010-catalog.json`.
+- Señales ISO 7010: `iso_<código en minúsculas>`, por ejemplo `iso_e002` (salida de emergencia) o `iso_f001` (extintor). Se validan contra `resources/iso7010-catalog.json`.
+- Señales de orientación y servicios: `sig_<nombre>` → `SVC_<NOMBRE>`, por ejemplo `sig_wc_men` (baño de hombres) o `sig_cafeteria`. Se validan contra `resources/service-signs.json`; son complementarias, no ISO 7010.
 - Equipos: clave del catálogo `cad_*`, por ejemplo `cad_desk` o `cad_stairs_straight`. Se validan contra `resources/cad-objects.json`.
 - Ambos se dibujan insertando el SVG del catálogo como símbolo saneado, con tamaño cuadrado por defecto (la señal mide 64×64 unidades por defecto).
+- Los trazos (`wall`, `route`, `line`, `dimension`) guardan `points` en coordenadas locales. Al editar un vértice el cliente reescribe la caja (`x`, `y`, `w`, `h`) con los límites reales y **disuelve la rotación en los puntos**, de modo que el servidor sigue recibiendo un documento válido sin cambios de esquema.
+- El catálogo de equipos tiene 145 objetos en 18 familias (`furniture`, `sanitary`, `kitchen`, `industrial`, `vehicles`, `vertical`, `restaurant`, `warehouse`, `retail`, `hospital`, `textile`, `grill`, `supermarket`, `residential`, `sports`, `outdoor`, `electrico`, `hidraulico`). Algunos objetos traen su propio `color` (por ejemplo el agua de piscinas, `#0891b2`); el resto hereda el color del elemento.
+- Los objetos de la familia `electrico` admiten además `circuit` y `load` (VA), y el editor los suma al cálculo del circuito.
+
+### Redes técnicas (`pipe` y `conduit`)
+
+```json
+{ "id": "el_agua_1", "type": "pipe", "layerId": "capa_hidraulica", "x": 700, "y": 300, "w": 400, "h": 100, "rotation": 0,
+  "color": "#0891b2", "stroke": 3.5, "opacity": 1, "label": "", "locked": false,
+  "network": "agua_fria", "diameter": "3/4\"", "material": "pvc", "slope": 0, "pressure": 280,
+  "points": [{ "x": 0, "y": 0 }, { "x": 400, "y": 100 }] }
+```
+
+- `network` pertenece a `resources/mep-networks.json`: `agua_fria`, `agua_caliente`, `gas`, `aguas_negras`, `aguas_lluvias`, `incendio`.
+- `diameter` debe existir en `diameters`; `material`, en `materials`. Si la red es de gravedad (`aguas_negras`, `aguas_lluvias`), `slope` es la pendiente física declarada en % y se compara con `slopes` para avisar.
+- `conduit` guarda `circuit`, `voltage` (de `electrical.voltages`), `gauge` (de `electrical.gauges`) y `phases`.
+- El servidor **rechaza** redes, diámetros, materiales, tensiones, calibres o fases fuera del catálogo; los elementos que no son de red no pueden traer estos campos.
+- La API `GET …/api/floors/{id}/mep` devuelve el resumen calculado (longitudes, cargas, breaker, calibre, caída de tensión) del último diseño guardado.
 
 ### Grupos
 

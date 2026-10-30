@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Models\Project;
+use App\Services\LibraryRepository;
 
 final class DashboardController extends BaseController
 {
@@ -15,6 +16,7 @@ final class DashboardController extends BaseController
             'title' => 'Mis planos',
             'projects' => $projects,
             'stats' => Project::stats((int) $user['id']),
+            'catalog' => LibraryRepository::counts(),
         ]);
     }
 }

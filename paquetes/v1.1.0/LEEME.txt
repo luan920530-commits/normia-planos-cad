@@ -1,0 +1,48 @@
+Normia Planos CAD v1.1.0 · paquetes listos para desplegar
+=========================================================
+
+- normia-planos-cad-1.1.0.zip       aplicación completa (instalador web)
+- normia-planos-cad-demo-1.1.0.zip  igual, con el proyecto de demostración premarcado
+- SHA256SUMS.txt                    sumas de ambos ZIP
+- BUILD.txt                         resumen de la construcción
+
+Verificación de integridad:
+    sha256sum -c SHA256SUMS.txt
+
+Funciona sin conexión: no descarga fuentes, iconos, scripts ni datos. Puede
+instalarse en una red aislada; solo necesita el navegador y el servidor.
+
+Novedades de la 1.1.0:
+  · auditor de planos: el cajón «Revisión» de la barra lateral analiza el
+    plano guardado y lista hallazgos con severidad (crítico, importante,
+    menor, informativo), valor medido y botón «Ver en el plano» que selecciona
+    el elemento y ajusta el zoom;
+  · medición de evacuación: recorrido más largo hasta la salida marcada más
+    cercana sobre una rejilla que respeta muros y vanos, superficie libre
+    interior (el terreno de fuera del edificio no cuenta), salidas y anchos
+    útiles, ocupación declarada o estimada por densidad, ancho requerido y
+    tiempo estimado de salida (marcha + cola);
+  · salidas de emergencia: interruptor «Salida de emergencia» en Apariencia
+    para puertas, puertas dobles y portones; la marca se valida en el servidor;
+  · criterios configurables en resources/audit-criteria.json y cálculo en el
+    servidor: GET api/floors/{id}/audit (admite ?occupancy=N);
+  · informe imprimible en …/floors/{floorId}/audit, con métricas, hallazgos,
+    rutas, criterios aplicados y el aviso de alcance;
+  · demo actualizada: dos salidas marcadas, ruta corregida por los vanos,
+    señal «Usted está aquí», señal de salida junto al portón y ocupación
+    declarada de 30 personas;
+  · 174 comprobaciones funcionales, 246 de interfaz y 39 de paquetes,
+    verificadas en PHP 8.1 y 8.3.
+
+El auditor y la medición de evacuación son de referencia: no son un dictamen,
+no certifican cumplimiento normativo y no sustituyen la verificación en sitio
+ni la revisión de un profesional competente.
+
+Los cálculos de redes son estimaciones de referencia: no sustituyen la
+memoria de cálculo ni la revisión de un profesional competente.
+
+Contenido y requisitos: README.md del repositorio.
+Instalación rápida: LEEME-PRIMERO.txt dentro de cada ZIP.
+
+Los ZIP no incluyen bases de datos, sesiones, credenciales, logs ni carpetas de
+desarrollo. Los planos son esquemáticos: verifica dimensiones y escala en sitio.

@@ -1,0 +1,38 @@
+Normia Planos CAD v1.0.7 · paquetes listos para desplegar
+=========================================================
+
+- normia-planos-cad-1.0.7.zip       aplicación completa (instalador web)
+- normia-planos-cad-demo-1.0.7.zip  igual, con el proyecto de demostración premarcado
+- SHA256SUMS.txt                    sumas de ambos ZIP
+- BUILD.txt                         resumen de la construcción
+
+Verificación de integridad:
+    sha256sum -c SHA256SUMS.txt
+
+Funciona sin conexión: no descarga fuentes, iconos, scripts ni datos. Puede
+instalarse en una red aislada; solo necesita el navegador y el servidor.
+
+Novedades de la 1.0.7:
+  · corrige el desplazamiento del inspector: la barra lateral estiraba la
+    fila del banco de trabajo y el panel quedaba cortado, como si estuviera
+    fijo; ahora la fila se acota al alto de la ventana, la barra hace su
+    propio scroll y el inspector se desplaza con normalidad;
+  · los menús de puertas, tubería y formas se anclan a la ventana y ya no
+    los recorta la barra al desplazarse;
+  · el inspector conserva el punto de lectura y el foco al editar;
+  · barra compacta (sólo iconos) desde 1000 px de alto.
+
+Novedades de la 1.0.6:
+  · pie de página en todos los planos con franja de orientación de cinco
+    celdas y datos del piso;
+  · nota de atribución © Normia Planos CAD · GPL-3.0 en cada plano;
+  · el mismo pie en SVG, PNG e impresión, con vista previa en el editor.
+
+Los cálculos de redes son estimaciones de referencia: no sustituyen la
+memoria de cálculo ni la revisión de un profesional competente.
+
+Contenido y requisitos: README.md del repositorio.
+Instalación rápida: LEEME-PRIMERO.txt dentro de cada ZIP.
+
+Los ZIP no incluyen bases de datos, sesiones, credenciales, logs ni carpetas de
+desarrollo. Los planos son esquemáticos: verifica dimensiones y escala en sitio.

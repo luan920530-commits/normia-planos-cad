@@ -1,0 +1,42 @@
+Normia Planos CAD v1.0.9 · paquetes listos para desplegar
+=========================================================
+
+- normia-planos-cad-1.0.9.zip       aplicación completa (instalador web)
+- normia-planos-cad-demo-1.0.9.zip  igual, con el proyecto de demostración premarcado
+- SHA256SUMS.txt                    sumas de ambos ZIP
+- BUILD.txt                         resumen de la construcción
+
+Verificación de integridad:
+    sha256sum -c SHA256SUMS.txt
+
+Funciona sin conexión: no descarga fuentes, iconos, scripts ni datos. Puede
+instalarse en una red aislada; solo necesita el navegador y el servidor.
+
+Novedades de la 1.0.9:
+  · cambiar el equipo CAD de un elemento desde el inspector: en Apariencia,
+    botón «Cambiar equipo» que abre la biblioteca de equipos con el objeto
+    actual resaltado; al elegir otro se conservan posición, tamaño, rotación,
+    capa, opacidad y bloqueo, el equipo toma el color de su familia y,
+    entre equipos eléctricos, se conserva el circuito asignado;
+  · seleccionar un solo objeto con un clic: el clic se resuelve contra la
+    pila geométrica del lienzo con 8 px de tolerancia, así que funciona en
+    pictogramas, equipos de trazo fino, textos y muros finos, sin necesidad
+    de usar la caja de selección;
+  · Ctrl/⌘ + clic sigue bajando en la pila de elementos superpuestos y
+    Shift sigue añadiendo a la selección; el cursor avisa cuando hay algo
+    seleccionable bajo el puntero;
+  · la biblioteca usa el vocabulario correcto en modo sustitución («Cambiar
+    equipo», «Equipo actual», «Usar este equipo»);
+  · 229 comprobaciones de interfaz, verificadas en PHP 8.1 y 8.3.
+
+Novedades de la 1.0.8:
+  · cambiar la señal desde el inspector y nueva señal «Usted está aquí».
+
+Los cálculos de redes son estimaciones de referencia: no sustituyen la
+memoria de cálculo ni la revisión de un profesional competente.
+
+Contenido y requisitos: README.md del repositorio.
+Instalación rápida: LEEME-PRIMERO.txt dentro de cada ZIP.
+
+Los ZIP no incluyen bases de datos, sesiones, credenciales, logs ni carpetas de
+desarrollo. Los planos son esquemáticos: verifica dimensiones y escala en sitio.

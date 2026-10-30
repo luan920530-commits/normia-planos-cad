@@ -7,6 +7,10 @@ use App\Core\Request;
 use App\Core\Response;
 use App\Core\VersionConflictException;
 use App\Models\Floor;
+use App\Services\DesignValidator;
+use App\Services\LibraryRepository;
+use App\Services\MepCalculator;
+use App\Services\PlanAudit;
 
 final class FloorApiController extends BaseController
 {
@@ -27,6 +31,53 @@ final class FloorApiController extends BaseController
                 'draft' => $preview['draft'],
             ],
             'design' => $preview['design'],
+        ]);
+    }
+
+    /**
+     * Resumen de redes del último diseño guardado: longitudes, diámetros,
+     * circuitos, cargas y caídas de tensión estimadas.
+     */
+    public function mep(int $floorId): void
+    {
+        $floor = $this->floor($floorId);
+        $design = DesignValidator::normalizeJson((string) $floor['design_json']);
+        Response::json([
+            'ok' => true,
+            'floor' => [
+                'id' => (int) $floor['id'],
+                'name' => $floor['name'],
+                'version' => (int) $floor['version'],
+            ],
+            'summary' => MepCalculator::summary($design),
+            'references' => [
+                'hydraulic' => LibraryRepository::networks(),
+                'diameters' => LibraryRepository::diameters(),
+                'materials' => LibraryRepository::materials(),
+                'electrical' => LibraryRepository::electrical(),
+            ],
+            'notice' => 'Resumen esquemático de referencia. No sustituye memoria de cálculo ni revisión profesional.',
+        ]);
+    }
+
+    public function audit(int $floorId): void
+    {
+        $floor = $this->floor($floorId);
+        $design = DesignValidator::normalizeJson((string) $floor['design_json']);
+        $occupancy = 0;
+        $request = new Request();
+        if ($request->query('occupancy') !== null) {
+            $occupancy = max(0, min(10000, (int) $request->query('occupancy')));
+        }
+        Response::json([
+            'ok' => true,
+            'floor' => [
+                'id' => (int) $floor['id'],
+                'name' => $floor['name'],
+                'version' => (int) $floor['version'],
+            ],
+            'report' => PlanAudit::analyze($design, $occupancy),
+            'notice' => 'Revisión de referencia sobre el último diseño guardado. No es un dictamen ni certifica cumplimiento normativo.',
         ]);
     }
 

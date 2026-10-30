@@ -68,6 +68,11 @@ async function main() {
     'normia-planos-cad/assets/js/editor/store.js',
     'normia-planos-cad/resources/iso7010-catalog.json',
     'normia-planos-cad/resources/cad-objects.json',
+    'normia-planos-cad/resources/audit-criteria.json',
+    'normia-planos-cad/app/Services/PlanAudit.php',
+    'normia-planos-cad/app/Views/editor/audit-report.php',
+    'normia-planos-cad/assets/js/editor/audit.js',
+    'normia-planos-cad/assets/css/audit.css',
     'normia-planos-cad/resources/demo/demo-project.json',
     'normia-planos-cad/config/config.example.php',
     'normia-planos-cad/storage/sessions/.gitkeep',
@@ -147,7 +152,7 @@ async function main() {
       /* hay páginas con % literales que no forman secuencias válidas */
     }
     const floorIds = [...new Set(Array.from(projectHtml.matchAll(/floors\/(\d+)\/editor/g)).map((match) => Number(match[1])))];
-    report.check('El proyecto de ejemplo tiene dos pisos', project.status === 200 && floorIds.length === 2, `${floorIds.join(',')} · estado ${project.status}`);
+    report.check('El proyecto de ejemplo tiene cuatro pisos', project.status === 200 && floorIds.length === 4, `${floorIds.join(',')} · estado ${project.status}`);
     const editor = floorIds.length ? await client.get(`projects/1/floors/${floorIds[0]}/editor`) : { status: 0, text: '' };
     const editorOk = report.check('El editor de la demo carga', editor.status === 200 && /id="plan-canvas"/.test(editor.text), String(editor.status));
     if (editorOk) {
@@ -163,6 +168,9 @@ async function main() {
       report.check('La demo arranca marcada como demostración', boot.demo === true);
       report.check('El plano de ejemplo tiene contenido', Array.isArray(design.elements) && design.elements.length >= 30, `${design.elements.length} elementos`);
       report.check('El plano de ejemplo usa señalización ISO 7010', design.elements.some((element) => String(element.type).startsWith('iso_')));
+      report.check('La demo incluye señales de baño y servicios',
+        design.elements.some((element) => ['sig_wc_men', 'sig_wc_women', 'sig_wc_accessible'].includes(element.type)),
+        design.elements.filter((element) => String(element.type).startsWith('sig_')).map((element) => element.type).join(','));
       const assetPaths = [...new Set(Array.from(editor.text.matchAll(/(?:href|src)="([^"]*\/assets\/[^"]+)"/g)).map((match) => match[1]))];
       report.check('La página del editor referencia assets locales', assetPaths.length >= 10, `${assetPaths.length} referencias`);
       const assetResults = [];
@@ -180,6 +188,24 @@ async function main() {
       report.check('La exportación JSON de la demo funciona', exported.schema_version === 2 && exported.design.elements.length >= 30);
       const print = await client.get(`projects/1/floors/${floorIds[0]}/print`);
       report.check('La vista de impresión de la demo funciona', print.status === 200 && /editor-print|print/i.test(print.text));
+      report.check('La impresión incluye redes y circuitos',
+        /Redes e instalaciones del piso/.test(print.text) && /Circuitos eléctricos/.test(print.text) && /Redes de tubería/.test(print.text),
+        `${(print.text.match(/print-swatch/g) || []).length} marcas de color`);
+      report.check('La exportación SVG trae la leyenda de redes',
+        (svg.text.match(/data-mep-legend=/g) || []).length >= 3,
+        `${(svg.text.match(/data-mep-legend=/g) || []).length} entradas`);
+      const audit = await client.get(`api/floors/${floorIds[0]}/audit`, { accept: 'application/json' });
+      let auditReport = {};
+      try { auditReport = JSON.parse(audit.text).report || {}; } catch { auditReport = {}; }
+      report.check('El auditor responde en la demo empaquetada',
+        audit.status === 200 && auditReport.exits?.count === 2 && auditReport.counts?.high === 0
+        && auditReport.travel?.longestM > 0,
+        `${auditReport.exits?.count} salidas · ${auditReport.travel?.longestM} m · ${auditReport.counts?.high} críticos`);
+      const auditView = await client.get(`projects/1/floors/${floorIds[0]}/audit`);
+      report.check('El informe de revisión de la demo se imprime',
+        auditView.status === 200 && /Medición de evacuación/.test(auditView.text)
+        && /Criterios aplicados/.test(auditView.text) && /no certifica/i.test(auditView.text),
+        `${auditView.status} · ${auditView.text.length} bytes`);
     }
     const account = await client.get('account/password');
     report.check('Las vistas internas responden con sesión', account.status === 200);

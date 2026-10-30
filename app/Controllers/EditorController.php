@@ -4,6 +4,8 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Models\Floor;
+use App\Services\LibraryRepository;
+use App\Services\PlanFooter;
 use App\Models\Project;
 
 final class EditorController extends BaseController
@@ -25,6 +27,8 @@ final class EditorController extends BaseController
             'floor' => $floor,
             'designJson' => $designJson,
             'siblings' => $siblings,
+            'networks' => LibraryRepository::networks(),
+            'catalog' => LibraryRepository::counts(),
             'boot' => [
                 'floorId' => (int) $floorId,
                 'projectId' => (int) $projectId,
@@ -42,10 +46,23 @@ final class EditorController extends BaseController
                 'printUrl' => url('projects/' . $projectId . '/floors/' . $floorId . '/print'),
                 'signsUrl' => url('catalogs/signs'),
                 'cadUrl' => url('catalogs/cad'),
+                'mepUrl' => url('catalogs/mep'),
+                'mepSummaryUrl' => url('api/floors/' . $floorId . '/mep'),
+                'auditUrl' => url('api/floors/' . $floorId . '/audit'),
                 'projectUrl' => url('projects/' . $projectId),
                 'autosaveInterval' => 30,
                 'draftAt' => $floor['draft']['updated_at'] ?? null,
                 'fileBase' => slug_filename($project['name'] . '-' . $floor['name']) . '-v' . (int) $floor['version'],
+                'footer' => PlanFooter::payload($design, [
+                    'project_name' => $project['name'],
+                    'floor_name' => $floor['name'],
+                    'level' => $floor['level'],
+                    'site' => $project['site'],
+                    'workplace' => $project['workplace'],
+                    'responsible' => $project['responsible'],
+                    'version' => (int) $floor['version'],
+                    'saved_at' => $floor['updated_at'] ?? '',
+                ]),
                 'project' => [
                     'name' => $project['name'],
                     'site' => $project['site'],

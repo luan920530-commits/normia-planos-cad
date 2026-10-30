@@ -1,0 +1,357 @@
+{
+  "format": "normia-service-signs",
+  "version": 1,
+  "standard": "Orientación y servicios (señalización complementaria, no ISO 7010)",
+  "license": "GPL-3.0 · pictogramas originales de Normia Planos CAD",
+  "note": "Señales de orientación dibujadas para este proyecto. No son señales ISO 7010 ni certifican cumplimiento normativo.",
+  "categories": {
+    "services": {
+      "label": "Orientación y servicios",
+      "short": "Servicios",
+      "description": "Baños, vestidores, cafetería, recepción y demás servicios del edificio. Verifica la ubicación real antes de señalizar."
+    },
+    "location": {
+      "label": "Ubicación en el plano",
+      "short": "Ubicación",
+      "description": "Marcadores que sitúan a quien lee el plano: el punto donde está ahora y referencias de posición. Señalización de orientación propia, no ISO 7010."
+    }
+  },
+  "signs": {
+    "SVC_AQUI": {
+      "name": "Usted está aquí",
+      "category": "location",
+      "description": "Marca la posición actual de quien lee el plano. Señal de orientación propia: no es una señal ISO 7010 ni certifica cumplimiento normativo.",
+      "aliases": [
+        "usted esta aqui",
+        "usted está aquí",
+        "estoy aqui",
+        "aquí",
+        "aqui",
+        "posicion actual",
+        "posición actual",
+        "ubicacion",
+        "ubicación",
+        "punto de ubicacion",
+        "marcador",
+        "pin",
+        "you are here"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><circle cx=\"50\" cy=\"50\" r=\"47\" fill=\"currentColor\" fill-opacity=\".12\"/><circle cx=\"50\" cy=\"50\" r=\"47\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"3.5\" stroke-opacity=\".45\"/><path d=\"M50 13c-13.5 0-24.5 11-24.5 24.5C25.5 57 50 87 50 87s24.5-30 24.5-49.5C74.5 24 63.5 13 50 13z\" fill=\"currentColor\"/><circle cx=\"50\" cy=\"37.5\" r=\"9.5\" fill=\"#fff\"/></svg>"
+    },
+    "SVC_BABY": {
+      "name": "Cambiador de bebés",
+      "category": "services",
+      "description": "Área con cambiador de bebés dentro del baño. Señal de orientación, no es una señal ISO 7010.",
+      "aliases": [
+        "baño bebe",
+        "bebe",
+        "bebé",
+        "cambiador",
+        "pañal"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"2\" y=\"2\" width=\"96\" height=\"96\" rx=\"12\" fill=\"currentColor\"/><path d=\"M16 54h68v8H16z\" fill=\"#fff\" stroke=\"none\" stroke-width=\"0\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><path d=\"M26 62L26 80\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\" stroke-linecap=\"round\"/><path d=\"M74 62L74 80\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\" stroke-linecap=\"round\"/><circle cx=\"38\" cy=\"42\" r=\"7\" fill=\"#fff\"/><path d=\"M46 46q12-10 22 0\" fill=\"none\" stroke=\"#fff\" stroke-width=\"6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><path d=\"M46 46q4 6 10 4\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><path d=\"M60 40L72 40\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\" stroke-linecap=\"round\"/></svg>"
+    },
+    "SVC_BIKE": {
+      "name": "Bicicletero",
+      "category": "services",
+      "description": "Parqueadero de bicicletas. Señal de orientación, no es una señal ISO 7010.",
+      "aliases": [
+        "bicicleta",
+        "bicicletero",
+        "bici",
+        "ciclismo",
+        "parqueadero bici"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"2\" y=\"2\" width=\"96\" height=\"96\" rx=\"12\" fill=\"currentColor\"/><circle cx=\"28\" cy=\"64\" r=\"15\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\"/><circle cx=\"72\" cy=\"64\" r=\"15\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\"/><path d=\"M28 64l14-22h14l8 22\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><path d=\"M42 42L62 42\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\" stroke-linecap=\"round\"/><path d=\"M20 42h12\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><path d=\"M72 42l6-8\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>"
+    },
+    "SVC_CAFETERIA": {
+      "name": "Cafetería",
+      "category": "services",
+      "description": "Cafetería o punto de venta de alimentos. Señal de orientación, no es una señal ISO 7010.",
+      "aliases": [
+        "cafeteria",
+        "café",
+        "cafe",
+        "comida",
+        "restaurante",
+        "bar",
+        "tienda"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"2\" y=\"2\" width=\"96\" height=\"96\" rx=\"12\" fill=\"currentColor\"/><path d=\"M28 44h34v14a17 17 0 0 1-34 0z\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><path d=\"M62 48h6a8 8 0 0 1 0 16h-4\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><path d=\"M22 80L72 80\" fill=\"none\" stroke=\"#fff\" stroke-width=\"6\" stroke-linecap=\"round\"/><path d=\"M38 34q-5-6 0-12\" fill=\"none\" stroke=\"#fff\" stroke-width=\"4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><path d=\"M50 34q-5-6 0-12\" fill=\"none\" stroke=\"#fff\" stroke-width=\"4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>"
+    },
+    "SVC_CHARGING": {
+      "name": "Punto de carga",
+      "category": "services",
+      "description": "Punto de carga para vehículos o dispositivos eléctricos. Señal de orientación, no es una señal ISO 7010.",
+      "aliases": [
+        "carga",
+        "cargador",
+        "electrico",
+        "eléctrico",
+        "enchufe",
+        "punto de recarga",
+        "vehiculo electrico"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"2\" y=\"2\" width=\"96\" height=\"96\" rx=\"12\" fill=\"currentColor\"/><path d=\"M54 16L34 56h14l-4 28 22-42H52z\" fill=\"#fff\" stroke=\"none\" stroke-width=\"0\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><rect x=\"18\" y=\"14\" width=\"64\" height=\"72\" rx=\"10\" fill=\"none\" stroke=\"#fff\" stroke-width=\"4\"/></svg>"
+    },
+    "SVC_COMEDOR": {
+      "name": "Comedor",
+      "category": "services",
+      "description": "Comedor o cocina de personal. Señal de orientación, no es una señal ISO 7010.",
+      "aliases": [
+        "comedor",
+        "cocina",
+        "restaurante",
+        "cubiertos",
+        "comida"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"2\" y=\"2\" width=\"96\" height=\"96\" rx=\"12\" fill=\"currentColor\"/><circle cx=\"52\" cy=\"56\" r=\"18\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\"/><path d=\"M20 28L20 76\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\" stroke-linecap=\"round\"/><path d=\"M14 28L14 44\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\" stroke-linecap=\"round\"/><path d=\"M26 28L26 44\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\" stroke-linecap=\"round\"/><path d=\"M14 44L26 44\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\" stroke-linecap=\"round\"/><path d=\"M78 28q8 8 8 18h-10V28z\" fill=\"#fff\" stroke=\"none\" stroke-width=\"0\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><path d=\"M78 46L78 76\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\" stroke-linecap=\"round\"/></svg>"
+    },
+    "SVC_ELEVATOR": {
+      "name": "Ascensor",
+      "category": "services",
+      "description": "Ascensor o elevador. Señal de orientación, no es una señal ISO 7010.",
+      "aliases": [
+        "ascensor",
+        "elevador",
+        "montacargas de personas"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"2\" y=\"2\" width=\"96\" height=\"96\" rx=\"12\" fill=\"currentColor\"/><rect x=\"24\" y=\"12\" width=\"52\" height=\"76\" rx=\"6\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\"/><path d=\"M50 12L50 88\" fill=\"none\" stroke=\"#fff\" stroke-width=\"4\" stroke-linecap=\"round\"/><path d=\"M33 34l6-8 6 8z\" fill=\"#fff\" stroke=\"none\" stroke-width=\"0\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><path d=\"M55 26l6 8 6-8z\" fill=\"#fff\" stroke=\"none\" stroke-width=\"0\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>"
+    },
+    "SVC_LACTARIO": {
+      "name": "Lactario",
+      "category": "services",
+      "description": "Sala de lactancia y alimentación de bebés. Señal de orientación, no es una señal ISO 7010.",
+      "aliases": [
+        "lactario",
+        "lactancia",
+        "maternidad",
+        "bebe",
+        "amamantar"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"2\" y=\"2\" width=\"96\" height=\"96\" rx=\"12\" fill=\"currentColor\"/><rect x=\"40\" y=\"34\" width=\"26\" height=\"44\" rx=\"8\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\"/><rect x=\"45\" y=\"24\" width=\"14\" height=\"10\" rx=\"3\" fill=\"#fff\"/><path d=\"M45 24q5-10 14 0\" fill=\"none\" stroke=\"#fff\" stroke-width=\"4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><path d=\"M40 46L66 46\" fill=\"none\" stroke=\"#fff\" stroke-width=\"3\" stroke-linecap=\"round\"/><path d=\"M40 56L66 56\" fill=\"none\" stroke=\"#fff\" stroke-width=\"3\" stroke-linecap=\"round\"/><path d=\"M40 66L66 66\" fill=\"none\" stroke=\"#fff\" stroke-width=\"3\" stroke-linecap=\"round\"/><path d=\"M30 22q-6 8 0 12q6-4 0-12z\" fill=\"#fff\" stroke=\"none\" stroke-width=\"0\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><path d=\"M20 30q-6 8 0 12q6-4 0-12z\" fill=\"#fff\" stroke=\"none\" stroke-width=\"0\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>"
+    },
+    "SVC_LAUNDRY": {
+      "name": "Lavandería",
+      "category": "services",
+      "description": "Lavandería o cuarto de lavado. Señal de orientación, no es una señal ISO 7010.",
+      "aliases": [
+        "lavanderia",
+        "lavandería",
+        "lavadora",
+        "ropa",
+        "lavado"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"2\" y=\"2\" width=\"96\" height=\"96\" rx=\"12\" fill=\"currentColor\"/><rect x=\"26\" y=\"14\" width=\"48\" height=\"72\" rx=\"7\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\"/><circle cx=\"50\" cy=\"56\" r=\"17\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\"/><path d=\"M36 56q6-8 14 0t14 0\" fill=\"none\" stroke=\"#fff\" stroke-width=\"4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><circle cx=\"36\" cy=\"27\" r=\"3\" fill=\"#fff\"/><circle cx=\"46\" cy=\"27\" r=\"3\" fill=\"#fff\"/><path d=\"M58 24L68 24\" fill=\"none\" stroke=\"#fff\" stroke-width=\"4\" stroke-linecap=\"round\"/></svg>"
+    },
+    "SVC_LOCKER": {
+      "name": "Vestidores",
+      "category": "services",
+      "description": "Vestidores y casilleros. Señal de orientación, no es una señal ISO 7010.",
+      "aliases": [
+        "vestidor",
+        "vestuario",
+        "casillero",
+        "locker",
+        "cambiarse"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"2\" y=\"2\" width=\"96\" height=\"96\" rx=\"12\" fill=\"currentColor\"/><rect x=\"24\" y=\"14\" width=\"52\" height=\"72\" rx=\"6\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\"/><path d=\"M50 14L50 86\" fill=\"none\" stroke=\"#fff\" stroke-width=\"4\" stroke-linecap=\"round\"/><path d=\"M30 24L44 24\" fill=\"none\" stroke=\"#fff\" stroke-width=\"3\" stroke-linecap=\"round\"/><path d=\"M56 24L70 24\" fill=\"none\" stroke=\"#fff\" stroke-width=\"3\" stroke-linecap=\"round\"/><circle cx=\"44\" cy=\"50\" r=\"3\" fill=\"#fff\"/><circle cx=\"56\" cy=\"50\" r=\"3\" fill=\"#fff\"/></svg>"
+    },
+    "SVC_PARKING": {
+      "name": "Parqueadero",
+      "category": "services",
+      "description": "Zona de parqueo de vehículos. Señal de orientación, no es una señal ISO 7010.",
+      "aliases": [
+        "carro",
+        "estacionamiento",
+        "garaje",
+        "parking",
+        "parqueadero",
+        "parqueo",
+        "vehiculos"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"2\" y=\"2\" width=\"96\" height=\"96\" rx=\"12\" fill=\"currentColor\"/><path d=\"M38 76V24h16a14 14 0 0 1 0 28H38\" fill=\"none\" stroke=\"#fff\" stroke-width=\"11\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>"
+    },
+    "SVC_PHARMACY": {
+      "name": "Farmacia",
+      "category": "services",
+      "description": "Farmacia o punto de entrega de medicamentos. Señal de orientación, no es una señal ISO 7010.",
+      "aliases": [
+        "farmacia",
+        "medicamentos",
+        "drogueria",
+        "droguería",
+        "botiquin"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"2\" y=\"2\" width=\"96\" height=\"96\" rx=\"12\" fill=\"currentColor\"/><rect x=\"34\" y=\"34\" width=\"32\" height=\"46\" rx=\"7\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\"/><rect x=\"42\" y=\"22\" width=\"16\" height=\"10\" rx=\"3\" fill=\"#fff\"/><path d=\"M46 50h8v8h8v8h-8v8h-8v-8h-8v-8h8z\" fill=\"#fff\" stroke=\"none\" stroke-width=\"0\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>"
+    },
+    "SVC_RECEPTION": {
+      "name": "Recepción e información",
+      "category": "services",
+      "description": "Recepción, información y atención al público. Señal de orientación, no es una señal ISO 7010.",
+      "aliases": [
+        "atencion",
+        "informacion",
+        "información",
+        "lobby",
+        "porteria",
+        "portería",
+        "recepcion",
+        "recepción",
+        "registro"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"2\" y=\"2\" width=\"96\" height=\"96\" rx=\"12\" fill=\"currentColor\"/><circle cx=\"50\" cy=\"28\" r=\"8\" fill=\"#fff\"/><path d=\"M36 46q14-8 28 0\" fill=\"none\" stroke=\"#fff\" stroke-width=\"6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><path d=\"M50 44v14\" fill=\"none\" stroke=\"#fff\" stroke-width=\"6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><path d=\"M18 62h64v10H18z\" fill=\"#fff\" stroke=\"none\" stroke-width=\"0\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><path d=\"M28 72L28 82\" fill=\"none\" stroke=\"#fff\" stroke-width=\"4\" stroke-linecap=\"round\"/><path d=\"M72 72L72 82\" fill=\"none\" stroke=\"#fff\" stroke-width=\"4\" stroke-linecap=\"round\"/></svg>"
+    },
+    "SVC_SECURITY": {
+      "name": "Vigilancia y seguridad",
+      "category": "services",
+      "description": "Punto de vigilancia o caseta de seguridad. Señal de orientación, no es una señal ISO 7010.",
+      "aliases": [
+        "seguridad",
+        "vigilancia",
+        "guardia",
+        "caseta",
+        "proteccion"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"2\" y=\"2\" width=\"96\" height=\"96\" rx=\"12\" fill=\"currentColor\"/><path d=\"M50 14l28 10v24c0 20-14 30-28 38-14-8-28-18-28-38V24z\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><path d=\"M36 48l10 10 20-22\" fill=\"none\" stroke=\"#fff\" stroke-width=\"7\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>"
+    },
+    "SVC_SHOWER": {
+      "name": "Duchas",
+      "category": "services",
+      "description": "Duchas en vestuarios o área de aseo. Señal de orientación, no es una señal ISO 7010.",
+      "aliases": [
+        "ducha",
+        "duchas",
+        "baño",
+        "vestuario",
+        "aseo"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"2\" y=\"2\" width=\"96\" height=\"96\" rx=\"12\" fill=\"currentColor\"/><path d=\"M22 26h14q10 0 10 10v6\" fill=\"none\" stroke=\"#fff\" stroke-width=\"6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><path d=\"M36 42h30l-15 14z\" fill=\"#fff\" stroke=\"none\" stroke-width=\"0\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><path d=\"M50 66L50 72\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\" stroke-linecap=\"round\"/><path d=\"M38 62L38 68\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\" stroke-linecap=\"round\"/><path d=\"M62 62L62 68\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\" stroke-linecap=\"round\"/><path d=\"M44 76L44 82\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\" stroke-linecap=\"round\"/><path d=\"M56 76L56 82\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\" stroke-linecap=\"round\"/></svg>"
+    },
+    "SVC_SMOKING": {
+      "name": "Zona de fumadores",
+      "category": "services",
+      "description": "Zona permitida para fumar al aire libre. Señal de orientación, no es una señal ISO 7010.",
+      "aliases": [
+        "fumadores",
+        "fumar",
+        "cigarrillo",
+        "tabaco",
+        "zona fumadores"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"2\" y=\"2\" width=\"96\" height=\"96\" rx=\"12\" fill=\"currentColor\"/><rect x=\"24\" y=\"58\" width=\"40\" height=\"9\" rx=\"2\" fill=\"#fff\"/><rect x=\"64\" y=\"58\" width=\"12\" height=\"9\" rx=\"2\" fill=\"currentColor\" stroke=\"#fff\" stroke-width=\"3\"/><path d=\"M20 76L80 76\" fill=\"none\" stroke=\"#fff\" stroke-width=\"4\" stroke-linecap=\"round\"/><path d=\"M34 48q-6-6 0-12t0-12\" fill=\"none\" stroke=\"#fff\" stroke-width=\"4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><path d=\"M50 48q-6-6 0-12t0-12\" fill=\"none\" stroke=\"#fff\" stroke-width=\"4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>"
+    },
+    "SVC_STAIRS": {
+      "name": "Escaleras",
+      "category": "services",
+      "description": "Escaleras fijas del edificio. Señal de orientación, no es una señal ISO 7010.",
+      "aliases": [
+        "escalera",
+        "escaleras",
+        "gradas",
+        "subir",
+        "bajar"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"2\" y=\"2\" width=\"96\" height=\"96\" rx=\"12\" fill=\"currentColor\"/><path d=\"M20 80V64h16V48h16V32h16V16h12v64z\" fill=\"#fff\" stroke=\"none\" stroke-width=\"0\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>"
+    },
+    "SVC_STORAGE": {
+      "name": "Depósito",
+      "category": "services",
+      "description": "Depósito, almacén o cuarto de suministros. Señal de orientación, no es una señal ISO 7010.",
+      "aliases": [
+        "deposito",
+        "depósito",
+        "almacen",
+        "almacén",
+        "bodega",
+        "cajas"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"2\" y=\"2\" width=\"96\" height=\"96\" rx=\"12\" fill=\"currentColor\"/><rect x=\"16\" y=\"52\" width=\"30\" height=\"30\" rx=\"3\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\"/><rect x=\"54\" y=\"52\" width=\"30\" height=\"30\" rx=\"3\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\"/><rect x=\"34\" y=\"18\" width=\"30\" height=\"30\" rx=\"3\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\"/><path d=\"M31 52L31 66\" fill=\"none\" stroke=\"#fff\" stroke-width=\"3\" stroke-linecap=\"round\"/><path d=\"M69 52L69 66\" fill=\"none\" stroke=\"#fff\" stroke-width=\"3\" stroke-linecap=\"round\"/><path d=\"M34 33L64 33\" fill=\"none\" stroke=\"#fff\" stroke-width=\"3\" stroke-linecap=\"round\"/></svg>"
+    },
+    "SVC_WAITING": {
+      "name": "Sala de espera",
+      "category": "services",
+      "description": "Sala de espera con asientos. Señal de orientación, no es una señal ISO 7010.",
+      "aliases": [
+        "espera",
+        "sala de espera",
+        "asientos",
+        "banco",
+        "silleria"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"2\" y=\"2\" width=\"96\" height=\"96\" rx=\"12\" fill=\"currentColor\"/><rect x=\"18\" y=\"46\" width=\"16\" height=\"10\" rx=\"3\" fill=\"#fff\"/><rect x=\"42\" y=\"46\" width=\"16\" height=\"10\" rx=\"3\" fill=\"#fff\"/><rect x=\"66\" y=\"46\" width=\"16\" height=\"10\" rx=\"3\" fill=\"#fff\"/><rect x=\"18\" y=\"30\" width=\"5\" height=\"26\" rx=\"2\" fill=\"none\" stroke=\"#fff\" stroke-width=\"4\"/><rect x=\"42\" y=\"30\" width=\"5\" height=\"26\" rx=\"2\" fill=\"none\" stroke=\"#fff\" stroke-width=\"4\"/><rect x=\"66\" y=\"30\" width=\"5\" height=\"26\" rx=\"2\" fill=\"none\" stroke=\"#fff\" stroke-width=\"4\"/><path d=\"M18 66L18 78\" fill=\"none\" stroke=\"#fff\" stroke-width=\"4\" stroke-linecap=\"round\"/><path d=\"M34 56L34 78\" fill=\"none\" stroke=\"#fff\" stroke-width=\"4\" stroke-linecap=\"round\"/><path d=\"M42 56L42 78\" fill=\"none\" stroke=\"#fff\" stroke-width=\"4\" stroke-linecap=\"round\"/><path d=\"M58 56L58 78\" fill=\"none\" stroke=\"#fff\" stroke-width=\"4\" stroke-linecap=\"round\"/><path d=\"M66 56L66 78\" fill=\"none\" stroke=\"#fff\" stroke-width=\"4\" stroke-linecap=\"round\"/><path d=\"M82 56L82 78\" fill=\"none\" stroke=\"#fff\" stroke-width=\"4\" stroke-linecap=\"round\"/></svg>"
+    },
+    "SVC_WC_ACCESSIBLE": {
+      "name": "Baño accesible (PMR)",
+      "category": "services",
+      "description": "Sanitario adaptado para personas con movilidad reducida. Señal de orientación, no es una señal ISO 7010.",
+      "aliases": [
+        "accesible",
+        "bano",
+        "baño",
+        "baño adaptado",
+        "discapacidad",
+        "discapacitado",
+        "movilidad reducida",
+        "pmr",
+        "sanitario",
+        "wc"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"2\" y=\"2\" width=\"96\" height=\"96\" rx=\"12\" fill=\"currentColor\"/><circle cx=\"58\" cy=\"22\" r=\"7\" fill=\"#fff\"/><path d=\"M58 30L58 50\" fill=\"none\" stroke=\"#fff\" stroke-width=\"8\" stroke-linecap=\"round\"/><path d=\"M58 38L70 44\" fill=\"none\" stroke=\"#fff\" stroke-width=\"7\" stroke-linecap=\"round\"/><path d=\"M58 50L58 62\" fill=\"none\" stroke=\"#fff\" stroke-width=\"8\" stroke-linecap=\"round\"/><path d=\"M58 62L72 70\" fill=\"none\" stroke=\"#fff\" stroke-width=\"8\" stroke-linecap=\"round\"/><circle cx=\"50\" cy=\"66\" r=\"18\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\"/><path d=\"M32 66L24 78\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\" stroke-linecap=\"round\"/><path d=\"M50 48L50 56\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\" stroke-linecap=\"round\"/></svg>"
+    },
+    "SVC_WC_MEN": {
+      "name": "Baño de hombres",
+      "category": "services",
+      "description": "Acceso a sanitario para hombres. Señal de orientación, no es una señal ISO 7010.",
+      "aliases": [
+        "aseo hombres",
+        "bano",
+        "baño",
+        "caballeros",
+        "hombres",
+        "restroom",
+        "sanitario",
+        "servicios sanitarios",
+        "toilet",
+        "wc"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"2\" y=\"2\" width=\"96\" height=\"96\" rx=\"12\" fill=\"currentColor\"/><circle cx=\"50\" cy=\"22\" r=\"7\" fill=\"#fff\"/><path d=\"M50 31L50 58\" fill=\"none\" stroke=\"#fff\" stroke-width=\"9\" stroke-linecap=\"round\"/><path d=\"M37 39L63 39\" fill=\"none\" stroke=\"#fff\" stroke-width=\"8\" stroke-linecap=\"round\"/><path d=\"M50 58L41 80\" fill=\"none\" stroke=\"#fff\" stroke-width=\"9\" stroke-linecap=\"round\"/><path d=\"M50 58L59 80\" fill=\"none\" stroke=\"#fff\" stroke-width=\"9\" stroke-linecap=\"round\"/></svg>"
+    },
+    "SVC_WC_MIXED": {
+      "name": "Baño mixto o familiar",
+      "category": "services",
+      "description": "Sanitario de uso mixto o familiar. Señal de orientación, no es una señal ISO 7010.",
+      "aliases": [
+        "aseo mixto",
+        "bano",
+        "baño",
+        "familiar",
+        "mixto",
+        "restroom",
+        "sanitario",
+        "servicios sanitarios",
+        "unisex",
+        "wc"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"2\" y=\"2\" width=\"96\" height=\"96\" rx=\"12\" fill=\"currentColor\"/><circle cx=\"34\" cy=\"25\" r=\"6\" fill=\"#fff\"/><path d=\"M34 33L34 56\" fill=\"none\" stroke=\"#fff\" stroke-width=\"7\" stroke-linecap=\"round\"/><path d=\"M24 40L44 40\" fill=\"none\" stroke=\"#fff\" stroke-width=\"6\" stroke-linecap=\"round\"/><path d=\"M34 56L27 78\" fill=\"none\" stroke=\"#fff\" stroke-width=\"7\" stroke-linecap=\"round\"/><path d=\"M34 56L41 78\" fill=\"none\" stroke=\"#fff\" stroke-width=\"7\" stroke-linecap=\"round\"/><circle cx=\"67\" cy=\"25\" r=\"6\" fill=\"#fff\"/><path d=\"M67 33L67 46\" fill=\"none\" stroke=\"#fff\" stroke-width=\"6\" stroke-linecap=\"round\"/><path d=\"M58 39L76 39\" fill=\"none\" stroke=\"#fff\" stroke-width=\"6\" stroke-linecap=\"round\"/><path d=\"M67 44L53 68h28z\" fill=\"#fff\" stroke=\"none\" stroke-width=\"0\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><path d=\"M61 68L61 78\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\" stroke-linecap=\"round\"/><path d=\"M73 68L73 78\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\" stroke-linecap=\"round\"/></svg>"
+    },
+    "SVC_WC_WOMEN": {
+      "name": "Baño de mujeres",
+      "category": "services",
+      "description": "Acceso a sanitario para mujeres. Señal de orientación, no es una señal ISO 7010.",
+      "aliases": [
+        "aseo mujeres",
+        "bano",
+        "baño",
+        "damas",
+        "mujeres",
+        "restroom",
+        "sanitario",
+        "servicios sanitarios",
+        "toilet",
+        "wc"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"2\" y=\"2\" width=\"96\" height=\"96\" rx=\"12\" fill=\"currentColor\"/><circle cx=\"50\" cy=\"21\" r=\"7\" fill=\"#fff\"/><path d=\"M50 30L50 46\" fill=\"none\" stroke=\"#fff\" stroke-width=\"8\" stroke-linecap=\"round\"/><path d=\"M39 37L61 37\" fill=\"none\" stroke=\"#fff\" stroke-width=\"7\" stroke-linecap=\"round\"/><path d=\"M50 44L32 72h36z\" fill=\"#fff\" stroke=\"none\" stroke-width=\"0\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><path d=\"M43 72L43 82\" fill=\"none\" stroke=\"#fff\" stroke-width=\"6\" stroke-linecap=\"round\"/><path d=\"M57 72L57 82\" fill=\"none\" stroke=\"#fff\" stroke-width=\"6\" stroke-linecap=\"round\"/></svg>"
+    }
+  }
+}

@@ -74,14 +74,43 @@
         <button class="rail-button is-active" type="button" data-tool="select" aria-pressed="true" data-tooltip="Seleccionar · V" aria-label="Seleccionar y mover">
           <svg class="icon"><use href="#i-select"></use></svg><span>Seleccionar</span>
         </button>
+        <button class="rail-button" type="button" data-tool="hand" aria-pressed="false" data-tooltip="Mano: desplazar el lienzo · H" aria-label="Desplazar el lienzo">
+          <svg class="icon"><use href="#i-hand"></use></svg><span>Mano</span>
+        </button>
         <button class="rail-button" type="button" data-tool="wall" aria-pressed="false" data-tooltip="Muro · M" aria-label="Dibujar muro">
           <svg class="icon"><use href="#i-wall"></use></svg><span>Muro</span>
         </button>
-        <button class="rail-button" type="button" data-tool="door" aria-pressed="false" data-tooltip="Puerta · U" aria-label="Insertar puerta">
-          <svg class="icon"><use href="#i-door"></use></svg><span>Puerta</span>
-        </button>
+        <div class="rail-flyout-wrap">
+          <button class="rail-button" type="button" data-tool="door" aria-pressed="false" data-tooltip="Puerta sencilla · U" aria-label="Insertar puerta sencilla">
+            <svg class="icon"><use href="#i-door"></use></svg><span>Puertas</span>
+          </button>
+          <button class="rail-caret" type="button" data-door-menu aria-expanded="false" aria-label="Más tipos de puerta" data-tooltip="Puertas dobles y portones">
+            <svg class="icon"><use href="#i-chevron-down"></use></svg>
+          </button>
+          <div class="rail-flyout" data-door-flyout hidden>
+            <button type="button" data-tool="door"><svg class="icon"><use href="#i-door"></use></svg>Puerta sencilla · U</button>
+            <button type="button" data-tool="door_double"><svg class="icon"><use href="#i-door-double"></use></svg>Puerta doble · Shift+U</button>
+            <button type="button" data-tool="door_garage"><svg class="icon"><use href="#i-door-garage"></use></svg>Portón o reja · R</button>
+          </div>
+        </div>
         <button class="rail-button" type="button" data-tool="route" aria-pressed="false" data-tooltip="Ruta de evacuación · E" aria-label="Trazar ruta de evacuación">
           <svg class="icon"><use href="#i-route"></use></svg><span>Ruta</span>
+        </button>
+        <div class="rail-flyout-wrap">
+          <button class="rail-button" type="button" data-tool="pipe" aria-pressed="false" data-tooltip="Tubería · P" aria-label="Trazar tubería">
+            <svg class="icon"><use href="#i-pipe"></use></svg><span>Tubería</span>
+          </button>
+          <button class="rail-caret" type="button" data-pipe-menu aria-expanded="false" aria-label="Elegir red de tubería" data-tooltip="Agua, gas, desagües e incendio">
+            <svg class="icon"><use href="#i-chevron-down"></use></svg>
+          </button>
+          <div class="rail-flyout" data-pipe-flyout hidden>
+            <?php foreach ($networks as $key => $network): ?>
+              <button type="button" data-tool="pipe" data-network="<?= e($key) ?>"><span class="swatch-dot" style="--swatch:<?= e($network['color']) ?>"></span><?= e($network['label']) ?> · <?= e($network['short']) ?></button>
+            <?php endforeach; ?>
+          </div>
+        </div>
+        <button class="rail-button" type="button" data-tool="conduit" aria-pressed="false" data-tooltip="Tubería eléctrica · Shift+P" aria-label="Trazar tubería eléctrica">
+          <svg class="icon"><use href="#i-conduit"></use></svg><span>Eléctrico</span>
         </button>
         <button class="rail-button" type="button" data-tool="text" aria-pressed="false" data-tooltip="Texto · T" aria-label="Añadir texto">
           <svg class="icon"><use href="#i-text"></use></svg><span>Texto</span>
@@ -102,19 +131,29 @@
         <span class="rail-separator" role="separator"></span>
         <button class="rail-button rail-library" type="button" data-open-library="sign" data-tooltip="Biblioteca de señalización ISO 7010" aria-label="Biblioteca de señalización ISO 7010">
           <svg class="icon"><use href="#i-sign"></use></svg><span>Señales</span>
-          <em class="rail-count">332</em>
+          <em class="rail-count" data-sign-count><?= e((string) $catalog['signs']) ?></em>
         </button>
         <button class="rail-button rail-library" type="button" data-open-library="cad" data-tooltip="Biblioteca de equipamiento CAD" aria-label="Biblioteca de equipamiento CAD">
           <svg class="icon"><use href="#i-cad"></use></svg><span>Equipos</span>
-          <em class="rail-count">32</em>
+          <em class="rail-count" data-cad-count>145</em>
         </button>
       </div>
       <div class="rail-bottom">
+        <button class="rail-button" type="button" data-open-drawer="audit" data-tooltip="Revisión del plano · auditor y evacuación" aria-label="Revisión del plano">
+          <svg class="icon"><use href="#i-audit"></use></svg><span>Revisión</span>
+          <em class="rail-count rail-count-alert" data-audit-count hidden></em>
+        </button>
+        <button class="rail-button" type="button" data-open-drawer="networks" data-tooltip="Redes y circuitos" aria-label="Redes y circuitos">
+          <svg class="icon"><use href="#i-network"></use></svg><span>Redes</span>
+        </button>
         <button class="rail-button" type="button" data-open-drawer="layers" data-tooltip="Capas" aria-label="Capas">
           <svg class="icon"><use href="#i-layers"></use></svg><span>Capas</span>
         </button>
         <button class="rail-button" type="button" data-open-drawer="versions" data-tooltip="Versiones" aria-label="Versiones">
           <svg class="icon"><use href="#i-history"></use></svg><span>Versiones</span>
+        </button>
+        <button class="rail-button" type="button" data-open-drawer="footer" data-tooltip="Pie de plano" aria-label="Pie de plano">
+          <svg class="icon"><use href="#i-layout-footer"></use></svg><span>Pie de plano</span>
         </button>
         <button class="rail-button" type="button" data-open-drawer="settings" data-tooltip="Ajustes del piso" aria-label="Ajustes del piso">
           <svg class="icon"><use href="#i-settings"></use></svg><span>Ajustes</span>
@@ -127,6 +166,52 @@
 
     <main class="canvas-stage">
       <div class="stage-toolbar">
+        <div class="tools-palette" data-tools-palette>
+          <button class="tool-palette-button" type="button" data-tools-toggle aria-expanded="false" aria-haspopup="true" data-tooltip="Todas las herramientas" aria-label="Todas las herramientas">
+            <span class="tool-palette-icon"><svg class="icon"><use href="#i-select" data-tools-icon></use></svg></span>
+            <span class="tool-palette-copy"><small>Herramienta</small><strong data-tools-label>Seleccionar</strong></span>
+            <svg class="icon chevron"><use href="#i-chevron-down"></use></svg>
+          </button>
+          <div class="tools-popover" data-tools-popover hidden role="menu" aria-label="Todas las herramientas">
+            <header class="tools-popover-head">
+              <div><strong>Todas las herramientas</strong><small>Elige una y sigue dibujando</small></div>
+              <kbd>H</kbd>
+            </header>
+            <div class="tool-group">
+              <p class="tool-group-title">Seleccionar</p>
+              <div class="tool-group-grid">
+                <button class="tool-choice" type="button" role="menuitem" data-tool="select" data-tool-choice="select"><span class="tool-choice-icon"><svg class="icon"><use href="#i-select"></use></svg></span><span class="tool-choice-name">Seleccionar</span><kbd>V</kbd></button>
+                <button class="tool-choice" type="button" role="menuitem" data-tool="hand" data-tool-choice="hand"><span class="tool-choice-icon"><svg class="icon"><use href="#i-hand"></use></svg></span><span class="tool-choice-name">Mano</span><kbd>H</kbd></button>
+              </div>
+            </div>
+            <div class="tool-group">
+              <p class="tool-group-title">Dibujar</p>
+              <div class="tool-group-grid">
+                <button class="tool-choice" type="button" role="menuitem" data-tool="wall" data-tool-choice="wall"><span class="tool-choice-icon"><svg class="icon"><use href="#i-wall"></use></svg></span><span class="tool-choice-name">Muro</span><kbd>M</kbd></button>
+                <button class="tool-choice" type="button" role="menuitem" data-tool="door" data-tool-choice="door"><span class="tool-choice-icon"><svg class="icon"><use href="#i-door"></use></svg></span><span class="tool-choice-name">Puerta</span><kbd>U</kbd></button>
+                <button class="tool-choice" type="button" role="menuitem" data-tool="route" data-tool-choice="route"><span class="tool-choice-icon"><svg class="icon"><use href="#i-route"></use></svg></span><span class="tool-choice-name">Ruta de evacuación</span><kbd>E</kbd></button>
+                <button class="tool-choice" type="button" role="menuitem" data-tool="door_double" data-tool-choice="door_double"><span class="tool-choice-icon"><svg class="icon"><use href="#i-door-double"></use></svg></span><span class="tool-choice-name">Puerta doble</span><kbd>Shift U</kbd></button>
+                <button class="tool-choice" type="button" role="menuitem" data-tool="pipe" data-tool-choice="pipe"><span class="tool-choice-icon"><svg class="icon"><use href="#i-pipe"></use></svg></span><span class="tool-choice-name">Tubería</span><kbd>P</kbd></button>
+                <button class="tool-choice" type="button" role="menuitem" data-tool="door_garage" data-tool-choice="door_garage"><span class="tool-choice-icon"><svg class="icon"><use href="#i-door-garage"></use></svg></span><span class="tool-choice-name">Portón o reja</span><kbd>R</kbd></button>
+                <button class="tool-choice" type="button" role="menuitem" data-tool="conduit" data-tool-choice="conduit"><span class="tool-choice-icon"><svg class="icon"><use href="#i-conduit"></use></svg></span><span class="tool-choice-name">Tubería eléctrica</span><kbd>Shift P</kbd></button>
+                <button class="tool-choice" type="button" role="menuitem" data-tool="text" data-tool-choice="text"><span class="tool-choice-icon"><svg class="icon"><use href="#i-text"></use></svg></span><span class="tool-choice-name">Texto</span><kbd>T</kbd></button>
+                <button class="tool-choice" type="button" role="menuitem" data-tool="dimension" data-tool-choice="dimension"><span class="tool-choice-icon"><svg class="icon"><use href="#i-dimension"></use></svg></span><span class="tool-choice-name">Medida</span><kbd>D</kbd></button>
+                <button class="tool-choice" type="button" role="menuitem" data-tool="line" data-tool-choice="line"><span class="tool-choice-icon"><svg class="icon"><use href="#i-line"></use></svg></span><span class="tool-choice-name">Línea</span><kbd>L</kbd></button>
+                <button class="tool-choice" type="button" role="menuitem" data-tool="rect" data-tool-choice="rect"><span class="tool-choice-icon"><svg class="icon"><use href="#i-rect"></use></svg></span><span class="tool-choice-name">Rectángulo</span><kbd>B</kbd></button>
+                <button class="tool-choice" type="button" role="menuitem" data-tool="ellipse" data-tool-choice="ellipse"><span class="tool-choice-icon"><svg class="icon"><use href="#i-ellipse"></use></svg></span><span class="tool-choice-name">Elipse</span><kbd>O</kbd></button>
+              </div>
+            </div>
+            <div class="tool-group">
+              <p class="tool-group-title">Insertar</p>
+              <div class="tool-group-grid">
+                <button class="tool-choice" type="button" role="menuitem" data-open-library="sign"><span class="tool-choice-icon"><svg class="icon"><use href="#i-sign"></use></svg></span><span class="tool-choice-name">Señales</span><span class="tool-choice-badge"><?= e((string) $catalog['signs']) ?></span></button>
+                <button class="tool-choice" type="button" role="menuitem" data-open-library="cad"><span class="tool-choice-icon"><svg class="icon"><use href="#i-cad"></use></svg></span><span class="tool-choice-name">Equipos</span><span class="tool-choice-badge">145</span></button>
+              </div>
+            </div>
+            <footer class="tools-popover-foot"><span class="tool-tip"><kbd>Ctrl</kbd> + clic sobre un elemento superpuesto baja al de abajo.</span></footer>
+          </div>
+        </div>
+        <span class="toolbar-separator" role="separator"></span>
         <div class="zoom-controls">
           <button class="icon-button" type="button" data-zoom="out" data-tooltip="Alejar" aria-label="Alejar"><svg class="icon"><use href="#i-zoom-out"></use></svg></button>
           <button class="zoom-label" type="button" data-zoom="reset" data-tooltip="Zoom 100%"><span data-zoom-label>100%</span></button>
@@ -158,6 +243,7 @@
       <div class="stage-statusbar">
         <span class="status-item" data-cursor-position>X 0 · Y 0</span>
         <span class="status-item" data-selection-status>Sin selección</span>
+        <span class="status-item status-stack" data-stack-status hidden></span>
         <span class="status-spacer"></span>
         <span class="status-item" data-canvas-size><?= e($floor['name']) ?></span>
         <span class="status-item" data-scale-label>Sin escala</span>
@@ -168,8 +254,14 @@
 
     <aside class="properties-panel" data-properties-panel aria-label="Propiedades de la selección">
       <header class="properties-head">
-        <div><span class="eyebrow">Inspector</span><h2 data-properties-title>Propiedades</h2></div>
-        <button class="icon-button properties-close" type="button" data-close-properties aria-label="Cerrar propiedades"><svg class="icon"><use href="#i-close"></use></svg></button>
+        <div class="properties-heading">
+          <span class="eyebrow">Inspector</span>
+          <h2 data-properties-title>Propiedades</h2>
+        </div>
+        <div class="properties-head-actions">
+          <span class="properties-count" data-selection-count hidden></span>
+          <button class="icon-button properties-close" type="button" data-close-properties aria-label="Cerrar propiedades"><svg class="icon"><use href="#i-close"></use></svg></button>
+        </div>
       </header>
       <div class="properties-body" data-properties></div>
     </aside>
@@ -206,6 +298,44 @@
   <footer class="drawer-foot">
     <p data-library-attribution>Pictogramas ISO 7010 locales, con licencias y atribuciones incluidas en el paquete.</p>
   </footer>
+</section>
+
+<section class="drawer" data-drawer="audit" hidden aria-labelledby="audit-title">
+  <header class="drawer-head">
+    <div><span class="eyebrow">Revisión del plano</span><h2 id="audit-title">Auditor de emergencias</h2></div>
+    <button class="icon-button" type="button" data-close-drawer aria-label="Cerrar revisión"><svg class="icon"><use href="#i-close"></use></svg></button>
+  </header>
+  <div class="drawer-body audit-drawer-body">
+    <div class="notice notice-warning compact-notice">
+      <svg class="icon"><use href="#i-alert"></use></svg>
+      <p>Revisión de <strong>referencia</strong> con umbrales configurables. No es un dictamen ni certifica cumplimiento normativo: verifica el plano en sitio y con un profesional competente.</p>
+    </div>
+    <div class="audit-toolbar">
+      <button class="button button-primary button-small" type="button" data-audit-run><svg class="icon"><use href="#i-audit"></use></svg>Revisar el plano guardado</button>
+      <a class="button button-ghost button-small" data-audit-report href="<?= e(url('projects/' . (int) $project['id'] . '/floors/' . (int) $floor['id'] . '/audit')) ?>" target="_blank" rel="noopener"><svg class="icon"><use href="#i-export"></use></svg>Informe</a>
+    </div>
+    <div class="audit-content" data-audit-content>
+      <p class="muted">Pulsa <strong>Revisar</strong> para medir recorridos, comprobar salidas y señalización y listar los hallazgos del plano guardado.</p>
+    </div>
+  </div>
+  <footer class="drawer-foot"><p>Umbrales en <code>resources/audit-criteria.json</code>. El análisis usa el último diseño guardado, no los cambios sin guardar.</p></footer>
+</section>
+
+<section class="drawer" data-drawer="networks" hidden aria-labelledby="networks-title">
+  <header class="drawer-head">
+    <div><span class="eyebrow">Instalaciones</span><h2 id="networks-title">Redes y circuitos</h2></div>
+    <button class="icon-button" type="button" data-close-drawer aria-label="Cerrar redes"><svg class="icon"><use href="#i-close"></use></svg></button>
+  </header>
+  <div class="drawer-body networks-body" data-networks-panel>
+    <div class="notice notice-info compact-notice">
+      <svg class="icon"><use href="#i-info"></use></svg>
+      <p>Resumen de referencia calculado sobre el <strong>último diseño guardado</strong>. No sustituye memoria de cálculo ni revisión de un profesional competente.</p>
+    </div>
+    <div class="networks-grid" data-networks-content>
+      <p class="muted">Cargando resumen de redes…</p>
+    </div>
+  </div>
+  <footer class="drawer-foot"><p>Diámetros, pendientes, calibres y caídas de tensión son valores de referencia configurables en <code>resources/mep-networks.json</code>.</p></footer>
 </section>
 
 <section class="drawer drawer-narrow" data-drawer="layers" hidden aria-labelledby="layers-title">
@@ -250,9 +380,29 @@
     <button class="export-card" type="button" data-export="png"><span class="export-icon"><svg class="icon"><use href="#i-image"></use></svg></span><strong>PNG</strong><small>Imagen rasterizada a partir del SVG guardado. Útil para informes.</small><span class="export-action">Descargar <svg class="icon"><use href="#i-download"></use></svg></span></button>
     <button class="export-card" type="button" data-export="json"><span class="export-icon"><svg class="icon"><use href="#i-file"></use></svg></span><strong>JSON</strong><small>Formato propio validado. Conserva capas, textos, rotaciones y objetos.</small><span class="export-action">Descargar <svg class="icon"><use href="#i-download"></use></svg></span></button>
     <button class="export-card" type="button" data-export="print"><span class="export-icon"><svg class="icon"><use href="#i-print"></use></svg></span><strong>Imprimir / PDF</strong><small>Abre una hoja limpia; usa el diálogo del navegador para guardar PDF.</small><span class="export-action">Abrir <svg class="icon"><use href="#i-chevron-right"></use></svg></span></button>
+    <button class="export-card export-footer-card" type="button" data-open-drawer="footer" data-footer-open><span class="export-icon"><svg class="icon"><use href="#i-layout-footer"></use></svg></span><strong>Pie de plano</strong><small>Franja de orientación y datos del piso que acompaña al SVG, al PNG y a la impresión.</small><span class="export-action">Revisar <svg class="icon"><use href="#i-chevron-right"></use></svg></span></button>
     <div class="notice notice-info export-note"><svg class="icon"><use href="#i-info"></use></svg><p>Las exportaciones usan la última versión guardada, no cambios sin guardar. No se ofrece compatibilidad DWG/DXF en esta versión.</p></div>
   </div>
   <footer class="drawer-foot"><p><a class="text-link" href="<?= e(url('projects/' . (int) $project['id'] . '#importar')) ?>">Importar un plano JSON</a> desde el proyecto.</p></footer>
+</section>
+
+<section class="drawer drawer-narrow" data-drawer="footer" hidden aria-labelledby="footer-title">
+  <header class="drawer-head">
+    <div><span class="eyebrow">Salida</span><h2 id="footer-title">Pie de plano</h2></div>
+    <button class="icon-button" type="button" data-close-drawer aria-label="Cerrar el pie de plano"><svg class="icon"><use href="#i-close"></use></svg></button>
+  </header>
+  <div class="drawer-body footer-body">
+    <p class="help-text">Este pie se agrega automáticamente debajo del plano en la exportación SVG, en el PNG y en la impresión. Toma los datos guardados del proyecto y del piso; los cambios sin guardar no aparecen hasta que guardes.</p>
+    <div class="footer-preview" data-footer-preview aria-live="polite">
+      <p class="muted">Preparando la vista previa…</p>
+    </div>
+    <div class="footer-cells" data-footer-cells></div>
+    <div class="notice notice-info"><svg class="icon"><use href="#i-info"></use></svg><p>Las cinco celdas de orientación son fijas: posición actual, rutas, salidas, equipos contra incendios y punto de reunión. El bloque inferior incluye proyecto, piso, nivel, sitio, área, responsable, escala, unidad, versión, fecha de guardado, número de elementos y la nota de la aplicación que generó el plano.</p></div>
+  </div>
+  <footer class="drawer-foot footer-actions">
+    <button class="button button-primary button-small" type="button" data-export="print"><svg class="icon"><use href="#i-print"></use></svg>Imprimir con el pie</button>
+    <button class="button button-ghost button-small" type="button" data-export="svg"><svg class="icon"><use href="#i-download"></use></svg>Descargar SVG</button>
+  </footer>
 </section>
 
 <section class="drawer drawer-narrow" data-drawer="settings" hidden aria-labelledby="settings-title">
@@ -279,6 +429,7 @@
         <label class="field"><span>Unidad</span><select name="unit"><?php foreach (['cm', 'm', 'mm'] as $unit): ?><option value="<?= e($unit) ?>" <?= $floor['design']['canvas']['unit'] === $unit ? 'selected' : '' ?>><?= e($unit) ?></option><?php endforeach; ?></select></label>
       </div>
       <label class="field"><span>Escala de referencia</span><input type="text" name="scale" pattern="1:[0-9]{1,5}" value="<?= e($floor['design']['canvas']['scale']) ?>" required><small>Referencia de impresión; verifica en sitio.</small></label>
+      <label class="field"><span>Ocupación declarada (personas)</span><input type="number" name="occupancy" min="0" max="10000" step="1" value="<?= e((string) ($floor['design']['canvas']['occupancy'] ?? 0)) ?>"><small>Con 0 el auditor estima la ocupación por superficie libre y lo advierte en el informe.</small></label>
       <button class="button button-primary button-small" type="submit">Aplicar lienzo</button>
       <p class="help-text">Los cambios de lienzo forman parte del diseño y se confirman al guardar el plano.</p>
     </form>
@@ -295,8 +446,10 @@
     <button class="icon-button" type="button" data-close-drawer aria-label="Cerrar atajos"><svg class="icon"><use href="#i-close"></use></svg></button>
   </header>
   <div class="drawer-body shortcut-grid">
-    <div><kbd>V</kbd><span>Seleccionar</span></div><div><kbd>M</kbd><span>Muro</span></div>
+    <div><kbd>V</kbd><span>Seleccionar</span></div><div><kbd>H</kbd><span>Mano (desplazar)</span></div>
+    <div><kbd>M</kbd><span>Muro</span></div><div><kbd>Ctrl + clic</kbd><span>Seleccionar lo que está debajo</span></div>
     <div><kbd>U</kbd><span>Puerta</span></div><div><kbd>E</kbd><span>Ruta de evacuación</span></div>
+    <div><kbd>P</kbd><span>Tubería</span></div><div><kbd>Shift + P</kbd><span>Tubería eléctrica</span></div>
     <div><kbd>T</kbd><span>Texto</span></div><div><kbd>D</kbd><span>Medida</span></div>
     <div><kbd>L</kbd><span>Línea</span></div><div><kbd>B</kbd><span>Rectángulo</span></div>
     <div><kbd>O</kbd><span>Elipse</span></div><div><kbd>Ctrl + Z</kbd><span>Deshacer</span></div>
@@ -318,11 +471,13 @@
 <noscript><div class="noscript-warning">El editor necesita JavaScript activado. El servidor valida y guarda el diseño, pero el lienzo interactivo no estará disponible.</div></noscript>
 <script src="<?= e(asset('js/ui.js')) ?>" defer></script>
 <script src="<?= e(asset('js/lib/geometry.js')) ?>" defer></script>
+<script src="<?= e(asset('js/lib/mep.js')) ?>" defer></script>
 <script src="<?= e(asset('js/lib/model.js')) ?>" defer></script>
 <script src="<?= e(asset('js/lib/renderer.js')) ?>" defer></script>
 <script src="<?= e(asset('js/editor/store.js')) ?>" defer></script>
 <script src="<?= e(asset('js/editor/inspector.js')) ?>" defer></script>
 <script src="<?= e(asset('js/editor/library.js')) ?>" defer></script>
+<script src="<?= e(asset('js/editor/audit.js')) ?>" defer></script>
 <script src="<?= e(asset('js/editor.js')) ?>" defer></script>
 </body>
 </html>

@@ -15,6 +15,16 @@
   const rad = (degrees) => (degrees * Math.PI) / 180;
   const snapValue = (value, step, enabled = true) => (enabled && step > 0 ? Math.round(value / step) * step : value);
   const distance = (a, b) => Math.hypot(b.x - a.x, b.y - a.y);
+
+  /** Distancia de un punto al segmento AB (para editar trazos con doble clic). */
+  const distanceToSegment = (point, a, b) => {
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const length = dx * dx + dy * dy;
+    if (!length) return distance(point, a);
+    const t = clamp(((point.x - a.x) * dx + (point.y - a.y) * dy) / length, 0, 1);
+    return distance(point, { x: a.x + t * dx, y: a.y + t * dy });
+  };
   const rotatePoint = (point, center, degrees) => {
     const angle = rad(degrees);
     const cos = Math.cos(angle);
@@ -192,6 +202,7 @@
     rad,
     snapValue,
     distance,
+    distanceToSegment,
     rotatePoint,
     centerOf,
     cornersOf,

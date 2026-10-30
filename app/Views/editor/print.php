@@ -17,9 +17,66 @@
 </div>
 <main class="print-sheet">
   <div class="print-svg"><?= $svg ?></div>
+<?php if (!empty($mep['hydraulic']) || !empty($mep['electrical'])): ?>
+  <?php
+  $formatLength = static fn (float $value): string => number_format($value, 2, ',', '.') . ' m';
+  $formatNumber = static fn (float $value, int $decimals = 2): string => number_format($value, $decimals, ',', '.');
+  ?>
+  <section class="print-mep">
+    <h2>Redes e instalaciones del piso</h2>
+    <?php if (!empty($mep['hydraulic'])): ?>
+    <table class="print-table">
+      <caption>Redes de tubería</caption>
+      <thead>
+        <tr><th scope="col">Red</th><th scope="col">Tramos</th><th scope="col">Longitud</th><th scope="col">Diámetros</th><th scope="col">Materiales</th></tr>
+      </thead>
+      <tbody>
+      <?php foreach ($mep['hydraulic'] as $net): ?>
+        <tr>
+          <th scope="row"><span class="print-swatch" style="background: <?= e($net['color']) ?>"></span><?= e($net['label']) ?> <small>(<?= e($net['short']) ?>)</small></th>
+          <td><?= (int) $net['count'] ?></td>
+          <td><?= e($formatLength((float) $net['lengthM'])) ?></td>
+          <td><?= e(implode(' · ', array_map(static fn (array $d): string => $d['diameter'] . ' (' . number_format((float) $d['lengthM'], 2, ',', '.') . ' m)', $net['diameters']))) ?></td>
+          <td><?= e(implode(', ', $net['materials'])) ?></td>
+        </tr>
+      <?php endforeach; ?>
+      </tbody>
+    </table>
+    <?php endif; ?>
+    <?php if (!empty($mep['electrical'])): ?>
+    <table class="print-table">
+      <caption>Circuitos eléctricos</caption>
+      <thead>
+        <tr><th scope="col">Circuito</th><th scope="col">Tensión / fases</th><th scope="col">Carga</th><th scope="col">Corriente</th><th scope="col">Breaker</th><th scope="col">Calibre</th><th scope="col">Longitud</th><th scope="col">Caída</th></tr>
+      </thead>
+      <tbody>
+      <?php foreach ($mep['electrical'] as $circuit): ?>
+        <tr>
+          <th scope="row"><span class="print-swatch" style="background: <?= e($circuit['color']) ?>"></span><?= e($circuit['code']) ?></th>
+          <td><?= (int) $circuit['voltage'] ?> V · <?= (int) $circuit['phases'] ?>F</td>
+          <td><?= e($formatNumber((float) $circuit['loadVA'], 0)) ?> VA</td>
+          <td><?= e($formatNumber((float) $circuit['current'])) ?> A</td>
+          <td><?= (int) $circuit['breaker'] ?> A</td>
+          <td><?= e((string) $circuit['gauge']) ?> AWG</td>
+          <td><?= e($formatLength((float) $circuit['lengthM'])) ?></td>
+          <td><?= e($formatNumber((float) $circuit['drop'])) ?> %</td>
+        </tr>
+      <?php endforeach; ?>
+      </tbody>
+    </table>
+    <?php endif; ?>
+    <?php if (!empty($mep['warnings'])): ?>
+      <ul class="print-warnings">
+        <?php foreach ($mep['warnings'] as $warning): ?>
+          <li><?= e($warning) ?></li>
+        <?php endforeach; ?>
+      </ul>
+    <?php endif; ?>
+    <p class="print-note">Longitudes, pendientes, breaker, calibre y caída de tensión son <strong>estimaciones de referencia</strong> calculadas con tablas configurables del catálogo local. No reemplazan la memoria de cálculo ni la revisión de un profesional competente.</p>
+  </section>
+<?php endif; ?>
   <footer class="print-footer">
     <p><strong>Verificación en sitio:</strong> este plano es una representación esquemática. Confirma dimensiones, accesos, rutas, señalización y equipos antes de usarlo. No constituye certificación ni aprobación legal automática.</p>
-    <p><?= e($meta['site'] !== '' ? $meta['site'] : '') ?><?= $meta['site'] !== '' && $meta['workplace'] !== '' ? ' · ' : '' ?><?= e($meta['workplace'] !== '' ? $meta['workplace'] : '') ?><?= $meta['responsible'] !== '' ? ' · Responsable: ' . e($meta['responsible']) : '' ?></p>
   </footer>
 </main>
 <script src="<?= e(asset('js/print.js')) ?>" defer></script>

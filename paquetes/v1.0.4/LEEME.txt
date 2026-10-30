@@ -1,0 +1,37 @@
+Normia Planos CAD v1.0.4 · paquetes listos para desplegar
+=========================================================
+
+- normia-planos-cad-1.0.4.zip       aplicación completa (instalador web)
+- normia-planos-cad-demo-1.0.4.zip  igual, con el proyecto de demostración premarcado
+- SHA256SUMS.txt                    sumas de ambos ZIP
+- BUILD.txt                         resumen de la construcción
+
+Verificación de integridad:
+    sha256sum -c SHA256SUMS.txt
+
+Funciona sin conexión: no descarga fuentes, iconos, scripts ni datos. Puede
+instalarse en una red aislada; solo necesita el navegador y el servidor.
+
+Novedades de la 1.0.4:
+  · herramienta de tuberías con seis redes: agua fría, agua caliente, gas
+    combustible, aguas negras, aguas lluvias y red contra incendios; cada
+    tramo guarda diámetro, material, pendiente y presión de referencia;
+  · red eléctrica: tramos de circuito con tensión, calibre y fases, y
+    equipos con carga en VA;
+  · panel Redes y circuitos con longitudes por sistema, cargas, corriente,
+    breaker y calibre sugeridos y caída de tensión estimada;
+  · catálogo CAD de 121 a 145 objetos con dos familias nuevas: instalaciones
+    eléctricas y redes hidrosanitarias (válvulas, medidores, tablero,
+    luminarias, gabinete contra incendios, rociadores…);
+  · demo con cuatro redes y tres circuitos en la planta baja;
+  · leyenda de redes y tabla de instalaciones en la exportación SVG y en la
+    vista de impresión.
+
+Los cálculos de redes son estimaciones de referencia: no sustituyen la
+memoria de cálculo ni la revisión de un profesional competente.
+
+Contenido y requisitos: README.md del repositorio.
+Instalación rápida: LEEME-PRIMERO.txt dentro de cada ZIP.
+
+Los ZIP no incluyen bases de datos, sesiones, credenciales, logs ni carpetas de
+desarrollo. Los planos son esquemáticos: verifica dimensiones y escala en sitio.

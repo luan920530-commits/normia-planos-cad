@@ -3,9 +3,23 @@
   'use strict';
   const root = (window.Normia = window.Normia || {});
   const G = root.Geometry;
-  const COLORS = ['#0f172a', '#1e293b', '#334155', '#475569', '#64748b', '#94a3b8', '#ffffff', '#f8fafc', '#2563eb', '#1d4ed8', '#005387', '#0f766e', '#15803d', '#16a34a', '#237f52', '#65a30d', '#b71f2e', '#dc2626', '#991b1b', '#ea580c', '#f97316', '#f59e0b', '#f9a800', '#eab308', '#facc15', '#7c3aed', '#be185d', '#0891b2'];
-  const BASIC = ['wall', 'door', 'route', 'text', 'dimension', 'line', 'rect', 'ellipse'];
-  const PATH_TYPES = ['wall', 'route', 'line', 'dimension'];
+  const COLORS = ['#0f172a', '#1e293b', '#334155', '#475569', '#64748b', '#94a3b8', '#ffffff', '#f8fafc', '#2563eb', '#1d4ed8', '#005387', '#0f766e', '#15803d', '#16a34a', '#237f52', '#65a30d', '#b71f2e', '#dc2626', '#991b1b', '#ea580c', '#f97316', '#f59e0b', '#f9a800', '#eab308', '#facc15', '#7c3aed', '#be185d', '#0891b2', '#ca8a04'];
+  const BASIC = ['wall', 'door', 'door_double', 'door_garage', 'route', 'text', 'dimension', 'line', 'rect', 'ellipse', 'pipe', 'conduit'];
+  const DOOR_TYPES = ['door', 'door_double', 'door_garage'];
+  /**
+   * Las puertas antiguas medían 80 × 16 (solo el hueco del muro) y el símbolo
+   * necesita la profundidad de abatimiento. Se conserva la línea del muro
+   * (borde inferior) al ampliar el alto.
+   */
+  const migrateDoor = (element, canvas) => {
+    if (element.type !== 'door' || element.h >= element.w * 0.5) return element;
+    const edge = element.y + element.h;
+    element.h = Math.min(element.w, canvas.height);
+    element.y = G.clamp(edge - element.h, 0, canvas.height - element.h);
+    return element;
+  };
+  const PATH_TYPES = ['wall', 'route', 'line', 'dimension', 'pipe', 'conduit'];
+  const MEP_TYPES = ['pipe', 'conduit'];
   let idCounter = 0;
 
   const deep = (value) => JSON.parse(JSON.stringify(value));
@@ -34,6 +48,7 @@
         cad: catalogs.cad || catalogs.objects || {},
         cadCategories: catalogs.cadCategories || {},
         aliases: catalogs.aliases || {},
+        mep: catalogs.mep && typeof catalogs.mep === 'object' ? catalogs.mep : null,
       };
       this.design = this.normalizeDesign(design);
       this.selection = new Set();
@@ -48,11 +63,29 @@
     }
 
     /* ----------------------------- catálogos ----------------------------- */
+    /**
+     * Traduce el tipo del editor al código del catálogo de señalización.
+     * ISO 7010 usa `iso_<código>` (iso_e002) y las señales de orientación
+     * propias usan `sig_<nombre>` (sig_wc_men → SVC_WC_MEN).
+     */
     signCodeForType(type) {
-      const match = /^iso_([efmpw][0-9]{3})$/i.exec(String(type || ''));
-      if (!match) return null;
-      const code = match[1].toUpperCase();
-      return this.catalogs.signs[code] ? code : null;
+      const raw = String(type || '');
+      const iso = /^iso_([efmpw][0-9]{3})$/i.exec(raw);
+      if (iso) {
+        const code = iso[1].toUpperCase();
+        return this.catalogs.signs[code] ? code : null;
+      }
+      const own = /^sig_([a-z][a-z0-9_]{1,40})$/i.exec(raw);
+      if (own) {
+        const code = `SVC_${own[1].toUpperCase()}`;
+        return this.catalogs.signs[code] ? code : null;
+      }
+      return null;
+    }
+
+    /** Código de catálogo → tipo del editor (lo usan la biblioteca y las pruebas). */
+    typeForSignCode(code) {
+      return String(code).startsWith('SVC_') ? `sig_${String(code).slice(4).toLowerCase()}` : `iso_${String(code).toLowerCase()}`;
     }
 
     cadForType(type) {
@@ -69,6 +102,110 @@
       return this.catalogs.signColors[sign.category] || this.catalogs.signCategories[sign.category]?.color || defaultColor;
     }
 
+    /* ------------------------- redes y circuitos ------------------------- */
+    mepData() {
+      return this.catalogs.mep && typeof this.catalogs.mep === 'object' ? this.catalogs.mep : null;
+    }
+
+    hydraulicKeys() {
+      const mep = this.mepData();
+      return mep && mep.hydraulic && typeof mep.hydraulic === 'object' ? Object.keys(mep.hydraulic) : [];
+    }
+
+    networkInfo(key) {
+      const mep = this.mepData();
+      return mep && mep.hydraulic ? mep.hydraulic[key] || null : null;
+    }
+
+    /** Estilo y valores por defecto que impone cada red hidrosanitaria. */
+    pipeStyle(key) {
+      const info = this.networkInfo(key) || {};
+      return {
+        color: COLORS.includes(info.color) ? info.color : '#0891b2',
+        stroke: G.clamp(Number(info.stroke) || 3.5, 1, 40),
+        diameter: typeof info.diameter === 'string' ? info.diameter : '1/2"',
+        material: typeof info.material === 'string' ? info.material : 'pvc',
+        slope: info.gravity ? 2 : 0,
+        pressure: G.clamp(Number(info.pressureKpa) || 0, 0, 5000),
+      };
+    }
+
+    electricalConfig() {
+      const mep = this.mepData();
+      const config = mep && mep.electrical && typeof mep.electrical === 'object' ? mep.electrical : {};
+      return {
+        voltages: Array.isArray(config.voltages) && config.voltages.length ? config.voltages.map(Number) : [110, 220],
+        gauges: Array.isArray(config.gauges) && config.gauges.length ? config.gauges.map(String) : ['14', '12', '10'],
+        colors: Array.isArray(config.colors) && config.colors.length ? config.colors.filter((color) => COLORS.includes(color)) : ['#2563eb'],
+        defaultCircuit: typeof config.defaultCircuit === 'string' ? config.defaultCircuit : 'C1',
+        phases: Array.isArray(config.phases) && config.phases.length ? config.phases.map(Number) : [1, 3],
+        defaultPhases: Number(config.defaultPhases) === 3 ? 3 : 1,
+      };
+    }
+
+    /** Los equipos eléctricos del catálogo admiten circuito y carga (VA). */
+    isElectricalDeviceType(type) {
+      const cad = this.cadForType(type);
+      if (!cad) return false;
+      const category = this.catalogs.cadCategories[cad.category];
+      return Boolean(category && /el[eé]ctric/i.test(String(category.label || '')));
+    }
+
+    /** Color estable por código de circuito: mismo circuito, mismo tono. */
+    circuitColor(code) {
+      const colors = this.electricalConfig().colors;
+      const text = String(code || 'C1').trim();
+      const numbered = /^C\s*(\d{1,3})$/.exec(text);
+      if (numbered && colors.length) {
+        return colors[(Number(numbered[1]) - 1) % colors.length] || '#2563eb';
+      }
+      let hash = 0;
+      for (let index = 0; index < text.length; index += 1) hash = (hash * 31 + text.charCodeAt(index)) % 9973;
+      return colors[hash % colors.length] || '#2563eb';
+    }
+
+    sanitizeCircuit(value) {
+      const clean = String(value ?? '').toUpperCase().replace(/[^A-Z0-9 .-]/g, '').slice(0, 12).trim();
+      return clean || this.electricalConfig().defaultCircuit;
+    }
+
+    /**
+     * Completa y sanea los atributos de red de un elemento. Se ejecuta al
+     * crear, cargar y editar para que el diseño guardado siempre tenga red,
+     * diámetro, material, circuito, tensión y calibre coherentes.
+     */
+    normalizeMepAttributes(element) {
+      const type = element.type;
+      const mep = this.mepData() || {};
+      if (type === 'pipe') {
+        const keys = this.hydraulicKeys();
+        const network = keys.includes(element.network) ? element.network : (keys[0] || 'agua_fria');
+        const style = this.pipeStyle(network);
+        const diameters = Array.isArray(mep.diameters) ? mep.diameters : [];
+        const materials = mep.materials && typeof mep.materials === 'object' ? Object.keys(mep.materials) : [];
+        element.network = network;
+        element.diameter = diameters.includes(element.diameter) ? element.diameter : style.diameter;
+        element.material = materials.includes(element.material) ? element.material : style.material;
+        element.slope = G.clamp(Number.isFinite(Number(element.slope)) ? Number(element.slope) : style.slope, 0, 15);
+        element.pressure = G.clamp(Number.isFinite(Number(element.pressure)) ? Number(element.pressure) : style.pressure, 0, 5000);
+        if (!COLORS.includes(element.color)) element.color = style.color;
+        if (!Number(element.stroke)) element.stroke = style.stroke;
+      } else if (type === 'conduit') {
+        const config = this.electricalConfig();
+        const voltage = Number(element.voltage);
+        element.circuit = this.sanitizeCircuit(element.circuit);
+        element.voltage = config.voltages.includes(voltage) ? voltage : (config.voltages.includes(220) ? 220 : config.voltages[0]);
+        element.gauge = config.gauges.includes(String(element.gauge)) ? String(element.gauge) : (config.gauges.includes('12') ? '12' : config.gauges[0]);
+        element.phases = config.phases.includes(Number(element.phases)) ? Number(element.phases) : config.defaultPhases;
+        if (!COLORS.includes(element.color)) element.color = config.colors[0];
+        if (!Number(element.stroke)) element.stroke = 2.5;
+      } else if (this.isElectricalDeviceType(type)) {
+        element.circuit = this.sanitizeCircuit(element.circuit);
+        element.load = G.clamp(Number.isFinite(Number(element.load)) ? Number(element.load) : Number(this.cadForType(type)?.load) || 0, 0, 100000);
+      }
+      return element;
+    }
+
     defaultFor(type) {
       const base = {
         type, x: 0, y: 0, w: 80, h: 60, rotation: 0, color: defaultColor, stroke: 2,
@@ -80,13 +217,22 @@
       }
       const cad = this.cadForType(type);
       if (cad) {
-        return Object.assign(base, { w: 90, h: 90, color: cad.color || defaultColor, stroke: 1.5 });
+        const preset = Object.assign(base, { w: 90, h: 90, color: cad.color || defaultColor, stroke: 1.5 });
+        if (this.isElectricalDeviceType(type)) {
+          preset.circuit = this.electricalConfig().defaultCircuit;
+          preset.load = G.clamp(Number(cad.load) || 0, 0, 100000);
+        }
+        return preset;
       }
       switch (type) {
         case 'wall':
           return Object.assign(base, { w: 200, h: 16, stroke: 8, color: '#0f172a', points: [{ x: 0, y: 8 }, { x: 200, y: 8 }] });
         case 'door':
-          return Object.assign(base, { w: 80, h: 16, color: '#475569', flipX: false });
+          return Object.assign(base, { w: 90, h: 90, color: '#475569', stroke: 2, flipX: false, flipY: false });
+        case 'door_double':
+          return Object.assign(base, { w: 120, h: 60, color: '#475569', stroke: 2, flipX: false, flipY: false });
+        case 'door_garage':
+          return Object.assign(base, { w: 160, h: 50, color: '#475569', stroke: 2, flipX: false, flipY: false });
         case 'route':
           return Object.assign(base, { w: 220, h: 80, stroke: 3, color: '#237f52', points: [{ x: 0, y: 72 }, { x: 110, y: 40 }, { x: 218, y: 8 }] });
         case 'text':
@@ -99,6 +245,27 @@
           return Object.assign(base, { w: 160, h: 100, stroke: 2, color: '#334155' });
         case 'ellipse':
           return Object.assign(base, { w: 140, h: 100, stroke: 2, color: '#334155' });
+        case 'pipe': {
+          const network = this.hydraulicKeys()[0] || 'agua_fria';
+          const style = this.pipeStyle(network);
+          return Object.assign(base, {
+            w: 240, h: 10, stroke: style.stroke, color: style.color,
+            network, diameter: style.diameter, material: style.material,
+            slope: style.slope, pressure: style.pressure,
+            points: [{ x: 0, y: 5 }, { x: 240, y: 5 }],
+          });
+        }
+        case 'conduit': {
+          const config = this.electricalConfig();
+          return Object.assign(base, {
+            w: 240, h: 10, stroke: 2.5, color: config.colors[0] || '#2563eb',
+            circuit: config.defaultCircuit || 'C1',
+            voltage: config.voltages.includes(220) ? 220 : config.voltages[0],
+            gauge: config.gauges.includes('12') ? '12' : config.gauges[0],
+            phases: config.defaultPhases,
+            points: [{ x: 0, y: 5 }, { x: 240, y: 5 }],
+          });
+        }
         default:
           return base;
       }
@@ -115,6 +282,9 @@
         unit: ['cm', 'm', 'mm'].includes(canvasSource.unit) ? canvasSource.unit : 'cm',
         scale: /^1:[1-9][0-9]{0,4}$/.test(canvasSource.scale || '') ? canvasSource.scale : '1:100',
         background: ['#ffffff', '#f8fafc'].includes(canvasSource.background) ? canvasSource.background : '#ffffff',
+        // Ocupación declarada del piso (personas). 0 = sin declarar: el auditor
+        // la estima con el área libre y lo advierte en el informe.
+        occupancy: G.clamp(Math.round(Number(canvasSource.occupancy) || 0), 0, 10000),
       };
       let layers = Array.isArray(source.layers) && source.layers.length ? source.layers : [{ id: 'capa_planta', name: 'Planta', visible: true, locked: false }];
       layers = layers.slice(0, 24).map((layer, index) => ({
@@ -145,7 +315,15 @@
         const code = this.signCodeForType(type);
         if (code) normalized.color = this.signCategoryColor(code);
         if (type === 'text' || type === 'dimension') normalized.fontSize = G.clamp(Number(element.fontSize) || base.fontSize || 14, 8, 160);
-        if (type === 'door') normalized.flipX = Boolean(element.flipX);
+        if (DOOR_TYPES.includes(type)) {
+          normalized.flipX = Boolean(element.flipX);
+          normalized.flipY = Boolean(element.flipY);
+          normalized.isExit = Boolean(element.isExit);
+          migrateDoor(normalized, canvas);
+        }
+        if (MEP_TYPES.includes(type) || this.isElectricalDeviceType(type)) {
+          this.normalizeMepAttributes(normalized);
+        }
         if (PATH_TYPES.includes(type)) {
           const points = Array.isArray(element.points) ? element.points : base.points;
           normalized.points = (points || [{ x: 0, y: 0 }, { x: normalized.w, y: normalized.h }]).slice(0, 40).map((point) => ({
@@ -398,6 +576,58 @@
       return Boolean(element && this.layer(element.layerId)?.visible);
     }
 
+    /* --------------------------- prueba de impacto --------------------------- */
+
+    /** Punto en coordenadas locales del elemento (deshace su rotación). */
+    localPoint(element, point) {
+      const center = { x: element.x + element.w / 2, y: element.y + element.h / 2 };
+      const rotated = G.rotatePoint(point, center, -(element.rotation || 0));
+      return { x: rotated.x - element.x, y: rotated.y - element.y };
+    }
+
+    /** ¿El punto alcanza el elemento? `tolerance` en unidades del lienzo. */
+    hitTest(element, point, tolerance = 6) {
+      if (!element) return false;
+      const reach = Math.max(1, Number(tolerance) || 0);
+      if (PATH_TYPES.includes(element.type)) {
+        const points = this.visualPoints(element);
+        const stroke = Math.max(1, Number(element.stroke) || 2) / 2;
+        for (let index = 0; index < points.length - 1; index += 1) {
+          if (G.distanceToSegment(point, points[index], points[index + 1]) <= stroke + reach) return true;
+        }
+        return false;
+      }
+      const local = this.localPoint(element, point);
+      const w = Math.max(1, Number(element.w) || 1);
+      const h = Math.max(1, Number(element.h) || 1);
+      if (element.type === 'ellipse') {
+        const nx = (local.x - w / 2) / (w / 2 + reach);
+        const ny = (local.y - h / 2) / (h / 2 + reach);
+        return nx * nx + ny * ny <= 1;
+      }
+      return local.x >= -reach && local.x <= w + reach && local.y >= -reach && local.y <= h + reach;
+    }
+
+    /**
+     * Pila de elementos bajo un punto, del más alto al más bajo, con el mismo
+     * orden de pintado que el lienzo (capas y luego orden dentro de la capa).
+     * Es la base para seleccionar lo que queda debajo de una superposición.
+     */
+    hitStack(point, options = {}) {
+      const tolerance = Number.isFinite(options.tolerance) ? options.tolerance : 6;
+      const exclude = new Set(options.exclude || []);
+      const stack = [];
+      const layers = this.design.layers.filter((layer) => layer.visible);
+      for (let index = layers.length - 1; index >= 0; index -= 1) {
+        const layer = layers[index];
+        const elements = this.design.elements.filter((element) => element.layerId === layer.id && !exclude.has(element.id));
+        for (let item = elements.length - 1; item >= 0; item -= 1) {
+          if (this.hitTest(elements[item], point, tolerance)) stack.push(elements[item]);
+        }
+      }
+      return stack;
+    }
+
     /* ----------------------------- creación ----------------------------- */
     createElement(type, overrides = {}) {
       if (!this.isKnownType(type)) throw new Error('El tipo de elemento no pertenece a las bibliotecas permitidas.');
@@ -415,7 +645,30 @@
       element.x = Number(element.x) || 0;
       element.y = Number(element.y) || 0;
       if (type === 'text' || type === 'dimension') element.fontSize = G.clamp(Number(element.fontSize) || base.fontSize || 14, 8, 160);
-      if (type === 'door') element.flipX = Boolean(element.flipX);
+      if (DOOR_TYPES.includes(type)) {
+        element.flipX = Boolean(element.flipX);
+        element.flipY = Boolean(element.flipY);
+        element.isExit = Boolean(element.isExit);
+        migrateDoor(element, this.design.canvas);
+      }
+      if (type === 'pipe') {
+        const network = this.networkInfo(element.network) ? element.network : this.hydraulicKeys()[0] || 'agua_fria';
+        const style = this.pipeStyle(network);
+        const given = (key) => Object.prototype.hasOwnProperty.call(overrides, key);
+        element.network = network;
+        if (!given('color')) element.color = style.color;
+        if (!given('stroke')) element.stroke = style.stroke;
+        if (!given('diameter')) element.diameter = style.diameter;
+        if (!given('material')) element.material = style.material;
+        if (!given('slope')) element.slope = style.slope;
+        if (!given('pressure')) element.pressure = style.pressure;
+      }
+      if (type === 'conduit' && !Object.prototype.hasOwnProperty.call(overrides, 'color')) {
+        element.color = this.circuitColor(element.circuit);
+      }
+      if (MEP_TYPES.includes(type) || this.isElectricalDeviceType(type)) {
+        this.normalizeMepAttributes(element);
+      }
       if (PATH_TYPES.includes(type)) {
         element.points = (Array.isArray(element.points) ? element.points : base.points).map((point) => ({
           x: G.clamp(Number(point.x), 0, element.w),
@@ -432,6 +685,85 @@
         this.selection = new Set([element.id]);
         this.activeLayerId = element.layerId;
       }), element;
+    }
+
+    /* --------------------------- edición de trazos --------------------------- */
+
+    /** Puntos absolutos (ya rotados) del trazo tal como se ven en el lienzo. */
+    visualPoints(element) {
+      if (!PATH_TYPES.includes(element.type)) return [];
+      const center = { x: element.x + element.w / 2, y: element.y + element.h / 2 };
+      const points = Array.isArray(element.points) && element.points.length >= 2
+        ? element.points
+        : [{ x: 0, y: 0 }, { x: element.w, y: element.h }];
+      return points.map((point) => G.rotatePoint(
+        { x: element.x + (Number(point.x) || 0), y: element.y + (Number(point.y) || 0) },
+        center,
+        element.rotation || 0,
+      ));
+    }
+
+    /**
+     * Reescribe la geometría de un trazo a partir de puntos absolutos. La caja
+     * se recalcula con los límites reales y la rotación se disuelve en los
+     * puntos para que mover un vértice no desplace el resto del trazo.
+     */
+    setPathPoints(id, points) {
+      const element = this.element(id);
+      if (!element || !PATH_TYPES.includes(element.type)) return false;
+      if (!Array.isArray(points) || points.length < 2 || points.length > 40) return false;
+      if (!this.canEdit()) return false;
+      const list = points.map((point) => ({
+        x: G.clamp(Number(point.x) || 0, 0, this.design.canvas.width),
+        y: G.clamp(Number(point.y) || 0, 0, this.design.canvas.height),
+      }));
+      return this.apply('points', () => {
+        element.rotation = 0;
+        const bounds = G.boundsOfPoints(list);
+        const w = G.clamp(Math.max(2, bounds.w), 2, this.design.canvas.width);
+        const h = G.clamp(Math.max(2, bounds.h), 2, this.design.canvas.height);
+        const x = G.clamp(bounds.x, 0, this.design.canvas.width - w);
+        const y = G.clamp(bounds.y, 0, this.design.canvas.height - h);
+        element.x = x;
+        element.y = y;
+        element.w = w;
+        element.h = h;
+        element.points = list.map((point) => ({
+          x: G.clamp(point.x - x, 0, w),
+          y: G.clamp(point.y - y, 0, h),
+        }));
+      }), true;
+    }
+
+    /** Mueve un vértice concreto conservando el resto del trazo. */
+    setPathPoint(id, index, point) {
+      const element = this.element(id);
+      if (!element) return false;
+      const points = this.visualPoints(element);
+      if (index < 0 || index >= points.length) return false;
+      points[index] = { x: Number(point.x) || 0, y: Number(point.y) || 0 };
+      return this.setPathPoints(id, points);
+    }
+
+    /** Inserta un vértice; `after` es el índice tras el que se añade. */
+    insertPathPoint(id, after, point) {
+      const element = this.element(id);
+      if (!element) return false;
+      const points = this.visualPoints(element);
+      if (points.length >= 40) return false;
+      const index = G.clamp(Number(after) + 1, 1, points.length);
+      points.splice(index, 0, { x: Number(point.x) || 0, y: Number(point.y) || 0 });
+      return this.setPathPoints(id, points);
+    }
+
+    /** Elimina un vértice manteniendo al menos dos (un trazo visible). */
+    removePathPoint(id, index) {
+      const element = this.element(id);
+      if (!element) return false;
+      const points = this.visualPoints(element);
+      if (points.length <= 2 || index < 0 || index >= points.length) return false;
+      points.splice(index, 1);
+      return this.setPathPoints(id, points);
     }
 
     addPath(type, points, overrides = {}) {
@@ -456,7 +788,7 @@
     }
 
     placeFromLibrary(kind, key, point) {
-      const type = kind === 'sign' ? `iso_${String(key).toLowerCase()}` : key;
+      const type = kind === 'sign' ? this.typeForSignCode(key) : key;
       if (!this.isKnownType(type)) throw new Error('El recurso no pertenece al catálogo local.');
       const base = this.defaultFor(type);
       const size = base.w;
@@ -569,7 +901,10 @@
     setProps(patch) {
       const elements = this.selectedElements();
       if (!elements.length) return false;
-      const allowed = ['color', 'stroke', 'opacity', 'label', 'fontSize', 'flipX', 'layerId', 'locked'];
+      const allowed = [
+        'color', 'stroke', 'opacity', 'label', 'fontSize', 'flipX', 'flipY', 'isExit', 'layerId', 'locked',
+        'network', 'diameter', 'material', 'slope', 'pressure', 'circuit', 'voltage', 'gauge', 'phases', 'load',
+      ];
       const keys = Object.keys(patch);
       if (!keys.every((key) => allowed.includes(key))) return false;
       const editable = this.canEdit();
@@ -589,9 +924,49 @@
           if (patch.fontSize !== undefined && (element.type === 'text' || element.type === 'dimension')) {
             element.fontSize = G.clamp(Number(patch.fontSize), 8, 160);
           }
-          if (patch.flipX !== undefined && element.type === 'door') element.flipX = Boolean(patch.flipX);
+          if (patch.flipX !== undefined && DOOR_TYPES.includes(element.type)) element.flipX = Boolean(patch.flipX);
+          if (patch.flipY !== undefined && DOOR_TYPES.includes(element.type)) element.flipY = Boolean(patch.flipY);
+          // Solo una puerta puede ser salida de emergencia: es el origen que
+          // usa el auditor para medir el recorrido de evacuación.
+          if (patch.isExit !== undefined) element.isExit = DOOR_TYPES.includes(element.type) ? Boolean(patch.isExit) : false;
           if (patch.layerId !== undefined && this.layer(patch.layerId)) element.layerId = patch.layerId;
           if (patch.locked !== undefined) element.locked = Boolean(patch.locked);
+          if (patch.network !== undefined && element.type === 'pipe' && this.networkInfo(patch.network)) {
+            const style = this.pipeStyle(patch.network);
+            element.network = patch.network;
+            element.color = style.color;
+            element.stroke = style.stroke;
+            element.diameter = style.diameter;
+            element.material = style.material;
+            element.slope = style.slope;
+            element.pressure = style.pressure;
+          }
+          if (patch.diameter !== undefined && element.type === 'pipe') element.diameter = String(patch.diameter).slice(0, 12);
+          if (patch.material !== undefined && element.type === 'pipe') element.material = String(patch.material).slice(0, 16);
+          if (patch.slope !== undefined && element.type === 'pipe') element.slope = G.clamp(Number(patch.slope) || 0, 0, 15);
+          if (patch.pressure !== undefined && element.type === 'pipe') element.pressure = G.clamp(Number(patch.pressure) || 0, 0, 5000);
+          if (patch.circuit !== undefined && (element.type === 'conduit' || this.isElectricalDeviceType(element.type))) {
+            element.circuit = this.sanitizeCircuit(patch.circuit);
+            // El color sigue al circuito: así se leen agrupados en el plano.
+            if (element.type === 'conduit' && patch.color === undefined) {
+              element.color = this.circuitColor(element.circuit);
+            }
+          }
+          if (patch.voltage !== undefined && element.type === 'conduit') {
+            const value = Number(patch.voltage);
+            element.voltage = this.electricalConfig().voltages.includes(value) ? value : element.voltage;
+          }
+          if (patch.phases !== undefined && element.type === 'conduit') {
+            const value = Number(patch.phases);
+            element.phases = this.electricalConfig().phases.includes(value) ? value : element.phases;
+          }
+          if (patch.gauge !== undefined && element.type === 'conduit') {
+            const value = String(patch.gauge);
+            element.gauge = this.electricalConfig().gauges.includes(value) ? value : element.gauge;
+          }
+          if (patch.load !== undefined && this.isElectricalDeviceType(element.type)) {
+            element.load = G.clamp(Number(patch.load) || 0, 0, 100000);
+          }
         });
       }), true;
     }
@@ -608,6 +983,8 @@
       return this.apply('type', () => {
         elements.forEach((element) => {
           const defaultElement = this.defaultFor(type);
+          const previousType = element.type;
+          const previousCircuit = this.isElectricalDeviceType(previousType) ? element.circuit : '';
           const keepLabel = element.label;
           const keepLayer = element.layerId;
           const keepRotation = element.rotation;
@@ -625,10 +1002,53 @@
           element.label = type === 'text' && keepLabel.trim() === '' ? 'Texto' : keepLabel;
           if (type === 'text' || type === 'dimension') element.fontSize = defaultElement.fontSize;
           else delete element.fontSize;
-          if (type === 'door') element.flipX = false;
-          else delete element.flipX;
+          if (DOOR_TYPES.includes(type)) {
+            element.flipX = false;
+            element.flipY = false;
+            element.isExit = false;
+          } else {
+            delete element.flipX;
+            delete element.flipY;
+            delete element.isExit;
+          }
+          if (MEP_TYPES.includes(type)) {
+            const preset = this.defaultFor(type);
+            if (type === 'pipe') {
+              element.network = preset.network;
+              element.diameter = preset.diameter;
+              element.material = preset.material;
+              element.slope = preset.slope;
+              element.pressure = preset.pressure;
+            } else {
+              element.circuit = preset.circuit;
+              element.voltage = preset.voltage;
+              element.gauge = preset.gauge;
+              element.phases = preset.phases;
+            }
+            element.color = preset.color;
+            element.stroke = preset.stroke;
+          } else {
+            delete element.network;
+            delete element.diameter;
+            delete element.material;
+            delete element.slope;
+            delete element.pressure;
+            delete element.circuit;
+            delete element.voltage;
+            delete element.gauge;
+            delete element.phases;
+            delete element.load;
+          }
+          if (this.isElectricalDeviceType(type)) {
+            // Cambiar un equipo eléctrico por otro no debe moverlo de circuito:
+            // solo se usa el circuito por defecto cuando el elemento no lo era.
+            element.circuit = this.isElectricalDeviceType(previousType) && previousCircuit
+              ? previousCircuit
+              : this.electricalConfig().defaultCircuit;
+            element.load = G.clamp(Number(this.cadForType(type)?.load) || 0, 0, 100000);
+          }
           if (PATH_TYPES.includes(type)) {
-            const isDiagonal = type === 'line' || type === 'route';
+            const isDiagonal = type === 'line' || type === 'route' || MEP_TYPES.includes(type);
             element.points = isDiagonal
               ? [{ x: 0, y: element.h }, { x: element.w, y: 0 }]
               : [{ x: 0, y: element.h / 2 }, { x: element.w, y: element.h / 2 }];
@@ -864,6 +1284,7 @@
       if (patch.unit !== undefined && ['cm', 'm', 'mm'].includes(patch.unit)) canvas.unit = patch.unit;
       if (patch.scale !== undefined && /^1:[1-9][0-9]{0,4}$/.test(patch.scale)) canvas.scale = patch.scale;
       if (patch.background !== undefined && ['#ffffff', '#f8fafc'].includes(patch.background)) canvas.background = patch.background;
+      if (patch.occupancy !== undefined) canvas.occupancy = G.clamp(Math.round(Number(patch.occupancy)) || 0, 0, 10000);
       const overflow = this.design.elements.some((element) => element.x + element.w > canvas.width + 0.5 || element.y + element.h > canvas.height + 0.5);
       if (overflow) throw new Error('No puedes reducir el lienzo: hay elementos fuera de los nuevos límites. Muévelos o amplía el lienzo.');
       return this.apply('canvas', () => {
@@ -889,6 +1310,8 @@
   root.Model = Model;
   root.COLORS = COLORS;
   root.BASIC_TYPES = BASIC;
+  root.DOOR_TYPES = DOOR_TYPES;
   root.PATH_TYPES = PATH_TYPES;
+  root.MEP_TYPES = MEP_TYPES;
   root.createModel = (design, catalogs, options) => new Model(design, catalogs, options);
 })();

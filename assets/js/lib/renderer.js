@@ -5,6 +5,8 @@
   const G = root.Geometry;
   const NS = 'http://www.w3.org/2000/svg';
   const XLINK_NS = 'http://www.w3.org/1999/xlink';
+  const DOOR_TYPES = ['door', 'door_double', 'door_garage'];
+  const PATH_TYPES = ['wall', 'route', 'line', 'dimension', 'pipe', 'conduit'];
 
   const node = (name, attrs = {}, text = null) => {
     const element = document.createElementNS(NS, name);
@@ -52,8 +54,11 @@
     }
 
     signTypeToCode(type) {
-      const match = /^iso_([efmpw][0-9]{3})$/i.exec(type);
-      return match ? match[1].toUpperCase() : null;
+      const raw = String(type || '');
+      const iso = /^iso_([efmpw][0-9]{3})$/i.exec(raw);
+      if (iso) return iso[1].toUpperCase();
+      const own = /^sig_([a-z][a-z0-9_]{1,40})$/i.exec(raw);
+      return own ? `SVC_${own[1].toUpperCase()}` : null;
     }
 
     assetNode(type) {
@@ -236,6 +241,82 @@
       return frame.rotation ? G.rotatePoint(point, { x: middleX, y: middleY }, frame.rotation) : point;
     }
 
+    /**
+     * Símbolo de puerta en vista de planta.
+     *
+     * La caja del elemento es el área de abatimiento: el vano se dibuja sobre
+     * el borde inferior y la hoja gira 90° hacia el interior. `flipX` cambia la
+     * bisagra de lado y `flipY` abate hacia el otro lado del muro.
+     */
+    doorNode(element, options = {}) {
+      const zoom = this.view.zoom || 1;
+      const color = options.color || element.color || '#475569';
+      const stroke = Math.max(1.4, Number(element.stroke) || 2);
+      const { x, y, w, h } = element;
+      const type = element.type;
+      const edge = y + h;
+      const flipX = Boolean(element.flipX);
+      const flipY = Boolean(element.flipY);
+      const group = node('g', { class: `door door-${type.replace('door_', '') || 'single'}` });
+      if (flipX || flipY) {
+        const px = G.round(x + w / 2, 2);
+        const py = G.round(edge, 2);
+        group.setAttribute('transform', `translate(${px} ${py}) scale(${flipX ? -1 : 1} ${flipY ? -1 : 1}) translate(${-px} ${-py})`);
+      }
+      const jamb = Math.min(14, Math.max(5, h * 0.16));
+      const frameWidth = Math.max(1.8, stroke * 1.15);
+      const dash = `${4 / zoom} ${4 / zoom}`;
+      const thin = Math.max(1, stroke * 0.65);
+      // Jambas: marcan el ancho real del vano.
+      group.appendChild(node('line', { x1: x, y1: edge, x2: x, y2: edge - jamb, stroke: color, 'stroke-width': frameWidth, 'stroke-linecap': 'round' }));
+      group.appendChild(node('line', { x1: x + w, y1: edge, x2: x + w, y2: edge - jamb, stroke: color, 'stroke-width': frameWidth, 'stroke-linecap': 'round' }));
+      // Línea tenue del vano (se borra sobre el muro al exportar a escala).
+      group.appendChild(node('line', { x1: x, y1: edge, x2: x + w, y2: edge, stroke: color, 'stroke-width': thin, 'stroke-dasharray': dash, opacity: 0.5 }));
+      if (type === 'door_garage') {
+        const panelHeight = Math.max(10, Math.min(30, h * 0.55));
+        const panelTop = edge - panelHeight;
+        group.appendChild(node('rect', {
+          x: x + 3, y: panelTop, width: Math.max(6, w - 6), height: panelHeight, rx: Math.min(3, panelHeight / 3),
+          fill: color, 'fill-opacity': 0.1, stroke: color, 'stroke-width': Math.max(1.2, stroke * 0.75),
+        }));
+        const bars = Math.max(3, Math.min(14, Math.round(w / 16)));
+        for (let index = 1; index < bars; index += 1) {
+          const barX = x + 3 + ((w - 6) * index) / bars;
+          group.appendChild(node('line', {
+            x1: barX, y1: panelTop + 1.5, x2: barX, y2: edge - 1.5,
+            stroke: color, 'stroke-width': Math.max(0.9, stroke * 0.55), opacity: 0.75,
+          }));
+        }
+        const railY = panelTop + panelHeight / 2;
+        group.appendChild(node('line', { x1: x + 3, y1: railY, x2: x + w - 3, y2: railY, stroke: color, 'stroke-width': Math.max(0.9, stroke * 0.5), opacity: 0.65 }));
+        // Guías laterales del portón.
+        group.appendChild(node('line', { x1: x + 3, y1: edge, x2: x + 3, y2: panelTop + panelHeight + 2, stroke: color, 'stroke-width': thin, opacity: 0.75 }));
+        group.appendChild(node('line', { x1: x + w - 3, y1: edge, x2: x + w - 3, y2: panelTop + panelHeight + 2, stroke: color, 'stroke-width': thin, opacity: 0.75 }));
+        return group;
+      }
+      const leafLength = Math.max(8, Math.min(type === 'door_double' ? w / 2 : w, h));
+      const leafWidth = Math.max(2.2, stroke * 1.2);
+      const drawLeaf = (hingeX, reachX) => {
+        group.appendChild(node('line', {
+          x1: hingeX, y1: edge, x2: hingeX, y2: edge - leafLength,
+          stroke: color, 'stroke-width': leafWidth, 'stroke-linecap': 'round',
+        }));
+        group.appendChild(node('circle', { cx: hingeX, cy: edge, r: Math.max(2, stroke * 1.1), fill: color }));
+        // Arco de abatimiento continuo: se lee bien incluso con zoom bajo.
+        group.appendChild(node('path', {
+          d: `M ${hingeX} ${edge - leafLength} A ${leafLength} ${leafLength} 0 0 ${reachX >= hingeX ? 1 : 0} ${reachX} ${edge}`,
+          fill: 'none', stroke: color, 'stroke-width': Math.max(1, stroke * 0.6), opacity: 0.55,
+        }));
+      };
+      if (type === 'door_double') {
+        drawLeaf(x, x + leafLength);
+        drawLeaf(x + w, x + w - leafLength);
+      } else {
+        drawLeaf(x, x + leafLength);
+      }
+      return group;
+    }
+
     elementNode(element, canvas, options = {}) {
       const zoom = this.view.zoom || 1;
       const cx = element.x + element.w / 2;
@@ -269,6 +350,60 @@
             x: element.x + element.w / 2, y: element.y + element.h + 12 / zoom,
             'text-anchor': 'middle', 'font-size': 10 / zoom, fill: '#334155', class: 'element-label',
           }, clean(element.label.split('\n')[0])));
+        }
+        return group;
+      }
+      if (type === 'pipe' || type === 'conduit') {
+        const Mep = root.Mep;
+        const mep = this.catalogs.mep;
+        const networkInfo = type === 'pipe' && mep && mep.hydraulic ? mep.hydraulic[element.network] || null : null;
+        const points = this.elementPoints(element);
+        const pointText = points.map((point) => `${G.round(point.x, 2)} ${G.round(point.y, 2)}`).join(' ');
+        const width = Math.max(1.5, Number(stroke) || (type === 'pipe' ? 3.5 : 2.5));
+        const dash = type === 'pipe' && Array.isArray(networkInfo?.dash) && networkInfo.dash.length
+          ? networkInfo.dash.map((value) => Math.max(1, Number(value) || 1)).join(' ')
+          : null;
+        group.appendChild(node('polyline', {
+          points: pointText,
+          fill: 'none',
+          stroke: color,
+          'stroke-width': width,
+          'stroke-linecap': 'round',
+          'stroke-linejoin': 'round',
+          opacity: 0.92,
+          ...(dash ? { 'stroke-dasharray': dash } : {}),
+        }));
+        // Nodos del tramo: ayudan a leer acometidas, cambios de diámetro y uniones.
+        const joint = Math.max(2, Math.min(5, width * 0.95));
+        for (const point of points) {
+          group.appendChild(node('circle', {
+            cx: point.x, cy: point.y, r: joint,
+            fill: '#ffffff', stroke: color, 'stroke-width': Math.max(1, width * 0.45),
+          }));
+        }
+        group.appendChild(node('polyline', {
+          points: pointText,
+          fill: 'none',
+          stroke: 'transparent',
+          'stroke-width': Math.max(16 / zoom, width + 12 / zoom),
+          'stroke-linecap': 'round',
+          'stroke-linejoin': 'round',
+          class: 'hit-area',
+        }));
+        const caption = element.label
+          ? element.label.split('\n')[0]
+          : (Mep && type === 'pipe' ? Mep.pipeCaption(element, this.catalogs, canvas) : (Mep ? Mep.conduitCaption(element) : ''));
+        if (caption) {
+          const middle = points[Math.floor((points.length - 1) / 2)];
+          const next = points[Math.floor((points.length - 1) / 2) + 1] || middle;
+          const cx = (middle.x + next.x) / 2;
+          const cy = (middle.y + next.y) / 2;
+          group.appendChild(node('text', {
+            x: cx + 6 / zoom, y: cy - 6 / zoom,
+            'font-size': 10 / zoom, fill: color, class: 'element-label mep-label',
+            'font-family': 'system-ui, -apple-system, Segoe UI, sans-serif',
+            'paint-order': 'stroke', stroke: '#ffffff', 'stroke-width': 3 / zoom, 'stroke-linejoin': 'round',
+          }, clean(caption)));
         }
         return group;
       }
@@ -314,16 +449,14 @@
         }
         return group;
       }
-      if (type === 'door') {
-        const flip = element.flipX ? `translate(${element.w} 0) scale(-1 1)` : '';
-        const doorGroup = node('g', flip ? { transform: flip } : {});
-        doorGroup.appendChild(node('line', { x1: element.x, y1: element.y + element.h, x2: element.x + element.w, y2: element.y + element.h, stroke: color, 'stroke-width': Math.max(1.5, stroke), 'stroke-linecap': 'round' }));
-        doorGroup.appendChild(node('line', { x1: element.x, y1: element.y + element.h, x2: element.x, y2: element.y, stroke: color, 'stroke-width': Math.max(1.5, stroke), 'stroke-linecap': 'round' }));
-        doorGroup.appendChild(node('path', {
-          d: `M ${element.x} ${element.y} A ${element.w} ${Math.max(4, element.h)} 0 0 1 ${element.x + element.w} ${element.y + element.h}`,
-          fill: 'none', stroke: color, 'stroke-width': Math.max(1, stroke * 0.7), 'stroke-dasharray': `${3 / zoom} ${4 / zoom}`, opacity: 0.7,
-        }));
-        group.appendChild(doorGroup);
+      if (DOOR_TYPES.includes(type)) {
+        group.appendChild(this.doorNode(element));
+        if (element.label) {
+          group.appendChild(node('text', {
+            x: element.x + element.w / 2, y: element.y - 6 / zoom,
+            'text-anchor': 'middle', 'font-size': 10 / zoom, fill: '#334155', class: 'element-label',
+          }, clean(element.label.split('\n')[0])));
+        }
         return group;
       }
       if (type === 'text') {
@@ -384,6 +517,25 @@
         fill: 'none', stroke: editable ? '#2563eb' : '#f59e0b', 'stroke-width': 1.5 / zoom,
         'stroke-dasharray': editable ? 'none' : `${6 / zoom} ${4 / zoom}`, 'pointer-events': 'none',
       }));
+      // Vértices editables: arrastrar un punto mueve la esquina y el doble clic
+      // sobre un segmento añade uno nuevo.
+      const single = elements.length === 1 ? elements[0] : null;
+      if (single && PATH_TYPES.includes(single.type) && editable && ui.activeTool === 'select') {
+        const points = this.elementPoints(single);
+        const dot = 4.5 / zoom;
+        for (const [index, point] of points.entries()) {
+          const handle = node('circle', {
+            cx: point.x, cy: point.y, r: dot,
+            fill: '#ffffff', stroke: '#1d4ed8', 'stroke-width': 1.6 / zoom,
+            'data-point': String(index), class: 'vertex-handle',
+            'pointer-events': 'all',
+          });
+          handle.appendChild(node('title', {}, index === 0
+            ? 'Vértice inicial · arrastra para moverlo · Alt+clic para quitarlo'
+            : 'Vértice · arrastra para moverlo · Alt+clic para quitarlo'));
+          group.appendChild(handle);
+        }
+      }
       if (editable && ui.activeTool === 'select') {
         const handleSize = 9 / zoom;
         const handles = [
@@ -412,7 +564,9 @@
       const frame = { x: ghost.x - ghost.w / 2, y: ghost.y - ghost.h / 2, w: ghost.w, h: ghost.h };
       const group = node('g', { class: 'placement-ghost', 'pointer-events': 'none', opacity: 0.72 });
       group.appendChild(node('rect', { ...frame, fill: 'rgba(37,99,235,.08)', stroke: '#2563eb', 'stroke-width': 1.5 / (this.view.zoom || 1), 'stroke-dasharray': `${5 / (this.view.zoom || 1)} ${4 / (this.view.zoom || 1)}` }));
-      if (ghost.type) {
+      if (ghost.type && DOOR_TYPES.includes(ghost.type)) {
+        group.appendChild(this.doorNode({ ...ghost, x: frame.x, y: frame.y, color: '#2563eb', stroke: 2 }, { color: '#2563eb' }));
+      } else if (ghost.type) {
         const asset = this.assetNode(ghost.type);
         if (asset) {
           asset.setAttribute('x', frame.x);
@@ -438,13 +592,16 @@
         }
         return group;
       }
-      if (draft.tool === 'route') {
-        group.appendChild(node('polyline', { points: draft.points.map((point) => `${point.x} ${point.y}`).join(' '), fill: 'none', stroke: '#237f52', 'stroke-width': 2 / zoom, 'stroke-dasharray': `${5 / zoom} ${4 / zoom}` }));
+      if (draft.tool === 'route' || draft.tool === 'pipe' || draft.tool === 'conduit') {
+        const mep = this.catalogs.mep;
+        const color = draft.color || (draft.tool === 'route' ? '#237f52' : draft.tool === 'conduit' ? '#2563eb' : (mep?.hydraulic?.[draft.network]?.color || '#0891b2'));
+        const width = draft.tool === 'route' ? 2 / zoom : Math.max(2, (draft.stroke || 3.5)) / zoom;
+        group.appendChild(node('polyline', { points: draft.points.map((point) => `${point.x} ${point.y}`).join(' '), fill: 'none', stroke: color, 'stroke-width': width, 'stroke-dasharray': draft.tool === 'route' ? `${5 / zoom} ${4 / zoom}` : `${9 / zoom} ${5 / zoom}` }));
         for (const [index, point] of draft.points.slice(0, -1).entries()) {
           group.appendChild(node('circle', {
             cx: point.x, cy: point.y, r: (index === 0 ? 7 : 3) / zoom,
-            fill: index === 0 ? 'rgba(35, 127, 82, .16)' : '#237f52',
-            stroke: index === 0 ? '#237f52' : 'none', 'stroke-width': 1.5 / zoom,
+            fill: index === 0 ? 'rgba(35, 127, 82, .16)' : color,
+            stroke: index === 0 ? color : 'none', 'stroke-width': 1.5 / zoom,
           }));
         }
         return group;
@@ -453,6 +610,215 @@
       if (points.length >= 2) {
         group.appendChild(node('line', { x1: points[0].x, y1: points[0].y, x2: points[points.length - 1].x, y2: points[points.length - 1].y, stroke: '#2563eb', 'stroke-width': 1.5 / zoom, 'stroke-dasharray': `${5 / zoom} ${4 / zoom}` }));
       }
+      return group;
+    }
+
+    /* -------------------------- pie de página del plano -------------------------- */
+
+    /**
+     * El pie del plano se dibuja en el navegador sólo para la exportación PNG.
+     * El contenido (`payload`) llega del servidor en `boot.footer`, de modo que
+     * la franja de orientación, los datos y la nota de la aplicación sean los
+     * mismos que en el SVG exportado y en la impresión.
+     */
+    static footerColumns(width, count) {
+      if (count <= 1) return 1;
+      if (width >= 1000) return Math.min(5, count);
+      return width >= 620 ? Math.min(3, count) : 1;
+    }
+
+    static footerRowHeight(width) {
+      return Math.round(Math.max(84, Math.min(150, width * 0.082)) * 100) / 100;
+    }
+
+    static footerLineStep(size) {
+      return Math.round(size * 1.34 * 100) / 100;
+    }
+
+    static footerToneSize(tone) {
+      return tone === 'strong' ? 10.5 : (tone === 'body' ? 9.2 : 8.4);
+    }
+
+    static footerToneFill(tone) {
+      return tone === 'strong' ? '#0f172a' : (tone === 'body' ? '#475569' : '#7c8798');
+    }
+
+    /** Parte el texto por palabras con un ancho estimado en caracteres. */
+    static wrapText(text, maxChars) {
+      const limit = Math.max(8, maxChars);
+      const words = String(text ?? '').trim().split(/\s+/).filter(Boolean);
+      const lines = [];
+      let current = '';
+      for (const word of words) {
+        const candidate = current === '' ? word : `${current} ${word}`;
+        if (candidate.length <= limit) {
+          current = candidate;
+          continue;
+        }
+        if (current !== '') lines.push(current);
+        current = word;
+        while (current.length > limit) {
+          lines.push(current.slice(0, limit));
+          current = current.slice(limit);
+        }
+      }
+      if (current !== '') lines.push(current);
+      return lines.length ? lines : [''];
+    }
+
+    /** Resuelve los marcadores `{clave}` de las líneas con los datos del piso. */
+    static footerText(template, fields) {
+      return String(template ?? '').replace(/\{([a-z_]+)\}/g, (match, key) => (
+        fields[key] === undefined || fields[key] === null ? match : String(fields[key])
+      ));
+    }
+
+    footerPayload(payload = {}, width) {
+      const fields = payload.fields || {};
+      const cells = Array.isArray(payload.cells) ? payload.cells : [];
+      const templates = Array.isArray(payload.lines) ? payload.lines : [];
+      const lines = [];
+      for (const template of templates) {
+        const tone = template.tone || 'body';
+        const size = Renderer.footerToneSize(tone);
+        const text = Renderer.footerText(template.text, fields);
+        const maxChars = Math.max(24, Math.floor((width - 28) / (size * 0.52)));
+        for (const part of Renderer.wrapText(text, maxChars)) lines.push({ text: part, tone, size });
+      }
+      return { cells, lines };
+    }
+
+    static footerBandHeight(width, count) {
+      const rows = Math.ceil(Math.max(1, count) / Renderer.footerColumns(width, count));
+      return Math.round(rows * Renderer.footerRowHeight(width) * 100) / 100;
+    }
+
+    /** Altura total que ocupa el pie (franja + bloque de datos). */
+    footerHeight(payload, width) {
+      const resolved = this.footerPayload(payload, width);
+      const data = resolved.lines.reduce((total, line) => total + Renderer.footerLineStep(line.size), 0);
+      return Renderer.footerBandHeight(width, resolved.cells.length) + data + 16;
+    }
+
+    /** Dibuja la franja y el bloque de datos a partir de `top`. */
+    footerBand(payload, options = {}) {
+      const width = Number(options.width || 0);
+      const top = Number(options.top || 0);
+      const { cells, lines } = this.footerPayload(payload, width);
+      const columns = Renderer.footerColumns(width, cells.length);
+      const rows = Math.ceil(Math.max(1, cells.length) / columns);
+      const rowHeight = Renderer.footerRowHeight(width);
+      const band = rows * rowHeight;
+      const cellWidth = width / columns;
+      const group = node('g', { id: 'pie-plano', 'data-plan-footer': 'guia', 'font-family': 'Helvetica, Arial, sans-serif' });
+      group.appendChild(node('rect', { x: 0, y: top, width, height: this.footerHeight(payload, width), fill: '#ffffff' }));
+
+      const bandGroup = node('g', { id: 'guia-evacuacion', 'data-footer-band': '1' });
+      bandGroup.appendChild(node('rect', { x: 0, y: top, width, height: band, fill: '#f8fafc', stroke: '#e2e8f0', 'stroke-width': 1 }));
+      for (let row = 0; row <= rows; row += 1) {
+        const y = top + row * rowHeight;
+        bandGroup.appendChild(node('line', { x1: 0, y1: y, x2: width, y2: y, stroke: '#e2e8f0', 'stroke-width': 1 }));
+      }
+      for (let column = 1; column < columns; column += 1) {
+        bandGroup.appendChild(node('line', {
+          x1: column * cellWidth, y1: top, x2: column * cellWidth, y2: top + band, stroke: '#e2e8f0', 'stroke-width': 1,
+        }));
+      }
+      cells.forEach((cell, index) => {
+        const column = index % columns;
+        const row = Math.floor(index / columns);
+        bandGroup.appendChild(this.footerCell(cell, column * cellWidth, top + row * rowHeight, cellWidth, rowHeight));
+      });
+      group.appendChild(bandGroup);
+
+      const dataGroup = node('g', { id: 'datos-plano', 'data-plan-data': '1' });
+      dataGroup.appendChild(node('line', { x1: 0, y1: top + band, x2: width, y2: top + band, stroke: '#e2e8f0', 'stroke-width': 1 }));
+      let cursor = top + band + 6;
+      for (const line of lines) {
+        const baseline = cursor + line.size * 0.94;
+        dataGroup.appendChild(node('text', {
+          x: 14,
+          y: Math.round(baseline * 100) / 100,
+          'font-size': line.size,
+          'font-weight': line.tone === 'strong' ? 600 : 400,
+          fill: Renderer.footerToneFill(line.tone),
+          'data-footer-line': line.tone,
+        }, line.text));
+        cursor += Renderer.footerLineStep(line.size);
+      }
+      group.appendChild(dataGroup);
+      this.svg.appendChild(group);
+      return group;
+    }
+
+    footerCell(cell, x, y, width, height) {
+      const group = node('g', { 'data-footer-cell': cell.key || '' });
+      const pad = Math.min(14, height * 0.16);
+      const icon = Math.round(height * 0.5 * 100) / 100;
+      const gap = Math.round(height * 0.08 * 100) / 100;
+      const iconX = x + pad;
+      const iconY = y + (height - icon) / 2;
+      const textX = iconX + icon + gap;
+      const textWidth = Math.max(40, x + width - pad - textX);
+      const titleSize = Math.round(Math.max(7.5, Math.min(13.5, height * 0.098)) * 100) / 100;
+      const bodySize = Math.round(Math.max(6.6, Math.min(11, height * 0.082)) * 100) / 100;
+      const titleChars = Math.max(8, Math.floor(textWidth / (titleSize * 0.56)));
+      const bodyChars = Math.max(10, Math.floor(textWidth / (bodySize * 0.52)));
+      const titleLines = Renderer.wrapText(cell.title || '', titleChars).slice(0, 2);
+      const titleStep = titleSize * 1.18;
+      const lineStep = Renderer.footerLineStep(bodySize);
+      const titleBlock = titleLines.length * titleStep;
+      const available = height - pad * 2 - titleBlock - 4;
+      const maxBody = Math.max(1, Math.floor(available / lineStep));
+      const bodyLines = Renderer.wrapText(cell.text || '', bodyChars).slice(0, maxBody);
+      const blockHeight = titleBlock + 4 + bodyLines.length * lineStep;
+      let cursor = y + Math.max(pad, (height - blockHeight) / 2);
+
+      group.appendChild(this.footerIcon(String(cell.icon || ''), iconX, iconY, icon, cell.accent || '#1d4ed8'));
+      titleLines.forEach((line, index) => {
+        group.appendChild(node('text', {
+          x: Math.round(textX * 100) / 100,
+          y: Math.round((cursor + titleSize * 0.92 + index * titleStep) * 100) / 100,
+          'font-size': titleSize,
+          'font-weight': 700,
+          fill: cell.title_color || '#0f172a',
+          'letter-spacing': 0.3,
+        }, line));
+      });
+      cursor += titleBlock + 4;
+      bodyLines.forEach((line, index) => {
+        group.appendChild(node('text', {
+          x: Math.round(textX * 100) / 100,
+          y: Math.round((cursor + bodySize * 0.86 + index * lineStep) * 100) / 100,
+          'font-size': bodySize,
+          fill: '#475569',
+        }, line));
+      });
+      return group;
+    }
+
+    footerIcon(icon, x, y, size, accent) {
+      const code = /^sign:([A-Za-z][0-9]{3})$/.exec(icon);
+      if (code) {
+        const type = `iso_${code[1].toLowerCase()}`;
+        const asset = this.assetNode(type);
+        if (asset) {
+          asset.setAttribute('x', x);
+          asset.setAttribute('y', y);
+          asset.setAttribute('width', size);
+          asset.setAttribute('height', size);
+          return asset;
+        }
+      }
+      const scale = size / 24;
+      const group = node('g', { transform: `translate(${x} ${y}) scale(${scale})`, fill: accent });
+      group.appendChild(node('path', {
+        d: icon === 'pin'
+          ? 'M12 2.2c-4.2 0-7.6 3.4-7.6 7.6 0 5.6 7.6 12 7.6 12s7.6-6.4 7.6-12c0-4.2-3.4-7.6-7.6-7.6z'
+          : 'M2.5 9.4h9.9V5.2L21.9 12l-9.5 6.8v-4.2H2.5z',
+        fill: accent,
+      }));
+      if (icon === 'pin') group.appendChild(node('circle', { cx: 12, cy: 9.8, r: 2.9, fill: '#ffffff' }));
       return group;
     }
 

@@ -8,6 +8,8 @@ use App\Core\Response;
 use App\Core\View;
 use App\Models\Floor;
 use App\Services\DesignValidator;
+use App\Services\MepCalculator;
+use App\Services\PlanAudit;
 use App\Services\SvgExporter;
 
 final class ExportController extends BaseController
@@ -69,13 +71,37 @@ final class ExportController extends BaseController
         $meta = $this->meta($floor);
         $svg = SvgExporter::render($design, $meta, true);
         $svg = preg_replace('/<\?xml[^>]*\?>\s*/i', '', $svg) ?? $svg;
+        $mep = MepCalculator::summary($design);
         View::render('editor/print', [
             'title' => 'Imprimir · ' . $floor['name'],
             'project' => $floor,
             'floor' => $floor,
             'svg' => $svg,
             'meta' => $meta,
+            'mep' => $mep,
             'version' => (int) $floor['version'],
+            'backUrl' => url('projects/' . $projectId . '/floors/' . $floorId . '/editor'),
+            'user' => $this->user(),
+        ], null);
+    }
+
+    /** Informe de revisión imprimible (auditor de planos + métricas de evacuación). */
+    public function audit(int $projectId, int $floorId): void
+    {
+        $floor = $this->floor($floorId, $projectId);
+        $design = DesignValidator::normalizeJson((string) $floor['design_json']);
+        $meta = $this->meta($floor);
+        $report = PlanAudit::analyze($design);
+        View::render('editor/audit-report', [
+            'title' => 'Revisión del plano · ' . $floor['name'],
+            'project' => $floor,
+            'floor' => $floor,
+            'meta' => $meta,
+            'report' => $report,
+            'criteria' => $report['criteria'],
+            'design' => $design,
+            'version' => (int) $floor['version'],
+            'generatedAt' => gmdate('Y-m-d H:i'),
             'backUrl' => url('projects/' . $projectId . '/floors/' . $floorId . '/editor'),
             'user' => $this->user(),
         ], null);
@@ -92,6 +118,7 @@ final class ExportController extends BaseController
             'workplace' => $floor['project_workplace'] ?? '',
             'exported_by' => $this->user()['name'] ?? '',
             'version' => (int) $floor['version'],
+            'saved_at' => $floor['updated_at'] ?? '',
         ];
     }
 }

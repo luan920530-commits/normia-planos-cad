@@ -17,10 +17,14 @@ final class DesignValidator
         '#ffffff', '#f8fafc', '#2563eb', '#1d4ed8', '#005387', '#0f766e',
         '#15803d', '#16a34a', '#237f52', '#65a30d', '#b71f2e', '#dc2626',
         '#991b1b', '#ea580c', '#f97316', '#f59e0b', '#f9a800', '#eab308',
-        '#facc15', '#7c3aed', '#be185d', '#0891b2',
+        '#facc15', '#7c3aed', '#be185d', '#0891b2', '#ca8a04',
     ];
 
-    private const BASE_TYPES = ['wall', 'door', 'route', 'text', 'dimension', 'line', 'rect', 'ellipse'];
+    public const DOOR_TYPES = ['door', 'door_double', 'door_garage'];
+
+    private const BASE_TYPES = ['wall', 'door', 'door_double', 'door_garage', 'route', 'text', 'dimension', 'line', 'rect', 'ellipse', 'pipe', 'conduit'];
+    private const MEP_TYPES = ['pipe', 'conduit'];
+    public const MAX_POINTS = 40;
     private const UNITS = ['cm', 'm', 'mm'];
 
     public static function normalizeJson(string $json): array
@@ -105,11 +109,39 @@ final class DesignValidator
 
     public static function signCodeForType(string $type): ?string
     {
-        if (preg_match('/^iso_([efmpw][0-9]{3})$/D', $type, $matches) !== 1) {
-            return null;
+        return LibraryRepository::codeForType($type);
+    }
+
+    /** @return list<string> Claves propias de cada tipo de red. */
+    public static function mepKeysFor(string $type): array
+    {
+        if ($type === 'pipe') {
+            return ['network', 'diameter', 'material', 'slope', 'pressure'];
         }
-        $code = strtoupper($matches[1]);
-        return LibraryRepository::sign($code) !== null ? $code : null;
+        if ($type === 'conduit') {
+            return ['circuit', 'voltage', 'gauge', 'phases'];
+        }
+        if (LibraryRepository::isElectricalObject($type)) {
+            return ['circuit', 'load'];
+        }
+        return [];
+    }
+
+    public static function isElectricalObject(string $type): bool
+    {
+        return LibraryRepository::isElectricalObject($type);
+    }
+
+    /** Código de circuito saneado: letras, números, espacio, punto y guion. */
+    public static function circuit(string $value): string
+    {
+        $clean = trim(strtoupper(preg_replace('/[^A-Za-z0-9 .-]/', '', $value) ?? ''));
+        $clean = substr($clean, 0, 12);
+        if ($clean === '') {
+            $fallback = (string) (LibraryRepository::electrical()['defaultCircuit'] ?? 'C1');
+            return $fallback !== '' ? $fallback : 'C1';
+        }
+        return $clean;
     }
 
     public static function isKnownType(string $type): bool
@@ -142,19 +174,61 @@ final class DesignValidator
             $base['h'] = 90;
             $base['color'] = in_array($cad['color'], self::COLORS, true) ? $cad['color'] : '#334155';
             $base['stroke'] = 1.5;
+            if (LibraryRepository::isElectricalObject($type)) {
+                $base['circuit'] = (string) (LibraryRepository::electrical()['defaultCircuit'] ?? 'C1');
+                $base['load'] = max(0, (float) ($cad['load'] ?? 0));
+            }
             return $base;
         }
         return match ($type) {
             'wall' => array_merge($base, ['w' => 200, 'h' => 16, 'stroke' => 8, 'color' => '#0f172a']),
-            'door' => array_merge($base, ['w' => 80, 'h' => 16, 'stroke' => 2, 'color' => '#475569']),
+            'door' => array_merge($base, ['w' => 90, 'h' => 90, 'stroke' => 2, 'color' => '#475569']),
+            'door_double' => array_merge($base, ['w' => 120, 'h' => 60, 'stroke' => 2, 'color' => '#475569']),
+            'door_garage' => array_merge($base, ['w' => 160, 'h' => 50, 'stroke' => 2, 'color' => '#475569']),
             'route' => array_merge($base, ['w' => 220, 'h' => 80, 'stroke' => 3, 'color' => '#237f52']),
             'text' => array_merge($base, ['w' => 180, 'h' => 32, 'stroke' => 0, 'color' => '#0f172a', 'fontSize' => 18]),
             'dimension' => array_merge($base, ['w' => 200, 'h' => 20, 'stroke' => 1.5, 'color' => '#475569', 'fontSize' => 12]),
             'line' => array_merge($base, ['w' => 160, 'h' => 2, 'stroke' => 3, 'color' => '#334155']),
             'rect' => array_merge($base, ['w' => 160, 'h' => 100, 'stroke' => 2, 'color' => '#334155']),
             'ellipse' => array_merge($base, ['w' => 140, 'h' => 100, 'stroke' => 2, 'color' => '#334155']),
+            'pipe' => self::defaultPipe(),
+            'conduit' => self::defaultConduit(),
             default => $base,
         };
+    }
+
+    /** Valores por defecto de una tubería para la primera red del catálogo. */
+    private static function defaultPipe(): array
+    {
+        $networks = LibraryRepository::networks();
+        $key = (string) array_key_first($networks);
+        $network = $networks[$key];
+        return [
+            'type' => 'pipe', 'x' => 0, 'y' => 0, 'w' => 240, 'h' => 10,
+            'rotation' => 0, 'color' => $network['color'], 'stroke' => (float) ($network['stroke'] ?? 3.5),
+            'opacity' => 1, 'label' => '', 'locked' => false,
+            'network' => $key,
+            'diameter' => $network['diameter'],
+            'material' => $network['material'],
+            'slope' => !empty($network['gravity']) ? 2 : 0,
+            'pressure' => (float) ($network['pressureKpa'] ?? 0),
+        ];
+    }
+
+    private static function defaultConduit(): array
+    {
+        $electrical = LibraryRepository::electrical();
+        $voltages = array_map('intval', $electrical['voltages']);
+        $gauges = array_map('strval', $electrical['gauges']);
+        return [
+            'type' => 'conduit', 'x' => 0, 'y' => 0, 'w' => 240, 'h' => 10,
+            'rotation' => 0, 'color' => $electrical['colors'][0] ?? '#2563eb', 'stroke' => 2.5,
+            'opacity' => 1, 'label' => '', 'locked' => false,
+            'circuit' => (string) ($electrical['defaultCircuit'] ?? 'C1'),
+            'voltage' => in_array(220, $voltages, true) ? 220 : $voltages[0],
+            'gauge' => in_array('12', $gauges, true) ? '12' : $gauges[0],
+            'phases' => (int) ($electrical['defaultPhases'] ?? 1) === 3 ? 3 : 1,
+        ];
     }
 
     private static function normalizeCanvas(mixed $canvas): array
@@ -162,7 +236,7 @@ final class DesignValidator
         if (!is_array($canvas)) {
             throw new DomainException('Falta la configuración del lienzo.');
         }
-        $allowed = ['width', 'height', 'grid', 'unit', 'scale', 'background'];
+        $allowed = ['width', 'height', 'grid', 'unit', 'scale', 'background', 'occupancy'];
         foreach (array_keys($canvas) as $key) {
             if (!in_array($key, $allowed, true)) {
                 throw new DomainException('El lienzo contiene una propiedad no permitida.');
@@ -171,6 +245,9 @@ final class DesignValidator
         $width = self::integer($canvas['width'] ?? null, 400, 4000, 'ancho del lienzo');
         $height = self::integer($canvas['height'] ?? null, 300, 3000, 'alto del lienzo');
         $grid = self::integer($canvas['grid'] ?? 20, 5, 100, 'cuadrícula');
+        // Ocupación declarada del piso (personas). 0 = sin declarar: el auditor
+        // la estima a partir del área libre y lo advierte en el informe.
+        $occupancy = self::integer($canvas['occupancy'] ?? 0, 0, 10000, 'ocupación del piso');
         $unit = $canvas['unit'] ?? 'cm';
         $scale = $canvas['scale'] ?? '1:100';
         $background = $canvas['background'] ?? '#ffffff';
@@ -190,6 +267,7 @@ final class DesignValidator
             'unit' => $unit,
             'scale' => $scale,
             'background' => $background,
+            'occupancy' => $occupancy,
         ];
     }
 
@@ -237,27 +315,28 @@ final class DesignValidator
         }
         $result = [];
         $ids = [];
-        $allowedKeys = [
+        $baseKeys = [
             'id', 'type', 'layerId', 'x', 'y', 'w', 'h', 'rotation', 'color', 'stroke', 'opacity',
-            'label', 'fontSize', 'points', 'flipX', 'locked',
+            'label', 'fontSize', 'points', 'flipX', 'flipY', 'isExit', 'locked',
         ];
         foreach ($elements as $element) {
             if (!is_array($element)) {
                 throw new DomainException('Uno de los elementos del plano no es válido.');
             }
+            $id = $element['id'] ?? '';
+            $type = $element['type'] ?? '';
+            if (!is_string($type) || !self::isKnownType($type)) {
+                throw new DomainException('El tipo de un elemento no pertenece a las bibliotecas permitidas.');
+            }
+            $allowedKeys = array_merge($baseKeys, self::mepKeysFor($type));
             foreach (array_keys($element) as $key) {
                 if (!in_array($key, $allowedKeys, true)) {
                     throw new DomainException('Un elemento contiene una propiedad no permitida: ' . (string) $key . '.');
                 }
             }
-            $id = $element['id'] ?? '';
-            $type = $element['type'] ?? '';
             $layerId = $element['layerId'] ?? '';
             if (!is_string($id) || preg_match('/^[A-Za-z][A-Za-z0-9_-]{2,63}$/D', $id) !== 1 || isset($ids[$id])) {
                 throw new DomainException('El identificador de un elemento no es válido o está repetido.');
-            }
-            if (!is_string($type) || !self::isKnownType($type)) {
-                throw new DomainException('El tipo de un elemento no pertenece a las bibliotecas permitidas.');
             }
             if (!is_string($layerId) || !in_array($layerId, $layerIds, true)) {
                 throw new DomainException('Un elemento apunta a una capa inexistente.');
@@ -266,6 +345,14 @@ final class DesignValidator
             $y = self::number($element['y'] ?? null, 0, 10_000, 'coordenada Y');
             $w = self::number($element['w'] ?? null, 2, 10_000, 'ancho');
             $h = self::number($element['h'] ?? null, 2, 10_000, 'alto');
+            // Las puertas antiguas solo guardaban el hueco del muro (80 × 16).
+            // El símbolo actual necesita la profundidad de abatimiento: se
+            // amplía el alto conservando la línea del muro (borde inferior).
+            if ($type === 'door' && $h < $w * 0.5) {
+                $edge = $y + $h;
+                $h = min($w, $canvas['height']);
+                $y = max(0.0, min($edge - $h, $canvas['height'] - $h));
+            }
             if ($x + $w > $canvas['width'] + 0.5 || $y + $h > $canvas['height'] + 0.5) {
                 throw new DomainException('Un elemento queda fuera de los límites del lienzo.');
             }
@@ -293,11 +380,18 @@ final class DesignValidator
                 throw new DomainException('El bloqueo de un elemento no es válido.');
             }
             $flipX = $element['flipX'] ?? false;
-            if (!is_bool($flipX)) {
+            $flipY = $element['flipY'] ?? false;
+            if (!is_bool($flipX) || !is_bool($flipY)) {
                 throw new DomainException('El sentido de apertura no es válido.');
             }
+            // Solo las puertas pueden declararse salida de emergencia.
+            $isExit = $element['isExit'] ?? false;
+            if (!is_bool($isExit)) {
+                throw new DomainException('La marca de salida de emergencia no es válida.');
+            }
+            $isExit = in_array($type, self::DOOR_TYPES, true) ? $isExit : false;
             $points = null;
-            if (in_array($type, ['wall', 'route', 'dimension', 'line'], true)) {
+            if (in_array($type, ['wall', 'route', 'dimension', 'line', 'pipe', 'conduit'], true)) {
                 $points = self::normalizePoints($element['points'] ?? null, $w, $h, $type);
             }
             $code = self::signCodeForType($type);
@@ -308,6 +402,60 @@ final class DesignValidator
             $cad = LibraryRepository::cadObject($type);
             if ($cad !== null && !in_array($color, self::COLORS, true)) {
                 $color = '#334155';
+            }
+            $mep = [];
+            if ($type === 'pipe') {
+                $networks = LibraryRepository::networks();
+                $network = $element['network'] ?? array_key_first($networks);
+                if (!is_string($network) || !isset($networks[$network])) {
+                    throw new DomainException('La red de una tubería no pertenece al catálogo permitido.');
+                }
+                $definition = $networks[$network];
+                $diameter = $element['diameter'] ?? $definition['diameter'];
+                if (!is_string($diameter) || !in_array($diameter, LibraryRepository::diameters(), true)) {
+                    throw new DomainException('El diámetro de una tubería no es válido.');
+                }
+                $material = $element['material'] ?? $definition['material'];
+                if (!is_string($material) || !isset(LibraryRepository::materials()[$material])) {
+                    throw new DomainException('El material de una tubería no es válido.');
+                }
+                $slope = self::number($element['slope'] ?? (!empty($definition['gravity']) ? 2 : 0), 0, 15, 'pendiente');
+                $pressure = self::number($element['pressure'] ?? (float) ($definition['pressureKpa'] ?? 0), 0, 5000, 'presión');
+                $mep = [
+                    'network' => $network,
+                    'diameter' => $diameter,
+                    'material' => $material,
+                    'slope' => round($slope, 2),
+                    'pressure' => round($pressure, 1),
+                ];
+                if (!in_array($color, self::COLORS, true)) {
+                    $color = $definition['color'];
+                }
+                $stroke = max(1.0, $stroke);
+            } elseif ($type === 'conduit') {
+                $electrical = LibraryRepository::electrical();
+                $voltages = array_map('intval', $electrical['voltages']);
+                $gauges = array_map('strval', $electrical['gauges']);
+                $circuit = self::circuit((string) ($element['circuit'] ?? ($electrical['defaultCircuit'] ?? 'C1')));
+                $voltage = self::integer($element['voltage'] ?? 220, 1, 2000, 'tensión');
+                if (!in_array($voltage, $voltages, true)) {
+                    throw new DomainException('La tensión del circuito no pertenece al catálogo permitido.');
+                }
+                $gauge = (string) ($element['gauge'] ?? ($gauges[0] ?? '12'));
+                if (!in_array($gauge, $gauges, true)) {
+                    throw new DomainException('El calibre del circuito no pertenece al catálogo permitido.');
+                }
+                $phases = self::integer($element['phases'] ?? (int) ($electrical['defaultPhases'] ?? 1), 1, 3, 'número de fases');
+                if (!in_array($phases, array_map('intval', $electrical['phases'] ?? [1, 3]), true)) {
+                    throw new DomainException('El número de fases del circuito no es válido.');
+                }
+                $mep = ['circuit' => $circuit, 'voltage' => $voltage, 'gauge' => $gauge, 'phases' => $phases];
+                $stroke = max(1.0, $stroke);
+            } elseif (LibraryRepository::isElectricalObject($type)) {
+                $mep = [
+                    'circuit' => self::circuit((string) ($element['circuit'] ?? '')),
+                    'load' => round(self::number($element['load'] ?? 0, 0, 100000, 'carga'), 1),
+                ];
             }
             $normalized = [
                 'id' => $id,
@@ -330,8 +478,13 @@ final class DesignValidator
             if ($points !== null) {
                 $normalized['points'] = $points;
             }
-            if ($type === 'door') {
+            if (in_array($type, self::DOOR_TYPES, true)) {
                 $normalized['flipX'] = $flipX;
+                $normalized['flipY'] = $flipY;
+                $normalized['isExit'] = $isExit;
+            }
+            foreach ($mep as $key => $value) {
+                $normalized[$key] = $value;
             }
             $ids[$id] = true;
             $result[] = $normalized;

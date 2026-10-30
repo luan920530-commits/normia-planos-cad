@@ -131,6 +131,10 @@ final class Application
         $router->get('projects/{id}/floors/{floorId}/preview.svg', static fn (array $p) => (new ExportController())->preview($p['id'], $p['floorId']));
         $router->get('catalogs/signs', static fn () => (new LibraryController())->signs());
         $router->get('catalogs/cad', static fn () => (new LibraryController())->cad());
+        $router->get('catalogs/mep', static fn () => (new LibraryController())->mep());
+        $router->get('api/floors/{id}/mep', static fn (array $p) => (new FloorApiController())->mep($p['id']));
+        $router->get('api/floors/{id}/audit', static fn (array $p) => (new FloorApiController())->audit($p['id']));
+        $router->get('projects/{id}/floors/{floorId}/audit', static fn (array $p) => (new ExportController())->audit($p['id'], $p['floorId']));
 
         // Cuenta
         $router->get('account/password', static fn () => (new AccountController())->show());
