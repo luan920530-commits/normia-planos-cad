@@ -5,15 +5,20 @@
   "license": "GPL-3.0 · pictogramas originales de Normia Planos CAD",
   "note": "Señales de orientación dibujadas para este proyecto. No son señales ISO 7010 ni certifican cumplimiento normativo.",
   "categories": {
+    "location": {
+      "label": "Ubicación en el plano",
+      "short": "Ubicación",
+      "description": "Marcadores que sitúan a quien lee el plano: el punto donde está ahora y referencias de posición. Señalización de orientación propia, no ISO 7010."
+    },
     "services": {
       "label": "Orientación y servicios",
       "short": "Servicios",
       "description": "Baños, vestidores, cafetería, recepción y demás servicios del edificio. Verifica la ubicación real antes de señalizar."
     },
-    "location": {
-      "label": "Ubicación en el plano",
-      "short": "Ubicación",
-      "description": "Marcadores que sitúan a quien lee el plano: el punto donde está ahora y referencias de posición. Señalización de orientación propia, no ISO 7010."
+    "traffic": {
+      "label": "Señalización de tránsito",
+      "short": "Tránsito",
+      "description": "Señales viales esquemáticas para accesos, parqueaderos y vías internas. Son referencias gráficas propias: no reproducen manuales oficiales ni certifican cumplimiento."
     }
   },
   "signs": {
@@ -267,6 +272,408 @@
         "cajas"
       ],
       "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"2\" y=\"2\" width=\"96\" height=\"96\" rx=\"12\" fill=\"currentColor\"/><rect x=\"16\" y=\"52\" width=\"30\" height=\"30\" rx=\"3\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\"/><rect x=\"54\" y=\"52\" width=\"30\" height=\"30\" rx=\"3\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\"/><rect x=\"34\" y=\"18\" width=\"30\" height=\"30\" rx=\"3\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\"/><path d=\"M31 52L31 66\" fill=\"none\" stroke=\"#fff\" stroke-width=\"3\" stroke-linecap=\"round\"/><path d=\"M69 52L69 66\" fill=\"none\" stroke=\"#fff\" stroke-width=\"3\" stroke-linecap=\"round\"/><path d=\"M34 33L64 33\" fill=\"none\" stroke=\"#fff\" stroke-width=\"3\" stroke-linecap=\"round\"/></svg>"
+    },
+    "SVC_TRF_BUS_STOP": {
+      "name": "Parada de transporte",
+      "category": "traffic",
+      "description": "Placa de parada de bus o transporte de personal. Pictograma propio de Normia para el plano; no es una señal oficial.",
+      "aliases": [
+        "parada",
+        "bus",
+        "transporte",
+        "paradero",
+        "colectivo"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"6\" y=\"20\" width=\"88\" height=\"60\" rx=\"4\" fill=\"#237f52\"/><rect x=\"20\" y=\"34\" width=\"60\" height=\"26\" rx=\"5\" fill=\"#ffffff\"/><circle cx=\"32\" cy=\"64\" r=\"4\" fill=\"#ffffff\"/><circle cx=\"68\" cy=\"64\" r=\"4\" fill=\"#ffffff\"/><rect x=\"26\" y=\"40\" width=\"20\" height=\"10\" rx=\"2\" fill=\"#237f52\"/><rect x=\"52\" y=\"40\" width=\"22\" height=\"10\" rx=\"2\" fill=\"#237f52\"/></svg>"
+    },
+    "SVC_TRF_CONSTRUCTION": {
+      "name": "Obras en la vía",
+      "category": "traffic",
+      "description": "Prevención de obras, maquinaria o trabajadores en la calzada. Pictograma propio de Normia para el plano; no es una señal oficial.",
+      "aliases": [
+        "obras",
+        "construccion",
+        "trabajos en la via"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path d=\"M50 11 92 85H8Z\" fill=\"#f9a800\" stroke=\"#1f2937\" stroke-width=\"6\" stroke-linejoin=\"round\"/><circle cx=\"50\" cy=\"40\" r=\"5\" fill=\"#1f2937\"/><path d=\"M50 46v14M50 50l-10 6M50 50l10 4M50 60l-8 12M50 60l8 12\" fill=\"none\" stroke=\"#1f2937\" stroke-width=\"4.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>"
+    },
+    "SVC_TRF_CROSSWALK": {
+      "name": "Cebra peatonal",
+      "category": "traffic",
+      "description": "Demarcación de cruce peatonal: franjas sobre la calzada. Pictograma propio de Normia para el plano; no es una señal oficial.",
+      "aliases": [
+        "cebra",
+        "cruce peatonal",
+        "paso cebra",
+        "demarcacion"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"8\" y=\"24\" width=\"84\" height=\"52\" rx=\"4\" fill=\"#1f2937\" fill-opacity=\".08\"/><rect x=\"14\" y=\"30\" width=\"8\" height=\"40\" rx=\"2\" fill=\"#1f2937\"/><rect x=\"27\" y=\"30\" width=\"8\" height=\"40\" rx=\"2\" fill=\"#1f2937\"/><rect x=\"40\" y=\"30\" width=\"8\" height=\"40\" rx=\"2\" fill=\"#1f2937\"/><rect x=\"53\" y=\"30\" width=\"8\" height=\"40\" rx=\"2\" fill=\"#1f2937\"/><rect x=\"66\" y=\"30\" width=\"8\" height=\"40\" rx=\"2\" fill=\"#1f2937\"/><rect x=\"79\" y=\"30\" width=\"8\" height=\"40\" rx=\"2\" fill=\"#1f2937\"/></svg>"
+    },
+    "SVC_TRF_CYCLIST": {
+      "name": "Paso de ciclistas",
+      "category": "traffic",
+      "description": "Prevención de circulación de bicicletas o ciclorruta cercana. Pictograma propio de Normia para el plano; no es una señal oficial.",
+      "aliases": [
+        "bicicleta",
+        "ciclista",
+        "ciclorruta",
+        "bici"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path d=\"M50 11 92 85H8Z\" fill=\"#f9a800\" stroke=\"#1f2937\" stroke-width=\"6\" stroke-linejoin=\"round\"/><circle cx=\"38\" cy=\"66\" r=\"8\" fill=\"none\" stroke=\"#1f2937\" stroke-width=\"4\"/><circle cx=\"64\" cy=\"66\" r=\"8\" fill=\"none\" stroke=\"#1f2937\" stroke-width=\"4\"/><path d=\"M38 66l10-16h12l4 16M46 50h14M56 44l4 6\" fill=\"none\" stroke=\"#1f2937\" stroke-width=\"4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>"
+    },
+    "SVC_TRF_DEAD_END": {
+      "name": "Vía sin salida",
+      "category": "traffic",
+      "description": "Placa informativa de vía sin continuidad. Pictograma propio de Normia para el plano; no es una señal oficial.",
+      "aliases": [
+        "sin salida",
+        "callejon",
+        "dead end",
+        "via cerrada"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"6\" y=\"20\" width=\"88\" height=\"60\" rx=\"4\" fill=\"#005387\"/><path d=\"M22 50h56M22 36v28M78 36v28\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"7\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>"
+    },
+    "SVC_TRF_DISABLED": {
+      "name": "Parqueadero accesible",
+      "category": "traffic",
+      "description": "Plaza reservada para vehículos de personas con movilidad reducida. Pictograma propio de Normia para el plano; no es una señal oficial.",
+      "aliases": [
+        "discapacidad",
+        "pmr",
+        "minusvalido",
+        "movilidad reducida"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"6\" y=\"20\" width=\"88\" height=\"60\" rx=\"4\" fill=\"#005387\"/><circle cx=\"42\" cy=\"32\" r=\"5\" fill=\"#ffffff\"/><path d=\"M42 40v14h14M42 54l-4 12M56 54l6 12M36 66h24\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>"
+    },
+    "SVC_TRF_HUMP": {
+      "name": "Resalto o reductor",
+      "category": "traffic",
+      "description": "Prevención de resalto o banda reductora de velocidad. Pictograma propio de Normia para el plano; no es una señal oficial.",
+      "aliases": [
+        "resalto",
+        "reductor",
+        "policia acostado",
+        "lomo de toro"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path d=\"M50 11 92 85H8Z\" fill=\"#f9a800\" stroke=\"#1f2937\" stroke-width=\"6\" stroke-linejoin=\"round\"/><path d=\"M22 72q12-18 28-18t28 18\" fill=\"none\" stroke=\"#1f2937\" stroke-width=\"6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><path d=\"M22 78h56\" fill=\"none\" stroke=\"#1f2937\" stroke-width=\"4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>"
+    },
+    "SVC_TRF_HUMP_MARK": {
+      "name": "Resalto demarcado",
+      "category": "traffic",
+      "description": "Demarcación de resalto con franjas de advertencia. Pictograma propio de Normia para el plano; no es una señal oficial.",
+      "aliases": [
+        "resalto",
+        "demarcacion",
+        "reductor"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"8\" y=\"30\" width=\"84\" height=\"40\" rx=\"4\" fill=\"#1f2937\" fill-opacity=\".08\"/><path d=\"M18 66 26 34\" stroke=\"#f9a800\" stroke-width=\"9\" stroke-linecap=\"round\"/><path d=\"M34 66 42 34\" stroke=\"#f9a800\" stroke-width=\"9\" stroke-linecap=\"round\"/><path d=\"M50 66 58 34\" stroke=\"#f9a800\" stroke-width=\"9\" stroke-linecap=\"round\"/><path d=\"M66 66 74 34\" stroke=\"#f9a800\" stroke-width=\"9\" stroke-linecap=\"round\"/><path d=\"M82 66 90 34\" stroke=\"#f9a800\" stroke-width=\"9\" stroke-linecap=\"round\"/></svg>"
+    },
+    "SVC_TRF_LANE_ARROW": {
+      "name": "Flecha de carril",
+      "category": "traffic",
+      "description": "Demarcación de sentido de circulación dentro del carril. Pictograma propio de Normia para el plano; no es una señal oficial.",
+      "aliases": [
+        "flecha",
+        "carril",
+        "demarcacion",
+        "sentido"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"8\" y=\"24\" width=\"84\" height=\"52\" rx=\"4\" fill=\"#1f2937\" fill-opacity=\".08\"/><path d=\"M50 70V40M38 52l12-14 12 14\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"9\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><path d=\"M50 70V40M38 52l12-14 12 14\" fill=\"none\" stroke=\"#1f2937\" stroke-width=\"4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>"
+    },
+    "SVC_TRF_LOADING": {
+      "name": "Zona de carga y descarga",
+      "category": "traffic",
+      "description": "Placa de zona reservada para carga y descarga de mercancía. Pictograma propio de Normia para el plano; no es una señal oficial.",
+      "aliases": [
+        "carga",
+        "descarga",
+        "cargue",
+        "zona de cargue",
+        "muelle"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"6\" y=\"20\" width=\"88\" height=\"60\" rx=\"4\" fill=\"#005387\"/><rect x=\"18\" y=\"44\" width=\"26\" height=\"20\" rx=\"2\" fill=\"#ffffff\"/><path d=\"M48 54h20M62 46l8 8-8 8\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>"
+    },
+    "SVC_TRF_MANDATORY_LEFT": {
+      "name": "Giro obligatorio a la izquierda",
+      "category": "traffic",
+      "description": "Obligación de girar a la izquierda en el próximo cruce. Pictograma propio de Normia para el plano; no es una señal oficial.",
+      "aliases": [
+        "giro obligatorio",
+        "izquierda",
+        "obligacion"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><circle cx=\"50\" cy=\"50\" r=\"44\" fill=\"#005387\"/><path d=\"M64 74V50a12 12 0 0 0-12-12H36M44 30l-10 8 10 8\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>"
+    },
+    "SVC_TRF_MANDATORY_RIGHT": {
+      "name": "Giro obligatorio a la derecha",
+      "category": "traffic",
+      "description": "Obligación de girar a la derecha en el próximo cruce. Pictograma propio de Normia para el plano; no es una señal oficial.",
+      "aliases": [
+        "giro obligatorio",
+        "derecha",
+        "obligacion"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><circle cx=\"50\" cy=\"50\" r=\"44\" fill=\"#005387\"/><path d=\"M36 74V50a12 12 0 0 1 12-12h16M56 30l10 8-10 8\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>"
+    },
+    "SVC_TRF_NO_ENTRY": {
+      "name": "Prohibido el paso",
+      "category": "traffic",
+      "description": "Círculo rojo con banda blanca: entrada restringida o sentido contrario. Pictograma propio de Normia para el plano; no es una señal oficial.",
+      "aliases": [
+        "prohibido el paso",
+        "no entry",
+        "entrada restringida",
+        "prohibido entrar"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><circle cx=\"50\" cy=\"50\" r=\"44\" fill=\"#c1121f\"/><rect x=\"24\" y=\"43\" width=\"52\" height=\"14\" rx=\"3\" fill=\"#ffffff\"/></svg>"
+    },
+    "SVC_TRF_NO_HORN": {
+      "name": "Prohibido pitar",
+      "category": "traffic",
+      "description": "Restricción de ruido: no se permite el uso de la bocina. Pictograma propio de Normia para el plano; no es una señal oficial.",
+      "aliases": [
+        "bocina",
+        "pitar",
+        "claxon",
+        "ruido"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><circle cx=\"50\" cy=\"50\" r=\"44\" fill=\"#ffffff\" stroke=\"#c1121f\" stroke-width=\"9\"/><path d=\"M30 44h12l14-10v32L42 56H30ZM64 40a16 16 0 0 1 0 20\" fill=\"none\" stroke=\"#1f2937\" stroke-width=\"6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><path d=\"M24 76 76 24\" fill=\"none\" stroke=\"#c1121f\" stroke-width=\"10\" stroke-linecap=\"round\"/></svg>"
+    },
+    "SVC_TRF_NO_LEFT": {
+      "name": "Prohibido girar a la izquierda",
+      "category": "traffic",
+      "description": "Reglamentación de giro: la maniobra a la izquierda no está permitida. Pictograma propio de Normia para el plano; no es una señal oficial.",
+      "aliases": [
+        "prohibido girar",
+        "no girar",
+        "izquierda"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><circle cx=\"50\" cy=\"50\" r=\"44\" fill=\"#ffffff\" stroke=\"#c1121f\" stroke-width=\"9\"/><path d=\"M62 68V44a12 12 0 0 0-12-12H34M40 24l-8 8 8 8\" fill=\"none\" stroke=\"#1f2937\" stroke-width=\"7\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><path d=\"M24 76 76 24\" fill=\"none\" stroke=\"#c1121f\" stroke-width=\"10\" stroke-linecap=\"round\"/></svg>"
+    },
+    "SVC_TRF_NO_OVERTAKE": {
+      "name": "Prohibido adelantar",
+      "category": "traffic",
+      "description": "Reglamentación que impide el sobrepaso entre vehículos. Pictograma propio de Normia para el plano; no es una señal oficial.",
+      "aliases": [
+        "adelantar",
+        "sobrepaso",
+        "rebasar",
+        "no adelantar"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><circle cx=\"50\" cy=\"50\" r=\"44\" fill=\"#ffffff\" stroke=\"#c1121f\" stroke-width=\"9\"/><rect x=\"30\" y=\"42\" width=\"20\" height=\"30\" rx=\"4\" fill=\"#1f2937\"/><rect x=\"52\" y=\"30\" width=\"18\" height=\"26\" rx=\"4\" fill=\"#1f2937\" fill-opacity=\".55\"/><path d=\"M24 76 76 24\" fill=\"none\" stroke=\"#c1121f\" stroke-width=\"10\" stroke-linecap=\"round\"/></svg>"
+    },
+    "SVC_TRF_NO_PARK": {
+      "name": "Prohibido parquear",
+      "category": "traffic",
+      "description": "Círculo azul con banda roja: no se permite estacionar en ese tramo. Pictograma propio de Normia para el plano; no es una señal oficial.",
+      "aliases": [
+        "prohibido parquear",
+        "no parquear",
+        "no estacionar",
+        "prohibido estacionar"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><circle cx=\"50\" cy=\"50\" r=\"44\" fill=\"#005387\"/><path d=\"M24 76 76 24\" fill=\"none\" stroke=\"#c1121f\" stroke-width=\"10\" stroke-linecap=\"round\"/><text x=\"50\" y=\"64\" text-anchor=\"middle\" font-family=\"Helvetica, Arial, sans-serif\" font-size=\"34\" font-weight=\"700\" fill=\"#ffffff\">P</text></svg>"
+    },
+    "SVC_TRF_NO_PEDESTRIAN": {
+      "name": "Prohibido el paso de peatones",
+      "category": "traffic",
+      "description": "Círculo de reglamentación: los peatones no deben cruzar por ese punto. Pictograma propio de Normia para el plano; no es una señal oficial.",
+      "aliases": [
+        "peaton",
+        "peatones",
+        "prohibido cruzar"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><circle cx=\"50\" cy=\"50\" r=\"44\" fill=\"#ffffff\" stroke=\"#c1121f\" stroke-width=\"9\"/><circle cx=\"52\" cy=\"30\" r=\"6\" fill=\"#1f2937\"/><path d=\"M52 38l-6 16 8 8-4 12M46 54l-10 6M54 46l10 6\" fill=\"none\" stroke=\"#1f2937\" stroke-width=\"6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><path d=\"M24 76 76 24\" fill=\"none\" stroke=\"#c1121f\" stroke-width=\"10\" stroke-linecap=\"round\"/></svg>"
+    },
+    "SVC_TRF_NO_RIGHT": {
+      "name": "Prohibido girar a la derecha",
+      "category": "traffic",
+      "description": "Reglamentación de giro: la maniobra a la derecha no está permitida. Pictograma propio de Normia para el plano; no es una señal oficial.",
+      "aliases": [
+        "prohibido girar",
+        "no girar",
+        "derecha"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><circle cx=\"50\" cy=\"50\" r=\"44\" fill=\"#ffffff\" stroke=\"#c1121f\" stroke-width=\"9\"/><path d=\"M38 68V44a12 12 0 0 1 12-12h16M60 24l8 8-8 8\" fill=\"none\" stroke=\"#1f2937\" stroke-width=\"7\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><path d=\"M24 76 76 24\" fill=\"none\" stroke=\"#c1121f\" stroke-width=\"10\" stroke-linecap=\"round\"/></svg>"
+    },
+    "SVC_TRF_NO_TRUCKS": {
+      "name": "Prohibido el paso de camiones",
+      "category": "traffic",
+      "description": "Restricción de circulación para vehículos de carga pesada. Pictograma propio de Normia para el plano; no es una señal oficial.",
+      "aliases": [
+        "camion",
+        "carga pesada",
+        "vehiculo pesado"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><circle cx=\"50\" cy=\"50\" r=\"44\" fill=\"#ffffff\" stroke=\"#c1121f\" stroke-width=\"9\"/><rect x=\"24\" y=\"40\" width=\"30\" height=\"24\" rx=\"3\" fill=\"#1f2937\"/><path d=\"M54 48h12l8 8v8H54Z\" fill=\"#1f2937\" fill-opacity=\".6\"/><circle cx=\"34\" cy=\"68\" r=\"4\" fill=\"#1f2937\"/><circle cx=\"64\" cy=\"68\" r=\"4\" fill=\"#1f2937\"/><path d=\"M24 76 76 24\" fill=\"none\" stroke=\"#c1121f\" stroke-width=\"10\" stroke-linecap=\"round\"/></svg>"
+    },
+    "SVC_TRF_NO_UTURN": {
+      "name": "Prohibido devolverse",
+      "category": "traffic",
+      "description": "Círculo de reglamentación: no se permite el retorno en U. Pictograma propio de Normia para el plano; no es una señal oficial.",
+      "aliases": [
+        "retorno",
+        "devolverse",
+        "u turn",
+        "prohibido retornar"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><circle cx=\"50\" cy=\"50\" r=\"44\" fill=\"#ffffff\" stroke=\"#c1121f\" stroke-width=\"9\"/><path d=\"M36 74V50a14 14 0 0 1 28 0v24M56 66l8 8 8-8\" fill=\"none\" stroke=\"#1f2937\" stroke-width=\"7\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><path d=\"M24 76 76 24\" fill=\"none\" stroke=\"#c1121f\" stroke-width=\"10\" stroke-linecap=\"round\"/></svg>"
+    },
+    "SVC_TRF_ONE_WAY": {
+      "name": "Sentido único",
+      "category": "traffic",
+      "description": "Flecha direccional para vías de un solo sentido. Pictograma propio de Normia para el plano; no es una señal oficial.",
+      "aliases": [
+        "sentido unico",
+        "una via",
+        "one way",
+        "direccion"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"8\" y=\"26\" width=\"84\" height=\"48\" rx=\"6\" fill=\"#005387\"/><path d=\"M22 50h44M54 38l14 12-14 12\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>"
+    },
+    "SVC_TRF_PARKING": {
+      "name": "Parqueadero",
+      "category": "traffic",
+      "description": "Placa informativa de zona de estacionamiento. Pictograma propio de Normia para el plano; no es una señal oficial.",
+      "aliases": [
+        "parqueadero",
+        "parqueo",
+        "estacionamiento",
+        "parking"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"6\" y=\"20\" width=\"88\" height=\"60\" rx=\"4\" fill=\"#005387\"/><text x=\"50\" y=\"66\" text-anchor=\"middle\" font-family=\"Helvetica, Arial, sans-serif\" font-size=\"44\" font-weight=\"700\" fill=\"#ffffff\">P</text></svg>"
+    },
+    "SVC_TRF_PEDESTRIAN": {
+      "name": "Cruce de peatones",
+      "category": "traffic",
+      "description": "Triángulo de prevención: paso de peatones más adelante. Pictograma propio de Normia para el plano; no es una señal oficial.",
+      "aliases": [
+        "cruce de peatones",
+        "paso peatonal",
+        "peaton",
+        "zebra"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path d=\"M50 11 92 85H8Z\" fill=\"#f9a800\" stroke=\"#1f2937\" stroke-width=\"6\" stroke-linejoin=\"round\"/><circle cx=\"52\" cy=\"42\" r=\"6\" fill=\"#1f2937\"/><path d=\"M52 50l-5 13 7 7-3 9M47 63l-9 5M53 57l9 5\" fill=\"none\" stroke=\"#1f2937\" stroke-width=\"5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>"
+    },
+    "SVC_TRF_ROUNDABOUT": {
+      "name": "Glorieta",
+      "category": "traffic",
+      "description": "Placa de glorieta: circulación giratoria en la intersección. Pictograma propio de Normia para el plano; no es una señal oficial.",
+      "aliases": [
+        "glorieta",
+        "rotonda",
+        "roundabout",
+        "interseccion"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><circle cx=\"50\" cy=\"50\" r=\"44\" fill=\"#005387\"/><circle cx=\"50\" cy=\"50\" r=\"12\" fill=\"#ffffff\"/><path d=\"M50 26a24 24 0 1 1-17 7M41 22h10v10\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"7\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>"
+    },
+    "SVC_TRF_SCHOOL": {
+      "name": "Zona escolar",
+      "category": "traffic",
+      "description": "Prevención de presencia de niños y cruces escolares. Pictograma propio de Normia para el plano; no es una señal oficial.",
+      "aliases": [
+        "zona escolar",
+        "colegio",
+        "escuela",
+        "ninos",
+        "estudiantes"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path d=\"M50 11 92 85H8Z\" fill=\"#f9a800\" stroke=\"#1f2937\" stroke-width=\"6\" stroke-linejoin=\"round\"/><circle cx=\"42\" cy=\"46\" r=\"6\" fill=\"#1f2937\"/><path d=\"M42 54l-4 12 5 6-2 7M38 66l-7 4M44 60l8 5\" fill=\"none\" stroke=\"#1f2937\" stroke-width=\"5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><circle cx=\"64\" cy=\"52\" r=\"4.5\" fill=\"#1f2937\"/><path d=\"M64 58l-2 9 4 4-2 6M62 67l-6 3M66 63l6 4\" fill=\"none\" stroke=\"#1f2937\" stroke-width=\"4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>"
+    },
+    "SVC_TRF_SIDEWALK": {
+      "name": "Andén o acera",
+      "category": "traffic",
+      "description": "Demarcación del andén y la franja de circulación peatonal. Pictograma propio de Normia para el plano; no es una señal oficial.",
+      "aliases": [
+        "anden",
+        "acera",
+        "peatonal",
+        "vereda"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"6\" y=\"34\" width=\"88\" height=\"32\" rx=\"3\" fill=\"#1f2937\" fill-opacity=\".07\"/><path d=\"M6 34h88M6 66h88\" stroke=\"#1f2937\" stroke-width=\"4\" stroke-linecap=\"round\"/><path d=\"M20 40v20\" stroke=\"#1f2937\" stroke-width=\"3\" opacity=\".45\"/><path d=\"M35 40v20\" stroke=\"#1f2937\" stroke-width=\"3\" opacity=\".45\"/><path d=\"M50 40v20\" stroke=\"#1f2937\" stroke-width=\"3\" opacity=\".45\"/><path d=\"M65 40v20\" stroke=\"#1f2937\" stroke-width=\"3\" opacity=\".45\"/><path d=\"M80 40v20\" stroke=\"#1f2937\" stroke-width=\"3\" opacity=\".45\"/></svg>"
+    },
+    "SVC_TRF_SIGNAL": {
+      "name": "Semáforo",
+      "category": "traffic",
+      "description": "Prevención de semáforo o control luminoso en la vía. Pictograma propio de Normia para el plano; no es una señal oficial.",
+      "aliases": [
+        "semaforo",
+        "senal luminosa",
+        "trafico"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path d=\"M50 11 92 85H8Z\" fill=\"#f9a800\" stroke=\"#1f2937\" stroke-width=\"6\" stroke-linejoin=\"round\"/><rect x=\"40\" y=\"36\" width=\"20\" height=\"40\" rx=\"6\" fill=\"#1f2937\"/><circle cx=\"50\" cy=\"46\" r=\"4\" fill=\"#f9a800\"/><circle cx=\"50\" cy=\"56\" r=\"4\" fill=\"#ffffff\"/><circle cx=\"50\" cy=\"66\" r=\"4\" fill=\"#ffffff\"/></svg>"
+    },
+    "SVC_TRF_SLIPPERY": {
+      "name": "Piso resbaloso",
+      "category": "traffic",
+      "description": "Prevención de calzada deslizante por agua o aceite. Pictograma propio de Normia para el plano; no es una señal oficial.",
+      "aliases": [
+        "resbaloso",
+        "derrape",
+        "piso mojado",
+        "deslizante"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path d=\"M50 11 92 85H8Z\" fill=\"#f9a800\" stroke=\"#1f2937\" stroke-width=\"6\" stroke-linejoin=\"round\"/><rect x=\"34\" y=\"48\" width=\"28\" height=\"18\" rx=\"4\" fill=\"#1f2937\"/><circle cx=\"40\" cy=\"70\" r=\"3.5\" fill=\"#1f2937\"/><circle cx=\"58\" cy=\"70\" r=\"3.5\" fill=\"#1f2937\"/><path d=\"M24 76q6-6 12 0M62 76q6-6 12 0\" fill=\"none\" stroke=\"#1f2937\" stroke-width=\"3.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>"
+    },
+    "SVC_TRF_SPEED30": {
+      "name": "Velocidad máxima 30",
+      "category": "traffic",
+      "description": "Círculo de reglamentación con la velocidad máxima permitida en la vía interna. Pictograma propio de Normia para el plano; no es una señal oficial.",
+      "aliases": [
+        "velocidad",
+        "maxima",
+        "limite",
+        "30"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><circle cx=\"50\" cy=\"50\" r=\"44\" fill=\"#ffffff\" stroke=\"#c1121f\" stroke-width=\"9\"/><text x=\"50\" y=\"65\" text-anchor=\"middle\" font-family=\"Helvetica, Arial, sans-serif\" font-size=\"40\" font-weight=\"700\" fill=\"#1f2937\">30</text></svg>"
+    },
+    "SVC_TRF_SPEED50": {
+      "name": "Velocidad máxima 50",
+      "category": "traffic",
+      "description": "Círculo de reglamentación para vías de circulación rápida del predio. Pictograma propio de Normia para el plano; no es una señal oficial.",
+      "aliases": [
+        "velocidad",
+        "maxima",
+        "limite",
+        "50"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><circle cx=\"50\" cy=\"50\" r=\"44\" fill=\"#ffffff\" stroke=\"#c1121f\" stroke-width=\"9\"/><text x=\"50\" y=\"65\" text-anchor=\"middle\" font-family=\"Helvetica, Arial, sans-serif\" font-size=\"40\" font-weight=\"700\" fill=\"#1f2937\">50</text></svg>"
+    },
+    "SVC_TRF_STOP": {
+      "name": "Pare",
+      "category": "traffic",
+      "description": "Octágono rojo de detención obligatoria. Sitúa el control de acceso o la salida a una vía principal. Pictograma propio de Normia para el plano; no es una señal oficial.",
+      "aliases": [
+        "pare",
+        "stop",
+        "detencion",
+        "alto"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path d=\"M31 6h38l25 25v38L69 94H31L6 69V31Z\" fill=\"#c1121f\" stroke=\"#ffffff\" stroke-width=\"6\" stroke-linejoin=\"round\"/><text x=\"50\" y=\"60\" text-anchor=\"middle\" font-family=\"Helvetica, Arial, sans-serif\" font-size=\"25\" font-weight=\"700\" fill=\"#ffffff\">PARE</text></svg>"
+    },
+    "SVC_TRF_STRAIGHT": {
+      "name": "Siga de frente",
+      "category": "traffic",
+      "description": "Obligación de continuar en línea recta; no se permite girar. Pictograma propio de Normia para el plano; no es una señal oficial.",
+      "aliases": [
+        "siga",
+        "de frente",
+        "recto",
+        "obligacion"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><circle cx=\"50\" cy=\"50\" r=\"44\" fill=\"#005387\"/><path d=\"M50 76V28M36 42l14-14 14 14\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>"
+    },
+    "SVC_TRF_YIELD": {
+      "name": "Ceda el paso",
+      "category": "traffic",
+      "description": "Triángulo invertido de prioridad. Úsalo en incorporaciones y salidas de parqueadero. Pictograma propio de Normia para el plano; no es una señal oficial.",
+      "aliases": [
+        "ceda el paso",
+        "ceda",
+        "yield",
+        "prioridad"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><path d=\"M50 89 92 15H8Z\" fill=\"#ffffff\" stroke=\"#c1121f\" stroke-width=\"9\" stroke-linejoin=\"round\"/></svg>"
     },
     "SVC_WAITING": {
       "name": "Sala de espera",

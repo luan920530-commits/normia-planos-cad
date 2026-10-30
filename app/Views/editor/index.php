@@ -135,7 +135,7 @@
         </button>
         <button class="rail-button rail-library" type="button" data-open-library="cad" data-tooltip="Biblioteca de equipamiento CAD" aria-label="Biblioteca de equipamiento CAD">
           <svg class="icon"><use href="#i-cad"></use></svg><span>Equipos</span>
-          <em class="rail-count" data-cad-count>145</em>
+          <em class="rail-count" data-cad-count><?= e((string) $catalog['cad']) ?></em>
         </button>
       </div>
       <div class="rail-bottom">
@@ -205,7 +205,7 @@
               <p class="tool-group-title">Insertar</p>
               <div class="tool-group-grid">
                 <button class="tool-choice" type="button" role="menuitem" data-open-library="sign"><span class="tool-choice-icon"><svg class="icon"><use href="#i-sign"></use></svg></span><span class="tool-choice-name">Señales</span><span class="tool-choice-badge"><?= e((string) $catalog['signs']) ?></span></button>
-                <button class="tool-choice" type="button" role="menuitem" data-open-library="cad"><span class="tool-choice-icon"><svg class="icon"><use href="#i-cad"></use></svg></span><span class="tool-choice-name">Equipos</span><span class="tool-choice-badge">145</span></button>
+                <button class="tool-choice" type="button" role="menuitem" data-open-library="cad"><span class="tool-choice-icon"><svg class="icon"><use href="#i-cad"></use></svg></span><span class="tool-choice-name">Equipos</span><span class="tool-choice-badge"><?= e((string) $catalog['cad']) ?></span></button>
               </div>
             </div>
             <footer class="tools-popover-foot"><span class="tool-tip"><kbd>Ctrl</kbd> + clic sobre un elemento superpuesto baja al de abajo.</span></footer>

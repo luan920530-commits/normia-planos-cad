@@ -96,7 +96,7 @@ Los tipos con trazo guardan `points` **en coordenadas locales** a la caja (`0..w
 - Equipos: clave del catálogo `cad_*`, por ejemplo `cad_desk` o `cad_stairs_straight`. Se validan contra `resources/cad-objects.json`.
 - Ambos se dibujan insertando el SVG del catálogo como símbolo saneado, con tamaño cuadrado por defecto (la señal mide 64×64 unidades por defecto).
 - Los trazos (`wall`, `route`, `line`, `dimension`) guardan `points` en coordenadas locales. Al editar un vértice el cliente reescribe la caja (`x`, `y`, `w`, `h`) con los límites reales y **disuelve la rotación en los puntos**, de modo que el servidor sigue recibiendo un documento válido sin cambios de esquema.
-- El catálogo de equipos tiene 145 objetos en 18 familias (`furniture`, `sanitary`, `kitchen`, `industrial`, `vehicles`, `vertical`, `restaurant`, `warehouse`, `retail`, `hospital`, `textile`, `grill`, `supermarket`, `residential`, `sports`, `outdoor`, `electrico`, `hidraulico`). Algunos objetos traen su propio `color` (por ejemplo el agua de piscinas, `#0891b2`); el resto hereda el color del elemento.
+- El catálogo de equipos tiene 301 objetos en 23 familias (`furniture`, `sanitary`, `kitchen`, `industrial`, `vehicles`, `vertical`, `restaurant`, `warehouse`, `retail`, `hospital`, `textile`, `grill`, `supermarket`, `residential`, `sports`, `outdoor`, `electrico`, `hidraulico`, `eds`, `drogueria`, `gimnasio`, `colegio`, `cafeteria`). Algunos objetos traen su propio `color` (por ejemplo el agua de piscinas, `#0891b2`); el resto hereda el color del elemento.
 - Los objetos de la familia `electrico` admiten además `circuit` y `load` (VA), y el editor los suma al cálculo del circuito.
 
 ### Redes técnicas (`pipe` y `conduit`)
