@@ -21,7 +21,8 @@ Normia Planos CAD guarda cada piso como un documento JSON normalizado. El mismo 
     { "id": "capa_senalizacion", "name": "Señalización", "visible": true, "locked": false }
   ],
   "elements": [],
-  "groups": []
+  "groups": [],
+  "extinguishers": { "profile": "colombia", "hazard": "ordinary" }
 }
 ```
 
@@ -37,6 +38,7 @@ Normia Planos CAD guarda cada piso como un documento JSON normalizado. El mismo 
 | `layers` | arreglo | 1–24 capas; la primera es la capa inicial. |
 | `elements` | arreglo | 0–1200 elementos. |
 | `groups` | arreglo | 0–80 grupos con 2–80 miembros existentes. |
+| `extinguishers` | objeto | Opcional. `profile`: `colombia` (por defecto) o `nfpa10`; `hazard`: `light`, `ordinary` (por defecto) o `extra`. Si falta, se aplica el perfil colombiano con riesgo ordinario. |
 
 ### Capas
 
@@ -98,6 +100,30 @@ Los tipos con trazo guardan `points` **en coordenadas locales** a la caja (`0..w
 - Los trazos (`wall`, `route`, `line`, `dimension`) guardan `points` en coordenadas locales. Al editar un vértice el cliente reescribe la caja (`x`, `y`, `w`, `h`) con los límites reales y **disuelve la rotación en los puntos**, de modo que el servidor sigue recibiendo un documento válido sin cambios de esquema.
 - El catálogo de equipos tiene 350 objetos en 28 familias (`furniture`, `sanitary`, `kitchen`, `industrial`, `vehicles`, `vertical`, `restaurant`, `warehouse`, `retail`, `hospital`, `textile`, `grill`, `supermarket`, `residential`, `sports`, `outdoor`, `electrico`, `hidraulico`, `eds`, `drogueria`, `gimnasio`, `colegio`, `cafeteria`, `fire`, `emergency`, `technic`, `access`, `security`). Algunos objetos traen su propio `color` (por ejemplo el agua de piscinas, `#0891b2`); el resto hereda el color del elemento.
 - Los objetos de la familia `electrico` admiten además `circuit` y `load` (VA), y el editor los suma al cálculo del circuito.
+
+### Extintores
+
+Los cuatro equipos de extinción del catálogo —`cad_eds_extinguisher`, `cad_drg_extinguisher`, `cad_fire_ext_co2` y `cad_fire_ext_wheeled`— admiten datos de norma:
+
+```json
+{ "id": "ext_abc_01", "type": "cad_eds_extinguisher", "layerId": "capa_seguridad",
+  "x": 120, "y": 120, "w": 44, "h": 44, "rotation": 0, "color": "#b71f2e", "stroke": 2,
+  "opacity": 1, "label": "ABC 20 lb", "locked": false,
+  "extAgent": "pqs_abc", "extCapacityLb": 20, "extRating": "4-A:60-B:C",
+  "extHazard": "ordinary", "extMountCm": 110 }
+```
+
+| Campo | Tipo | Reglas |
+| --- | --- | --- |
+| `extAgent` | texto | Clave de `agents` en `resources/extinguisher-criteria.json`: `pqs_abc`, `pqs_bc`, `co2`, `water`, `foam`, `wet_k` o `d_powder`. Un valor fuera del catálogo devuelve `422`. |
+| `extCapacityLb` | número | 1–400 lb. Es la capacidad nominal declarada, no el peso bruto. |
+| `extRating` | texto | Clasificación normalizada en mayúsculas: `2-A:10-B:C`, `10-B:C`, `4-A:80-B:C`, `1-A:K`, `D`. El servidor rechaza cualquier otra forma. |
+| `extHazard` | texto | `light`, `ordinary` o `extra`. Ajusta el mínimo y el área admisible de este equipo. |
+| `extMountCm` | número | 0–300 cm desde el piso hasta la parte superior. `0` = rodante o apoyado en el piso. |
+
+- Los campos `ext*` solo se aceptan en estos cuatro tipos; en cualquier otro, el validador responde `422`.
+- Si el elemento guardado no trae los campos, el servidor los completa con `catalogDefaults` (referencia de fabricante) para que el cálculo sea posible. Esos valores son revisables y **no** son un dato de norma: la clasificación real está en la placa del equipo.
+- El perfil y el riesgo del documento (`extinguishers`) definen las tablas del cálculo; el riesgo del elemento puede sobrescribirlo para un equipo concreto.
 
 ### Redes técnicas (`pipe` y `conduit`)
 

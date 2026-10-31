@@ -118,7 +118,7 @@ final class PlanAudit
                     'id' => (string) $element['id'],
                     'type' => $type,
                     'widthM' => self::round(((float) $element['w']) * $metersPerUnit),
-                    'opening' => self::doorOpening($element),
+                    'opening' => PlanGrid::doorOpening($element),
                     'center' => [
                         'x' => (float) $element['x'] + (float) $element['w'] / 2,
                         'y' => (float) $element['y'] + (float) $element['h'] / 2,
@@ -134,13 +134,13 @@ final class PlanAudit
             if ($type === 'wall') {
                 $walls[] = [
                     'id' => (string) $element['id'],
-                    'points' => self::visualPoints($element),
+                    'points' => PlanGrid::visualPoints($element),
                     'stroke' => max(1.0, (float) ($element['stroke'] ?? 2)),
                 ];
                 continue;
             }
             if ($type === 'route') {
-                $routes[] = ['id' => (string) $element['id'], 'element' => $element, 'points' => self::visualPoints($element)];
+                $routes[] = ['id' => (string) $element['id'], 'element' => $element, 'points' => PlanGrid::visualPoints($element)];
                 continue;
             }
             $code = LibraryRepository::codeForType($type);
@@ -454,6 +454,12 @@ final class PlanAudit
             );
         }
 
+        /* ---------------------------- extintores ---------------------------- */
+        $extinguishers = ExtinguisherCoverage::analyze($design);
+        foreach ($extinguishers['findings'] as $finding) {
+            $findings[] = $finding;
+        }
+
         /* ------------------------------ orden ------------------------------ */
         usort($findings, static function (array $a, array $b): int {
             $order = array_flip(self::SEVERITIES);
@@ -504,6 +510,7 @@ final class PlanAudit
                 'estimatedTimeS' => $estimatedTimeS,
                 'speedMps' => $speed,
             ],
+            'extinguishers' => $extinguishers,
             'routes' => $routesReport,
             'signs' => [
                 'youAreHere' => $hasYouAreHere,
@@ -529,146 +536,20 @@ final class PlanAudit
         array $criteria,
         float $cmPerUnit
     ): array {
-        $canvas = $design['canvas'];
-        $width = (float) $canvas['width'];
-        $height = (float) $canvas['height'];
-        $cellCm = max(5.0, (float) $criteria['grid']['cellCm']);
-        $cell = max(1.0, $cellCm / $cmPerUnit);
-        $nx = max(1, (int) ceil($width / $cell));
-        $ny = max(1, (int) ceil($height / $cell));
-        $maxCells = max(4000, (int) $criteria['grid']['maxCells']);
-        while ($nx * $ny > $maxCells) {
-            $cell *= 1.5;
-            $nx = max(1, (int) ceil($width / $cell));
-            $ny = max(1, (int) ceil($height / $cell));
-        }
-        $metersPerUnit = $cmPerUnit / 100;
-        $cellM = $cell * $metersPerUnit;
-        $cellAreaM2 = $cellM * $cellM;
-
-        $blocked = array_fill(0, $nx * $ny, false);
-        $clearance = max(0.0, (float) $criteria['grid']['wallClearanceCm'] / $cmPerUnit);
+        $grid = PlanGrid::build($design, $walls, $doors, $criteria);
+        $width = $grid['width'];
+        $height = $grid['height'];
+        $cell = $grid['cell'];
+        $nx = $grid['nx'];
+        $ny = $grid['ny'];
+        $clearance = $grid['clearance'];
+        $cellM = $grid['cellM'];
+        $cellAreaM2 = $grid['cellAreaM2'];
+        $blocked = $grid['blocked'];
+        $exterior = $grid['exterior'];
+        $freeAreaM2 = $grid['freeAreaM2'];
+        $exteriorAreaM2 = $grid['exteriorAreaM2'];
         $index = static fn (int $ix, int $iy): int => $iy * $nx + $ix;
-
-        // Muros: se bloquean las celdas a menos de medio trazo + holgura.
-        foreach ($walls as $wall) {
-            $reach = $wall['stroke'] / 2 + $clearance;
-            foreach ($wall['points'] as $i => $point) {
-                if ($i === 0) {
-                    continue;
-                }
-                $a = $wall['points'][$i - 1];
-                $b = $point;
-                $margin = $reach + $cell;
-                $x0 = max(0, (int) floor((min($a['x'], $b['x']) - $margin) / $cell));
-                $x1 = min($nx - 1, (int) ceil((max($a['x'], $b['x']) + $margin) / $cell));
-                $y0 = max(0, (int) floor((min($a['y'], $b['y']) - $margin) / $cell));
-                $y1 = min($ny - 1, (int) ceil((max($a['y'], $b['y']) + $margin) / $cell));
-                for ($iy = $y0; $iy <= $y1; $iy += 1) {
-                    for ($ix = $x0; $ix <= $x1; $ix += 1) {
-                        $center = self::cellCenter($ix, $iy, $cell, $width, $height);
-                        if (self::distanceToSegment($center, $a, $b) <= $reach) {
-                            $blocked[$index($ix, $iy)] = true;
-                        }
-                    }
-                }
-            }
-        }
-
-        // Vanos: cada puerta libera el tramo que ocupa sobre su muro. Así el
-        // análisis no confunde una puerta con una pared cerrada.
-        $openingBand = max($clearance * 2, $cell * 0.75);
-        $doorCells = [];
-        foreach ($doors as $door) {
-            $a = $door['opening'][0];
-            $b = $door['opening'][1];
-            $margin = $openingBand + $cell;
-            $x0 = max(0, (int) floor((min($a['x'], $b['x']) - $margin) / $cell));
-            $x1 = min($nx - 1, (int) ceil((max($a['x'], $b['x']) + $margin) / $cell));
-            $y0 = max(0, (int) floor((min($a['y'], $b['y']) - $margin) / $cell));
-            $y1 = min($ny - 1, (int) ceil((max($a['y'], $b['y']) + $margin) / $cell));
-            for ($iy = $y0; $iy <= $y1; $iy += 1) {
-                for ($ix = $x0; $ix <= $x1; $ix += 1) {
-                    $center = self::cellCenter($ix, $iy, $cell, $width, $height);
-                    if (self::distanceToSegment($center, $a, $b) <= $openingBand) {
-                        $blocked[$index($ix, $iy)] = false;
-                        $doorCells[$index($ix, $iy)] = true;
-                    }
-                }
-            }
-        }
-
-        $freeCells = 0;
-        $freeAreaM2 = 0.0;
-        for ($cellIndex = 0; $cellIndex < $nx * $ny; $cellIndex += 1) {
-            if (!$blocked[$cellIndex]) {
-                $freeCells += 1;
-                $freeAreaM2 += $cellAreaM2;
-            }
-        }
-
-        // Exterior: se inunda el espacio libre desde el borde del lienzo con los
-        // vanos cerrados. Esa superficie no forma parte del piso, así que no
-        // cuenta como área libre, ocupación ni recorrido de evacuación. Solo se
-        // descuenta cuando el recinto está cerrado y queda interior suficiente;
-        // en un plano sin cerramiento se analiza el lienzo completo.
-        $sealed = $blocked;
-        foreach ($doorCells as $doorIndex => $opened) {
-            $sealed[$doorIndex] = true;
-        }
-        $exterior = array_fill(0, $nx * $ny, false);
-        $stack = [];
-        for ($ix = 0; $ix < $nx; $ix += 1) {
-            foreach ([[$ix, 0], [$ix, $ny - 1]] as [$bx, $by]) {
-                $border = $index($bx, $by);
-                if (!$sealed[$border] && !$exterior[$border]) {
-                    $exterior[$border] = true;
-                    $stack[] = $border;
-                }
-            }
-        }
-        for ($iy = 1; $iy < $ny - 1; $iy += 1) {
-            foreach ([0, $nx - 1] as $bx) {
-                $border = $index($bx, $iy);
-                if (!$sealed[$border] && !$exterior[$border]) {
-                    $exterior[$border] = true;
-                    $stack[] = $border;
-                }
-            }
-        }
-        while ($stack !== []) {
-            $current = array_pop($stack);
-            $ix = $current % $nx;
-            $iy = intdiv($current, $nx);
-            foreach ([[1, 0], [-1, 0], [0, 1], [0, -1]] as [$dx, $dy]) {
-                $jx = $ix + $dx;
-                $jy = $iy + $dy;
-                if ($jx < 0 || $jy < 0 || $jx >= $nx || $jy >= $ny) {
-                    continue;
-                }
-                $next = $index($jx, $jy);
-                if ($sealed[$next] || $exterior[$next]) {
-                    continue;
-                }
-                $exterior[$next] = true;
-                $stack[] = $next;
-            }
-        }
-        unset($sealed, $stack);
-        $exteriorCells = 0;
-        foreach ($exterior as $isOutside) {
-            if ($isOutside) {
-                $exteriorCells += 1;
-            }
-        }
-        $interiorCells = $freeCells - $exteriorCells;
-        if ($exteriorCells === 0 || $interiorCells < max(1, (int) ceil($freeCells * 0.2))) {
-            $exterior = array_fill(0, $nx * $ny, false);
-            $exteriorCells = 0;
-        }
-        $exteriorAreaM2 = $exteriorCells * $cellAreaM2;
-        $freeCells = $freeCells - $exteriorCells;
-        $freeAreaM2 = $freeCells * $cellAreaM2;
 
         if ($exits === []) {
             return [
@@ -820,51 +701,6 @@ final class PlanAudit
     }
 
     /* ------------------------------ geometría ------------------------------ */
-
-    private static function doorOpening(array $element): array
-    {
-        $x = (float) $element['x'];
-        $y = (float) $element['y'];
-        $w = (float) $element['w'];
-        $h = (float) $element['h'];
-        $edge = $y + $h;
-        return [
-            ['x' => $x, 'y' => $edge],
-            ['x' => $x + $w, 'y' => $edge],
-        ];
-    }
-
-    /** Puntos absolutos de un trazo, aplicando su rotación como el renderizador. */
-    private static function visualPoints(array $element): array
-    {
-        $points = $element['points'] ?? null;
-        if (!is_array($points) || count($points) < 2) {
-            $points = [
-                ['x' => 0, 'y' => 0],
-                ['x' => (float) $element['w'], 'y' => 0],
-            ];
-        }
-        $x = (float) $element['x'];
-        $y = (float) $element['y'];
-        $cx = $x + (float) $element['w'] / 2;
-        $cy = $y + (float) $element['h'] / 2;
-        $degrees = (float) ($element['rotation'] ?? 0);
-        $absolute = [];
-        foreach ($points as $point) {
-            $absolute[] = ['x' => $x + (float) $point['x'], 'y' => $y + (float) $point['y']];
-        }
-        if (abs($degrees) < 0.0001) {
-            return $absolute;
-        }
-        $angle = deg2rad($degrees);
-        $cos = cos($angle);
-        $sin = sin($angle);
-        return array_map(static function (array $point) use ($cx, $cy, $cos, $sin): array {
-            $dx = $point['x'] - $cx;
-            $dy = $point['y'] - $cy;
-            return ['x' => $cx + $dx * $cos - $dy * $sin, 'y' => $cy + $dx * $sin + $dy * $cos];
-        }, $absolute);
-    }
 
     private static function wallCrossings(array $points, array $walls, array $doors, float $cmPerUnit): int
     {

@@ -22,18 +22,19 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 5. [El editor](#el-editor)
 6. [Bibliotecas de señalización y CAD](#bibliotecas-de-señalización-y-cad)
 7. [Revisión del plano y evacuación](#revisión-del-plano-y-evacuación)
-8. [Pliego de señalización y rutas internas](#pliego-de-señalización-y-rutas-internas)
-9. [Modo presentación](#modo-presentación)
-10. [Guardado, versiones y borradores](#guardado-versiones-y-borradores)
-11. [Exportaciones](#exportaciones)
-12. [Formato de datos](#formato-de-datos)
-13. [Arquitectura](#arquitectura)
-14. [Seguridad](#seguridad)
-15. [Pruebas](#pruebas)
-16. [Cambios de la versión 1.7.0](#cambios-de-la-versión-170)
-17. [Paquetes y verificación](#paquetes-y-verificación)
-18. [Limitaciones](#limitaciones)
-19. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
+8. [Extintores y cobertura](#extintores-y-cobertura)
+9. [Pliego de señalización y rutas internas](#pliego-de-señalización-y-rutas-internas)
+10. [Modo presentación](#modo-presentación)
+11. [Guardado, versiones y borradores](#guardado-versiones-y-borradores)
+12. [Exportaciones](#exportaciones)
+13. [Formato de datos](#formato-de-datos)
+14. [Arquitectura](#arquitectura)
+15. [Seguridad](#seguridad)
+16. [Pruebas](#pruebas)
+17. [Cambios de la versión 1.8.0](#cambios-de-la-versión-180)
+18. [Paquetes y verificación](#paquetes-y-verificación)
+19. [Limitaciones](#limitaciones)
+20. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
 
 ---
 
@@ -51,6 +52,7 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 | Propiedades | Posición, tamaño, rotación, sentido de apertura, color (paleta de 34), grosor, opacidad, texto, capa, bloqueo, cambio de tipo y, en redes, **sistema, diámetro, material, pendiente, presión, circuito, tensión, calibre, fases y carga**. |
 | Historial | Deshacer/rehacer con 120 pasos, duplicar, pegar, agrupar, alinear, distribuir y orden de dibujo. |
 | Redes | Panel **Redes y circuitos** con longitudes por sistema, diámetros usados, pendientes, cargas por circuito, breaker y calibre sugeridos y caída de tensión estimada. |
+| Extintores | Agente, capacidad, clasificación, riesgo y altura de montaje por equipo. Cajón **Extintores** con cobertura por recorrido real, superficie descubierta, mapa, acciones cuantificadas y CSV. Perfiles NTC 2885 + Resolución 2400 y NFPA 10. |
 | Revisión | Cajón **Revisión** con recorrido más largo hasta las salidas, salidas y anchos, ocupación declarada o estimada, ancho requerido, tiempo de evacuación y hallazgos por severidad enlazados al plano. |
 | Pliego | Cajón **Pliego** con las señales agrupadas por código y familia, cantidades, tamaño de lámina sugerido, desglose por capa, precios unitarios locales, total estimado, avisos de consistencia y exportación CSV/portapapeles. |
 | Rutas internas | Cajón **Rutas** que mide el recorrido caminable entre dos o más puntos: rodea muros y equipos, respeta los vanos, suma tramos, estima el tiempo a pie o en silla de ruedas y guarda la medición como capa. |
@@ -394,6 +396,26 @@ El menú **Análisis** de la barra de herramientas abre el auditor con **Revisi�
 
 ---
 
+## Extintores y cobertura
+
+El cajón **Extintores** (menú **Análisis**) responde a una pregunta concreta: *este extintor de 10 lb ABC, ¿a cuántos metros llega y cuánta superficie puede cubrir?* Trabaja siempre sobre el **último plano guardado** y usa la misma rejilla del auditor, así que el recorrido es el camino real por las circulaciones y no la línea recta.
+
+**Dos criterios a la vez.** Una celda del piso queda cubierta solo si el extintor más cercano llega dentro de su **recorrido máximo** *y* si el **área asignada** no supera lo que admite su clasificación. Cuando sobra área se conservan las celdas más próximas y las demás quedan descubiertas; el cajón explica el motivo (recorrido, área, sin paso o sin clase).
+
+**Perfiles.** `colombia` aplica la NTC 2885:2009 (idéntica a NFPA 10:2007) y la Resolución 2400 de 1979 —incluida la regla de un extintor por cada 200 m² o fracción—; `nfpa10` aplica las mismas tablas internacionales sin esa regla local. El riesgo (leve, ordinario o extra) se declara por piso y se puede ajustar por equipo. Las tablas están en `resources/extinguisher-criteria.json`.
+
+**Qué devuelve.** Porcentaje cubierto, superficie descubierta, mínimo por área, clases de fuego presentes, tabla por equipo (agente, capacidad, clasificación, recorrido máximo, área admisible, superficie cubierta, señal y estado), mapa de zonas descubiertas y **tres acciones medidas sobre la misma rejilla**: reubicar el extintor, subir su clasificación o instalar otro en el punto más desfavorable. Cada acción indica la ganancia en m² que se midió al simularla.
+
+**En el inspector.** Al seleccionar un extintor aparece la sección **Extintor** con agente, capacidad, clasificación (formato `2-A:10-B:C`), riesgo y altura de la parte superior. Debajo, el veredicto del cálculo —«cumple los criterios de referencia» o «requiere ajuste»— con el área que cubre, el recorrido máximo, el área admisible y las acciones disponibles para ese equipo. **Guardar y verificar** guarda el plano y vuelve a calcular.
+
+**Hallazgos.** `ext_missing`, `ext_ratio_short`, `ext_travel_too_long`, `ext_coverage_gap`, `ext_no_class_a`, `ext_wrong_class`, `ext_without_sign`, `ext_height` y `ext_obsolete_rating`.
+
+**CSV.** Una fila por equipo, una por zona descubierta y una de resumen, con BOM UTF-8 y punto y coma para Excel en español.
+
+> **La cobertura es de referencia.** Las tablas son configurables, la capacidad y la clasificación se declaran a mano y el cálculo es esquemático: **no es un dictamen**, no certifica cumplimiento normativo y no sustituye la revisión en sitio, la placa del equipo ni la opinión de un profesional competente. Detalle completo en [`docs/EXTINTORES.md`](docs/EXTINTORES.md).
+
+---
+
 ## Pliego de señalización y rutas internas
 
 Dos cajones de trabajo que usan el plano guardado en pantalla (no una versión anterior) para pasar del dibujo a la obra.
@@ -659,6 +681,21 @@ Las pruebas trabajan sobre copias temporales: no escriben configuración ni base
 
 ---
 
+## Cambios de la versión 1.8.0
+
+Entrega de **cálculo de extintores**. No rompe el formato: los planos anteriores abren igual y el servidor completa los datos que falten con referencias de fabricante.
+
+- **Datos de norma por equipo.** Los cuatro extintores del catálogo (`cad_eds_extinguisher`, `cad_drg_extinguisher`, `cad_fire_ext_co2` y `cad_fire_ext_wheeled`) guardan agente, capacidad, clasificación, riesgo y altura de montaje. El inspector los edita y el servidor los valida: un agente fuera del catálogo o una clasificación mal escrita se rechazan con `422`.
+- **Motor de cobertura nuevo.** `ExtinguisherCoverage` reutiliza la rejilla del auditor mediante el nuevo servicio `PlanGrid` (muros, vanos y exterior compartidos) y ejecuta un Dijkstra multi-fuente desde todos los extintores. Cubre por recorrido y por área, con el criterio más restrictivo, y agrupa la superficie descubierta en zonas con su motivo y su punto más desfavorable.
+- **Tres acciones cuantificadas.** Instalar otro, reubicar o subir la clasificación. Cada sugerencia se **simula sobre la misma rejilla** y se muestra la ganancia real en m² y el porcentaje de la zona descubierta que cierra.
+- **Cajón Extintores.** Resumen, tabla por equipo, mapa de zonas descubiertas, lista de acciones, descarga CSV y perfiles conmutables (Colombia o NFPA 10). Incluye el aviso de que el cálculo no certifica cumplimiento.
+- **Nueve hallazgos nuevos** en el auditor: `ext_missing`, `ext_ratio_short`, `ext_travel_too_long`, `ext_coverage_gap`, `ext_no_class_a`, `ext_wrong_class`, `ext_without_sign`, `ext_height` y `ext_obsolete_rating`. El primero es informativo para no ensuciar los planos sin extintores.
+- **Tablas en JSON.** `resources/extinguisher-criteria.json` reúne las distancias y áreas de la NTC 2885/NFPA 10, la altura de montaje, la regla de 200 m² de la Resolución 2400, los agentes con sus clases de fuego y los valores de referencia del catálogo.
+- **Muros más fiables en la rejilla.** Una pared delgada ya no puede caer entre dos centros de celda: el bloqueo incluye medio lado de celda y el vano se abre con el mismo margen. Mejora por igual el recorrido de evacuación y la cobertura.
+- **Demo con extintores.** Cuatro equipos en la bodega, entre ellos un CO₂ montado a 180 cm y sin señal, para ver el veredicto y los hallazgos. El quinto elemento añadido es la señal F001 que acompaña a dos equipos.
+- **Pruebas.** Interfaz **317** (inspector, cajón, ajustes, veredicto, acciones y guardado), funcional **197** (cobertura, alturas, perfiles, validación y demo) y páginas **32**.
+- **Documentación.** Nueva guía [`docs/EXTINTORES.md`](docs/EXTINTORES.md) con las tablas, el método, los códigos y los límites.
+
 ## Cambios de la versión 1.7.0
 
 Entrega de **identidad y bienvenida**. No cambia el formato de los planos ni los catálogos: los planos guardados abren igual.
@@ -862,14 +899,14 @@ Versión de corrección sobre la 1.0.0. Reemplaza los paquetes anteriores: la 1.
 
 ## Paquetes y verificación
 
-Las versiones publicadas están en la página de **[Liberaciones](https://github.com/luan920530-commits/normia-planos-cad/releases)**. La versión vigente es la **v1.7.0**, con sus notas, sus sumas SHA-256 y los enlaces de descarga de los paquetes que viven en `paquetes/v1.7.0/`. Las entregas anteriores (v1.0.0 a v1.0.9 y las v1.1.0 a v1.6.0) no deben usarse: la v1.7.0 las reemplaza.
+Las versiones publicadas están en la página de **[Liberaciones](https://github.com/luan920530-commits/normia-planos-cad/releases)**. La versión vigente es la **v1.8.0**, con sus notas, sus sumas SHA-256 y los enlaces de descarga de los paquetes que viven en `paquetes/v1.8.0/`. Las entregas anteriores (v1.0.0 a v1.0.9 y las v1.1.0 a v1.7.0) no deben usarse: la v1.8.0 las reemplaza.
 
-La entrega v1.7.0 incluye los ZIP ya construidos en **`paquetes/v1.7.0/`** (misma composición que genera el script, verificada por `tests/php/package.mjs`):
+La entrega v1.8.0 incluye los ZIP ya construidos en **`paquetes/v1.8.0/`** (misma composición que genera el script, verificada por `tests/php/package.mjs`):
 
 ```text
-paquetes/v1.7.0/
-├── normia-planos-cad-1.7.0.zip
-├── normia-planos-cad-demo-1.7.0.zip
+paquetes/v1.8.0/
+├── normia-planos-cad-1.8.0.zip
+├── normia-planos-cad-demo-1.8.0.zip
 ├── SHA256SUMS.txt
 └── BUILD.txt
 ```
@@ -883,8 +920,8 @@ npm run build          # o: bash tools/build-packages.sh
 El script deja los artefactos en `dist/`:
 
 ```text
-normia-planos-cad-1.7.0.zip
-normia-planos-cad-demo-1.7.0.zip
+normia-planos-cad-1.8.0.zip
+normia-planos-cad-demo-1.8.0.zip
 SHA256SUMS.txt
 BUILD.txt
 ```
@@ -894,11 +931,11 @@ BUILD.txt
 - Verifica las sumas:
 
 ```bash
-cd paquetes/v1.7.0
+cd paquetes/v1.8.0
 sha256sum -c SHA256SUMS.txt
 ```
 
-Los hashes exactos de los ZIP publicados están en `paquetes/v1.7.0/SHA256SUMS.txt`; `dist/` es solo la salida de trabajo y está ignorada por Git.
+Los hashes exactos de los ZIP publicados están en `paquetes/v1.8.0/SHA256SUMS.txt`; `dist/` es solo la salida de trabajo y está ignorada por Git.
 
 ---
 

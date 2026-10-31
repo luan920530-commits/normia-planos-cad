@@ -49,7 +49,7 @@ final class DesignValidator
 
     public static function normalizeArray(array $design): array
     {
-        $allowedTop = ['format', 'canvas', 'layers', 'elements', 'groups'];
+        $allowedTop = ['format', 'canvas', 'layers', 'elements', 'groups', 'extinguishers'];
         foreach (array_keys($design) as $key) {
             if (!in_array($key, $allowedTop, true)) {
                 throw new DomainException('El diseño contiene una propiedad no permitida: ' . (string) $key . '.');
@@ -63,6 +63,7 @@ final class DesignValidator
         $layerIds = array_column($layers, 'id');
         $elements = self::normalizeElements($design['elements'] ?? null, $canvas, $layerIds);
         $groups = self::normalizeGroups($design['groups'] ?? null, $elements);
+        $extinguishers = self::normalizeExtinguisherSettings($design['extinguishers'] ?? null);
 
         return [
             'format' => 2,
@@ -70,6 +71,7 @@ final class DesignValidator
             'layers' => $layers,
             'elements' => $elements,
             'groups' => $groups,
+            'extinguishers' => $extinguishers,
         ];
     }
 
@@ -127,6 +129,9 @@ final class DesignValidator
         }
         if (LibraryRepository::isElectricalObject($type)) {
             return ['circuit', 'load'];
+        }
+        if (in_array($type, ExtinguisherNorms::catalogTypes(), true)) {
+            return ['extAgent', 'extCapacityLb', 'extRating', 'extHazard', 'extMountCm'];
         }
         return [];
     }
@@ -461,6 +466,7 @@ final class DesignValidator
                     'load' => round(self::number($element['load'] ?? 0, 0, 100000, 'carga'), 1),
                 ];
             }
+            $ext = self::extinguisherFields($type, $element);
             $normalized = [
                 'id' => $id,
                 'type' => $type,
@@ -490,10 +496,73 @@ final class DesignValidator
             foreach ($mep as $key => $value) {
                 $normalized[$key] = $value;
             }
+            foreach ($ext as $key => $value) {
+                $normalized[$key] = $value;
+            }
             $ids[$id] = true;
             $result[] = $normalized;
         }
         return $result;
+    }
+
+    /**
+     * Datos de norma de un extintor. Si el elemento no es un extintor del
+     * catálogo devuelve una lista vacía; si lo es, completa los valores que
+     * falten con los del catálogo (referencia de fabricante, no dictamen).
+     */
+    private static function extinguisherFields(string $type, array $element): array
+    {
+        if (!in_array($type, ExtinguisherNorms::catalogTypes(), true)) {
+            return [];
+        }
+        $defaults = ExtinguisherNorms::defaultsFor($type) ?? [];
+        $agent = $element['extAgent'] ?? ($defaults['agent'] ?? 'pqs_abc');
+        if (!is_string($agent) || ExtinguisherNorms::agent($agent) === null) {
+            throw new DomainException('El agente extintor no pertenece al catálogo permitido.');
+        }
+        $rating = ExtinguisherNorms::sanitizeRating((string) ($element['extRating'] ?? ($defaults['rating'] ?? '')));
+        if ($rating === null) {
+            throw new DomainException('La clasificación del extintor no es válida. Usa el formato 2-A:10-B:C.');
+        }
+        $hazard = $element['extHazard'] ?? ($defaults['hazard'] ?? 'ordinary');
+        if (!is_string($hazard) || !in_array($hazard, ExtinguisherNorms::HAZARDS, true)) {
+            throw new DomainException('El riesgo declarado del extintor no es válido.');
+        }
+        return [
+            'extAgent' => $agent,
+            'extCapacityLb' => round(self::number($element['extCapacityLb'] ?? ($defaults['capacityLb'] ?? 10), 1, 400, 'capacidad del extintor'), 1),
+            'extRating' => $rating,
+            'extHazard' => $hazard,
+            'extMountCm' => round(self::number($element['extMountCm'] ?? ($defaults['mountCm'] ?? 120), 0, 300, 'altura de montaje'), 1),
+        ];
+    }
+
+    /**
+     * Ajustes de extintores del plano: perfil normativo y riesgo predominante.
+     * Se guardan aparte de los elementos para que el cálculo sea reproducible.
+     */
+    private static function normalizeExtinguisherSettings(mixed $settings): array
+    {
+        if ($settings === null) {
+            return ['profile' => ExtinguisherNorms::defaultProfile(), 'hazard' => 'ordinary'];
+        }
+        if (!is_array($settings)) {
+            throw new DomainException('Los ajustes de extintores no son válidos.');
+        }
+        foreach (array_keys($settings) as $key) {
+            if (!in_array($key, ['profile', 'hazard'], true)) {
+                throw new DomainException('Los ajustes de extintores contienen una propiedad no permitida.');
+            }
+        }
+        $profile = $settings['profile'] ?? ExtinguisherNorms::defaultProfile();
+        if (!is_string($profile) || !isset(ExtinguisherNorms::profiles()[$profile])) {
+            throw new DomainException('El perfil normativo de extintores no es válido.');
+        }
+        $hazard = $settings['hazard'] ?? 'ordinary';
+        if (!is_string($hazard) || !in_array($hazard, ExtinguisherNorms::HAZARDS, true)) {
+            throw new DomainException('El riesgo de extintores no es válido.');
+        }
+        return ['profile' => $profile, 'hazard' => $hazard];
     }
 
     private static function normalizePoints(mixed $points, float $w, float $h, string $type): array

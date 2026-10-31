@@ -65,6 +65,7 @@
       this.library = new root.Library(this);
       this.audit = root.Audit ? new root.Audit(this) : null;
       this.schedule = root.Schedule ? new root.Schedule(this) : null;
+      this.extinguishers = root.Extinguishers ? new root.Extinguishers(this) : null;
       this.measure = root.Measure ? new root.Measure(this) : null;
       this.present = root.Present ? new root.Present(this) : null;
       this.tool = 'select';
@@ -1709,6 +1710,7 @@
         this.removeBannerByAction('download');
         this.updateSaveStatus();
         this.audit?.invalidate();
+        this.extinguishers?.invalidate();
         if (this.activeDrawer === 'versions') this.loadVersions();
       } catch (error) {
         if (error.status === 409) {
@@ -1752,6 +1754,7 @@
         this.updateSaveStatus();
         this.toast(`Versión v${this.store.version} recargada desde el servidor.`, 'success');
         this.audit?.invalidate();
+        this.extinguishers?.invalidate();
       } catch (error) {
         this.toast(error.message, 'error');
       }
@@ -2261,6 +2264,7 @@
       if (name === 'layers') this.renderLayers();
       if (name === 'networks') this.renderNetworks();
       if (name === 'audit') this.audit?.open();
+      if (name === 'extinguishers') this.extinguishers?.open();
       if (name === 'schedule') this.schedule?.open();
       if (name === 'measure') this.measure?.open();
       if (name === 'footer') this.renderFooterPreview();

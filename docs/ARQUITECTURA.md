@@ -129,10 +129,19 @@ Editor B: conserva el diseño, muestra aviso, permite recargar v6 o descargar co
 | `SvgExporter` | Exportación SVG de la versión guardada, con identificadores únicos y símbolos incrustados (señales ISO, de servicios y equipos CAD). |
 | `Installer` | Requisitos, validación de la cuenta, creación del esquema, usuario administrador, demo opcional y escritura atómica de `config/config.php`. |
 | `MepCalculator` | Longitudes, pendientes, cargas, breaker, calibre y caída de tensión de referencia a partir de `mep-networks.json`. |
-| `PlanAudit` | Auditor de planos: salidas, rejilla de recorrido, ocupación, ancho requerido, tiempo de evacuación, señalización y hallazgos con severidad. Criterios en `resources/audit-criteria.json`. |
+| `PlanGrid` | Rejilla compartida del plano: celdas de 20 cm, bloqueo de muros con holgura (incluye medio lado de celda para no perder trazos finos), apertura de vanos y separación del terreno exterior. La usan el auditor y el cálculo de extintores. |
+| `PlanAudit` | Auditor de planos: salidas, rejilla de recorrido, ocupación, ancho requerido, tiempo de evacuación, señalización y hallazgos con severidad. Criterios en `resources/audit-criteria.json`; incorpora los hallazgos de extintores. |
+| `ExtinguisherNorms` | Tablas de extintores: perfiles NTC 2885 / NFPA 10, agentes y clases de fuego, clasificaciones, distancias por clase y riesgo, área admisible, alturas de montaje y mínimo por superficie. Lee `resources/extinguisher-criteria.json`. |
+| `ExtinguisherCoverage` | Cobertura por Dijkstra multi-fuente sobre `PlanGrid`: recorrido real, área admisible por clasificación, zonas descubiertas con motivo y acciones simuladas (añadir, reubicar, subir clasificación) con su ganancia medida. |
 | `DemoSeeder` | Carga `resources/demo/demo-project.json` como proyecto de ejemplo con sus pisos. |
 
 `LibraryRepository::safeSvg()` rechaza SVG con `<script>`, `<foreignObject>`, `<iframe>`, `<object>`, `<embed>`, `<audio>`, `<video>`, `<image>`, `<style>`, atributos `on*`, `href` no locales, `javascript:`/`vbscript:`/`data:`, `url()` remotos, `<!ENTITY`, `<!DOCTYPE` y `xml-stylesheet`. Los catálogos se validan al cargarse: si uno no pasa la comprobación, la aplicación registra el error y no sirve contenido inseguro.
+
+## Extintores
+
+`ExtinguisherCoverage::analyze($design)` recibe el diseño ya normalizado y devuelve `summary`, `units`, `zones`, `findings`, `recommendations`, `agents`, `examples` y `notice`. No calcula nada en el cliente: el cajón y el inspector solo pintan el informe del último plano guardado y las acciones se aplican al modelo para que el siguiente guardado las valide. El detalle normativo, las tablas y los límites están en [`EXTINTORES.md`](EXTINTORES.md).
+
+La rejilla es la misma del auditor, de modo que una mejora en el bloqueo de muros o en la detección del exterior se refleja en los dos cálculos. Los muros se bloquean con `medio trazo + holgura + medio lado de celda` y los vanos se abren con el mismo margen: así un trazo de 2 cm no desaparece entre dos centros de celda.
 
 ## Capa web
 

@@ -1511,6 +1511,107 @@ async function main() {
     app.applyTool('select');
     app.renderNow();
 
+    /* ----------------------------- extintores ----------------------------- */
+    const extProbe = app.model.addElement('cad_fire_ext_co2', { x: 880, y: 220 });
+    report.check('Crear un extintor trae agente, capacidad y clasificación de referencia',
+      extProbe.extAgent === 'co2' && extProbe.extCapacityLb === 10 && extProbe.extRating === '10-B:C' && extProbe.extMountCm === 120,
+      `${extProbe.extAgent} · ${extProbe.extCapacityLb} lb · ${extProbe.extRating} · ${extProbe.extMountCm} cm`);
+    report.check('El modelo rechaza una propiedad que no existe',
+      app.model.setProps({ extInventada: 1 }) === false);
+    app.model.select([extProbe.id]);
+    app.renderNow();
+    const extSection = q(window, '[data-section="extinguisher"]');
+    report.check('El inspector dedica una sección al extintor',
+      Boolean(extSection) && extSection.querySelector('[data-prop="extAgent"]') !== null
+      && extSection.querySelector('[data-prop="extRating"]') !== null && extSection.querySelector('[data-prop="extMountCm"]') !== null,
+      extSection ? extSection.textContent.slice(0, 40) : 'sin sección');
+    report.check('El inspector avisa de que los datos son de referencia',
+      /placa del equipo/i.test(extSection?.textContent || ''));
+    app.model.setProps({ extAgent: 'pqs_abc', extRating: '2-A:10-B:C', extCapacityLb: 10, extMountCm: 170 });
+    const extEdited = elementById(app, extProbe.id);
+    report.check('Editar agente, clasificación y altura actualiza el extintor',
+      extEdited.extAgent === 'pqs_abc' && extEdited.extRating === '2-A:10-B:C' && extEdited.extMountCm === 170,
+      `${extEdited.extAgent} · ${extEdited.extRating} · ${extEdited.extMountCm} cm`);
+    app.model.setExtinguisherSettings({ hazard: 'extra' });
+    report.check('El riesgo del piso se guarda y se propaga a los extintores',
+      app.model.design.extinguishers.hazard === 'extra'
+      && app.model.design.elements.filter((element) => app.model.isExtinguisherType(element.type)).every((element) => element.extHazard === 'extra'),
+      app.model.design.extinguishers.hazard);
+    app.model.setExtinguisherSettings({ hazard: 'ordinary' });
+
+    const extProbe2 = app.model.addElement('cad_drg_extinguisher', { x: 700, y: 300 });
+    report.check('El segundo extintor nace con sus datos de referencia',
+      extProbe2.extAgent === 'pqs_abc' && extProbe2.extRating === '2-A:10-B:C' && extProbe2.extMountCm === 120,
+      `${extProbe2.extAgent} · ${extProbe2.extRating}`);
+    await app.saveNow('Plano con extintores de prueba', { force: true });
+    await sleep(300);
+    q(window, '[data-open-drawer="extinguishers"]').click();
+    report.check('La barra lateral abre el cajón de extintores',
+      app.activeDrawer === 'extinguishers' && app.extinguishers !== null && q(window, '[data-drawer="extinguishers"]')?.hidden === false,
+      `cajón ${app.activeDrawer}`);
+    await waitFor(() => q(window, '[data-drawer="extinguishers"] .ext-stat'), 20000);
+    const extReport = app.extinguishers.report;
+    report.check('El cajón mide la cobertura del plano guardado',
+      extReport?.summary?.count === 2 && extReport.summary.floorAreaM2 > 0
+      && qa(window, '[data-drawer="extinguishers"] .ext-stat').length === 4,
+      `${extReport?.summary?.count} extintores · ${extReport?.summary?.coveredPct} % · piso ${extReport?.summary?.floorAreaM2} m²`);
+    report.check('El cajón lista los equipos con su recorrido y área admisible',
+      qa(window, '[data-drawer="extinguishers"] .ext-table tbody tr').length === extReport.summary.count
+      && /m²/.test(q(window, '[data-drawer="extinguishers"] .ext-table')?.textContent || ''),
+      `${extReport.summary.count} filas`);
+    report.check('El cajón declara el perfil normativo y su carácter de apoyo',
+      /NTC 2885/.test(app.extinguishers.host?.textContent || '') && /no certifica/i.test(app.extinguishers.host?.textContent || ''));
+    const extCsv = app.extinguishers.csvContent();
+    report.check('El CSV de extintores incluye equipos y resumen',
+      /extintor/.test(extCsv) && /resumen/.test(extCsv) && (extCsv.match(/;/g) || []).length > 10,
+      `${extCsv.split('\r\n').length} filas`);
+    const extVerdict = app.extinguishers.verdictFor(extProbe.id);
+    report.check('El veredicto de un extintor trae límites y veredicto del cálculo',
+      Boolean(extVerdict) && extVerdict.unit.travelLimitM > 0 && extVerdict.unit.coverageAreaM2 >= 0
+      && extVerdict.unit.mountCm === 170,
+      extVerdict ? `${extVerdict.unit.coverageAreaM2} m² · ${extVerdict.unit.travelLimitM} m · ${extVerdict.unit.mountCm} cm` : 'sin veredicto');
+    report.check('El extintor mal montado queda marcado por el cálculo',
+      Boolean((extReport.findings || []).find((finding) => finding.code === 'ext_height' && finding.elements.includes(extProbe.id))),
+      (extReport.findings || []).map((finding) => finding.code).join(','));
+    app.model.select([extProbe.id]);
+    app.renderNow();
+    report.check('El inspector muestra el veredicto con el aviso de altura',
+      /Requiere ajuste/i.test(q(window, '[data-section="extinguisher"]')?.textContent || '')
+      && /170 cm/i.test(q(window, '[data-section="extinguisher"]')?.textContent || ''));
+    const extCountBefore = app.model.design.elements.length;
+    app.extinguishers.apply({
+      action: 'add', elementId: null, target: { x: 300, y: 700 }, gainAreaM2: 12,
+      element: { type: 'cad_eds_extinguisher', x: 280, y: 680, w: 44, h: 44, extAgent: 'pqs_abc', extCapacityLb: 20, extRating: '4-A:60-B:C', extHazard: 'ordinary', extMountCm: 110 },
+    });
+    const addedExt = app.model.design.elements[app.model.design.elements.length - 1];
+    report.check('La acción «instalar otro» añade el extintor sugerido',
+      app.model.design.elements.length === extCountBefore + 1 && addedExt.type === 'cad_eds_extinguisher' && addedExt.extRating === '4-A:60-B:C',
+      `${addedExt.type} · ${addedExt.extRating}`);
+    app.extinguishers.apply({ action: 'upgrade', elementId: extProbe.id, rating: '4-A:80-B:C', capacityLb: 150, gainAreaM2: 20 });
+    report.check('La acción «subir capacidad» cambia clasificación y capacidad',
+      elementById(app, extProbe.id)?.extRating === '4-A:80-B:C',
+      String(elementById(app, extProbe.id)?.extRating));
+    app.extinguishers.apply({ action: 'move', elementId: extProbe.id, target: { x: 600, y: 500 }, gainAreaM2: 8 });
+    const movedExt = elementById(app, extProbe.id);
+    report.check('La acción «reubicar» mueve el extintor al punto sugerido',
+      Math.round(movedExt.x + movedExt.w / 2) === 600 && Math.round(movedExt.y + movedExt.h / 2) === 500,
+      `${Math.round(movedExt.x + movedExt.w / 2)},${Math.round(movedExt.y + movedExt.h / 2)}`);
+    q(window, '[data-drawer="extinguishers"] [data-close-drawer]').click();
+    report.check('El cajón de extintores se cierra', app.activeDrawer === null);
+    await app.saveNow('Plan con extintores', { force: true });
+    await sleep(300);
+    const savedExtFloor = JSON.parse((await client.get(`api/floors/${floorId}`, { accept: 'application/json' })).text);
+    const savedExt = (savedExtFloor.design?.elements || []).find((element) => element.id === extProbe.id);
+    report.check('El servidor guarda los datos normativos del extintor',
+      savedExt?.extRating === '4-A:80-B:C' && savedExt?.extCapacityLb === 150
+      && savedExtFloor.design?.extinguishers?.profile === 'colombia',
+      `${savedExt?.extRating} · ${savedExt?.extCapacityLb} lb · ${savedExtFloor.design?.extinguishers?.profile}`);
+    report.check('Guardar invalida también el informe de extintores',
+      app.extinguishers.report === null, String(app.extinguishers.report));
+    app.model.clearSelection();
+    app.applyTool('select');
+    app.renderNow();
+
     /* --------------------------- pliego de señalización --------------------------- */
     q(window, '[data-open-drawer="schedule"]').click();
     report.check('La barra lateral abre el pliego de señalización',

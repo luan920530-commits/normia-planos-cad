@@ -1,0 +1,361 @@
+{
+  "version": 1,
+  "notice": "Tablas de referencia para el cálculo de extintores. Reproducen NTC 2885:2009 (idéntica a NFPA 10:2007) y la Resolución 2400 de 1979, artículos 220 a 224. Son apoyo de diseño: no son un dictamen ni certifican cumplimiento, y deben revisarse con un profesional competente y con la autoridad que adopte la edición vigente.",
+  "defaultProfile": "colombia",
+  "profiles": {
+    "colombia": {
+      "label": "Colombia · NTC 2885 + Resolución 2400 de 1979",
+      "reference": "NTC 2885:2009 (IDT NFPA 10:2007), capítulos 5 y 6 · Resolución 2400 de 1979, arts. 220-224",
+      "classA": {
+        "travelM": 22.9,
+        "maxAreaPerExtinguisherM2": 1045,
+        "hazards": {
+          "light": {
+            "label": "Leve",
+            "minRatingA": 2,
+            "areaPerRatingM2": 278.7
+          },
+          "ordinary": {
+            "label": "Ordinario",
+            "minRatingA": 2,
+            "areaPerRatingM2": 139.4
+          },
+          "extra": {
+            "label": "Extra",
+            "minRatingA": 4,
+            "areaPerRatingM2": 92.9
+          }
+        }
+      },
+      "classB": {
+        "maxTravelM": 15.25,
+        "hazards": {
+          "light": [
+            {
+              "minRatingB": 5,
+              "travelM": 9.15
+            },
+            {
+              "minRatingB": 10,
+              "travelM": 15.25
+            }
+          ],
+          "ordinary": [
+            {
+              "minRatingB": 10,
+              "travelM": 9.15
+            },
+            {
+              "minRatingB": 20,
+              "travelM": 15.25
+            }
+          ],
+          "extra": [
+            {
+              "minRatingB": 40,
+              "travelM": 9.15
+            },
+            {
+              "minRatingB": 80,
+              "travelM": 15.25
+            }
+          ]
+        }
+      },
+      "classC": {
+        "travelFromACAOrB": true,
+        "note": "Se dimensiona y ubica con los requisitos de Clase A o B según el combustible predominante (6.4.3)."
+      },
+      "classD": {
+        "travelM": 22.9
+      },
+      "classK": {
+        "travelM": 9.15
+      },
+      "mounting": {
+        "maxTopCmSmall": 153,
+        "maxTopCmLarge": 107,
+        "minClearanceCm": 10,
+        "smallMaxGrossKg": 18.14,
+        "note": "Parte superior a 1,53 m como máximo si el peso bruto no supera 18,14 kg; 1,07 m si es mayor, salvo extintores sobre ruedas. Fondo con al menos 10 cm libres (6.1.3.8)."
+      },
+      "areaRule": {
+        "onePerM2": 200,
+        "note": "Resolución 2400 de 1979, art. 221: no menos de un extintor por cada 200 m² de local o fracción, cerca de los lugares de mayor riesgo y libres de obstáculos."
+      },
+      "signage": {
+        "codes": [
+          "F001"
+        ],
+        "radiusCm": 150,
+        "note": "Resolución 2400 de 1979, art. 224: señalización en rojo que facilite ubicarlos; NTC 1669/NTC 2885 piden que no queden obstruidos ni ocultos."
+      }
+    },
+    "nfpa10": {
+      "label": "Internacional · NFPA 10",
+      "reference": "NFPA 10, Standard for Portable Fire Extinguishers (capítulos 5 y 6)",
+      "classA": {
+        "travelM": 22.9,
+        "maxAreaPerExtinguisherM2": 1045,
+        "hazards": {
+          "light": {
+            "label": "Light (low)",
+            "minRatingA": 2,
+            "areaPerRatingM2": 278.7
+          },
+          "ordinary": {
+            "label": "Ordinary (moderate)",
+            "minRatingA": 2,
+            "areaPerRatingM2": 139.4
+          },
+          "extra": {
+            "label": "Extra (high)",
+            "minRatingA": 4,
+            "areaPerRatingM2": 92.9
+          }
+        }
+      },
+      "classB": {
+        "maxTravelM": 15.25,
+        "hazards": {
+          "light": [
+            {
+              "minRatingB": 5,
+              "travelM": 9.15
+            },
+            {
+              "minRatingB": 10,
+              "travelM": 15.25
+            }
+          ],
+          "ordinary": [
+            {
+              "minRatingB": 10,
+              "travelM": 9.15
+            },
+            {
+              "minRatingB": 20,
+              "travelM": 15.25
+            }
+          ],
+          "extra": [
+            {
+              "minRatingB": 40,
+              "travelM": 9.15
+            },
+            {
+              "minRatingB": 80,
+              "travelM": 15.25
+            }
+          ]
+        }
+      },
+      "classC": {
+        "travelFromACAOrB": true,
+        "note": "Se dimensiona y ubica con los requisitos de Clase A o B según el combustible predominante."
+      },
+      "classD": {
+        "travelM": 22.9
+      },
+      "classK": {
+        "travelM": 9.15
+      },
+      "mounting": {
+        "maxTopCmSmall": 153,
+        "maxTopCmLarge": 107,
+        "minClearanceCm": 10,
+        "smallMaxGrossKg": 18.14,
+        "note": "Parte superior a 1,53 m como máximo si el peso bruto no supera 18,14 kg; 1,07 m si es mayor, salvo extintores sobre ruedas."
+      },
+      "areaRule": null,
+      "signage": {
+        "codes": [
+          "F001"
+        ],
+        "radiusCm": 150,
+        "note": "Los extintores deben estar visibles y señalizados; no deben quedar obstruidos ni ocultos."
+      }
+    }
+  },
+  "agents": {
+    "pqs_abc": {
+      "label": "Polvo químico seco ABC (multipropósito)",
+      "classes": [
+        "A",
+        "B",
+        "C"
+      ],
+      "detail": "Sirve para sólidos, líquidos inflamables y equipos eléctricos energizados. Deja residuo y no debe usarse en áreas con oxidantes ni en cocinas con aceites vegetales o animales."
+    },
+    "pqs_bc": {
+      "label": "Polvo químico seco BC",
+      "classes": [
+        "B",
+        "C"
+      ],
+      "detail": "Líquidos inflamables y equipos eléctricos; no tiene clasificación Clase A."
+    },
+    "co2": {
+      "label": "Dióxido de carbono (CO₂)",
+      "classes": [
+        "B",
+        "C"
+      ],
+      "detail": "No deja residuo, útil junto a equipos electrónicos y tableros. No tiene clasificación Clase A y puede asfixiar en recintos cerrados."
+    },
+    "water": {
+      "label": "Agua presurizada",
+      "classes": [
+        "A"
+      ],
+      "detail": "Sólidos comunes. Nunca en fuegos eléctricos ni en líquidos inflamables."
+    },
+    "foam": {
+      "label": "Espuma (AFFF/FFFP)",
+      "classes": [
+        "A",
+        "B"
+      ],
+      "detail": "Sólidos y líquidos inflamables. Para solventes polares solo si el rótulo lo indica; en Colombia no debe usarse AFFF en alcoholes, acetona y éteres sin listado específico."
+    },
+    "wet_k": {
+      "label": "Químico húmedo (Clase K)",
+      "classes": [
+        "A",
+        "K"
+      ],
+      "detail": "Cocinas con aceites y grasas vegetales o animales. Requiere listado específico Clase K; acompaña al sistema fijo de la campana."
+    },
+    "d_powder": {
+      "label": "Polvo especial Clase D",
+      "classes": [
+        "D"
+      ],
+      "detail": "Metales combustibles como magnesio, titanio, sodio o litio; el agente depende del metal."
+    }
+  },
+  "capacitiesLb": [
+    2.5,
+    5,
+    6,
+    9,
+    10,
+    12,
+    15,
+    20,
+    25,
+    30,
+    50,
+    75,
+    100,
+    150,
+    250
+  ],
+  "catalogDefaults": {
+    "cad_fire_ext_co2": {
+      "agent": "co2",
+      "capacityLb": 10,
+      "rating": "10-B:C",
+      "hazard": "ordinary",
+      "mountCm": 120
+    },
+    "cad_fire_ext_wheeled": {
+      "agent": "pqs_abc",
+      "capacityLb": 150,
+      "rating": "4-A:80-B:C",
+      "hazard": "extra",
+      "mountCm": 0
+    },
+    "cad_eds_extinguisher": {
+      "agent": "pqs_abc",
+      "capacityLb": 20,
+      "rating": "4-A:60-B:C",
+      "hazard": "ordinary",
+      "mountCm": 120
+    },
+    "cad_drg_extinguisher": {
+      "agent": "pqs_abc",
+      "capacityLb": 10,
+      "rating": "2-A:10-B:C",
+      "hazard": "light",
+      "mountCm": 120
+    }
+  },
+  "recommendations": {
+    "minimumGainPoints": 2,
+    "note": "Las sugerencias se calculan con la misma rejilla: reubicar el extintor con peor cobertura, subir la clasificación o añadir una unidad en el punto más desfavorable."
+  },
+  "defaultsNotice": "Las capacidades y clasificaciones de catalogDefaults y examples son combinaciones comerciales frecuentes, no valores fijados por la norma: la norma exige mínimos por riesgo. Confirma siempre contra la placa del equipo instalado.",
+  "examples": {
+    "pqs_abc": [
+      {
+        "capacityLb": 5,
+        "rating": "1-A:10-B:C"
+      },
+      {
+        "capacityLb": 10,
+        "rating": "2-A:10-B:C"
+      },
+      {
+        "capacityLb": 20,
+        "rating": "4-A:60-B:C"
+      },
+      {
+        "capacityLb": 150,
+        "rating": "4-A:80-B:C"
+      }
+    ],
+    "pqs_bc": [
+      {
+        "capacityLb": 10,
+        "rating": "10-B:C"
+      },
+      {
+        "capacityLb": 20,
+        "rating": "20-B:C"
+      }
+    ],
+    "co2": [
+      {
+        "capacityLb": 5,
+        "rating": "5-B:C"
+      },
+      {
+        "capacityLb": 10,
+        "rating": "10-B:C"
+      },
+      {
+        "capacityLb": 15,
+        "rating": "10-B:C"
+      }
+    ],
+    "water": [
+      {
+        "capacityLb": 9.5,
+        "rating": "2-A"
+      },
+      {
+        "capacityLb": 25,
+        "rating": "4-A"
+      }
+    ],
+    "foam": [
+      {
+        "capacityLb": 20,
+        "rating": "2-A:20-B"
+      }
+    ],
+    "wet_k": [
+      {
+        "capacityLb": 6,
+        "rating": "1-A:K"
+      }
+    ],
+    "d_powder": [
+      {
+        "capacityLb": 30,
+        "rating": "D"
+      }
+    ]
+  }
+}

@@ -8,6 +8,14 @@
     line: 'Línea', rect: 'Rectángulo', ellipse: 'Elipse', sign: 'Señal ISO 7010', cad: 'Equipo CAD', pipe: 'Tubería', conduit: 'Tubería eléctrica',
   };
   const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+  const num = (value, decimals = 1) => (Number.isFinite(Number(value))
+    ? Number(value).toLocaleString('es-CO', { maximumFractionDigits: decimals })
+    : '—');
+  const EXT_AGENT_FALLBACK = {
+    pqs_abc: 'Polvo químico seco ABC', pqs_bc: 'Polvo químico seco BC', co2: 'Dióxido de carbono (CO₂)',
+    water: 'Agua presurizada', foam: 'Espuma (AFFF/FFFP)', wet_k: 'Químico húmedo (Clase K)', d_powder: 'Polvo especial Clase D',
+  };
+  const EXT_HAZARDS = { light: 'Leve', ordinary: 'Ordinario', extra: 'Extra' };
 
   class Inspector {
     constructor(app) {
@@ -46,6 +54,10 @@
             this.model.setProps({ [prop]: Number(field.value) });
           } else if (prop === 'flipX' || prop === 'flipY' || prop === 'isExit' || prop === 'locked') {
             this.model.setProps({ [prop]: field.checked });
+          } else if (prop === 'extAgent' || prop === 'extRating' || prop === 'extHazard') {
+            this.model.setProps({ [prop]: field.value });
+          } else if (prop === 'extCapacityLb' || prop === 'extMountCm') {
+            this.model.setProps({ [prop]: Number(field.value) });
           } else if (prop === 'layerId') {
             this.model.setProps({ layerId: field.value });
           } else if (prop === 'rotation') {
@@ -82,6 +94,18 @@
         const button = event.target.closest('[data-action]');
         if (!button || button.disabled) return;
         event.preventDefault();
+        if (button.dataset.action === 'ext-verify') {
+          this.app.openDrawer('extinguishers');
+          return;
+        }
+        if (button.dataset.action === 'ext-apply') {
+          const recommendation = this.app.extinguishers?.recommendationFor(button.dataset.value);
+          if (recommendation) {
+            this.app.extinguishers.apply(recommendation);
+            this.render(true);
+          }
+          return;
+        }
         if (button.dataset.action === 'swap-sign') {
           this.app.startSignSwap();
           return;
@@ -295,6 +319,7 @@
       const hasPipe = Boolean(single && single.type === 'pipe');
       const hasConduit = Boolean(single && single.type === 'conduit');
       const hasDevice = Boolean(single && this.model.isElectricalDeviceType(single.type));
+      const hasExtinguisher = Boolean(single && this.model.isExtinguisherType(single.type));
       const Mep = root.Mep;
       const mep = this.model.mepData() || {};
       const networkOptions = hasPipe
@@ -460,6 +485,62 @@
         { badge: hasPipe ? (this.model.networkInfo(single.network)?.short || '') : hasConduit ? (single.circuit || 'C1') : '' },
       ) : '';
 
+      /* ---------------------------- extintor ---------------------------- */
+      const extReport = this.app.extinguishers?.report || null;
+      const extVerdict = hasExtinguisher ? this.app.extinguishers?.verdictFor(single.id) : null;
+      const agentOptions = Object.entries(extReport?.agents || EXT_AGENT_FALLBACK)
+        .map(([key, info]) => `<option value="${esc(key)}" ${single?.extAgent === key ? 'selected' : ''}>${esc(info.label || key)}</option>`)
+        .join('');
+      const hazardOptions = Object.entries(EXT_HAZARDS)
+        .map(([key, label]) => `<option value="${key}" ${single?.extHazard === key ? 'selected' : ''}>${label}</option>`)
+        .join('');
+      const exampleRatings = extReport?.examples?.[single?.extAgent] || [];
+      const ratingList = exampleRatings.length
+        ? `<datalist id="ext-ratings">${exampleRatings.map((row) => `<option value="${esc(row.rating)}">${num(row.capacityLb, 0)} lb</option>`).join('')}</datalist>`
+        : '';
+      let verdictMarkup = `<p class="help-text">Verifica la cobertura para saber si este extintor llega a todo su margen y cuánta superficie admite su clasificación.</p>
+        <button class="button button-small button-soft" type="button" data-action="ext-verify"><svg class="icon"><use href="#i-extinguisher"></use></svg>Verificar cobertura</button>`;
+      if (extVerdict) {
+        const unit = extVerdict.unit;
+        const issues = [];
+        if (unit.travelAreaM2 > unit.coverageAreaM2 + 0.5) {
+          issues.push(`Su recorrido alcanza ${num(unit.travelAreaM2)} m², pero la clasificación solo admite ${num(unit.areaLimitM2)} m².`);
+        }
+        if (unit.travelLimitM === null) issues.push('No declara una clase de fuego con distancia aplicable.');
+        if (!unit.signCovered) issues.push('No tiene una señal F001 a menos de 1,5 m.');
+        if (!unit.wheeled && unit.mountCm > unit.mountMaxCm) issues.push(`La parte superior a ${num(unit.mountCm, 0)} cm supera el máximo de ${num(unit.mountMaxCm, 0)} cm.`);
+        const ok = issues.length === 0 && unit.coverageAreaM2 > 0;
+        verdictMarkup = `<div class="ext-verdict ${ok ? 'is-ok' : 'is-warn'}">
+          <p class="ext-verdict-head"><svg class="icon"><use href="#i-${ok ? 'check' : 'alert'}"></use></svg><strong>${ok ? 'Cumple los criterios de referencia' : 'Requiere ajuste'}</strong></p>
+          <dl class="ext-verdict-facts">
+            <div><dt>Cubre</dt><dd>${num(unit.coverageAreaM2)} m² · ${num(unit.coveragePct)} % del piso</dd></div>
+            <div><dt>Recorrido máximo</dt><dd>${unit.travelLimitM === null ? '—' : `${num(unit.travelLimitM)} m`}</dd></div>
+            <div><dt>Área máxima</dt><dd>${unit.areaLimitM2 === null ? '—' : `${num(unit.areaLimitM2)} m²`}</dd></div>
+            <div><dt>Alcanza hasta</dt><dd>${unit.maxTravelM === null ? '—' : `${num(unit.maxTravelM)} m`} en su zona</dd></div>
+          </dl>
+          ${issues.length ? `<ul class="ext-verdict-issues">${issues.map((issue) => `<li>${esc(issue)}</li>`).join('')}</ul>` : ''}
+          <p class="ext-verdict-source">Calculado sobre el plano guardado · ${esc(extVerdict.profileLabel)} · riesgo ${esc(extVerdict.hazardLabel)}</p>
+          ${extVerdict.recommendations.length ? `<div class="ext-verdict-actions">${extVerdict.recommendations.map((rec, index) => `<button class="button button-small button-soft" type="button" data-action="ext-apply" data-value="${extReport.recommendations.indexOf(rec)}">${esc(rec.action === 'add' ? 'Instalar otro' : rec.action === 'move' ? `Reubicar (+${num(rec.gainAreaM2)} m²)` : `Subir a ${esc(rec.rating)} (+${num(rec.gainAreaM2)} m²)`)}</button>`).join('')}</div>` : ''}
+        </div>`;
+      }
+      const extinguisherSection = hasExtinguisher ? this.section('extinguisher', 'Extintor', 'extinguisher',
+        `<div class="ext-fields">
+          <label class="select-field"><span class="num-label">Agente extintor</span><select data-prop="extAgent"${disabled}>${agentOptions}</select></label>
+          <div class="metric-grid">
+            ${this.numberField('Capacidad', 'extCapacityLb', Number(single.extCapacityLb) || 0, { disabled: !canEdit, min: 1, max: 400, step: 0.5, unit: 'lb' })}
+            <label class="field compact"><span>Clasificación</span><input type="text" data-prop="extRating" list="ext-ratings" maxlength="24" value="${esc(single.extRating || '')}"${disabled}><small>Formato 2-A:10-B:C</small></label>
+          </div>
+          <div class="metric-grid">
+            <label class="select-field"><span class="num-label">Riesgo</span><select data-prop="extHazard"${disabled}>${hazardOptions}</select></label>
+            ${this.numberField('Parte superior', 'extMountCm', Number(single.extMountCm) || 0, { disabled: !canEdit, min: 0, max: 300, unit: 'cm' })}
+          </div>
+          ${ratingList}
+          <p class="help-text">Valores de referencia del fabricante: confirma agente, capacidad y clasificación contra la placa del equipo. Con la parte superior a 0 cm se asume un extintor sobre ruedas o apoyado en el piso.</p>
+        </div>
+        ${verdictMarkup}`,
+        { badge: single.extRating ? esc(single.extRating) : '' },
+      ) : '';
+
       /* ------------------------- organización ------------------------- */
       const organization = `<label class="select-field"><span class="num-label">Capa</span><select data-prop="layerId">${layerOptions}</select></label>
         <label class="switch-row compact"><span><strong>Bloquear</strong><small>Evita mover o modificar el elemento.</small></span><input type="checkbox" data-prop="locked" ${lockedAll ? 'checked' : ''}></label>
@@ -495,6 +576,7 @@
         ${this.section('geometry', 'Geometría', 'move', geometry)}
         ${this.section('appearance', 'Apariencia', 'palette', appearance)}
         ${mepSection}
+        ${extinguisherSection}
         ${this.stackMarkup(elements)}
         ${this.section('organization', 'Organización', 'layers', organization)}
         ${this.section('actions', 'Orden y acciones', 'arrange', actions)}`;
