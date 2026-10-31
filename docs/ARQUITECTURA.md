@@ -153,6 +153,8 @@ assets/js/editor/store.js    API: guardar, autosave, versiones, restaurar, ajust
 assets/js/editor/inspector.js Inspector plegable: ficha, geometría, apariencia, redes, superposiciones y acciones
 assets/js/editor/library.js  Cajón de bibliotecas: chips, búsqueda, grilla y detalle
 assets/js/editor/audit.js    Cajón de revisión: pide el informe, pinta métricas y hallazgos, filtra y enlaza al plano
+assets/js/editor/schedule.js Cajón del pliego: agrupa señales, tamaños, precios, consistencia y CSV
+assets/js/editor/measure.js  Cajón de rutas internas: retícula, A*, tramos, tiempos y guardado en capa
 assets/js/editor.js          EditorApp: arranque, herramientas, puntero, teclado, guardado, exportación
 ```
 
@@ -308,3 +310,10 @@ Cada prueba corre en PHP 8.1 y 8.3 (la de paquetes en 8.3), sin instalar PHP en 
 - Sin gestor de usuarios en la interfaz: la fase 1 crea la cuenta administradora en el instalador. El esquema y las consultas ya soportan varias cuentas con proyectos aislados, pero las cuentas adicionales se crean por base de datos; un gestor de usuarios queda para una fase posterior.
 - Sin migraciones automáticas: el esquema es estable y `PRAGMA user_version = 1`; una versión futura podrá migrar con un paso explícito.
 - La escala es una **referencia declarada**: el editor no mide el mundo real ni convierte unidades físicas a píxeles de impresión.
+
+
+## Pliego de señalización y rutas internas
+
+- **Pliego (`schedule.js`)** trabaja sobre el diseño en pantalla: cuenta los elementos cuyo tipo empieza por `iso_` o `sig_`, resuelve su código con `Model.signCodeForType()`, agrupa por código, suma cantidades y toma nombre, familia y color de los catálogos ya cargados. El tamaño sugerido depende del área del piso (150/300/450 mm) y los precios unitarios viven en `localStorage` (`normia.schedule.prices`), nunca en la base. La consistencia compara el centro de cada equipo (extintor, botiquín, hidrante, alarma) con las señales `F001`, `E003`, `F002` y `F005`, y el final de cada ruta con las señales `E002`. La exportación es CSV con BOM y `;` y TSV al portapapeles.
+- **Rutas (`measure.js`)** construye una retícula de 10 unidades sobre el lienzo, bloquea los muros por distancia al segmento (+ holgura), libera el rectángulo de cada puerta y rodea los equipos grandes; en modo silla de ruedas sube la holgura y bloquea también escaleras y equipos medianos. Busca el camino con A* (heap binario, 8 vecinos sin cortar esquinas) y lo suaviza con «tira de la cuerda» para que el trazo guardado no quede en escalera. El tiempo usa 1,2 m/s a pie y 0,8 m/s en silla de ruedas. **Guardar en el plano** crea la capa *Mediciones de ruta* y añade una `line` con etiqueta y un `text` con la distancia, todo dentro de `Model.begin()/end()` para que sea un solo paso del historial.
+- Ambos cajones se registran en `EditorApp` como `app.schedule` y `app.measure`. El editor les pasa el clic del lienzo mientras `measure.tracing` está activo, redibuja su superposición al final de `renderNow()` y marca el pliego como desactualizado cuando cambia el modelo.

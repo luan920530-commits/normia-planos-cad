@@ -124,6 +124,10 @@ try {
   report.check('Editor sin avisos PHP', noPhpErrors(editorHtml));
   report.check('Editor incluye lienzo y paneles', editorHtml.includes('id="plan-canvas"') && editorHtml.includes('data-properties-panel') && editorHtml.includes('data-drawer="library"'));
   report.check('Editor carga JS/CSS locales', editorHtml.includes('/assets/js/editor.js') && editorHtml.includes('/assets/css/editor.css') && editorHtml.includes('/assets/js/editor/store.js'));
+  report.check('Editor incluye el pliego y la medición de rutas',
+    editorHtml.includes('data-drawer="schedule"') && editorHtml.includes('data-drawer="measure"')
+    && editorHtml.includes('/assets/js/editor/schedule.js') && editorHtml.includes('/assets/js/editor/measure.js')
+    && editorHtml.includes('data-open-drawer="schedule"') && editorHtml.includes('data-open-drawer="measure"'));
   report.check('Editor sin recursos externos', localAssets(editorHtml, `/index.php?r=projects/${projectId}/floors/${floorId}/editor`).external.length === 0);
   const bootMatch = /<textarea id="editor-boot" hidden>([\s\S]*?)<\/textarea>/.exec(editorHtml);
   let boot = null;

@@ -22,16 +22,17 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 5. [El editor](#el-editor)
 6. [Bibliotecas de señalización y CAD](#bibliotecas-de-señalización-y-cad)
 7. [Revisión del plano y evacuación](#revisión-del-plano-y-evacuación)
-8. [Guardado, versiones y borradores](#guardado-versiones-y-borradores)
-9. [Exportaciones](#exportaciones)
-10. [Formato de datos](#formato-de-datos)
-11. [Arquitectura](#arquitectura)
-12. [Seguridad](#seguridad)
-13. [Pruebas](#pruebas)
-14. [Cambios de la versión 1.2.0](#cambios-de-la-versión-120)
-15. [Paquetes y verificación](#paquetes-y-verificación)
-16. [Limitaciones](#limitaciones)
-17. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
+8. [Pliego de señalización y rutas internas](#pliego-de-señalización-y-rutas-internas)
+9. [Guardado, versiones y borradores](#guardado-versiones-y-borradores)
+10. [Exportaciones](#exportaciones)
+11. [Formato de datos](#formato-de-datos)
+12. [Arquitectura](#arquitectura)
+13. [Seguridad](#seguridad)
+14. [Pruebas](#pruebas)
+15. [Cambios de la versión 1.3.0](#cambios-de-la-versión-130)
+16. [Paquetes y verificación](#paquetes-y-verificación)
+17. [Limitaciones](#limitaciones)
+18. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
 
 ---
 
@@ -50,6 +51,8 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 | Historial | Deshacer/rehacer con 120 pasos, duplicar, pegar, agrupar, alinear, distribuir y orden de dibujo. |
 | Redes | Panel **Redes y circuitos** con longitudes por sistema, diámetros usados, pendientes, cargas por circuito, breaker y calibre sugeridos y caída de tensión estimada. |
 | Revisión | Cajón **Revisión** con recorrido más largo hasta las salidas, salidas y anchos, ocupación declarada o estimada, ancho requerido, tiempo de evacuación y hallazgos por severidad enlazados al plano. |
+| Pliego | Cajón **Pliego** con las señales agrupadas por código y familia, cantidades, tamaño de lámina sugerido, desglose por capa, precios unitarios locales, total estimado, avisos de consistencia y exportación CSV/portapapeles. |
+| Rutas internas | Cajón **Rutas** que mide el recorrido caminable entre dos o más puntos: rodea muros y equipos, respeta los vanos, suma tramos, estima el tiempo a pie o en silla de ruedas y guarda la medición como capa. |
 | Persistencia | Guardado manual con nota, versiones inmutables, restaurar versión, borrador automático cada 30 s y detección de conflictos. |
 | Exportación | SVG, JSON, PNG (generado en el navegador) e impresión lista para PDF desde el navegador. |
 | Datos | Base SQLite con claves foráneas, consultas preparadas y copia de seguridad = 2 archivos. |
@@ -174,7 +177,8 @@ Luego importa `resources/schema.sql` en el archivo SQLite y crea el usuario admi
 - **Muro (M)**, **Puerta (U)**, **Ruta de evacuación (E)**, **Tubería (P)** —con desplegable de red—, **Eléctrico (Shift + P)**, **Texto (T)**, **Medida (D)**, **Línea (L)**, **Rectángulo (B)** y **Elipse (O)**, agrupados en el menú de formas.
 - **Todas las herramientas** (arriba del lienzo): paleta agrupada con icono, nombre y atajo de cada herramienta, incluida la Mano.
 - **Señalización ISO 7010** y **Equipamiento CAD**: abren el cajón de biblioteca con búsqueda, familias y vista previa.
-- **Redes y circuitos**, **Capas**, **Versiones**, **Ajustes**, **Atajos** e **Imprimir** en la parte inferior.
+- **Revisión**, **Pliego**, **Rutas**, **Redes y circuitos**, **Capas**, **Versiones**, **Pie de plano**, **Ajustes**, **Atajos** e **Imprimir** en la parte inferior.
+- **Pliego** cuenta las señales del plano para comprar; **Rutas** mide recorridos internos y los guarda como capa.
 
 ### Gestos y puntero
 
@@ -339,7 +343,7 @@ El panel **Redes y circuitos** (barra lateral inferior) resume el piso:
 | --- | --- |
 | `resources/iso7010-catalog.json` | `{format, standard, source, license, categories, signs{CODE:{name,category,description,svg}}}` |
 | `resources/cad-objects.json` | `{version, categories{furniture,...}, objects{cad_*:{category,name,description,reference,color,load?,svg}}}` — 301 objetos en 23 familias |
-| `resources/service-signs.json` | `{format, standard, license, categories{services,location}, signs{SVC_*:{name,category,description,aliases,svg}}}` — 23 señales propias |
+| `resources/service-signs.json` | `{format, standard, license, categories{services,location,traffic}, signs{SVC_*:{name,category,description,aliases,svg}}}` — 57 señales propias |
 | `resources/mep-networks.json` | `{hydraulic{clave:{label,short,color,dash,stroke,diameter,material,gravity,pressureKpa,reference}},diameters[],materials{},slopes{},electrical{...}}` — valores de referencia de redes y circuitos |
 | `resources/audit-criteria.json` | `{version, notice, grid, egress, occupancy, signs}` — umbrales del auditor y de la medición de evacuación |
 | `resources/sign-aliases.json` | Alias heredados → códigos ISO 7010 |
@@ -373,6 +377,35 @@ La barra lateral inferior tiene un botón **Revisión** que abre el auditor. Ana
 **API e informe.** `GET /index.php?r=api/floors/{id}/audit` (admite `?occupancy=N` para simular una ocupación) devuelve `{ok, floor, report, notice}` con `findings`, `counts`, `exits`, `travel`, `occupancy`, `egress`, `routes`, `signs` y `criteria`. El informe imprimible está en `…/projects/{id}/floors/{floorId}/audit` y lleva las métricas, los hallazgos, las rutas, los criterios aplicados y el aviso de alcance.
 
 > **La revisión es de referencia.** Los umbrales son configurables y el cálculo es esquemático: **no es un dictamen**, no certifica cumplimiento normativo y no sustituye la verificación en sitio ni la revisión de un profesional competente. Los anchos, las rutas y la ocupación real deben confirmarse en el sitio.
+
+---
+
+## Pliego de señalización y rutas internas
+
+Dos cajones de trabajo que usan el plano guardado en pantalla (no una versión anterior) para pasar del dibujo a la obra.
+
+### Pliego de señalización
+
+El botón **Pliego** de la barra lateral inferior cuenta las señales del piso y arma la lista de compra.
+
+- **Agrupación por código y familia.** Cada fila trae código (`E002`, `SVC_TRF_STOP`…), nombre, familia, cantidad, tamaño sugerido, capa o capas donde está montada y botón **Ver** para seleccionarla en el plano.
+- **Tamaño sugerido por área.** 150 mm hasta 150 m², 300 mm hasta 600 m² y 450 mm por encima. Es una guía de compra: la norma aplicable y el sitio mandan.
+- **Precios unitarios.** Escribe el precio de cada código y el subtotal y el total se recalculan al instante. Los precios se guardan solo en tu navegador (`localStorage`), no en la base ni en el proyecto.
+- **Consistencia.** Avisa cuando un extintor, botiquín, hidrante o pulsador de alarma no tiene su señal a menos de 8–10 m, y cuando el final de una ruta de evacuación queda a más de 12 m de una señal de salida.
+- **Exportación.** **Descargar CSV** (con BOM y punto y coma, listo para Excel en español) y **Copiar tabla** (TSV al portapapeles para pegar en una hoja de cálculo).
+
+> El pliego es un inventario de referencia: no sustituye la orden de compra ni certifica que la señalización cumpla la norma. Revisa cantidades, tamaños y ubicaciones en sitio.
+
+### Medición de rutas internas
+
+El botón **Rutas** mide distancias caminables dentro del plano, sin necesidad de acotar a mano.
+
+- **Punto a punto y con paradas.** Pulsa **Trazar ruta** y haz clic en el origen, en las paradas que quieras y en el destino. Cada tramo se calcula sobre una retícula que bloquea muros y equipos grandes y abre los vanos de las puertas.
+- **Distancias y tiempos.** Suma los tramos en metros (según la unidad del lienzo) y estima el tiempo a pie (1,2 m/s) o en silla de ruedas (0,8 m/s). El modo accesible exige más holgura y evita escaleras y equipos medianos.
+- **Guardar en el plano.** Crea la capa **Mediciones de ruta**, con el trazo punteado y una etiqueta con la distancia y el tiempo. Entra en el historial como un solo paso y se puede ocultar desde **Capas**.
+- **Comparación.** Las mediciones guardadas en la sesión quedan listadas con su distancia y la más corta marcada; sirve para contrastar dos alternativas de recorrido logístico.
+
+> Las distancias son de referencia: la rejilla, la holgura y las velocidades son valores de trabajo, no un cálculo de evacuación. Los anchos libres, las puertas y los obstáculos reales se verifican en sitio.
 
 ---
 
@@ -566,8 +599,8 @@ Lo único que no funciona sin red es la **vista previa de desarrollo** (`npm run
 | Bloque | Comprobaciones |
 | --- | --- |
 | `tests/php/lint.mjs` | `php -l` sobre todo `app/`, `bootstrap.php` e `index.php` en 8.1 y 8.3. |
-| `tests/php/functional.mjs` | 174 comprobaciones: instalador, requisitos, contraseñas débiles, CSRF, sesión, autorización entre cuentas, CRUD de proyectos/pisos, duplicados, importación v1/v2, catálogos (389 señales y 301 objetos), catálogo y guardado de redes, señales de baño y de servicios (guardado, color de familia y exportación SVG), **auditor y medición de evacuación** (salidas, recorrido máximo, zonas inalcanzables, rutas que cruzan muros o no llegan a la salida, ocupación declarada y estimada, señalización, validación de `isExit`, informe imprimible y demo coherente), puertas y portones (geometría, sentidos de apertura, exportación con trazo), validaciones de la API, guardado/versiones/borradores/conflictos, exportaciones, ciclo de vida y logout. |
-| `tests/js/editor.mjs` | 246 comprobaciones de interfaz sobre la app real: arranque, 389 señales y 301 objetos, **trazado de tuberías y circuitos, inspector de red y panel de redes**, **mano y paneo, selección de superpuestos, inspector plegable y paleta de herramientas**, puertas dobles y portones, **vértices de ruta editables (arrastrar, doble clic, Alt+clic)**, **señal de baño insertada desde la biblioteca**, **posiciones reales del trazo**, **clic sobre muros finos, pictogramas y equipos**, **cambio de señal y de equipo desde el inspector**, **auditor de planos** (interruptor de salida, ocupación declarada, cajón de revisión, contador, filtros, «Ver en el plano», cierre sin dejar el fondo bloqueado), **rotación**, **rutas cerradas**, **arrastrar y soltar desde la biblioteca sin que el cajón lo bloquee**, reglas, herramientas, inserción con puntero, selección, mover, escalar, rotar, color, cambio de tipo, deshacer/rehacer, duplicar, agrupar, bloquear, desplazar, texto y saneado, guardar, reabrir, borradores, conflictos, exportación SVG/JSON/PNG, tooltips sin acumulación, capas, versiones y límites. |
+| `tests/php/functional.mjs` | 175 comprobaciones: instalador, requisitos, contraseñas débiles, CSRF, sesión, autorización entre cuentas, CRUD de proyectos/pisos, duplicados, importación v1/v2, catálogos (389 señales y 301 objetos), catálogo y guardado de redes, señales de baño y de servicios (guardado, color de familia y exportación SVG), **auditor y medición de evacuación** (salidas, recorrido máximo, zonas inalcanzables, rutas que cruzan muros o no llegan a la salida, ocupación declarada y estimada, señalización, validación de `isExit`, informe imprimible y demo coherente), puertas y portones (geometría, sentidos de apertura, exportación con trazo), validaciones de la API, guardado/versiones/borradores/conflictos, exportaciones, ciclo de vida y logout. |
+| `tests/js/editor.mjs` | 266 comprobaciones de interfaz sobre la app real: arranque, 389 señales y 301 objetos, **trazado de tuberías y circuitos, inspector de red y panel de redes**, **mano y paneo, selección de superpuestos, inspector plegable y paleta de herramientas**, puertas dobles y portones, **vértices de ruta editables (arrastrar, doble clic, Alt+clic)**, **señal de baño insertada desde la biblioteca**, **posiciones reales del trazo**, **clic sobre muros finos, pictogramas y equipos**, **cambio de señal y de equipo desde el inspector**, **auditor de planos** (interruptor de salida, ocupación declarada, cajón de revisión, contador, filtros, «Ver en el plano», cierre sin dejar el fondo bloqueado), **pliego de señalización** (conteo, tamaño sugerido, CSV, precios y consistencia), **medición de rutas internas** (ruta que rodea muros, tramos, guardado en capa y comparación), **rotación**, **rutas cerradas**, **arrastrar y soltar desde la biblioteca sin que el cajón lo bloquee**, reglas, herramientas, inserción con puntero, selección, mover, escalar, rotar, color, cambio de tipo, deshacer/rehacer, duplicar, agrupar, bloquear, desplazar, texto y saneado, guardar, reabrir, borradores, conflictos, exportación SVG/JSON/PNG, tooltips sin acumulación, capas, versiones y límites. |
 | `tests/js/pages.mjs` | 29 comprobaciones de las páginas fuera del editor: menú de acciones de proyectos y pisos (capa fija, colocación, teclado, un solo menú), confirmación de borrado y borrado real de piso y proyecto, con la protección del último piso. |
 | `tests/php/package.mjs` | 39 comprobaciones: construye ambos ZIP, verifica que no haya bases, sesiones, credenciales, logs ni carpetas de desarrollo, valida los SHA-256 y hace una instalación limpia de la demo comprobando assets, catálogos (389/301), los cuatro pisos del proyecto de ejemplo, señales de servicios y redes en la demo, la señal «Usted está aquí», **el auditor y su informe en la demo empaquetada**, editor, SVG, JSON e impresión. |
 | `tests/js/offline.mjs` | 0 dependencias de red: revisa las vistas, los estilos, los scripts y los catálogos y falla si aparece un `fetch`, un `WebSocket`, un `src`/`href`/`url()` externo, una llamada de red desde PHP o un dominio no declarado. |
@@ -592,6 +625,15 @@ Resultados esperados de la última ejecución completa:
 Las pruebas trabajan sobre copias temporales: no escriben configuración ni bases en el repositorio. `node_modules` solo contiene dependencias de desarrollo y se excluye de los paquetes.
 
 ---
+
+## Cambios de la versión 1.3.0
+
+Dos herramientas para pasar del plano a la obra, pedidas en el [#6](https://github.com/luan920530-commits/normia-planos-cad/issues/6).
+
+- **Pliego de señalización.** Un cajón nuevo que cuenta las señales del plano por código y familia, sugiere el tamaño de lámina según el área, desglosa por capa, permite escribir precios unitarios (solo en el navegador) y calcula el total. Avisa si un extintor, botiquín, hidrante o pulsador quedó sin su señal cerca, o si una ruta termina lejos de una señal de salida. Exporta CSV para Excel y copia la tabla al portapapeles.
+- **Medición de rutas internas.** Traza un recorrido de origen a destino, con paradas intermedias, sobre una retícula que rodea muros y equipos y abre los vanos de las puertas. Muestra cada tramo en metros, el total y el tiempo estimado a pie (1,2 m/s) o en silla de ruedas (0,8 m/s, con más holgura y sin escaleras). **Guardar en el plano** crea la capa *Mediciones de ruta* con el trazo y su etiqueta, y la lista de mediciones de la sesión marca la más corta.
+- **Sin controles falsos.** Las dos herramientas son locales, funcionan sin conexión y no prometen cálculos certificados: el pliego y las distancias son de referencia y así se dice en cada panel, en el README y en el pie.
+- **Pruebas.** La interfaz pasa de 246 a **266** comprobaciones; la suite funcional gana una comprobación de la estructura del editor y queda en **175**.
 
 ## Cambios de la versión 1.2.0
 
@@ -746,14 +788,14 @@ Versión de corrección sobre la 1.0.0. Reemplaza los paquetes anteriores: la 1.
 
 ## Paquetes y verificación
 
-Las versiones publicadas están en la página de **[Liberaciones](https://github.com/luan920530-commits/normia-planos-cad/releases)**. La versión vigente es la **v1.2.0**, con sus notas, sus sumas SHA-256 y los enlaces de descarga de los paquetes que viven en `paquetes/v1.2.0/`. Las entregas anteriores (v1.0.0 a v1.0.9 y las v1.1.0 a v1.1.3) no deben usarse: la v1.2.0 las reemplaza.
+Las versiones publicadas están en la página de **[Liberaciones](https://github.com/luan920530-commits/normia-planos-cad/releases)**. La versión vigente es la **v1.3.0**, con sus notas, sus sumas SHA-256 y los enlaces de descarga de los paquetes que viven en `paquetes/v1.3.0/`. Las entregas anteriores (v1.0.0 a v1.0.9 y las v1.1.0 a v1.2.0) no deben usarse: la v1.3.0 las reemplaza.
 
-La entrega v1.2.0 incluye los ZIP ya construidos en **`paquetes/v1.2.0/`** (misma composición que genera el script, verificada por `tests/php/package.mjs`):
+La entrega v1.3.0 incluye los ZIP ya construidos en **`paquetes/v1.3.0/`** (misma composición que genera el script, verificada por `tests/php/package.mjs`):
 
 ```text
-paquetes/v1.2.0/
-├── normia-planos-cad-1.2.0.zip
-├── normia-planos-cad-demo-1.2.0.zip
+paquetes/v1.3.0/
+├── normia-planos-cad-1.3.0.zip
+├── normia-planos-cad-demo-1.3.0.zip
 ├── SHA256SUMS.txt
 ├── BUILD.txt
 └── LEEME.txt
@@ -768,8 +810,8 @@ npm run build          # o: bash tools/build-packages.sh
 El script deja los artefactos en `dist/`:
 
 ```text
-normia-planos-cad-1.2.0.zip
-normia-planos-cad-demo-1.2.0.zip
+normia-planos-cad-1.3.0.zip
+normia-planos-cad-demo-1.3.0.zip
 SHA256SUMS.txt
 BUILD.txt
 ```
@@ -783,7 +825,7 @@ cd paquetes/v1.1.2
 sha256sum -c SHA256SUMS.txt
 ```
 
-Los hashes exactos de los ZIP publicados están en `paquetes/v1.2.0/SHA256SUMS.txt`; `dist/` es solo la salida de trabajo y está ignorada por Git.
+Los hashes exactos de los ZIP publicados están en `paquetes/v1.3.0/SHA256SUMS.txt`; `dist/` es solo la salida de trabajo y está ignorada por Git.
 
 ---
 
