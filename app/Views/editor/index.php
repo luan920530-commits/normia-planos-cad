@@ -57,6 +57,27 @@
           <svg class="icon"><use href="#i-redo"></use></svg>
         </button>
       </div>
+      <div class="topbar-tools">
+        <button class="icon-button dark" type="button" data-open-drawer="versions" data-tooltip="Versiones del plano" aria-label="Versiones del plano">
+          <svg class="icon"><use href="#i-history"></use></svg>
+        </button>
+        <button class="icon-button dark" type="button" data-open-drawer="footer" data-tooltip="Pie de plano" aria-label="Pie de plano">
+          <svg class="icon"><use href="#i-layout-footer"></use></svg>
+        </button>
+        <button class="icon-button dark" type="button" data-open-drawer="shortcuts" data-tooltip="Atajos y ayuda" aria-label="Atajos y ayuda">
+          <svg class="icon"><use href="#i-keyboard"></use></svg>
+        </button>
+        <div class="topbar-flyout-wrap">
+          <button class="icon-button dark" type="button" data-topbar-menu aria-expanded="false" aria-haspopup="menu" data-tooltip="Más opciones" aria-label="Más opciones del editor">
+            <svg class="icon"><use href="#i-chevron-down"></use></svg>
+          </button>
+          <div class="rail-flyout topbar-flyout" data-topbar-flyout role="menu" hidden>
+            <button type="button" role="menuitem" data-open-drawer="versions"><svg class="icon"><use href="#i-history"></use></svg>Versiones del plano</button>
+            <button type="button" role="menuitem" data-open-drawer="footer"><svg class="icon"><use href="#i-layout-footer"></use></svg>Pie de plano</button>
+            <button type="button" role="menuitem" data-open-drawer="shortcuts"><svg class="icon"><use href="#i-keyboard"></use></svg>Atajos y ayuda</button>
+          </div>
+        </div>
+      </div>
       <button class="button button-primary editor-save" type="button" data-save>
         <svg class="icon"><use href="#i-save"></use></svg><span>Guardar</span>
       </button>
@@ -71,105 +92,101 @@
   <div class="editor-workbench">
     <nav class="rail" aria-label="Herramientas del editor">
       <div class="rail-main">
-        <button class="rail-button is-active" type="button" data-tool="select" aria-pressed="true" data-tooltip="Seleccionar · V" aria-label="Seleccionar y mover">
-          <svg class="icon"><use href="#i-select"></use></svg><span>Seleccionar</span>
+        <button class="rail-button is-active" type="button" data-tool="select" aria-pressed="true" data-tooltip="Seleccionar · V" data-tooltip-side="right" aria-label="Seleccionar y mover">
+          <svg class="icon"><use href="#i-select"></use></svg>
         </button>
-        <button class="rail-button" type="button" data-tool="hand" aria-pressed="false" data-tooltip="Mano: desplazar el lienzo · H" aria-label="Desplazar el lienzo">
-          <svg class="icon"><use href="#i-hand"></use></svg><span>Mano</span>
+        <button class="rail-button" type="button" data-tool="hand" aria-pressed="false" data-tooltip="Mano: desplazar el lienzo · H" data-tooltip-side="right" aria-label="Desplazar el lienzo">
+          <svg class="icon"><use href="#i-hand"></use></svg>
         </button>
-        <button class="rail-button" type="button" data-tool="wall" aria-pressed="false" data-tooltip="Muro · M" aria-label="Dibujar muro">
-          <svg class="icon"><use href="#i-wall"></use></svg><span>Muro</span>
+        <button class="rail-button" type="button" data-tool="wall" aria-pressed="false" data-tooltip="Muro · M" data-tooltip-side="right" aria-label="Dibujar muro">
+          <svg class="icon"><use href="#i-wall"></use></svg>
         </button>
         <div class="rail-flyout-wrap">
-          <button class="rail-button" type="button" data-tool="door" aria-pressed="false" data-tooltip="Puerta sencilla · U" aria-label="Insertar puerta sencilla">
-            <svg class="icon"><use href="#i-door"></use></svg><span>Puertas</span>
+          <button class="rail-button" type="button" data-tool="door" aria-pressed="false" data-tooltip="Puerta sencilla · U" data-tooltip-side="right" aria-label="Insertar puerta sencilla">
+            <svg class="icon"><use href="#i-door"></use></svg>
           </button>
-          <button class="rail-caret" type="button" data-door-menu aria-expanded="false" aria-label="Más tipos de puerta" data-tooltip="Puertas dobles y portones">
+          <button class="rail-caret" type="button" data-door-menu aria-expanded="false" aria-haspopup="menu" aria-label="Más tipos de puerta" data-tooltip="Puertas dobles y portones" data-tooltip-side="right">
             <svg class="icon"><use href="#i-chevron-down"></use></svg>
           </button>
-          <div class="rail-flyout" data-door-flyout hidden>
-            <button type="button" data-tool="door"><svg class="icon"><use href="#i-door"></use></svg>Puerta sencilla · U</button>
-            <button type="button" data-tool="door_double"><svg class="icon"><use href="#i-door-double"></use></svg>Puerta doble · Shift+U</button>
-            <button type="button" data-tool="door_garage"><svg class="icon"><use href="#i-door-garage"></use></svg>Portón o reja · R</button>
+          <div class="rail-flyout" data-door-flyout role="menu" hidden>
+            <button type="button" role="menuitem" data-tool="door"><svg class="icon"><use href="#i-door"></use></svg>Puerta sencilla · U</button>
+            <button type="button" role="menuitem" data-tool="door_double"><svg class="icon"><use href="#i-door-double"></use></svg>Puerta doble · Shift+U</button>
+            <button type="button" role="menuitem" data-tool="door_garage"><svg class="icon"><use href="#i-door-garage"></use></svg>Portón o reja · R</button>
           </div>
         </div>
-        <button class="rail-button" type="button" data-tool="route" aria-pressed="false" data-tooltip="Ruta de evacuación · E" aria-label="Trazar ruta de evacuación">
-          <svg class="icon"><use href="#i-route"></use></svg><span>Ruta</span>
+        <button class="rail-button" type="button" data-tool="route" aria-pressed="false" data-tooltip="Ruta de evacuación · E" data-tooltip-side="right" aria-label="Trazar ruta de evacuación">
+          <svg class="icon"><use href="#i-route"></use></svg>
         </button>
         <div class="rail-flyout-wrap">
-          <button class="rail-button" type="button" data-tool="pipe" aria-pressed="false" data-tooltip="Tubería · P" aria-label="Trazar tubería">
-            <svg class="icon"><use href="#i-pipe"></use></svg><span>Tubería</span>
+          <button class="rail-button" type="button" data-tool="pipe" aria-pressed="false" data-tooltip="Tubería · P" data-tooltip-side="right" aria-label="Trazar tubería">
+            <svg class="icon"><use href="#i-pipe"></use></svg>
           </button>
-          <button class="rail-caret" type="button" data-pipe-menu aria-expanded="false" aria-label="Elegir red de tubería" data-tooltip="Agua, gas, desagües e incendio">
+          <button class="rail-caret" type="button" data-pipe-menu aria-expanded="false" aria-haspopup="menu" aria-label="Elegir red de tubería" data-tooltip="Agua, gas, desagües e incendio" data-tooltip-side="right">
             <svg class="icon"><use href="#i-chevron-down"></use></svg>
           </button>
-          <div class="rail-flyout" data-pipe-flyout hidden>
+          <div class="rail-flyout" data-pipe-flyout role="menu" hidden>
             <?php foreach ($networks as $key => $network): ?>
-              <button type="button" data-tool="pipe" data-network="<?= e($key) ?>"><span class="swatch-dot" style="--swatch:<?= e($network['color']) ?>"></span><?= e($network['label']) ?> · <?= e($network['short']) ?></button>
+              <button type="button" role="menuitem" data-tool="pipe" data-network="<?= e($key) ?>"><span class="swatch-dot" style="--swatch:<?= e($network['color']) ?>"></span><?= e($network['label']) ?> · <?= e($network['short']) ?></button>
             <?php endforeach; ?>
           </div>
         </div>
-        <button class="rail-button" type="button" data-tool="conduit" aria-pressed="false" data-tooltip="Tubería eléctrica · Shift+P" aria-label="Trazar tubería eléctrica">
-          <svg class="icon"><use href="#i-conduit"></use></svg><span>Eléctrico</span>
+        <button class="rail-button" type="button" data-tool="conduit" aria-pressed="false" data-tooltip="Tubería eléctrica · Shift+P" data-tooltip-side="right" aria-label="Trazar tubería eléctrica">
+          <svg class="icon"><use href="#i-conduit"></use></svg>
         </button>
-        <button class="rail-button" type="button" data-tool="text" aria-pressed="false" data-tooltip="Texto · T" aria-label="Añadir texto">
-          <svg class="icon"><use href="#i-text"></use></svg><span>Texto</span>
+        <button class="rail-button" type="button" data-tool="text" aria-pressed="false" data-tooltip="Texto · T" data-tooltip-side="right" aria-label="Añadir texto">
+          <svg class="icon"><use href="#i-text"></use></svg>
         </button>
-        <button class="rail-button" type="button" data-tool="dimension" aria-pressed="false" data-tooltip="Medida · D" aria-label="Añadir medida">
-          <svg class="icon"><use href="#i-dimension"></use></svg><span>Medida</span>
+        <button class="rail-button" type="button" data-tool="dimension" aria-pressed="false" data-tooltip="Medida · D" data-tooltip-side="right" aria-label="Añadir medida">
+          <svg class="icon"><use href="#i-dimension"></use></svg>
         </button>
         <div class="rail-flyout-wrap">
-          <button class="rail-button" type="button" data-shape-menu aria-expanded="false" data-tooltip="Líneas y formas · L, B, O" aria-label="Líneas y formas">
-            <svg class="icon"><use href="#i-shapes"></use></svg><span>Formas</span>
+          <button class="rail-button" type="button" data-tool="line" aria-pressed="false" data-tooltip="Línea · L" data-tooltip-side="right" aria-label="Dibujar línea">
+            <svg class="icon"><use href="#i-line"></use></svg>
           </button>
-          <div class="rail-flyout" data-shape-flyout hidden>
-            <button type="button" data-tool="line"><svg class="icon"><use href="#i-line"></use></svg>Línea</button>
-            <button type="button" data-tool="rect"><svg class="icon"><use href="#i-rect"></use></svg>Rectángulo</button>
-            <button type="button" data-tool="ellipse"><svg class="icon"><use href="#i-ellipse"></use></svg>Elipse</button>
+          <button class="rail-caret" type="button" data-shape-menu aria-expanded="false" aria-haspopup="menu" aria-label="Rectángulo y elipse" data-tooltip="Rectángulo y elipse" data-tooltip-side="right">
+            <svg class="icon"><use href="#i-chevron-down"></use></svg>
+          </button>
+          <div class="rail-flyout" data-shape-flyout role="menu" hidden>
+            <button type="button" role="menuitem" data-tool="line"><svg class="icon"><use href="#i-line"></use></svg>Línea · L</button>
+            <button type="button" role="menuitem" data-tool="rect"><svg class="icon"><use href="#i-rect"></use></svg>Rectángulo · B</button>
+            <button type="button" role="menuitem" data-tool="ellipse"><svg class="icon"><use href="#i-ellipse"></use></svg>Elipse · O</button>
           </div>
         </div>
         <span class="rail-separator" role="separator"></span>
-        <button class="rail-button rail-library" type="button" data-open-library="sign" data-tooltip="Biblioteca de señalización ISO 7010" aria-label="Biblioteca de señalización ISO 7010">
-          <svg class="icon"><use href="#i-sign"></use></svg><span>Señales</span>
+        <button class="rail-button rail-library" type="button" data-open-library="sign" data-tooltip="Biblioteca de señalización ISO 7010" data-tooltip-side="right" aria-label="Biblioteca de señalización ISO 7010">
+          <svg class="icon"><use href="#i-sign"></use></svg>
           <em class="rail-count" data-sign-count><?= e((string) $catalog['signs']) ?></em>
         </button>
-        <button class="rail-button rail-library" type="button" data-open-library="cad" data-tooltip="Biblioteca de equipamiento CAD" aria-label="Biblioteca de equipamiento CAD">
-          <svg class="icon"><use href="#i-cad"></use></svg><span>Equipos</span>
+        <button class="rail-button rail-library" type="button" data-open-library="cad" data-tooltip="Biblioteca de equipamiento CAD" data-tooltip-side="right" aria-label="Biblioteca de equipamiento CAD">
+          <svg class="icon"><use href="#i-cad"></use></svg>
           <em class="rail-count" data-cad-count><?= e((string) $catalog['cad']) ?></em>
         </button>
       </div>
       <div class="rail-bottom">
-        <button class="rail-button" type="button" data-open-drawer="audit" data-tooltip="Revisión del plano · auditor y evacuación" aria-label="Revisión del plano">
-          <svg class="icon"><use href="#i-audit"></use></svg><span>Revisión</span>
-          <em class="rail-count rail-count-alert" data-audit-count hidden></em>
-        </button>
-        <button class="rail-button" type="button" data-open-drawer="schedule" data-tooltip="Pliego de señalización · inventario de compra" aria-label="Pliego de señalización">
-          <svg class="icon"><use href="#i-bom"></use></svg><span>Pliego</span>
-        </button>
-        <button class="rail-button" type="button" data-open-drawer="measure" data-tooltip="Medir rutas internas · distancias de recorrido" aria-label="Medir rutas internas">
-          <svg class="icon"><use href="#i-measure"></use></svg><span>Rutas</span>
-        </button>
-        <button class="rail-button" type="button" data-present-open data-tooltip="Modo presentación · pantalla limpia, láser y quiz" aria-label="Modo presentación">
-          <svg class="icon"><use href="#i-present"></use></svg><span>Presentar</span>
-        </button>
-        <button class="rail-button" type="button" data-open-drawer="networks" data-tooltip="Redes y circuitos" aria-label="Redes y circuitos">
-          <svg class="icon"><use href="#i-network"></use></svg><span>Redes</span>
-        </button>
-        <button class="rail-button" type="button" data-open-drawer="layers" data-tooltip="Capas" aria-label="Capas">
-          <svg class="icon"><use href="#i-layers"></use></svg><span>Capas</span>
-        </button>
-        <button class="rail-button" type="button" data-open-drawer="versions" data-tooltip="Versiones" aria-label="Versiones">
-          <svg class="icon"><use href="#i-history"></use></svg><span>Versiones</span>
-        </button>
-        <button class="rail-button" type="button" data-open-drawer="footer" data-tooltip="Pie de plano" aria-label="Pie de plano">
-          <svg class="icon"><use href="#i-layout-footer"></use></svg><span>Pie de plano</span>
-        </button>
-        <button class="rail-button" type="button" data-open-drawer="settings" data-tooltip="Ajustes del piso" aria-label="Ajustes del piso">
-          <svg class="icon"><use href="#i-settings"></use></svg><span>Ajustes</span>
-        </button>
-        <button class="rail-button" type="button" data-open-drawer="shortcuts" data-tooltip="Atajos y ayuda" aria-label="Atajos y ayuda">
-          <svg class="icon"><use href="#i-keyboard"></use></svg><span>Atajos</span>
-        </button>
+        <div class="rail-flyout-wrap">
+          <button class="rail-button rail-menu-button" type="button" data-analysis-menu aria-expanded="false" aria-haspopup="menu" data-tooltip="Análisis · revisión, pliego, rutas y redes" data-tooltip-side="right" aria-label="Análisis del plano">
+            <svg class="icon"><use href="#i-audit"></use></svg>
+            <span class="rail-caret-mark" aria-hidden="true"><svg class="icon"><use href="#i-chevron-down"></use></svg></span>
+            <em class="rail-count rail-count-alert" data-audit-count hidden></em>
+          </button>
+          <div class="rail-flyout" data-analysis-flyout role="menu" hidden>
+            <button type="button" role="menuitem" data-open-drawer="audit"><svg class="icon"><use href="#i-audit"></use></svg>Revisión del plano</button>
+            <button type="button" role="menuitem" data-open-drawer="schedule"><svg class="icon"><use href="#i-bom"></use></svg>Pliego de señalización</button>
+            <button type="button" role="menuitem" data-open-drawer="measure"><svg class="icon"><use href="#i-measure"></use></svg>Rutas internas</button>
+            <button type="button" role="menuitem" data-open-drawer="networks"><svg class="icon"><use href="#i-network"></use></svg>Redes y circuitos</button>
+          </div>
+        </div>
+        <div class="rail-flyout-wrap">
+          <button class="rail-button rail-menu-button" type="button" data-view-menu aria-expanded="false" aria-haspopup="menu" data-tooltip="Vista · capas, presentación y ajustes" data-tooltip-side="right" aria-label="Vista y presentación">
+            <svg class="icon"><use href="#i-layers"></use></svg>
+            <span class="rail-caret-mark" aria-hidden="true"><svg class="icon"><use href="#i-chevron-down"></use></svg></span>
+          </button>
+          <div class="rail-flyout" data-view-flyout role="menu" hidden>
+            <button type="button" role="menuitem" data-open-drawer="layers"><svg class="icon"><use href="#i-layers"></use></svg>Capas</button>
+            <button type="button" role="menuitem" data-present-open><svg class="icon"><use href="#i-present"></use></svg>Modo presentación</button>
+            <button type="button" role="menuitem" data-open-drawer="settings"><svg class="icon"><use href="#i-settings"></use></svg>Ajustes del piso</button>
+          </div>
+        </div>
       </div>
     </nav>
 

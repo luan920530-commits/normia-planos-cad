@@ -30,7 +30,7 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 13. [Arquitectura](#arquitectura)
 14. [Seguridad](#seguridad)
 15. [Pruebas](#pruebas)
-16. [Cambios de la versión 1.5.0](#cambios-de-la-versión-150)
+16. [Cambios de la versión 1.6.0](#cambios-de-la-versión-160)
 17. [Paquetes y verificación](#paquetes-y-verificación)
 18. [Limitaciones](#limitaciones)
 19. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
@@ -368,7 +368,7 @@ El panel **Redes y circuitos** (barra lateral inferior) resume el piso:
 
 ## Revisión del plano y evacuación
 
-La barra lateral inferior tiene un botón **Revisión** que abre el auditor. Analiza el **último diseño guardado** (no los cambios sin guardar) y devuelve dos cosas: una medición de evacuación y una lista de hallazgos con severidad.
+El menú **Análisis** de la barra de herramientas abre el auditor con **Revisión**. Analiza el **último diseño guardado** (no los cambios sin guardar) y devuelve dos cosas: una medición de evacuación y una lista de hallazgos con severidad.
 
 **Cómo marcar las salidas.** Selecciona una puerta y activa **Salida de emergencia** en *Apariencia*. Solo las puertas pueden ser salidas; el editor guarda la marca (`isExit`) y el servidor la valida. Marca todas las salidas reales: el auditor mide hasta la más cercana y cuenta el ancho útil de todas.
 
@@ -400,7 +400,7 @@ Dos cajones de trabajo que usan el plano guardado en pantalla (no una versión a
 
 ### Pliego de señalización
 
-El botón **Pliego** de la barra lateral inferior cuenta las señales del piso y arma la lista de compra.
+**Análisis → Pliego** cuenta las señales del piso y arma la lista de compra.
 
 - **Agrupación por código y familia.** Cada fila trae código (`E002`, `SVC_TRF_STOP`…), nombre, familia, cantidad, tamaño sugerido, capa o capas donde está montada y botón **Ver** para seleccionarla en el plano.
 - **Tamaño sugerido por área.** 150 mm hasta 150 m², 300 mm hasta 600 m² y 450 mm por encima. Es una guía de compra: la norma aplicable y el sitio mandan.
@@ -425,7 +425,7 @@ El botón **Rutas** mide distancias caminables dentro del plano, sin necesidad d
 
 ## Modo presentación
 
-El botón **Presentar** de la barra lateral deja el plano a pantalla completa, sin barras ni paneles, para explicarlo en una reunión, una capacitación o una brigada.
+**Vista → Presentar** deja el plano a pantalla completa, sin barras ni paneles, para explicarlo en una reunión, una capacitación o una brigada.
 
 | Recurso | Cómo funciona |
 | --- | --- |
@@ -487,7 +487,7 @@ Los tres formatos que muestran el plano (SVG, PNG e impresión) llevan el mismo 
 - **Franja de orientación** con cinco celdas, cada una con su pictograma: *su posición actual*, *rutas de evacuación*, *salidas de emergencia*, *equipos de protección contra incendios* y *punto de reunión*. Las celdas de salidas y extinción reutilizan los pictogramas ISO 7010 locales del catálogo (E002 y F001).
 - **Bloque de datos**: proyecto, piso y nivel; sitio, área y responsable; escala, unidad, versión, fecha de guardado y número de elementos; y una nota de atribución con la aplicación que generó el plano (`© año Normia Planos CAD · GPL-3.0 · versión`), los créditos de los pictogramas y el aviso de que el plano es esquemático.
 - La franja se reparte en **5, 3 o 1 columna** según el ancho del lienzo, y el texto se parte por palabras para no salirse de cada celda.
-- Se puede revisar antes de exportar desde **Exportar → Pie de plano** (o el botón *Pie de plano* de la barra lateral), que muestra la vista previa real del pie con los datos actuales.
+- Se puede revisar antes de exportar desde **Exportar → Pie de plano** (o el botón *Pie de plano* de la barra superior), que muestra la vista previa real del pie con los datos actuales.
 
 El mismo contenido se calcula una sola vez en `app/Services/PlanFooter.php`; el editor lo recibe en su arranque (`boot.footer`) para dibujar idéntico pie en la exportación PNG, que ocurre en el navegador.
 
@@ -658,6 +658,17 @@ Resultados esperados de la última ejecución completa:
 Las pruebas trabajan sobre copias temporales: no escriben configuración ni bases en el repositorio. `node_modules` solo contiene dependencias de desarrollo y se excluye de los paquetes.
 
 ---
+
+## Cambios de la versión 1.6.0
+
+Rediseño de la **barra de herramientas**. No cambia ningún dato, formato ni catálogo: los planos guardados abren igual.
+
+- **Una sola columna de baldosas alineadas.** El rail pasa a **14 baldosas de 40 × 40 px** con separación de 2 px y grupos separados por una línea. A 720 px de alto no hay desplazamiento: 14 × 42 = 588 px, más el separador y los márgenes, suman unos 613 px de columna. Las tres herramientas con variantes muestran su **chevron dentro de la baldosa** (Puertas, Tubería y Formas), así que el clic en la baldosa usa la herramienta principal y el chevrón abre sus opciones.
+- **Solo iconos, con etiqueta al pasar.** Cada baldosa pierde el texto fijo y gana una etiqueta flotante a su derecha (`data-tooltip-side="right"`), con la tecla de atajo incluida. La etiqueta es una píldora oscura que no se acumula ni queda obsoleta: se reposiciona con cada baldosa y se oculta al salir.
+- **Los accesos de abajo se agrupan en dos menús.** **Análisis** reúne Revisión, Pliego, Rutas y Redes; **Vista** reúne Capas, Presentar y Ajustes. La barra conserva además las dos bibliotecas (señalización y equipamiento) y las diez herramientas de dibujo.
+- **Versiones, pie de plano y atajos pasan a la barra superior.** Son acciones de documento, no de dibujo: ahora viven junto a deshacer/rehacer como icon-buttons. Por debajo de 1100 px se recogen en un menú **Más**, para que la cabecera no se rompa en tabletas.
+- **Un solo menú abierto a la vez.** `toggleMenu()` comparte la colocación (`placeFlyout`) y el cierre de los seis menús; se cierran al hacer clic fuera, al desplazar el rail, al redimensionar o al elegir una herramienta, y `aria-expanded` acompaña a cada botón.
+- **Pruebas.** La interfaz pasa de 282 a **291** comprobaciones: cuenta las 14 baldosas, verifica que ninguna lleva texto visible, que los tres chevrones están dentro de la baldosa, que Análisis y Vista abren y se cierran entre sí, y que Versiones, Pie y Atajos viven en la barra superior.
 
 ## Cambios de la versión 1.5.0
 
@@ -839,14 +850,14 @@ Versión de corrección sobre la 1.0.0. Reemplaza los paquetes anteriores: la 1.
 
 ## Paquetes y verificación
 
-Las versiones publicadas están en la página de **[Liberaciones](https://github.com/luan920530-commits/normia-planos-cad/releases)**. La versión vigente es la **v1.5.0**, con sus notas, sus sumas SHA-256 y los enlaces de descarga de los paquetes que viven en `paquetes/v1.5.0/`. Las entregas anteriores (v1.0.0 a v1.0.9 y las v1.1.0 a v1.4.0) no deben usarse: la v1.5.0 las reemplaza.
+Las versiones publicadas están en la página de **[Liberaciones](https://github.com/luan920530-commits/normia-planos-cad/releases)**. La versión vigente es la **v1.6.0**, con sus notas, sus sumas SHA-256 y los enlaces de descarga de los paquetes que viven en `paquetes/v1.6.0/`. Las entregas anteriores (v1.0.0 a v1.0.9 y las v1.1.0 a v1.5.0) no deben usarse: la v1.6.0 las reemplaza.
 
-La entrega v1.5.0 incluye los ZIP ya construidos en **`paquetes/v1.5.0/`** (misma composición que genera el script, verificada por `tests/php/package.mjs`):
+La entrega v1.6.0 incluye los ZIP ya construidos en **`paquetes/v1.6.0/`** (misma composición que genera el script, verificada por `tests/php/package.mjs`):
 
 ```text
-paquetes/v1.5.0/
-├── normia-planos-cad-1.5.0.zip
-├── normia-planos-cad-demo-1.5.0.zip
+paquetes/v1.6.0/
+├── normia-planos-cad-1.6.0.zip
+├── normia-planos-cad-demo-1.6.0.zip
 ├── SHA256SUMS.txt
 └── BUILD.txt
 ```
@@ -860,8 +871,8 @@ npm run build          # o: bash tools/build-packages.sh
 El script deja los artefactos en `dist/`:
 
 ```text
-normia-planos-cad-1.5.0.zip
-normia-planos-cad-demo-1.5.0.zip
+normia-planos-cad-1.6.0.zip
+normia-planos-cad-demo-1.6.0.zip
 SHA256SUMS.txt
 BUILD.txt
 ```
@@ -871,11 +882,11 @@ BUILD.txt
 - Verifica las sumas:
 
 ```bash
-cd paquetes/v1.1.2
+cd paquetes/v1.6.0
 sha256sum -c SHA256SUMS.txt
 ```
 
-Los hashes exactos de los ZIP publicados están en `paquetes/v1.5.0/SHA256SUMS.txt`; `dist/` es solo la salida de trabajo y está ignorada por Git.
+Los hashes exactos de los ZIP publicados están en `paquetes/v1.6.0/SHA256SUMS.txt`; `dist/` es solo la salida de trabajo y está ignorada por Git.
 
 ---
 

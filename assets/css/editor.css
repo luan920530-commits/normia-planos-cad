@@ -108,32 +108,36 @@ body.editor-body { overflow: hidden; background: #eef2f8; }
 
 /* ------------------------------ banco de trabajo ------------------------------ */
 .editor-workbench {
-  display: grid; grid-template-columns: 80px minmax(0, 1fr) 336px;
+  display: grid; grid-template-columns: 68px minmax(0, 1fr) 336px;
   grid-template-rows: minmax(0, 1fr);
   min-height: 0; overflow: hidden;
 }
 
+/* Rail de iconos: una baldosa por herramienta, sin texto y con etiqueta al
+   pasar. Todas las baldosas miden lo mismo y los grupos se separan con una
+   línea, para que la columna quede alineada a cualquier altura. */
 .rail {
   background: linear-gradient(180deg, #0d1728, #0a1220);
   color: #dbe3ef; display: flex; flex-direction: column; justify-content: space-between;
-  padding: 10px 7px; gap: 10px; z-index: 25; box-shadow: inset -1px 0 rgba(255, 255, 255, .07);
+  align-items: center; padding: 6px 0; gap: 6px; z-index: 25;
+  box-shadow: inset -1px 0 rgba(255, 255, 255, .07);
   min-height: 0; overflow-y: auto; overflow-x: hidden;
-  overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, .22) transparent;
+  overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, .2) transparent;
 }
-.rail::-webkit-scrollbar { width: 6px; }
-.rail::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, .18); border-radius: 999px; }
+.rail::-webkit-scrollbar { width: 5px; }
+.rail::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, .16); border-radius: 999px; }
 .rail::-webkit-scrollbar-track { background: transparent; }
-.rail-main, .rail-bottom { display: flex; flex-direction: column; gap: 2px; flex: 0 0 auto; }
+.rail-main, .rail-bottom { display: flex; flex-direction: column; align-items: center; gap: 2px; flex: 0 0 auto; width: 100%; }
 
-/* Chips de icono al estilo iOS: baldosa squircle, cristal y brillo superior. */
+/* Baldosa squircle de cristal, 40 × 40, con icono de 20 px. */
 .rail-button {
-  position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px;
-  padding: 2px 2px 3px; border: 0; border-radius: 14px; background: transparent;
-  color: #a9b7cc; font: inherit; font-size: .6rem; font-weight: 600; cursor: pointer;
-  transition: color .2s ease; line-height: 1.1; -webkit-tap-highlight-color: transparent;
+  position: relative; display: grid; place-items: center;
+  width: 40px; height: 40px; padding: 0; border: 0; border-radius: 12px; background: transparent;
+  color: #a9b7cc; font: inherit; cursor: pointer; line-height: 0;
+  -webkit-tap-highlight-color: transparent;
 }
 .rail-button .icon {
-  width: 32px; height: 32px; padding: 6px; box-sizing: border-box; border-radius: 11px;
+  width: 40px; height: 40px; padding: 10px; box-sizing: border-box; border-radius: 12px;
   color: #e6eefc;
   background: linear-gradient(180deg, rgba(255, 255, 255, .11), rgba(255, 255, 255, .03));
   border: 1px solid rgba(255, 255, 255, .085);
@@ -142,9 +146,8 @@ body.editor-body { overflow: hidden; background: #eef2f8; }
   transition: transform .38s cubic-bezier(.34, 1.56, .64, 1), background .2s ease,
               border-color .2s ease, box-shadow .24s ease, color .2s ease;
 }
-.rail-button:focus-visible { outline: 2px solid #7db3ff; outline-offset: 2px; }
+.rail-button:focus-visible { outline: 2px solid #7db3ff; outline-offset: 2px; border-radius: 12px; }
 .rail-button:focus-visible .icon { border-color: rgba(125, 179, 255, .9); }
-.rail-button:hover { color: #fff; }
 .rail-button:hover .icon {
   color: #fff; transform: translateY(-1px);
   background: linear-gradient(180deg, rgba(255, 255, 255, .18), rgba(255, 255, 255, .07));
@@ -152,7 +155,6 @@ body.editor-body { overflow: hidden; background: #eef2f8; }
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .28), 0 4px 10px rgba(0, 0, 0, .3);
 }
 .rail-button:active .icon { transform: scale(.94); transition-duration: .12s; }
-.rail-button.is-active { color: #fff; }
 .rail-button.is-active .icon {
   color: #fff; border-color: rgba(255, 255, 255, .34);
   background: linear-gradient(175deg, #4a97ff 0%, #0a6cf5 46%, #0a55cc 100%);
@@ -160,7 +162,7 @@ body.editor-body { overflow: hidden; background: #eef2f8; }
               0 6px 16px rgba(10, 108, 245, .42), 0 1px 2px rgba(0, 0, 0, .3);
 }
 .rail-button.is-active::before {
-  content: ""; position: absolute; left: -7px; top: 13px; bottom: 13px; width: 3px;
+  content: ""; position: absolute; left: -7px; top: 12px; bottom: 12px; width: 3px;
   border-radius: 0 3px 3px 0; background: #69a7ff; box-shadow: 0 0 8px rgba(105, 167, 255, .8);
 }
 .rail-library .icon { color: #dbe9ff; }
@@ -169,20 +171,21 @@ body.editor-body { overflow: hidden; background: #eef2f8; }
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .5), 0 6px 16px rgba(28, 110, 240, .4);
 }
 .rail-count {
-  position: absolute; left: calc(50% + 4px); top: -1px; font-style: normal; font-size: .52rem;
+  position: absolute; right: 1px; top: 0; font-style: normal; font-size: .5rem;
   font-weight: 800; line-height: 1; background: rgba(255, 255, 255, .22); color: #fff;
   padding: 2px 4px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, .22);
   -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
   box-shadow: 0 1px 3px rgba(0, 0, 0, .38);
 }
-.rail-separator { height: 1px; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .16), transparent); margin: 6px 6px; }
-.rail-flyout-wrap { position: relative; }
+.rail-count[hidden] { display: none; }
+.rail-separator { height: 1px; width: 22px; background: rgba(255, 255, 255, .16); margin: 4px 0; flex: 0 0 auto; }
+.rail-flyout-wrap { position: relative; display: grid; place-items: center; }
 .rail-flyout {
   /* `fixed` para que la barra lateral pueda desplazarse sin recortarlo:
      la posición la calcula el editor al abrirlo. */
   position: fixed; left: 0; top: 0; z-index: 60;
-  background: rgba(15, 26, 45, .92); border: 1px solid rgba(255, 255, 255, .12); border-radius: 15px;
-  padding: 6px; display: flex; flex-direction: column; gap: 2px; min-width: 150px;
+  background: rgba(15, 26, 45, .94); border: 1px solid rgba(255, 255, 255, .12); border-radius: 14px;
+  padding: 6px; display: flex; flex-direction: column; gap: 2px; min-width: 190px;
   box-shadow: 0 24px 70px rgba(2, 8, 23, .55), inset 0 1px 0 rgba(255, 255, 255, .1);
   -webkit-backdrop-filter: blur(22px) saturate(180%); backdrop-filter: blur(22px) saturate(180%);
   max-height: calc(100dvh - 16px); overflow-y: auto; overscroll-behavior: contain;
@@ -193,16 +196,41 @@ body.editor-body { overflow: hidden; background: #eef2f8; }
 .rail-flyout button { display: flex; align-items: center; gap: 9px; border: 0; background: transparent; color: #dbe3ef; font: inherit; font-size: .82rem; padding: 7px 9px; border-radius: 9px; cursor: pointer; text-align: left; transition: background .16s ease, color .16s ease; }
 .rail-flyout button:hover { background: rgba(255, 255, 255, .1); color: #fff; }
 .rail-flyout button:focus-visible { outline: 2px solid #7db3ff; outline-offset: -2px; }
-.rail-flyout .icon { width: 17px; height: 17px; }
+.rail-flyout .icon { width: 17px; height: 17px; flex: 0 0 auto; }
+
+/* Chevrón dentro de la baldosa: misma posición en las herramientas con
+   opciones y en los menús (Análisis y Vista). */
 .rail-caret {
-  position: absolute; top: -1px; right: 4px; z-index: 2; width: 16px; height: 16px; padding: 0;
+  position: absolute; right: 2px; bottom: 3px; z-index: 2; width: 14px; height: 14px; padding: 0;
   display: grid; place-items: center; border-radius: 50%; cursor: pointer;
-  border: 1px solid rgba(255, 255, 255, .3); background: rgba(11, 20, 36, .92); color: #cdd9ea;
+  border: 1px solid rgba(255, 255, 255, .28); background: rgba(11, 20, 36, .92); color: #cdd9ea;
   box-shadow: 0 1px 3px rgba(0, 0, 0, .45);
   transition: background .18s ease, border-color .18s ease, color .18s ease, transform .3s cubic-bezier(.34, 1.56, .64, 1);
 }
-.rail-caret:hover, .rail-caret[aria-expanded="true"] { background: var(--blue); border-color: rgba(255, 255, 255, .5); color: #fff; transform: scale(1.08); }
-.rail-caret .icon { width: 10px; height: 10px; }
+.rail-caret:hover, .rail-caret[aria-expanded="true"] { background: var(--blue); border-color: rgba(255, 255, 255, .5); color: #fff; transform: scale(1.12); }
+.rail-caret:focus-visible { outline: 2px solid #7db3ff; outline-offset: 1px; }
+.rail-caret .icon { width: 9px; height: 9px; padding: 0; border: 0; background: none; box-shadow: none; }
+.rail-caret-mark {
+  position: absolute; right: 4px; bottom: 4px; width: 12px; height: 12px; pointer-events: none;
+  display: grid; place-items: center; opacity: .75;
+}
+.rail-caret-mark .icon { width: 10px; height: 10px; padding: 0; border: 0; background: none; box-shadow: none; }
+.rail-menu-button[aria-expanded="true"] { color: #fff; }
+.rail-menu-button[aria-expanded="true"] .icon {
+  color: #fff; border-color: rgba(255, 255, 255, .34);
+  background: linear-gradient(175deg, #4a97ff 0%, #0a6cf5 46%, #0a55cc 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .5), 0 6px 16px rgba(10, 108, 245, .42);
+}
+
+/* Accesos que viven en la barra superior (versiones, pie y atajos). */
+.topbar-tools { display: flex; align-items: center; gap: 4px; }
+.topbar-tools .icon-button.dark { width: 34px; height: 34px; border-radius: 9px; }
+.topbar-tools .icon-button.dark .icon { width: 17px; height: 17px; }
+.topbar-flyout-wrap { position: relative; display: none; }
+.topbar-flyout-wrap .icon-button[aria-expanded="true"] { background: rgba(255, 255, 255, .18); color: #fff; }
+/* La barra superior tiene `backdrop-filter`, así que es el bloque contenedor
+   de sus descendientes fijos: este panel se ancla con `absolute`. */
+.topbar-flyout { position: absolute; left: auto; right: 0; top: calc(100% + 8px); transform-origin: right top; }
 
 @media (prefers-reduced-motion: reduce) {
   .rail-button .icon, .rail-caret, .rail-flyout { transition: none; animation: none; }
@@ -647,10 +675,14 @@ body.is-dragging-resource .library-card { cursor: grabbing; }
 
 /* ------------------------------ responsive ------------------------------ */
 @media (max-width: 1200px) {
-  .editor-workbench { grid-template-columns: 80px minmax(0, 1fr) 312px; }
+  .editor-workbench { grid-template-columns: 68px minmax(0, 1fr) 312px; }
+}
+@media (max-width: 1100px) {
+  .editor-topbar .topbar-tools > .icon-button { display: none; }
+  .topbar-flyout-wrap { display: block; }
 }
 @media (max-width: 1024px) {
-  .editor-workbench { grid-template-columns: 80px minmax(0, 1fr); }
+  .editor-workbench { grid-template-columns: 68px minmax(0, 1fr); }
   .properties-panel { position: fixed; right: 0; top: 0; bottom: 0; margin: 0; border-radius: 16px 0 0 16px; width: min(348px, 94vw); max-height: 100dvh; z-index: 90; transform: translateX(100%); transition: transform .22s cubic-bezier(.22, .8, .3, 1); box-shadow: -24px 0 70px rgba(15, 23, 42, .3); }
   .properties-panel.is-open { transform: none; }
   .properties-close { display: inline-grid; }
@@ -671,12 +703,12 @@ body.is-dragging-resource .library-card { cursor: grabbing; }
 @media (max-width: 700px) {
   .editor-app { grid-template-rows: auto auto minmax(0, 1fr); }
   .editor-workbench { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
-  .rail { order: 2; flex-direction: row; justify-content: flex-start; overflow-x: auto; overflow-y: hidden; padding: 6px; gap: 3px; border-top: 1px solid rgba(255, 255, 255, .08); }
-  .rail-main, .rail-bottom { flex-direction: row; gap: 3px; }
+  .rail { order: 2; flex-direction: row; align-items: center; justify-content: flex-start; overflow-x: auto; overflow-y: hidden; padding: 6px; gap: 4px; border-top: 1px solid rgba(255, 255, 255, .08); }
+  .rail-main, .rail-bottom { flex-direction: row; width: auto; gap: 4px; }
   .rail-bottom { margin-left: auto; }
-  .rail-button { flex: 0 0 auto; min-width: 60px; font-size: .6rem; }
+  .rail-button { flex: 0 0 auto; }
   .rail-button.is-active::before { display: none; }
-  .rail-separator { width: 1px; height: auto; margin: 4px 3px; }
+  .rail-separator { width: 1px; height: 26px; margin: 0 4px; }
   .floor-switch-label { display: none; }
   .stage-toolbar { margin: 8px 8px 0; padding: 6px 8px; border-radius: 12px; }
   .canvas-shell { margin: 8px 8px 0; border-radius: 12px; }
@@ -820,11 +852,11 @@ body.is-dragging-resource .library-card { cursor: grabbing; }
 .plan-element { cursor: inherit; }
 .plan-element .hit-area { cursor: inherit; }
 
-/* barra lateral compacta en pantallas bajas: sólo iconos, con tooltip */
-@media (max-height: 1000px) and (min-width: 701px) {
-  .rail { padding: 8px 6px; }
-  .rail-button { padding: 3px 4px; }
-  .rail-button > span { display: none; }
+/* barra lateral en pantallas bajas: ya es sólo iconos, así que basta con
+   juntar un poco las baldosas para que la columna nunca necesite scroll. */
+@media (max-height: 760px) and (min-width: 701px) {
+  .rail { padding: 6px 0; gap: 6px; }
+  .rail-main, .rail-bottom { gap: 3px; }
   .rail-library .rail-count { display: none; }
 }
 

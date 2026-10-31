@@ -138,6 +138,13 @@
      */
     placeFlyout(flyout, anchor) {
       if (!flyout || flyout.hidden) return;
+      // El menú «Más» se ancla con CSS a su propia baldosa (la barra superior
+      // tiene `backdrop-filter` y sería su bloque contenedor).
+      if (flyout.hasAttribute('data-topbar-flyout')) {
+        flyout.style.left = '';
+        flyout.style.top = '';
+        return;
+      }
       const rect = anchor?.getBoundingClientRect?.() || { left: 0, right: 88, top: 0, bottom: 44 };
       const box = flyout.getBoundingClientRect?.() || { width: 0, height: 0 };
       const width = Math.max(box.width || 0, flyout.offsetWidth || 0, 150);
@@ -153,10 +160,50 @@
       flyout.style.top = `${Math.round(top)}px`;
     }
 
+    /**
+     * Menús flotantes del editor: cada uno tiene su botón y su panel.
+     * `placeFlyout()` calcula la posición y aquí solo se abre uno a la vez.
+     */
+    menuPairs() {
+      return {
+        door: { button: '[data-door-menu]', flyout: '[data-door-flyout]' },
+        pipe: { button: '[data-pipe-menu]', flyout: '[data-pipe-flyout]' },
+        shape: { button: '[data-shape-menu]', flyout: '[data-shape-flyout]' },
+        analysis: { button: '[data-analysis-menu]', flyout: '[data-analysis-flyout]' },
+        view: { button: '[data-view-menu]', flyout: '[data-view-flyout]' },
+        topbar: { button: '[data-topbar-menu]', flyout: '[data-topbar-flyout]' },
+      };
+    }
+
+    closeMenu(name) {
+      const pair = this.menuPairs()[name];
+      if (!pair) return;
+      const flyout = q(pair.flyout);
+      if (flyout) flyout.hidden = true;
+      qa(pair.button).forEach((button) => button.setAttribute('aria-expanded', 'false'));
+    }
+
+    /** Cierra todos los menús salvo el indicado. */
+    closeMenus(except = null) {
+      Object.keys(this.menuPairs()).forEach((name) => {
+        if (name !== except) this.closeMenu(name);
+      });
+    }
+
+    toggleMenu(name, anchor) {
+      const pair = this.menuPairs()[name];
+      const flyout = pair ? q(pair.flyout) : null;
+      if (!flyout) return false;
+      const willOpen = flyout.hidden;
+      this.closeMenus(name);
+      flyout.hidden = !willOpen;
+      if (willOpen) this.placeFlyout(flyout, anchor);
+      qa(pair.button).forEach((button) => button.setAttribute('aria-expanded', willOpen ? 'true' : 'false'));
+      return willOpen;
+    }
+
     closeAllFlyouts() {
-      this.closeShapeFlyout();
-      this.closeDoorFlyout();
-      this.closePipeFlyout?.();
+      this.closeMenus();
     }
 
     /* ------------------------------- eventos ------------------------------- */
@@ -169,15 +216,19 @@
           this.closeToolsPalette();
         });
       });
-      q('[data-pipe-menu]')?.addEventListener('click', (event) => {
-        event.stopPropagation();
-        const flyout = q('[data-pipe-flyout]');
-        const button = q('[data-pipe-menu]');
-        if (!flyout) return;
-        const open = flyout.hidden;
-        flyout.hidden = !open;
-        if (open) this.placeFlyout(flyout, button);
-        button?.setAttribute('aria-expanded', open ? 'true' : 'false');
+      Object.entries(this.menuPairs()).forEach(([name, pair]) => {
+        qa(pair.button).forEach((button) => {
+          button.addEventListener('click', (event) => {
+            event.stopPropagation();
+            this.toggleMenu(name, button);
+          });
+        });
+        q(pair.flyout)?.addEventListener('click', (event) => event.stopPropagation());
+      });
+      qa('[data-analysis-flyout], [data-view-flyout], [data-topbar-flyout]').forEach((flyout) => {
+        flyout.addEventListener('click', (event) => {
+          if (event.target.closest('button')) this.closeAllFlyouts();
+        });
       });
       qa('[data-pipe-flyout] [data-network]').forEach((button) => {
         button.addEventListener('click', () => {
@@ -186,44 +237,11 @@
           this.applyTool('pipe');
         });
       });
-      q('[data-shape-menu]')?.addEventListener('click', (event) => {
-        event.stopPropagation();
-        const flyout = q('[data-shape-flyout]');
-        const button = q('[data-shape-menu]');
-        if (!flyout) return;
-        const open = flyout.hidden;
-        flyout.hidden = !open;
-        if (open) this.placeFlyout(flyout, button);
-        button.setAttribute('aria-expanded', open ? 'true' : 'false');
+      qa('[data-shape-flyout] [data-tool], [data-door-flyout] [data-tool]').forEach((button) => {
+        button.addEventListener('click', () => this.closeAllFlyouts());
       });
-      q('[data-shape-flyout]')?.addEventListener('click', (event) => {
-        const tool = event.target.closest('[data-tool]')?.dataset.tool;
-        if (tool) this.applyTool(tool);
-        this.closeShapeFlyout();
-      });
-      q('[data-shape-flyout]')?.addEventListener('click', (event) => event.stopPropagation());
-      q('[data-door-menu]')?.addEventListener('click', (event) => {
-        event.stopPropagation();
-        const flyout = q('[data-door-flyout]');
-        const button = q('[data-door-menu]');
-        if (!flyout) return;
-        this.closeShapeFlyout();
-        const open = flyout.hidden;
-        flyout.hidden = !open;
-        if (open) this.placeFlyout(flyout, button);
-        button.setAttribute('aria-expanded', open ? 'true' : 'false');
-      });
-      q('[data-door-flyout]')?.addEventListener('click', (event) => {
-        const tool = event.target.closest('[data-tool]')?.dataset.tool;
-        if (tool) this.applyTool(tool);
-        this.closeDoorFlyout();
-      });
-      q('[data-door-flyout]')?.addEventListener('click', (event) => event.stopPropagation());
       document.addEventListener('click', (event) => {
-        if (!event.target.closest?.('.rail-flyout-wrap')) {
-          this.closeShapeFlyout();
-          this.closeDoorFlyout();
-        }
+        if (!event.target.closest?.('.rail-flyout-wrap, .topbar-flyout-wrap')) this.closeAllFlyouts();
       });
       // Con la barra desplazable, el menú fijo dejaría de coincidir con su
       // botón: se cierra al desplazar y al redimensionar.
@@ -413,8 +431,7 @@
       if (hint) hint.textContent = (tool === 'pipe' && this.pipeNetwork && this.model.networkInfo(this.pipeNetwork))
         ? `Tubería · ${this.model.networkInfo(this.pipeNetwork).label}: arrastra o haz clic para trazar. Enter o doble clic termina; Esc cancela.`
         : TYPE_HINTS[tool] || TYPE_HINTS.select;
-      this.closeDoorFlyout();
-      this.closePipeFlyout();
+      this.closeAllFlyouts();
       this.closeToolsPalette();
       this.syncToolPalette();
       this.svg.style.cursor = this.cursorFor(tool);
@@ -1431,26 +1448,11 @@
       this.scheduleRender();
     }
 
-    closeShapeFlyout() {
-      const flyout = q('[data-shape-flyout]');
-      const button = q('[data-shape-menu]');
-      if (flyout) flyout.hidden = true;
-      if (button) button.setAttribute('aria-expanded', 'false');
-    }
+    closeShapeFlyout() { this.closeMenu('shape'); }
 
-    closePipeFlyout() {
-      const flyout = q('[data-pipe-flyout]');
-      const button = q('[data-pipe-menu]');
-      if (flyout) flyout.hidden = true;
-      if (button) button.setAttribute('aria-expanded', 'false');
-    }
+    closePipeFlyout() { this.closeMenu('pipe'); }
 
-    closeDoorFlyout() {
-      const flyout = q('[data-door-flyout]');
-      const button = q('[data-door-menu]');
-      if (flyout) flyout.hidden = true;
-      if (button) button.setAttribute('aria-expanded', 'false');
-    }
+    closeDoorFlyout() { this.closeMenu('door'); }
 
     /* -------------------------------- zoom -------------------------------- */
     setZoom(zoom, clientX, clientY) {

@@ -388,7 +388,19 @@ p { margin: 0; }
   opacity: 0; transform: translateY(2px); transition: opacity .12s ease, transform .12s ease;
 }
 .app-tooltip[data-visible="true"] { opacity: 1; transform: translateY(0); }
+/* Etiqueta lateral de la barra de herramientas: píldora pegada al icono. */
+.app-tooltip[data-side="right"] {
+  border-radius: 999px; padding: 5px 11px; font-size: .74rem; font-weight: 600;
+  letter-spacing: .01em; transform: translateX(-3px);
+  background: rgba(13, 23, 40, .96); border: 1px solid rgba(255, 255, 255, .14);
+  box-shadow: 0 8px 22px rgba(2, 8, 23, .38), inset 0 1px 0 rgba(255, 255, 255, .12);
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+}
+.app-tooltip[data-side="right"][data-visible="true"] { transform: translateX(0); }
 .app-tooltip[hidden] { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .app-tooltip, .app-tooltip[data-visible="true"] { transition: none; transform: none; }
+}
 .toast-stack { position: fixed; right: 18px; bottom: 18px; z-index: 320; display: flex; flex-direction: column; gap: 9px; max-width: min(390px, calc(100vw - 28px)); }
 .toast { display: flex; align-items: flex-start; gap: 10px; padding: 11px 12px; border-radius: 13px; background: rgba(255, 255, 255, .98); border: 1px solid var(--line); box-shadow: var(--shadow-md); font-size: .85rem; color: var(--ink-soft); animation: toast-in .2s ease; }
 .toast.is-leaving { animation: toast-out .2s ease forwards; }
