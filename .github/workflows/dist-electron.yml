@@ -57,11 +57,27 @@ jobs:
         run: node tools/electron/build.mjs --out=dist/electron --sin-instalador
 
       - name: Armar y compilar el instalador
+        shell: bash
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
           # electron-builder descarga el binario de Electron: sin espejos raros.
           ELECTRON_BUILDER_CACHE: ${{ github.workspace }}/dist/electron/.cache
-        run: node tools/electron/build.mjs --out=dist/electron --arch=${{ matrix.arch }}
+        run: |
+          set -o pipefail
+          node tools/electron/build.mjs --out=dist/electron --arch=${{ matrix.arch }} 2>&1 | tee "$RUNNER_TEMP/build.log"
+
+      # Las anotaciones del trabajo son lo único que se puede leer desde la API:
+      # se publica el final del registro cuando algo falla.
+      - name: Diagnóstico del armado
+        if: failure()
+        shell: bash
+        run: |
+          if [ -f "$RUNNER_TEMP/build.log" ]; then
+            tail -25 "$RUNNER_TEMP/build.log" | while IFS= read -r line; do
+              echo "::error title=armado::${line//$'\r'/}"
+            done
+          fi
+          ls -R dist/electron/installers 2>/dev/null | head -30 || true
 
       - name: Comprobar el instalador
         shell: bash

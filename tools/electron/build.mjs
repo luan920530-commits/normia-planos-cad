@@ -151,6 +151,14 @@ function build() {
       ],
       asar: true,
       compression: 'normal',
+      // La aplicación PHP no tiene dependencias de Node: no hay nada que
+      // reconstruir ni que instalar al empaquetar.
+      npmRebuild: false,
+      nodeGypRebuild: false,
+      buildDependenciesFromSource: false,
+      // Se fija la versión del propio Electron: el empaquetador la descarga él
+      // mismo, sin depender de que esté instalada en el equipo que compila.
+      ...(readElectronVersion() ? { electronVersion: readElectronVersion() } : {}),
       mac: {
         category: 'public.app-category.graphics-design',
         icon: path.join(buildDir, 'icon.png'),
@@ -208,12 +216,14 @@ function build() {
     return;
   }
   const electronVersion = readElectronVersion();
-  if (!electronVersion) throw new Error('Falta electron en node_modules. Ejecuta: npm install');
+  if (!electronVersion) throw new Error('Falta electron en node_modules. Ejecuta: npm install --no-save electron');
   console.log(`· Compilando el instalador con electron-builder (Electron ${electronVersion}, ${args.arch})…`);
-  execFileSync(process.execPath, [builder, '--config', path.join(stage, 'package.json'), '--config.directories.app', stage, '--prepackaged', '', '--publish=never'], {
+  // Se ejecuta desde la carpeta armada y sin opciones raras: electron-builder
+  // lee su `package.json` (con la clave `build`) y resuelve todo desde ahí.
+  execFileSync(process.execPath, [builder, '--publish=never', `--${args.arch}`], {
     cwd: stage,
     stdio: 'inherit',
-    env: { ...process.env, ELECTRON_BUILDER_CACHE: path.join(out, '.cache') },
+    env: { ...process.env, ELECTRON_BUILDER_CACHE: path.join(out, '.cache'), CSC_IDENTITY_AUTO_DISCOVERY: 'false' },
   });
 }
 

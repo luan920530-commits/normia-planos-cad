@@ -283,27 +283,41 @@ function normaLPhpArguments(string $root): array
  *
  * Con el PHP del paquete se ejecuta un segundo proceso con los mismos
  * argumentos que el servidor, que es la única forma de verificar el
- * `extension_dir` real. Con un PHP estático (macOS) se informa en el acto.
+ * `extension_dir` real. Las comprobaciones viajan en un archivo temporal y no
+ * en `-r`: en Windows `escapeshellarg()` convierte las comillas en espacios y
+ * el código llegaría roto al intérprete hijo.
  */
-function normaLReportEnvironment(string $root): int
+function normaLReportEnvironment(string $root, ?string $dataDir = null): int
 {
     $required = ['pdo_sqlite', 'sqlite3', 'mbstring', 'openssl', 'fileinfo', 'session'];
     if (is_dir($root . '/runtime/ext')) {
-        $code = 'echo "PHP " . PHP_VERSION . PHP_EOL;'
-            . 'foreach (' . var_export($required, true) . ' as $extension) {'
-            . '  echo ($extension . "=" . (extension_loaded($extension) ? "ok" : "falta") . PHP_EOL);'
-            . '}'
-            . 'exit(extension_loaded("pdo_sqlite") ? 0 : 1);';
-        $command = array_merge([PHP_BINARY], normaLPhpArguments($root), ['-r', $code]);
+        $directory = $dataDir !== null && is_dir($dataDir) ? $dataDir : sys_get_temp_dir();
+        $probe = rtrim($directory, '/\\') . '/comprobar-interprete.php';
+        $code = "<?php\n"
+            . "echo 'PHP ' . PHP_VERSION . PHP_EOL;\n"
+            . "echo 'Extensiones:' . PHP_EOL;\n"
+            . 'foreach (' . var_export($required, true) . " as \$required) {\n"
+            . "    echo '  ' . (extension_loaded(\$required) ? 'ok  ' : 'falta ') . \$required . PHP_EOL;\n"
+            . "}\n"
+            . "exit(extension_loaded('pdo_sqlite') ? 0 : 1);\n";
+        if (@file_put_contents($probe, $code) === false) {
+            fwrite(STDERR, 'No se pudo escribir la comprobación en ' . $probe . PHP_EOL);
+            return 1;
+        }
+        $command = array_merge([PHP_BINARY], normaLPhpArguments($root), ['-f', $probe]);
         $output = [];
         $status = 0;
         @exec(implode(' ', array_map('escapeshellarg', $command)) . ' 2>&1', $output, $status);
-        echo implode(PHP_EOL, $output) . PHP_EOL;
+        @unlink($probe);
+        echo 'Binario: ' . PHP_BINARY . PHP_EOL;
         echo 'Carpeta: ' . $root . PHP_EOL;
+        echo implode(PHP_EOL, $output) . PHP_EOL;
         if ($status !== 0) {
-            fwrite(STDERR, 'El intérprete del paquete no carga pdo_sqlite.' . PHP_EOL);
+            fwrite(STDERR, 'El intérprete del paquete no cargó pdo_sqlite (código ' . $status . ').' . PHP_EOL);
+            fwrite(STDERR, 'Argumentos: ' . implode(' ', normaLPhpArguments($root)) . PHP_EOL);
+            return 1;
         }
-        return $status === 0 ? 0 : 1;
+        return 0;
     }
 
     echo 'PHP ' . PHP_VERSION . ' (' . PHP_SAPI . ')' . PHP_EOL;
@@ -332,7 +346,10 @@ function normaLMain(array $argv, ?callable $openBrowser = null): int
     $dataDir = $options['data'] !== '' ? rtrim($options['data'], '/\\') : normaLDefaultDataDir();
 
     if ($options['check']) {
-        return normaLReportEnvironment($root);
+        // La carpeta de datos se prepara antes: ahí vive el archivo temporal de
+        // la comprobación, que así no depende de la carpeta temporal del sistema.
+        normaLPrepareDataDir($dataDir);
+        return normaLReportEnvironment($root, $dataDir);
     }
 
     if ($options['stop']) {
