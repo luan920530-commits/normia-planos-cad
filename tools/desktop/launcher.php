@@ -178,7 +178,7 @@ function normaLOpenBrowser(string $url): void
 /** Interfaz pedida por la línea de órdenes. */
 function normaLParseArgs(array $argv): array
 {
-    $options = ['no-browser' => false, 'stop' => false, 'status' => false, 'port' => 0, 'data' => ''];
+    $options = ['no-browser' => false, 'stop' => false, 'status' => false, 'check' => false, 'port' => 0, 'data' => ''];
     foreach (array_slice($argv, 1) as $argument) {
         if ($argument === '--no-browser') {
             $options['no-browser'] = true;
@@ -186,6 +186,8 @@ function normaLParseArgs(array $argv): array
             $options['stop'] = true;
         } elseif ($argument === '--status') {
             $options['status'] = true;
+        } elseif ($argument === '--check') {
+            $options['check'] = true;
         } elseif (str_starts_with($argument, '--port=')) {
             $options['port'] = (int) substr($argument, 7);
         } elseif (str_starts_with($argument, '--data=')) {
@@ -231,16 +233,27 @@ function normaLWaitForExit(array $state): void
 /** Arranca el servidor y devuelve el proceso, o null con el motivo. */
 function normaLStartServer(string $root, int $port, string $dataDir): ?array
 {
-    $command = [
-        PHP_BINARY,
+    $command = [PHP_BINARY];
+    // En Windows el intérprete viaja con su carpeta `ext/` y el php.ini del
+    // equipo que lo empaquetó no sirve en el equipo del usuario. Se cargan las
+    // extensiones con rutas absolutas en vez de depender de la configuración.
+    $runtimeExt = $root . '/runtime/ext';
+    if (is_dir($runtimeExt)) {
+        array_push($command, '-n', '-d', 'extension_dir=' . $runtimeExt);
+        foreach (['pdo', 'pdo_sqlite', 'sqlite3', 'mbstring', 'openssl', 'fileinfo'] as $extension) {
+            array_push($command, '-d', 'extension=' . $extension);
+        }
+    }
+    array_push(
+        $command,
         '-d', 'variables_order=EGPCS',
         '-d', 'display_errors=0',
         '-d', 'log_errors=1',
         '-d', 'error_log=' . rtrim($dataDir, '/\\') . '/storage/logs/php-desktop.log',
         '-S', '127.0.0.1:' . $port,
         '-t', $root,
-        $root . '/tools/desktop/router.php',
-    ];
+        $root . '/tools/desktop/router.php'
+    );
     $descriptors = [
         0 => ['file', PHP_OS_FAMILY === 'Windows' ? 'NUL' : '/dev/null', 'r'],
         1 => ['file', rtrim($dataDir, '/\\') . '/storage/logs/servidor.log', 'a'],
@@ -255,12 +268,40 @@ function normaLStartServer(string $root, int $port, string $dataDir): ?array
     return ['process' => $process, 'pid' => (int) ($status['pid'] ?? 0)];
 }
 
+/**
+ * Muestra el intérprete que usará el servidor y sus extensiones.
+ * Lo usan la instalación y el flujo de trabajo para comprobar el paquete.
+ */
+function normaLReportEnvironment(string $root): int
+{
+    echo 'PHP ' . PHP_VERSION . ' (' . PHP_SAPI . ')' . PHP_EOL;
+    echo 'Binario: ' . PHP_BINARY . PHP_EOL;
+    echo 'Carpeta: ' . $root . PHP_EOL;
+    $missing = [];
+    foreach (['pdo_sqlite', 'sqlite3', 'mbstring', 'openssl', 'fileinfo', 'session'] as $extension) {
+        $loaded = extension_loaded($extension);
+        echo ($loaded ? '  ✓ ' : '  ✗ ') . $extension . PHP_EOL;
+        if (!$loaded) {
+            $missing[] = $extension;
+        }
+    }
+    if ($missing !== []) {
+        fwrite(STDERR, 'Faltan extensiones: ' . implode(', ', $missing) . PHP_EOL);
+        return 1;
+    }
+    return 0;
+}
+
 /** Cuerpo principal del lanzador. Devuelve el código de salida. */
 function normaLMain(array $argv, ?callable $openBrowser = null): int
 {
     $root = dirname(__DIR__, 2);
     $options = normaLParseArgs($argv);
     $dataDir = $options['data'] !== '' ? rtrim($options['data'], '/\\') : normaLDefaultDataDir();
+
+    if ($options['check']) {
+        return normaLReportEnvironment($root);
+    }
 
     if ($options['stop']) {
         return normaLStop($dataDir);

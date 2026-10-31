@@ -237,6 +237,19 @@ se generan en GitHub Actions, en el sistema operativo de destino.
 
 En una computadora con el SDK correspondiente también se pueden generar a mano:
 
+Para comprobar el intérprete del paquete, sin abrir nada:
+
+```sh
+"Normia Planos CAD.app/Contents/MacOS/Normia" --check      # macOS
+"dist\win-app\runtime\php.exe" "dist\win-app\tools\desktop\launcher.php" --check   # Windows
+```
+
+Dice la versión de PHP, el binario y si están las extensiones que usa la
+aplicación (`pdo_sqlite`, `sqlite3`, `mbstring`, `openssl`, `fileinfo`,
+`session`). En Windows el lanzador carga las extensiones con la ruta absoluta de
+la carpeta `ext/` que viaja en el paquete, así que no depende del `php.ini` del
+equipo que lo compiló.
+
 ```sh
 # macOS (necesita Xcode Command Line Tools)
 node tools/desktop/build.mjs --platform=mac --php=/ruta/al/php --out=dist --arch=arm64

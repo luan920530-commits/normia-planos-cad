@@ -105,8 +105,23 @@ report.check('La carpeta de datos por defecto es la del usuario', /config|Normia
 
 report.check('El lanzador escucha solo en la interfaz local',
   /127\.0\.0\.1:' \. \$port/.test(launcherSource) && !/0\.0\.0\.0/.test(launcherSource));
+const check = await runtime.run(`
+define('NORMA_LAUNCHER_LIB', true);
+require BASE_PATH . '/tools/desktop/launcher.php';
+ob_start();
+$code = normaLReportEnvironment(BASE_PATH);
+$out = ob_get_clean();
+echo json_encode(['code' => $code, 'out' => $out]);
+`);
+const environment = JSON.parse(check.text.replace(/^[\s\S]*?(\{[\s\S]*\})\s*$/, '$1') || '{}');
+report.check('El lanzador puede informar su intérprete y extensiones',
+  environment.code === 0 && /pdo_sqlite/.test(environment.out || '') && /PHP 8\./.test(environment.out || ''),
+  String(environment.out || '').split('\n')[0]);
+report.check('El lanzador carga las extensiones del paquete sin depender del php.ini',
+  /runtime\/ext/ .test(launcherSource) && /extension_dir=/.test(launcherSource));
+
 report.check('El lanzador nunca usa una carpeta de datos relativa',
-  /NORMA_DATA_PATH/ .test(launcherSource) && /#\^\(\[A-Za-z\]:/.test(fs.readFileSync(new URL('../../app/Core/Paths.php', import.meta.url), 'utf8')));
+  /NORMA_DATA_PATH/.test(launcherSource) && /#\^\(\[A-Za-z\]:/.test(fs.readFileSync(new URL('../../app/Core/Paths.php', import.meta.url), 'utf8')));
 report.check('El lanzador abre la instalación la primera vez y la app después',
   /is_file\(\$config\) \? '' : 'install'/.test(launcherSource));
 report.check('El lanzador cierra el servidor cuando lo cierra el sistema',

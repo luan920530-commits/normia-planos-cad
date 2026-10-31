@@ -21,9 +21,8 @@ permissions:
   contents: write
 
 env:
-  PHP_VERSION: '8.3.14'
+  PHP_VERSION: '8.3'
   SPC_VERSION: '2.8.5'
-  EXTENSIONS: 'pdo,sqlite3,pdo_sqlite,session,mbstring,openssl,fileinfo,tokenizer,ctype,filter,zlib'
 
 jobs:
   # ------------------------------------------------------------------ macOS
@@ -61,12 +60,26 @@ jobs:
           tar -xzf spc.tar.gz
           chmod +x spc
 
+      # `spc craft` lee un craft.yml y hace todo el trabajo: descarga fuentes,
+      # resuelve dependencias y compila. Se instalan las dependencias del
+      # sistema con el propio verificador de spc.
       - name: Compilar PHP estático ${{ env.PHP_VERSION }}
+        env:
+          EXTENSIONS: pdo,sqlite3,pdo_sqlite,session,mbstring,openssl,fileinfo,tokenizer,ctype,filter,zlib
         run: |
-          ./spc download --for-extensions="${EXTENSIONS}" --with-php=${PHP_VERSION} --prefer-pre-built
-          ./spc build "${EXTENSIONS}" --build-cli
-          ls -la buildroot/bin/
-          BIN="$(find buildroot/bin -maxdepth 1 -type f -name 'php*' | head -1)"
+          ./spc doctor --auto-fix || true
+          cat > craft.yml <<EOF
+          php-version: ${PHP_VERSION}
+          extensions: "${EXTENSIONS}"
+          sapi:
+            - cli
+          download-options:
+            prefer-pre-built: true
+          EOF
+          cat craft.yml
+          ./spc craft
+          ls -la buildroot/bin
+          BIN="$(find buildroot/bin -maxdepth 1 -type f -name 'php' | head -1)"
           echo "PHP_BIN=$PWD/$BIN" >> "$GITHUB_ENV"
 
       - name: Comprobar el intérprete
@@ -81,7 +94,7 @@ jobs:
           test -x "$APP/Contents/MacOS/Normia"
           export NORMA_DATA_PATH="$RUNNER_TEMP/normia-data"
           mkdir -p "$NORMA_DATA_PATH"
-          "$APP/Contents/Resources/app/runtime/php" -v
+          "$APP/Contents/MacOS/Normia" --check
           # Arranque real: instalación limpia en la carpeta temporal y respuesta HTTP.
           "$APP/Contents/MacOS/Normia" --no-browser --port=8791 &
           sleep 4
@@ -136,8 +149,7 @@ jobs:
           node tools/desktop/build.mjs --platform=win --php="$env:PHP_DIR" --out=dist
           if (-not (Test-Path "dist\win-app\runtime\php.exe")) { throw "No se copió el intérprete" }
           if (-not (Test-Path "dist\win-app\Iniciar Normia.vbs")) { throw "Falta el lanzador" }
-          & "dist\win-app\runtime\php.exe" -v
-          & "dist\win-app\runtime\php.exe" -r "exit(extension_loaded('pdo_sqlite') ? 0 : 1);"
+          & "dist\win-app\runtime\php.exe" "dist\win-app\tools\desktop\launcher.php" --check
 
       # Arranca el servidor real del paquete y pide la pantalla de instalación.
       # Si algo falla, el paso siguiente publica los registros como anotaciones.
