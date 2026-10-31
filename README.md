@@ -31,10 +31,12 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 14. [Arquitectura](#arquitectura)
 15. [Seguridad](#seguridad)
 16. [Pruebas](#pruebas)
-17. [Cambios de la versión 1.8.0](#cambios-de-la-versión-180)
-18. [Paquetes y verificación](#paquetes-y-verificación)
-19. [Limitaciones](#limitaciones)
-20. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
+17. [Distribución: escritorio y Android](#distribución-escritorio-y-android)
+18. [Cambios de la versión 1.9.0](#cambios-de-la-versión-190)
+19. [Cambios de la versión 1.8.0](#cambios-de-la-versión-180)
+20. [Paquetes y verificación](#paquetes-y-verificación)
+21. [Limitaciones](#limitaciones)
+22. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
 
 ---
 
@@ -658,6 +660,8 @@ Lo único que no funciona sin red es la **vista previa de desarrollo** (`npm run
 | `tests/js/editor.mjs` | 282 comprobaciones de interfaz sobre la app real: arranque, 395 señales y 350 objetos, **trazado de tuberías y circuitos, inspector de red y panel de redes**, **mano y paneo, selección de superpuestos, inspector plegable y paleta de herramientas**, puertas dobles y portones, **vértices de ruta editables (arrastrar, doble clic, Alt+clic)**, **señal de baño insertada desde la biblioteca**, **posiciones reales del trazo**, **clic sobre muros finos, pictogramas y equipos**, **cambio de señal y de equipo desde el inspector**, **auditor de planos** (interruptor de salida, ocupación declarada, cajón de revisión, contador, filtros, «Ver en el plano», cierre sin dejar el fondo bloqueado), **pliego de señalización** (conteo, tamaño sugerido, CSV, precios y consistencia), **medición de rutas internas** (ruta que rodea muros, tramos, guardado en capa y comparación), **modo presentación** (pantalla limpia, láser, spotlight, rutas animadas, capas, quiz y salida sin perder el estado), **rotación**, **rutas cerradas**, **arrastrar y soltar desde la biblioteca sin que el cajón lo bloquee**, reglas, herramientas, inserción con puntero, selección, mover, escalar, rotar, color, cambio de tipo, deshacer/rehacer, duplicar, agrupar, bloquear, desplazar, texto y saneado, guardar, reabrir, borradores, conflictos, exportación SVG/JSON/PNG, tooltips sin acumulación, capas, versiones y límites. |
 | `tests/js/pages.mjs` | 29 comprobaciones de las páginas fuera del editor: menú de acciones de proyectos y pisos (capa fija, colocación, teclado, un solo menú), confirmación de borrado y borrado real de piso y proyecto, con la protección del último piso. |
 | `tests/php/package.mjs` | 39 comprobaciones: construye ambos ZIP, verifica que no haya bases, sesiones, credenciales, logs ni carpetas de desarrollo, valida los SHA-256 y hace una instalación limpia de la demo comprobando assets, catálogos (395/350), los cuatro pisos del proyecto de ejemplo, señales de servicios y redes en la demo, la señal «Usted está aquí», **el auditor y su informe en la demo empaquetada**, editor, SVG, JSON e impresión. |
+| `tests/php/desktop.mjs` | 32 comprobaciones del escritorio: rutas de datos separadas del código, `NORMA_DATA_PATH` (solo absolutas), lanzador (argumentos, puerto, estado, cierre), enrutador (bloqueos, saltos de directorio, byte nulo) y una instalación completa escribiendo en una carpeta de datos externa. |
+| `tests/js/android.mjs` | 18 comprobaciones del APK: arranque de PHP 8.3 sobre WebAssembly, instalación, sesión, panel, editor, auditor, guardado, reapertura y verificación del contenedor nativo (permisos, descargas, impresión, selección de archivos, firma). |
 | `tests/js/offline.mjs` | 0 dependencias de red: revisa las vistas, los estilos, los scripts y los catálogos y falla si aparece un `fetch`, un `WebSocket`, un `src`/`href`/`url()` externo, una llamada de red desde PHP o un dominio no declarado. |
 
 Resultados esperados de la última ejecución completa:
@@ -667,19 +671,89 @@ Resultados esperados de la última ejecución completa:
 ✓ Sintaxis PHP 8.3 · 56 archivos, sin errores
 ✓ Sintaxis JavaScript · 21 archivos, sin errores
 ✓ Funcionamiento sin conexión · 85 archivos, sin referencias externas
-✓ Funcional PHP 8.1 · 174/174
-✓ Funcional PHP 8.3 · 174/174
-✓ Interfaz (JSDOM) PHP 8.1 · 246/246
-✓ Interfaz (JSDOM) PHP 8.3 · 246/246
-✓ Páginas y menús PHP 8.1 · 29/29
-✓ Páginas y menús PHP 8.3 · 29/29
+✓ Funcional PHP 8.1 · 197/197
+✓ Funcional PHP 8.3 · 197/197
+✓ Interfaz (JSDOM) PHP 8.1 · 317/317
+✓ Interfaz (JSDOM) PHP 8.3 · 317/317
+✓ Páginas y menús PHP 8.1 · 32/32
+✓ Páginas y menús PHP 8.3 · 32/32
+✓ Escritorio (instaladores) · 32/32
+✓ Android (APK) · 18/18
 ✓ Paquetes y demo · 39/39
-11/11 pasos correctos
+13/13 pasos correctos
 ```
 
 Las pruebas trabajan sobre copias temporales: no escriben configuración ni bases en el repositorio. `node_modules` solo contiene dependencias de desarrollo y se excluye de los paquetes.
 
 ---
+
+## Distribución: escritorio y Android
+
+Además del paquete web, el editor se entrega como aplicación instalable. En las
+tres formas viaja el intérprete de PHP: no hay que instalar PHP, Apache ni nada
+más en el equipo.
+
+| Plataforma | Archivo | Requisitos |
+| --- | --- | --- |
+| macOS 12 Monterey o superior (Intel y Apple Silicon) | `normia-planos-cad-<versión>-macos-x64.pkg` · `…-arm64.pkg` | Ninguno adicional |
+| Windows 10 y 11 de 64 bits | `normia-planos-cad-<versión>-windows-x64.exe` | Ninguno adicional |
+| Android 8.0 o superior | `normia-planos-cad-<versión>-android.apk` | WebView actualizado |
+
+- **Escritorio.** Instalador por usuario (sin permisos de administrador en
+  Windows) que copia la app y su propio PHP 8.3. El lanzador escucha solo en
+  `127.0.0.1`, abre el navegador del sistema y deja los datos en la carpeta del
+  usuario, separados del programa: desinstalar no borra los planos.
+- **Android.** El editor completo dentro de un `WebView`, con PHP 8.3 compilado a
+  WebAssembly. Funciona sin conexión y el APK no pide permiso de red.
+- **Sin certificados comerciales.** Los paquetes llevan firma ad-hoc (macOS) y
+  clave propia (Android); Windows no está firmado. Los avisos de Gatekeeper y
+  SmartScreen se explican, con su solución, en la guía. No se promete un
+  instalador sin avisos.
+- **Windows 7, 8 y 8.1 no están soportados**: PHP 8.x exige Windows 8 o superior
+  y esos sistemas ya no reciben navegadores actualizados.
+
+Guía completa, requisitos, rutas de datos y solución de problemas:
+[`docs/ESCRITORIO.md`](docs/ESCRITORIO.md).
+
+---
+
+## Cambios de la versión 1.9.0
+
+Entrega de **distribución por flujos de trabajo**. La aplicación no cambia su
+funcionamiento: cambia la forma de instalarla y se prepara el terreno para
+empaquetarla sin servidor.
+
+- **Rutas separadas del código.** Nuevo `app/Core/Paths.php`: el código puede
+  vivir en una carpeta de solo lectura y los datos (configuración, base SQLite,
+  sesiones, registros) en otra. Se activa con `NORMA_DATA_PATH` (solo rutas
+  absolutas) o con la carpeta portátil de siempre. `Config`, `Session`,
+  `Installer` y la bitácora de errores ya lo usan.
+- **Instalador de escritorio.** `tools/desktop/build.mjs` arma la app con un PHP
+  estático incluido y genera `.app` + `.pkg` en macOS (firma ad-hoc, macOS 12+,
+  Intel y Apple Silicon) o el instalador de Inno Setup en Windows (por usuario,
+  sin UAC). El lanzador `tools/desktop/launcher.php` elige un puerto libre,
+  escucha solo en `127.0.0.1`, reutiliza la instancia abierta y se detiene con el
+  sistema.
+- **Enrutador del servidor local.** `tools/desktop/router.php` reproduce las
+  reglas de `.htaccess`: solo se entregan `assets/` y `index.php`; `app/`,
+  `config/`, `resources/`, `storage/`, `tests/`, `tools/`, `docs/` y `paquetes/`
+  quedan bloqueados, incluidos los intentos con `..`, `%2e%2e` y bytes nulos.
+- **APK de Android.** El editor completo en un `WebView` con PHP 8.3 sobre
+  WebAssembly (`@php-wasm/web` 3.1.61). `tools/android/web/app-core.js` monta la
+  aplicación, atiende las peticiones, mantiene la sesión y guarda los datos en el
+  almacenamiento del teléfono; la pantalla intercepta enlaces, formularios,
+  `fetch`, descargas e impresión. El APK no declara permiso de red.
+- **Flujos de trabajo.** `verify.yml` corre la suite en PHP 8.1 y 8.3;
+  `dist-desktop.yml` compila en `macos-13`, `macos-14` y `windows-2022`, instala
+  el paquete y lo arranca antes de publicarlo; `dist-android.yml` verifica el
+  paquete del editor, compila, firma y comprueba el APK con `apksigner`.
+- **Pruebas nuevas.** `tests/php/desktop.mjs` (32) cubre rutas, lanzador,
+  enrutador e instalación con datos fuera del código; `tests/js/android.mjs` (18)
+  arranca el intérprete de WebAssembly, instala, entra, abre el editor, consulta
+  el auditor, guarda, reabre y comprueba el contenedor nativo.
+- **Documentación.** Nueva guía [`docs/ESCRITORIO.md`](docs/ESCRITORIO.md) con la
+  instalación en las tres plataformas, SmartScreen, Gatekeeper, la explicación de
+  por qué Windows 7/8/8.1 no están soportados y el estado de validación del APK.
 
 ## Cambios de la versión 1.8.0
 

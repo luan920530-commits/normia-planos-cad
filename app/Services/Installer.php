@@ -5,6 +5,7 @@ namespace App\Services;
 
 use App\Core\Config;
 use App\Core\Database;
+use App\Core\Paths;
 use App\Core\ValidationException;
 use App\Models\User;
 use PDOException;
@@ -22,9 +23,10 @@ final class Installer
     /** @return array<int,array{key:string,label:string,ok:bool,detail:string}> */
     public function requirements(): array
     {
-        $storage = $this->basePath . '/storage';
-        $configDir = $this->basePath . '/config';
-        $sessions = $storage . '/sessions';
+        Paths::ensure();
+        $storage = Paths::storage();
+        $configDir = Paths::configDir();
+        $sessions = Paths::sessions();
         return [
             ['key' => 'php', 'label' => 'PHP 8.1 o superior', 'ok' => PHP_VERSION_ID >= 80100, 'detail' => 'Versión detectada: ' . PHP_VERSION],
             ['key' => 'pdo', 'label' => 'Extensión PDO', 'ok' => extension_loaded('pdo'), 'detail' => extension_loaded('pdo') ? 'Disponible' : 'Activa PDO en el hosting'],
@@ -53,7 +55,7 @@ final class Installer
         if (Config::hasConfigFile() && Config::isInstalled()) {
             return true;
         }
-        return is_file($this->basePath . '/config/config.php') && is_file($this->basePath . '/storage/normia.sqlite');
+        return is_file(Paths::configFile()) && is_file(Paths::database('normia.sqlite'));
     }
 
     /**
@@ -96,7 +98,7 @@ final class Installer
         }
 
         $databaseFile = 'normia-' . bin2hex(random_bytes(8)) . '.sqlite';
-        $databasePath = $this->basePath . '/storage/' . $databaseFile;
+        $databasePath = Paths::database($databaseFile);
         if (is_file($databasePath)) {
             throw new ValidationException(['install' => 'No se pudo reservar un archivo de datos. Inténtalo de nuevo.']);
         }
@@ -114,7 +116,7 @@ final class Installer
                 throw new ValidationException(['install' => 'No se pudo escribir config/config.php. Revisa los permisos de la carpeta config.']);
             }
             @chmod($databasePath, 0660);
-            @chmod($this->basePath . '/config/config.php', 0640);
+            @chmod(Paths::configFile(), 0640);
             return ['email' => $email, 'demo' => $demo];
         } catch (ValidationException $exception) {
             @unlink($databasePath);
@@ -134,7 +136,7 @@ final class Installer
 
     private function writeConfig(string $databaseFile, bool $demo): bool
     {
-        $configFile = $this->basePath . '/config/config.php';
+        $configFile = Paths::configFile();
         $appKey = bin2hex(random_bytes(32));
         $content = "<?php\n"
             . "declare(strict_types=1);\n\n"

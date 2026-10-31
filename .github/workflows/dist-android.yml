@@ -1,0 +1,103 @@
+# APK de Android para Normia Planos CAD.
+#
+# Compila el editor completo dentro de un WebView con PHP 8.3 compilado a
+# WebAssembly, lo firma con una clave propia y lo publica. Antes de compilar
+# verifica el paquete que viaja dentro del APK (`tools/android/check.mjs`): si esa
+# revisión falla, no se genera nada.
+#
+# Firma: no hay certificado de Google Play. El flujo usa
+# `ANDROID_KEYSTORE_BASE64` y sus contraseñas si están en los secretos del
+# repositorio; si no, genera una clave desechable y lo advierte, porque entonces
+# cada versión nueva necesita desinstalar la anterior.
+name: Distribución de Android
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    name: Compilar APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.7'
+
+      - name: Dependencias
+        run: npm install --no-audit --no-fund
+
+      - name: Armar el paquete del APK
+        run: node tools/android/build.mjs
+
+      - name: Verificar el paquete antes de compilar
+        run: node tools/android/check.mjs
+
+      - name: Clave de firma
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "· Se usa la clave guardada en los secretos del repositorio."
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/normia.jks"
+            echo "NORMA_KEYSTORE=$RUNNER_TEMP/normia.jks" >> "$GITHUB_ENV"
+            echo "NORMA_KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
+            echo "NORMA_KEY_ALIAS=${KEY_ALIAS:-normia}" >> "$GITHUB_ENV"
+            echo "NORMA_KEY_PASSWORD=$KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
+          else
+            echo "::warning::No hay clave en los secretos: se genera una desechable. Para actualizar el APK sin desinstalar, guarda ANDROID_KEYSTORE_BASE64 y ANDROID_KEYSTORE_PASSWORD."
+            keytool -genkeypair -v -keystore "$RUNNER_TEMP/normia.jks" -storepass normia-local -keypass normia-local \
+              -alias normia -keyalg RSA -keysize 2048 -validity 10000 \
+              -dname "CN=Normia Planos CAD, O=Normia, C=CO"
+            echo "NORMA_KEYSTORE=$RUNNER_TEMP/normia.jks" >> "$GITHUB_ENV"
+            echo "NORMA_KEYSTORE_PASSWORD=normia-local" >> "$GITHUB_ENV"
+            echo "NORMA_KEY_ALIAS=normia" >> "$GITHUB_ENV"
+            echo "NORMA_KEY_PASSWORD=normia-local" >> "$GITHUB_ENV"
+          fi
+
+      - name: Compilar y firmar
+        env:
+          NORMA_VERSION: ${{ github.ref_name }}
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          gradle -p tools/android assembleRelease -PnormiaVersion="$VERSION" --no-daemon
+          APK="$(find tools/android/app/build/outputs/apk/release -name '*.apk' | head -1)"
+          cp "$APK" "normia-planos-cad-${VERSION}-android.apk"
+          "$ANDROID_HOME/build-tools/34.0.0/apksigner" verify --print-certs "normia-planos-cad-${VERSION}-android.apk"
+          "$ANDROID_HOME/build-tools/34.0.0/apksigner" sign --ks "$NORMA_KEYSTORE" \
+            --ks-pass "pass:$NORMA_KEYSTORE_PASSWORD" --key-pass "pass:$NORMA_KEY_PASSWORD" \
+            --ks-key-alias "$NORMA_KEY_ALIAS" --out "firmado-${VERSION}.apk" "normia-planos-cad-${VERSION}-android.apk"
+          mv "firmado-${VERSION}.apk" "normia-planos-cad-${VERSION}-android.apk"
+          "$ANDROID_HOME/build-tools/34.0.0/apksigner" verify "normia-planos-cad-${VERSION}-android.apk" && echo "· APK firmado y verificado"
+
+      - name: Publicar el artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: normia-android
+          path: normia-planos-cad-*-android.apk
+          if-no-files-found: error
+
+      - name: Adjuntar a la release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "${GITHUB_REF_NAME}" normia-planos-cad-*-android.apk --clobber || \
+          gh release create "${GITHUB_REF_NAME}" normia-planos-cad-*-android.apk --title "Normia Planos CAD ${GITHUB_REF_NAME}" --notes "APK del editor completo."

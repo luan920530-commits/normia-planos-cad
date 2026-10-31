@@ -14,7 +14,11 @@ final class Config
 
     public static function boot(string $basePath): void
     {
-        self::$basePath = rtrim($basePath, '/');
+        // Las rutas de datos se resuelven una sola vez por petición: en un
+        // hosting coinciden con el código y en la app de escritorio viven en la
+        // carpeta del usuario (NORMA_DATA_PATH).
+        Paths::init($basePath, null);
+        self::$basePath = Paths::data();
         $defaults = [
             'database' => null,
             'session_name' => 'normia_sid',
@@ -23,7 +27,7 @@ final class Config
             'demo' => false,
             'installed_at' => null,
         ];
-        $file = self::$basePath . '/config/config.php';
+        $file = Paths::configFile();
         $data = [];
         if (is_file($file)) {
             try {
@@ -37,6 +41,12 @@ final class Config
         }
         self::$data = array_merge($defaults, $data);
         self::$loaded = is_file($file);
+    }
+
+    /** Ruta del código (recursos, vistas y catálogos de solo lectura). */
+    public static function codePath(): string
+    {
+        return Paths::base();
     }
 
     public static function get(string $key, mixed $default = null): mixed
@@ -71,12 +81,12 @@ final class Config
 
     public static function configFile(): string
     {
-        return self::$basePath . '/config/config.php';
+        return Paths::configFile();
     }
 
     public static function isDemoBuild(): bool
     {
-        return is_file(self::$basePath . '/resources/demo/.demo-build');
+        return is_file(Paths::base() . '/resources/demo/.demo-build');
     }
 
     public static function requireInstalled(): void
