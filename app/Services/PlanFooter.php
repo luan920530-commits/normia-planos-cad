@@ -76,6 +76,42 @@ final class PlanFooter
     /** Relleno interior del pie, en unidades del lienzo. */
     public const PAD = 14.0;
 
+    /** Emblema de la marca, pequeño y con fondo transparente. */
+    public const BRAND_IMAGE = 'assets/img/normia-watermark.png';
+
+    /** Alto reservado para la marca de agua al final del bloque de datos. */
+    public const BRAND_HEIGHT = 26.0;
+
+    /**
+     * Emblema incrustado como `data:` para que el SVG exportado y el PNG del
+     * navegador llevan la marca sin depender de archivos externos.
+     */
+    private static ?string $brandUri = null;
+
+    public static function brandUri(): string
+    {
+        if (self::$brandUri !== null) {
+            return self::$brandUri;
+        }
+        $file = (defined('BASE_PATH') ? BASE_PATH : dirname(__DIR__, 2)) . '/' . self::BRAND_IMAGE;
+        if (!is_file($file)) {
+            return self::$brandUri = '';
+        }
+        $binary = (string) file_get_contents($file);
+        return self::$brandUri = 'data:image/png;base64,' . base64_encode($binary);
+    }
+
+    /** Datos de la marca de agua que comparten el servidor y el navegador. */
+    public static function brand(): array
+    {
+        return [
+            'image' => self::brandUri(),
+            'name' => 'Normia Planos CAD',
+            'version' => defined('NORMA_VERSION') ? (string) \NORMA_VERSION : '',
+            'label' => 'Normia Planos CAD · plano generado con la app',
+        ];
+    }
+
     /** @return list<array{key:string,title:string,text:string,icon:string,accent:string}> */
     public static function cells(): array
     {
@@ -114,7 +150,7 @@ final class PlanFooter
             'attribution' => 'Pictogramas ISO 7010 (MIT © Karl Norling)',
             'note' => 'Los planos son esquemáticos: verifica dimensiones y escala en sitio.',
         ];
-        return ['cells' => self::CELLS, 'lines' => self::LINES, 'fields' => $fields];
+        return ['cells' => self::CELLS, 'lines' => self::LINES, 'fields' => $fields, 'brand' => self::brand()];
     }
 
     /** Columnas de la franja según el ancho disponible. */
@@ -137,14 +173,14 @@ final class PlanFooter
         return round($rows * self::rowHeight($width), 2);
     }
 
-    /** Altura del bloque de datos y nota legal. */
+    /** Altura del bloque de datos, la nota legal y la marca de agua. */
     public static function dataHeight(float $width, array $payload): float
     {
         $height = 0.0;
         foreach (self::wrappedLines($width, $payload) as $line) {
             $height += self::lineStep($line['size']);
         }
-        return round($height + 16.0, 2);
+        return round($height + 16.0 + self::BRAND_HEIGHT, 2);
     }
 
     /**
@@ -330,6 +366,40 @@ final class PlanFooter
                 . SvgAsset::esc($line['text']) . '</text>' . "\n";
             $cursor += $step;
         }
+        $svg .= self::brandMark($width, $cursor + 5.0, $payload);
+        $svg .= '</g>' . "\n";
+        return $svg;
+    }
+
+    /**
+     * Marca de agua del pie: emblema pequeño y el nombre de la app, alineados
+     * a la derecha y en gris tenue, para que no compitan con los datos del
+     * plano pero dejen claro con qué aplicación se generó.
+     */
+    private static function brandMark(float $width, float $top, array $payload): string
+    {
+        $brand = is_array($payload['brand'] ?? null) ? $payload['brand'] : self::brand();
+        $image = (string) ($brand['image'] ?? '');
+        if ($image === '') {
+            return '';
+        }
+        $size = 20.0;
+        $right = $width - self::PAD;
+        $label = trim('Generado con ' . (string) ($brand['name'] ?? 'Normia Planos CAD')
+            . (($brand['version'] ?? '') !== '' ? ' v' . (string) $brand['version'] : ''));
+        $fontSize = 7.6;
+        $textWidth = min($width * 0.62, strlen($label) * $fontSize * 0.54);
+        $textX = $right - $textWidth;
+        $imageX = $textX - $size - 6.0;
+        $imageY = $top + 1.0;
+        $baseline = $imageY + $size / 2 + $fontSize * 0.36;
+        $svg = '<g id="marca-normia" data-footer-brand="1" opacity="0.82">' . "\n";
+        $svg .= '<image x="' . SvgAsset::num($imageX) . '" y="' . SvgAsset::num($imageY)
+            . '" width="' . SvgAsset::num($size) . '" height="' . SvgAsset::num($size)
+            . '" preserveAspectRatio="xMidYMid meet" href="' . SvgAsset::esc($image) . '"/>' . "\n";
+        $svg .= '<text x="' . SvgAsset::num($textX) . '" y="' . SvgAsset::num($baseline)
+            . '" font-size="' . SvgAsset::num($fontSize) . '" fill="#7c8798" letter-spacing="0.2">'
+            . SvgAsset::esc($label) . '</text>' . "\n";
         $svg .= '</g>' . "\n";
         return $svg;
     }

@@ -6,15 +6,20 @@
   <meta name="color-scheme" content="light">
   <meta name="theme-color" content="#0f172a">
   <title><?= e($title ?? 'Normia Planos CAD') ?> · Normia Planos CAD</title>
+  <meta name="theme-color" content="#0b1220">
+  <link rel="icon" href="<?= e(asset('img/favicon-32.png')) ?>" sizes="32x32" type="image/png">
   <link rel="icon" href="<?= e(asset('img/favicon.svg')) ?>" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="<?= e(asset('img/apple-touch-icon.png')) ?>">
+  <link rel="manifest" href="<?= e(asset('manifest.webmanifest')) ?>">
   <link rel="stylesheet" href="<?= e(asset('css/app.css')) ?>">
 </head>
 <body class="<?= e($bodyClass ?? '') ?>">
 <?php \App\Core\View::partial('partials/icons'); ?>
+<?php \App\Core\View::partial('partials/splash', ['splashTitle' => 'Abriendo Normia Planos CAD']); ?>
 <a class="skip-link" href="#contenido">Saltar al contenido</a>
 <header class="site-header">
   <a class="brand" href="<?= e(url('')) ?>" aria-label="Normia Planos CAD · inicio">
-    <span class="brand-mark"><svg class="icon"><use href="#i-logo"></use></svg></span>
+    <span class="brand-mark"><img src="<?= e(asset('img/normia-emblem.png')) ?>" alt="" width="40" height="40" decoding="async"></span>
     <span class="brand-text"><strong>Normia</strong><small>Planos CAD</small></span>
   </a>
   <?php if (!empty($user)): ?>

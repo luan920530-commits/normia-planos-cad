@@ -30,7 +30,7 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 13. [Arquitectura](#arquitectura)
 14. [Seguridad](#seguridad)
 15. [Pruebas](#pruebas)
-16. [Cambios de la versión 1.6.0](#cambios-de-la-versión-160)
+16. [Cambios de la versión 1.7.0](#cambios-de-la-versión-170)
 17. [Paquetes y verificación](#paquetes-y-verificación)
 18. [Limitaciones](#limitaciones)
 19. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
@@ -659,6 +659,18 @@ Las pruebas trabajan sobre copias temporales: no escriben configuración ni base
 
 ---
 
+## Cambios de la versión 1.7.0
+
+Entrega de **identidad y bienvenida**. No cambia el formato de los planos ni los catálogos: los planos guardados abren igual.
+
+- **Logo propio.** El emblema del tiburón mecánico pasa a ser la marca de la aplicación: sustituye a la «N» en la cabecera, el editor y el acceso, y se usa como favicon (PNG 32 px + SVG incrustado), icono de iOS (`apple-touch-icon`), icono de la aplicación instalable (`manifest.webmanifest`) y arte de bienvenida. Las imágenes se recortaron en círculo y se limpió el fondo oscuro, con transparencia y sin el texto de la lámina original.
+- **Pantalla de bienvenida.** Cada carga abre con un splash de cristal sobre azul noche: emblema flotante con halo, nombre, barra de progreso animada y una línea de estado que dice qué se está preparando. Se retira sola en menos de un segundo tras la carga (máximo 3 s) y deja la página libre; también se oculta con CSS si el navegador no ejecuta JavaScript. Respeta `prefers-reduced-motion`.
+- **Bienvenida en «Mis planos».** La cabecera del panel se convierte en una tarjeta con el emblema, accesos directos y una retícula tenue de plano de fondo.
+- **Paleta «Todas las herramientas» al estilo AutoCAD.** El panel de herramientas del lienzo pasa a cristal oscuro, gana un **buscador** que filtra por nombre, oculta los grupos que se quedan sin coincidencias, avisa cuando no hay resultados y suma un grupo de **acciones del plano** (revisión, pliego, medición, redes, capas, presentar, versiones, pie de plano y atajos). Al reabrir siempre aparece completa.
+- **Marca de agua en el pie.** Cada plano exportado —SVG, PNG e impresión— cierra el bloque de datos con el emblema pequeño y el texto «Generado con Normia Planos CAD v…», alineado a la derecha y en gris tenue. El emblema viaja **incrustado en base64** dentro del SVG: el archivo sigue siendo autónomo y no hace llamadas externas. La altura del pie se recalcula para reservarle su renglón.
+- **Acabado macOS.** Cristal (`backdrop-filter`) en tarjetas y paneles, sombras largas, realces al pasar y muelles suaves en los botones, siempre con `prefers-reduced-motion`.
+- **Pruebas.** Interfaz **296** (buscador de la paleta, reapertura, activación y cierre), funcional **186** (splash, marca, paleta y marca de agua incrustada) y páginas **32** (bienvenida, emblema e iconos del navegador, retirada del splash).
+
 ## Cambios de la versión 1.6.0
 
 Rediseño de la **barra de herramientas**. No cambia ningún dato, formato ni catálogo: los planos guardados abren igual.
@@ -850,14 +862,14 @@ Versión de corrección sobre la 1.0.0. Reemplaza los paquetes anteriores: la 1.
 
 ## Paquetes y verificación
 
-Las versiones publicadas están en la página de **[Liberaciones](https://github.com/luan920530-commits/normia-planos-cad/releases)**. La versión vigente es la **v1.6.0**, con sus notas, sus sumas SHA-256 y los enlaces de descarga de los paquetes que viven en `paquetes/v1.6.0/`. Las entregas anteriores (v1.0.0 a v1.0.9 y las v1.1.0 a v1.5.0) no deben usarse: la v1.6.0 las reemplaza.
+Las versiones publicadas están en la página de **[Liberaciones](https://github.com/luan920530-commits/normia-planos-cad/releases)**. La versión vigente es la **v1.7.0**, con sus notas, sus sumas SHA-256 y los enlaces de descarga de los paquetes que viven en `paquetes/v1.7.0/`. Las entregas anteriores (v1.0.0 a v1.0.9 y las v1.1.0 a v1.6.0) no deben usarse: la v1.7.0 las reemplaza.
 
-La entrega v1.6.0 incluye los ZIP ya construidos en **`paquetes/v1.6.0/`** (misma composición que genera el script, verificada por `tests/php/package.mjs`):
+La entrega v1.7.0 incluye los ZIP ya construidos en **`paquetes/v1.7.0/`** (misma composición que genera el script, verificada por `tests/php/package.mjs`):
 
 ```text
-paquetes/v1.6.0/
-├── normia-planos-cad-1.6.0.zip
-├── normia-planos-cad-demo-1.6.0.zip
+paquetes/v1.7.0/
+├── normia-planos-cad-1.7.0.zip
+├── normia-planos-cad-demo-1.7.0.zip
 ├── SHA256SUMS.txt
 └── BUILD.txt
 ```
@@ -871,8 +883,8 @@ npm run build          # o: bash tools/build-packages.sh
 El script deja los artefactos en `dist/`:
 
 ```text
-normia-planos-cad-1.6.0.zip
-normia-planos-cad-demo-1.6.0.zip
+normia-planos-cad-1.7.0.zip
+normia-planos-cad-demo-1.7.0.zip
 SHA256SUMS.txt
 BUILD.txt
 ```
@@ -882,11 +894,11 @@ BUILD.txt
 - Verifica las sumas:
 
 ```bash
-cd paquetes/v1.6.0
+cd paquetes/v1.7.0
 sha256sum -c SHA256SUMS.txt
 ```
 
-Los hashes exactos de los ZIP publicados están en `paquetes/v1.6.0/SHA256SUMS.txt`; `dist/` es solo la salida de trabajo y está ignorada por Git.
+Los hashes exactos de los ZIP publicados están en `paquetes/v1.7.0/SHA256SUMS.txt`; `dist/` es solo la salida de trabajo y está ignorada por Git.
 
 ---
 

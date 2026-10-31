@@ -1009,6 +1009,46 @@ async function main() {
       `hidden=${q(window, '[data-topbar-flyout]')?.hidden}`);
     q(window, '[data-topbar-menu]')?.click();
 
+    /* ---------------- paleta de todas las herramientas ---------------- */
+    q(window, '[data-tools-toggle]')?.click();
+    const toolsPopover = q(window, '[data-tools-popover]');
+    const toolsChoices = qa(window, '.tool-choice');
+    report.check('La paleta reúne herramientas y acciones del plano',
+      toolsPopover?.hidden === false && toolsChoices.length === 25
+      && Boolean(q(window, '.tool-choice[data-open-drawer="audit"]'))
+      && Boolean(q(window, '.tool-choice[data-present-open]'))
+      && Boolean(q(window, '.tool-choice[data-open-library="sign"]')),
+      `${toolsChoices.length} acciones`);
+    const toolsFilter = q(window, '[data-tools-filter]');
+    if (toolsFilter) {
+      toolsFilter.value = 'puerta';
+      toolsFilter.dispatchEvent(new window.Event('input', { bubbles: true }));
+    }
+    const toolsVisibles = qa(window, '.tool-choice').filter((choice) => !choice.hidden);
+    report.check('El buscador de la paleta filtra por nombre y oculta los grupos vacíos',
+      toolsVisibles.length === 2
+      && toolsVisibles.every((choice) => /puerta/i.test(choice.textContent))
+      && qa(window, '.tool-group').filter((group) => !group.hidden).length === 1,
+      `${toolsVisibles.length} coincidencias`);
+    if (toolsFilter) {
+      toolsFilter.value = 'sin-resultados';
+      toolsFilter.dispatchEvent(new window.Event('input', { bubbles: true }));
+    }
+    report.check('Sin coincidencias la paleta lo dice',
+      q(window, '[data-tools-empty]')?.hidden === false,
+      String(q(window, '[data-tools-empty]')?.hidden));
+    q(window, '[data-tools-toggle]')?.click();
+    q(window, '[data-tools-toggle]')?.click();
+    report.check('Al reabrir, la paleta vuelve completa y con el buscador vacío',
+      q(window, '[data-tools-filter]')?.value === ''
+      && qa(window, '.tool-choice').every((choice) => !choice.hidden),
+      `filtro="${q(window, '[data-tools-filter]')?.value}"`);
+    q(window, '.tool-choice[data-tool="wall"]')?.click();
+    app.renderNow();
+    report.check('Elegir en la paleta activa la herramienta y cierra el panel',
+      app.tool === 'wall' && toolsPopover?.hidden === true,
+      `${app.tool} · hidden=${toolsPopover?.hidden}`);
+
     const inspectorBody = q(window, '[data-properties]');
     const propField = q(window, '[data-section="geometry"] [data-prop="x"]');
     inspectorBody.scrollTop = 260;

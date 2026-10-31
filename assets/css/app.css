@@ -90,22 +90,22 @@ p { margin: 0; }
 .site-header .brand:hover { text-decoration: none; }
 .brand-mark {
   position: relative; isolation: isolate;
-  width: 36px; height: 36px; display: grid; place-items: center;
-  border-radius: 28%; color: #fff;
-  background: linear-gradient(158deg, #5aa2ff 0%, #1168f0 45%, #0a44a8 100%);
-  box-shadow: 0 6px 16px rgba(10, 82, 200, .34), inset 0 1px 0 rgba(255, 255, 255, .55),
-              inset 0 -1px 1px rgba(3, 24, 64, .45);
-  overflow: hidden;
+  width: 38px; height: 38px; display: grid; place-items: center;
+  border-radius: 30%;
+  background: radial-gradient(120% 90% at 30% 0%, rgba(255, 255, 255, .16), rgba(11, 18, 32, .92) 60%);
+  box-shadow: 0 6px 18px rgba(8, 23, 48, .32), inset 0 1px 0 rgba(255, 255, 255, .22);
+  transition: transform .4s cubic-bezier(.34, 1.56, .64, 1), box-shadow .3s ease;
 }
-/* Brillo de cristal tipo icono de iOS. */
+.brand-mark img {
+  width: 34px; height: 34px; display: block; object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(3, 16, 38, .45));
+}
+a.brand:hover .brand-mark { transform: translateY(-1px) scale(1.04); box-shadow: 0 10px 24px rgba(8, 23, 48, .36), inset 0 1px 0 rgba(255, 255, 255, .3); }
 .brand-mark::after {
   content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
-  background:
-    radial-gradient(120% 80% at 22% 4%, rgba(255, 255, 255, .55), rgba(255, 255, 255, 0) 58%),
-    linear-gradient(180deg, rgba(255, 255, 255, .22), rgba(255, 255, 255, 0) 46%);
+  background: linear-gradient(180deg, rgba(255, 255, 255, .16), rgba(255, 255, 255, 0) 46%);
 }
-.brand-mark .icon { position: relative; z-index: 1; filter: drop-shadow(0 1px 1px rgba(4, 26, 66, .45)); }
-.brand-mark .icon { width: 21px; height: 21px; }
+.brand-mark .icon { position: relative; z-index: 1; }
 .brand-text { display: flex; flex-direction: column; line-height: 1.15; }
 .brand-text strong { font-size: .98rem; letter-spacing: -.01em; }
 .brand-text small { color: var(--muted); font-size: .72rem; letter-spacing: .02em; text-transform: uppercase; }
@@ -252,8 +252,8 @@ p { margin: 0; }
 .auth-body { min-height: 100vh; display: flex; flex-direction: column; background: radial-gradient(1200px 600px at 15% -10%, #e6efff 0%, transparent 60%), radial-gradient(900px 500px at 100% 0%, #eafaf1 0%, transparent 55%), var(--bg); }
 .auth-shell { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 34px 18px 20px; gap: 18px; }
 .auth-brand { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
-.auth-brand .brand-mark { width: 58px; height: 58px; border-radius: 17px; }
-.auth-brand .brand-mark .icon { width: 32px; height: 32px; }
+.auth-brand .brand-mark { width: 76px; height: 76px; border-radius: 22px; }
+.auth-brand .brand-mark img { width: 68px; height: 68px; }
 .auth-brand h1 { font-size: 1.5rem; }
 .auth-brand p { color: var(--muted); font-size: .9rem; max-width: 34ch; }
 .auth-card { width: min(410px, 100%); padding: 26px; display: flex; flex-direction: column; gap: 16px; box-shadow: var(--shadow-md); }
@@ -285,6 +285,42 @@ p { margin: 0; }
 .dashboard-hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 24px; }
 .dashboard-hero h1 { font-size: 1.9rem; }
 .dashboard-hero p { color: var(--muted); margin-top: 6px; max-width: 62ch; }
+
+/* Bienvenida: la marca preside la página de inicio, con el emblema flotando. */
+.welcome-hero {
+  position: relative; align-items: center; gap: 26px;
+  padding: 26px 28px; border-radius: var(--radius-lg);
+  background:
+    radial-gradient(70% 120% at 100% 0%, rgba(10, 108, 245, .1), transparent 60%),
+    radial-gradient(50% 100% at 0% 100%, rgba(14, 165, 190, .08), transparent 60%),
+    var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+.welcome-hero::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(15, 23, 42, .035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 42, .035) 1px, transparent 1px);
+  background-size: 34px 34px;
+  -webkit-mask-image: radial-gradient(70% 100% at 78% 30%, #000, transparent 72%);
+  mask-image: radial-gradient(70% 100% at 78% 30%, #000, transparent 72%);
+}
+.welcome-copy { position: relative; z-index: 1; }
+.welcome-copy .eyebrow { display: inline-flex; align-items: center; gap: 7px; }
+.welcome-dot { width: 18px; height: 18px; display: block; }
+.welcome-actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 16px; }
+.welcome-art { position: relative; z-index: 1; margin: 0; flex: 0 0 auto; }
+.welcome-art img {
+  width: clamp(120px, 18vw, 180px); height: auto; display: block;
+  filter: drop-shadow(0 20px 34px rgba(8, 26, 58, .3));
+  animation: welcome-float 7s ease-in-out infinite alternate;
+}
+@keyframes welcome-float { from { transform: translateY(-4px) rotate(-1deg); } to { transform: translateY(6px) rotate(1deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .welcome-art img { animation: none; }
+}
 .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 26px; }
 .stat-card { padding: 16px 18px; display: flex; flex-direction: column; gap: 3px; }
 .stat-card .stat-icon { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; background: var(--blue-soft); color: var(--blue-strong); margin-bottom: 6px; }
@@ -448,4 +484,123 @@ kbd { font-family: var(--font-mono); font-size: .74rem; background: var(--surfac
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+}
+
+
+/* ============================= pantalla de bienvenida ============================= */
+/* Capa de carga: emblema, barra de progreso y estado. No bloquea la página:
+   el CSS la retira sola y `splash.js` la quita en cuanto termina la carga. */
+.app-splash {
+  position: fixed; inset: 0; z-index: 900; display: grid; place-items: center;
+  padding: 24px; overflow: hidden;
+  background: radial-gradient(90% 70% at 50% 0%, #16233c 0%, #0b1220 55%, #070d17 100%);
+  color: #e8effb;
+  animation: splash-auto 3.4s ease forwards;
+}
+.app-splash[data-state="done"] { animation: splash-out .6s cubic-bezier(.4, 0, .2, 1) forwards; }
+@keyframes splash-auto {
+  0%, 72% { opacity: 1; visibility: visible; }
+  100% { opacity: 0; visibility: hidden; pointer-events: none; }
+}
+@keyframes splash-out {
+  to { opacity: 0; visibility: hidden; pointer-events: none; transform: scale(1.015); }
+}
+.app-splash-glow {
+  position: absolute; inset: -20% -10% auto; height: 70%;
+  background:
+    radial-gradient(40% 60% at 22% 30%, rgba(56, 132, 255, .34), transparent 70%),
+    radial-gradient(38% 58% at 78% 24%, rgba(14, 190, 214, .26), transparent 70%),
+    radial-gradient(30% 50% at 52% 8%, rgba(255, 132, 66, .18), transparent 72%);
+  filter: blur(30px); animation: splash-breathe 6s ease-in-out infinite alternate;
+}
+@keyframes splash-breathe { from { transform: translate3d(-1.5%, -1%, 0) scale(1); } to { transform: translate3d(1.5%, 2%, 0) scale(1.06); } }
+.app-splash-grid {
+  position: absolute; inset: 0; opacity: .16; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(122, 170, 255, .5) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(122, 170, 255, .5) 1px, transparent 1px);
+  background-size: 46px 46px;
+  -webkit-mask-image: radial-gradient(60% 55% at 50% 45%, #000 10%, transparent 78%);
+  mask-image: radial-gradient(60% 55% at 50% 45%, #000 10%, transparent 78%);
+  animation: splash-drift 18s linear infinite;
+}
+@keyframes splash-drift { to { background-position: 46px 46px, 46px 46px; } }
+.app-splash-card {
+  position: relative; z-index: 1; width: min(392px, 100%);
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  padding: 34px 30px 24px; text-align: center;
+  border-radius: 30px;
+  background: linear-gradient(180deg, rgba(28, 43, 69, .62), rgba(10, 17, 30, .72));
+  border: 1px solid rgba(255, 255, 255, .1);
+  box-shadow: 0 40px 90px rgba(2, 8, 20, .6), inset 0 1px 0 rgba(255, 255, 255, .14);
+  -webkit-backdrop-filter: blur(26px) saturate(170%); backdrop-filter: blur(26px) saturate(170%);
+  animation: splash-rise .7s cubic-bezier(.22, 1.1, .36, 1) both;
+}
+@keyframes splash-rise { from { opacity: 0; transform: translateY(14px) scale(.97); } to { opacity: 1; transform: none; } }
+.app-splash-emblem { position: relative; display: grid; place-items: center; margin-bottom: 10px; }
+.app-splash-emblem img {
+  width: 128px; height: 128px; display: block;
+  filter: drop-shadow(0 18px 34px rgba(3, 12, 28, .58));
+  animation: splash-float 4.4s ease-in-out infinite alternate;
+}
+@keyframes splash-float { from { transform: translateY(-3px); } to { transform: translateY(4px); } }
+.app-splash-ring {
+  position: absolute; inset: -14px; border-radius: 50%;
+  border: 1px solid rgba(126, 180, 255, .28);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, .04), 0 0 42px rgba(58, 140, 255, .28);
+  animation: splash-pulse 2.6s ease-out infinite;
+}
+@keyframes splash-pulse {
+  0% { transform: scale(.92); opacity: .7; }
+  70% { transform: scale(1.12); opacity: 0; }
+  100% { transform: scale(1.12); opacity: 0; }
+}
+.app-splash-word {
+  margin: 0; font-size: 1.72rem; font-weight: 800; letter-spacing: .3em;
+  text-transform: uppercase; color: #f2f7ff;
+  text-shadow: 0 2px 18px rgba(88, 160, 255, .45);
+}
+.app-splash-sub { margin: 0; font-size: .72rem; letter-spacing: .34em; text-transform: uppercase; color: #8fa8c9; }
+.app-splash-track {
+  position: relative; width: 100%; height: 4px; margin: 20px 0 10px;
+  border-radius: 999px; background: rgba(255, 255, 255, .1); overflow: hidden;
+}
+.app-splash-bar {
+  position: absolute; inset: 0; width: 42%; border-radius: 999px;
+  background: linear-gradient(90deg, #4f9dff, #7ef0e2);
+  box-shadow: 0 0 18px rgba(94, 178, 255, .7);
+  animation: splash-load 2.1s cubic-bezier(.5, 0, .3, 1) infinite;
+}
+@keyframes splash-load {
+  0% { transform: translateX(-110%); }
+  60% { transform: translateX(150%); }
+  100% { transform: translateX(250%); }
+}
+.app-splash-status { margin: 0; font-size: .8rem; color: #a9bcd6; min-height: 1.2em; }
+.app-splash-lines { display: none; }
+.app-splash-foot { margin: 14px 0 0; font-size: .68rem; color: #6d82a3; letter-spacing: .04em; }
+
+@media (prefers-reduced-motion: reduce) {
+  .app-splash, .app-splash[data-state="done"] { animation-duration: .01ms; animation-delay: 0s; }
+  .app-splash-glow, .app-splash-grid, .app-splash-card, .app-splash-emblem img,
+  .app-splash-ring, .app-splash-bar { animation: none; }
+  .app-splash-bar { width: 100%; opacity: .55; }
+}
+
+/* =============================== pulido tipo macOS =============================== */
+/* Cristal en las tarjetas del panel y realce del foco, como en las ventanas de
+   macOS: bordes suaves, luz superior y sombras largas y difusas. */
+.card, .project-card, .stat-card, .panel {
+  -webkit-backdrop-filter: blur(14px) saturate(140%); backdrop-filter: blur(14px) saturate(140%);
+}
+.card { transition: box-shadow .28s ease, transform .28s cubic-bezier(.34, 1.3, .64, 1); }
+.project-card { transition: box-shadow .28s cubic-bezier(.22, 1, .36, 1), transform .28s cubic-bezier(.34, 1.4, .64, 1); }
+.project-card:hover { transform: translateY(-3px); }
+.button, .nav-link, .account-chip { transition: background .18s ease, color .18s ease, box-shadow .24s ease, transform .3s cubic-bezier(.34, 1.4, .64, 1); }
+.button:active { transform: scale(.98); }
+:where(a, button, input, select, textarea):focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .project-card, .card, .brand-mark, .button { transition: none; }
+  .project-card:hover { transform: none; }
 }
