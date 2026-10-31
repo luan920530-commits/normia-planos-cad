@@ -11,7 +11,10 @@
  * `.github/workflows/dist-desktop.yml` en macOS y Windows reales.
  */
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
+import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { startRuntime, cloneProject, makeReporter, extractToken } from './harness.mjs';
 
 const report = makeReporter('Escritorio');
@@ -217,6 +220,55 @@ report.check('El enrutador deja pasar index.php y los assets locales',
 report.check('El enrutador resiste el salto de directorio y el byte nulo',
   routes.traversal === 'deny' && routes.encoded === 'deny' && routes.nulo === 'deny',
   `${routes.traversal} · ${routes.encoded} · ${routes.nulo}`);
+
+/* --------------------------- armado del paquete -------------------------- */
+/*
+ * El trabajo de Windows falló dos veces al comprobar el intérprete copiado. La
+ * causa era el `php.ini`: se reescribía solo si existía, y la instalación de
+ * PHP del flujo trae las plantillas `php.ini-development`/`php.ini-production`,
+ * no un `php.ini`. Sin él, `php.exe` no carga ninguna extensión. Aquí se arma un
+ * paquete con un intérprete de mentira para comprobar el archivo resultante.
+ */
+
+const fakePhp = fs.mkdtempSync(path.join(os.tmpdir(), 'normia-php-'));
+fs.mkdirSync(path.join(fakePhp, 'ext'), { recursive: true });
+fs.writeFileSync(path.join(fakePhp, 'php.exe'), 'MZ', 'utf8');
+fs.writeFileSync(path.join(fakePhp, 'ext', 'php_pdo_sqlite.dll'), 'MZ', 'utf8');
+fs.writeFileSync(path.join(fakePhp, 'php.ini-development'), '; plantilla', 'utf8');
+
+const buildOut = fs.mkdtempSync(path.join(os.tmpdir(), 'normia-dist-'));
+let buildError = '';
+try {
+  execFileSync(process.execPath, [fileURLToPath(new URL('../../tools/desktop/build.mjs', import.meta.url)),
+    '--platform=win', `--php=${fakePhp}`, `--out=${buildOut}`], { stdio: 'pipe' });
+} catch (error) {
+  buildError = String(error.stderr || error.message).slice(-200);
+}
+const packagedIniPath = path.join(buildOut, 'win-app', 'runtime', 'php.ini');
+const packagedIni = fs.existsSync(packagedIniPath) ? fs.readFileSync(packagedIniPath, 'utf8') : '';
+report.check('El paquete de Windows escribe su propio php.ini aunque la instalación no traiga uno',
+  buildError === '' && /^extension_dir = "ext"$/m.test(packagedIni),
+  buildError || packagedIni.split('\n').slice(0, 3).join(' | '));
+const packagedExtensions = ['pdo', 'pdo_sqlite', 'sqlite3', 'mbstring', 'openssl', 'fileinfo']
+  .filter((extension) => new RegExp(`^extension=${extension}$`, 'm').test(packagedIni));
+report.check('El php.ini del paquete activa pdo_sqlite, sqlite3 y mbstring',
+  packagedExtensions.length === 6, `extension=${packagedExtensions.join(', extension=')}`);
+
+// Un intérprete sin la extensión debe fallar al armar el paquete y decirlo: en
+// el flujo esa frase aparece en el registro del trabajo, sin adivinar.
+fs.rmSync(path.join(fakePhp, 'ext', 'php_pdo_sqlite.dll'));
+let missingError = '';
+try {
+  execFileSync(process.execPath, [fileURLToPath(new URL('../../tools/desktop/build.mjs', import.meta.url)),
+    '--platform=win', `--php=${fakePhp}`, `--out=${buildOut}`], { stdio: 'pipe' });
+} catch (error) {
+  missingError = String(error.stderr || error.message);
+}
+report.check('Armar el paquete avisa si el intérprete no trae pdo_sqlite',
+  /no trae ext\/php_pdo_sqlite\.dll/.test(missingError), missingError.split('\n').find((line) => line.includes('pdo_sqlite')) || 'no avisó');
+
+fs.rmSync(fakePhp, { recursive: true, force: true });
+fs.rmSync(buildOut, { recursive: true, force: true });
 
 runtime.close();
 process.exit(report.summary());

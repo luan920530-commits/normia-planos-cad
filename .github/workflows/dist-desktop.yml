@@ -143,13 +143,32 @@ jobs:
           & $php -r "exit(extension_loaded('pdo_sqlite') ? 0 : 1);"
           echo "PHP_DIR=$(Split-Path $php)" >> $env:GITHUB_ENV
 
-      - name: Armar la aplicación
+      # Tres pasos y no uno: cuando algo falla, el nombre del paso dice qué
+      # parte falló. Las anotaciones del trabajo solo dicen «exit code 1».
+      - name: Armar la carpeta de la aplicación
         shell: pwsh
         run: |
-          node tools/desktop/build.mjs --platform=win --php="$env:PHP_DIR" --out=dist
-          if (-not (Test-Path "dist\win-app\runtime\php.exe")) { throw "No se copió el intérprete" }
-          if (-not (Test-Path "dist\win-app\Iniciar Normia.vbs")) { throw "Falta el lanzador" }
+          node tools/desktop/build.mjs --platform=win --php="$env:PHP_DIR" --out=dist 2>&1 |
+            Tee-Object -FilePath "$env:RUNNER_TEMP\armar.log"
+          if ($LASTEXITCODE -ne 0) { throw "El armado terminó con código $LASTEXITCODE" }
+
+      - name: Revisar los archivos del paquete
+        shell: pwsh
+        run: |
+          foreach ($f in @("dist\win-app\runtime\php.exe", "dist\win-app\Iniciar Normia.vbs",
+                           "dist\win-app\index.php", "dist\win-app\runtime\ext\php_pdo_sqlite.dll")) {
+            if (-not (Test-Path $f)) { throw "Falta $f" }
+          }
+          Write-Output "Interprete en: $((Get-Command "$env:PHP_DIR\php.exe").Source)"
+          Get-ChildItem "dist\win-app\runtime" | Select-Object -First 12 -ExpandProperty Name
+          Write-Output "--- php.ini del paquete ---"
+          Get-Content "dist\win-app\runtime\php.ini"
+
+      - name: Comprobar el intérprete del paquete
+        shell: pwsh
+        run: |
           & "dist\win-app\runtime\php.exe" "dist\win-app\tools\desktop\launcher.php" --check
+          if ($LASTEXITCODE -ne 0) { throw "El intérprete del paquete no sirve (código $LASTEXITCODE)" }
 
       # Arranca el servidor real del paquete y pide la pantalla de instalación.
       # Si algo falla, el paso siguiente publica los registros como anotaciones.
@@ -181,6 +200,21 @@ jobs:
         if: failure()
         shell: pwsh
         run: |
+          if (Test-Path "$env:RUNNER_TEMP\armar.log") {
+            Write-Output "--- registro del armado ---"
+            Get-Content "$env:RUNNER_TEMP\armar.log" -Tail 40
+          }
+          foreach ($f in @("dist\win-app\runtime\php.exe", "dist\win-app\runtime\php.ini",
+                           "dist\win-app\runtime\ext\php_pdo_sqlite.dll", "dist\win-app\index.php")) {
+            Write-Output "$f -> $(Test-Path $f)"
+          }
+          if (Test-Path "dist\win-app\runtime\php.ini") {
+            Write-Output "--- php.ini ---"
+            Get-Content "dist\win-app\runtime\php.ini" -Tail 20
+          }
+          Write-Output "PHP_DIR=$env:PHP_DIR"
+          Get-ChildItem "dist\win-app\runtime" -ErrorAction SilentlyContinue | Select-Object -First 15 -ExpandProperty Name
+
           $dir = "$env:RUNNER_TEMP\normia-data"
           foreach ($f in @("storage\logs\servidor.log", "storage\logs\php-desktop.log")) {
             $path = Join-Path $dir $f

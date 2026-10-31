@@ -177,13 +177,25 @@ function buildWindows({ php, out }, version) {
   // La configuración de PHP del equipo de compilación apunta a su propia
   // carpeta de extensiones. En el paquete las DLL viajan al lado, así que la
   // ruta debe ser relativa o el intérprete no encuentra pdo_sqlite al instalar.
-  const ini = path.join(app, 'runtime', 'php.ini');
-  if (fs.existsSync(ini)) {
-    const lines = fs.readFileSync(ini, 'utf8').split(/\r?\n/);
-    const clean = lines.filter((line) => !/^[ \t]*extension_dir[ \t]*=/i.test(line));
-    clean.push('extension_dir = "ext"');
-    fs.writeFileSync(ini, clean.join('\r\n'), 'utf8');
+  const extDir = path.join(app, 'runtime', 'ext', 'php_pdo_sqlite.dll');
+  if (!fs.existsSync(extDir)) {
+    throw new Error(`La instalación de PHP no trae ext/php_pdo_sqlite.dll (${phpSource}).`);
   }
+
+  // La instalación de PHP del flujo puede no traer php.ini (solo las plantillas
+  // php.ini-development/production). Sin él, php.exe no carga pdo_sqlite en
+  // absoluto y la comprobación del paquete falla con un error poco claro.
+  const ini = path.join(app, 'runtime', 'php.ini');
+  const lines = fs.existsSync(ini) ? fs.readFileSync(ini, 'utf8').split(/\r?\n/) : [];
+  const clean = lines.filter((line) => !/^[ \t]*extension_dir[ \t]*=/i.test(line));
+  clean.push('extension_dir = "ext"');
+  for (const extension of ['pdo', 'pdo_sqlite', 'sqlite3', 'mbstring', 'openssl', 'fileinfo']) {
+    const enabled = new RegExp(`^[ \\t]*extension[ \\t]*=[ \\t]*"?php_${extension}\\.dll"?[ \\t]*$`, 'i');
+    if (!clean.some((line) => enabled.test(line))) {
+      clean.push(`extension=${extension}`);
+    }
+  }
+  fs.writeFileSync(ini, clean.join('\r\n'), 'utf8');
 
   const icon = path.join(out, 'normia.ico');
   try {
