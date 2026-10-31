@@ -35,13 +35,22 @@ export function shouldCopy(relative, { excludeTools = false } = {}) {
   return true;
 }
 
-/** Copia el repositorio completo (con el filtro) y prepara las carpetas vacías. */
+/**
+ * Copia el repositorio completo (con el filtro) y prepara las carpetas vacías.
+ *
+ * Se copia entrada por entrada y no la raíz entera: en los flujos de trabajo la
+ * carpeta de destino (`dist/…`) vive **dentro** del repositorio y Node rechaza
+ * copiar un directorio dentro de sí mismo.
+ */
 export function copyApp(destination, options = {}) {
   fs.mkdirSync(destination, { recursive: true });
-  fs.cpSync(ROOT, destination, {
-    recursive: true,
-    filter: (source) => shouldCopy(path.relative(ROOT, source), options),
-  });
+  for (const entry of fs.readdirSync(ROOT, { withFileTypes: true })) {
+    if (!shouldCopy(entry.name, options)) continue;
+    fs.cpSync(path.join(ROOT, entry.name), path.join(destination, entry.name), {
+      recursive: true,
+      filter: (source) => shouldCopy(path.relative(ROOT, source), options),
+    });
+  }
   for (const directory of ['config', 'storage', 'storage/sessions', 'storage/logs', 'storage/cache']) {
     fs.mkdirSync(path.join(destination, directory), { recursive: true });
   }

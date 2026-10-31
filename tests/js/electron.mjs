@@ -14,6 +14,7 @@ import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { makeReporter, repoRoot } from '../php/harness.mjs';
 import { startServer } from '../../tools/electron/server.mjs';
+import { copyApp } from '../../tools/shared/app-copy.mjs';
 
 const report = makeReporter('Escritorio (Electron)');
 const read = (relative) => fs.readFileSync(path.join(repoRoot, relative), 'utf8');
@@ -138,4 +139,20 @@ report.check('El instalador es por usuario y sin firma comercial',
   && manifest.build.mac.identity === null && manifest.build.mac.category.startsWith('public.app-category'));
 
 fs.rmSync(out, { recursive: true, force: true });
+
+// Los flujos compilan dentro del repositorio (`--out=dist/electron`). Node no
+// deja copiar un directorio dentro de sí mismo, así que el armado copia entrada
+// por entrada: aquí se comprueba con un destino dentro del propio repositorio.
+const inside = path.join(repoRoot, 'dist', 'electron-prueba');
+let insideError = '';
+try {
+  copyApp(inside, { excludeTools: true });
+} catch (error) {
+  insideError = String(error?.message || error);
+}
+report.check('El armado funciona con la carpeta de destino dentro del repositorio',
+  insideError === '' && fs.existsSync(path.join(inside, 'index.php')) && !fs.existsSync(path.join(inside, 'node_modules')),
+  insideError);
+fs.rmSync(inside, { recursive: true, force: true });
+
 process.exit(report.summary());
