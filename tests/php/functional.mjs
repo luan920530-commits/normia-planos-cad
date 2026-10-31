@@ -163,26 +163,41 @@ try {
   }
 
   let { response: catalogResponse, body: catalog } = await json('catalogs/signs');
-  report.check('Catálogo de señales con 332 ISO 7010 y 57 de servicios, orientación y tránsito',
-    catalogResponse.status === 200 && catalog.count === 389 && catalog.isoCount === 332 && catalog.serviceCount === 57
-    && Object.keys(catalog.signs || {}).length === 389);
+  report.check('Catálogo de señales con 332 ISO 7010 y 63 propias, orientación, tránsito y brigada',
+    catalogResponse.status === 200 && catalog.count === 395 && catalog.isoCount === 332 && catalog.serviceCount === 63
+    && Object.keys(catalog.signs || {}).length === 395);
   report.check('Señales con SVG seguro embebido', catalog.signs?.E002?.svg?.startsWith('<svg') && !/xlink:href="(?!#)/.test(catalog.signs?.E002?.svg || ''));
   report.check('Señales de baño disponibles', ['SVC_WC_MEN', 'SVC_WC_WOMEN', 'SVC_WC_MIXED', 'SVC_WC_ACCESSIBLE'].every((code) => catalog.signs?.[code]?.svg?.startsWith('<svg')));
+  report.check('Señales de emergencia y brigada con alias y pictograma',
+    ['SVC_EVAC_ROUTE', 'SVC_EXIT_TEXT', 'SVC_HYDRANT', 'SVC_COMMAND_POST', 'SVC_GAS_SHUTOFF', 'SVC_POWER_SHUTOFF']
+      .every((code) => catalog.signs?.[code]?.svg?.startsWith('<svg') && catalog.signs[code].aliases?.length
+        && catalog.signs[code].category === 'brigade')
+    && catalog.aliases?.SVC_EVAC_ROUTE?.includes('ruta de evacuacion'), '6 señales');
   report.check('Familias de señalización completas',
-    Object.keys(catalog.categories || {}).length === 8 && catalog.colors?.emergency === '#237f52'
+    Object.keys(catalog.categories || {}).length === 9 && catalog.colors?.emergency === '#237f52'
     && catalog.colors?.services === '#0f766e' && catalog.colors?.location === '#1d4ed8'
     && catalog.colors?.traffic === '#b45309'
     && catalog.categories?.location?.label === 'Ubicación en el plano'
-    && catalog.categories?.traffic?.label === 'Señalización de tránsito',
+    && catalog.colors?.brigade === '#b91c1c'
+    && catalog.categories?.traffic?.label === 'Señalización de tránsito'
+    && catalog.categories?.brigade?.label === 'Emergencia y brigada',
     Object.keys(catalog.categories || {}).join(','));
   report.check('Alias heredados disponibles', catalog.legacyTools?.extinguisher === 'F001' && catalog.legacyTools?.exit === 'E002');
   ({ response: catalogResponse, body: catalog } = await json('catalogs/cad'));
-  report.check('Catálogo CAD con 301 objetos', catalogResponse.status === 200 && catalog.count === 301 && Object.keys(catalog.objects || {}).length === 301);
-  report.check('Catálogo CAD con 23 familias sectoriales', Object.keys(catalog.categories || {}).length === 23
+  report.check('Catálogo CAD con 350 objetos', catalogResponse.status === 200 && catalog.count === 350 && Object.keys(catalog.objects || {}).length === 350);
+  report.check('Catálogo CAD con 28 familias sectoriales', Object.keys(catalog.categories || {}).length === 28
     && ['restaurant', 'warehouse', 'retail', 'hospital', 'textile', 'grill', 'supermarket', 'residential', 'sports', 'outdoor', 'electrico', 'hidraulico', 'eds', 'drogueria', 'gimnasio', 'colegio', 'cafeteria'].every((key) => catalog.categories?.[key]?.label),
     Object.keys(catalog.categories || {}).join(','));
   report.check('Cada familia CAD tiene objetos', Object.keys(catalog.categories || {}).every((key) => Object.values(catalog.objects || {}).some((object) => object.category === key)));
   report.check('Objetos CAD con SVG', Object.values(catalog.objects || {}).every((object) => String(object.svg || '').startsWith('<svg')));
+  report.check('Familias de emergencia, técnicas, accesibilidad y seguridad',
+    ['fire', 'emergency', 'technic', 'access', 'security'].every((key) => catalog.categories?.[key]?.label
+      && Object.values(catalog.objects || {}).some((object) => object.category === key))
+    && catalog.objects?.cad_fire_smoke_detector?.category === 'fire'
+    && catalog.objects?.cad_acc_accessible_lift?.category === 'access',
+    ['fire', 'emergency', 'technic', 'access', 'security'].map((key) => `${key}:${Object.values(catalog.objects || {}).filter((object) => object.category === key).length}`).join(' · '));
+  const nombres = Object.values(catalog.objects || {}).map((object) => object.name);
+  report.check('Sin nombres repetidos en el catálogo CAD', new Set(nombres).size === nombres.length, `${nombres.length - new Set(nombres).size} repetidos`);
   report.check('Símbolos de instalación eléctrica e hidráulica disponibles',
     ['cad_elec_outlet', 'cad_elec_panel', 'cad_elec_luminaire', 'cad_hyd_valve', 'cad_hyd_cabinet', 'cad_hyd_meter'].every((key) => catalog.objects?.[key]?.svg?.startsWith('<svg'))
     && catalog.objects?.cad_elec_luminaire?.load === 60);
@@ -204,12 +219,20 @@ try {
   const changed = JSON.parse(JSON.stringify(original));
   changed.elements[0].label = 'Prueba funcional';
   changed.elements[0].x = 70;
+  // Los tipos nuevos también tienen que pasar la validación del servidor.
+  const extraBase = { layerId: changed.layers[0].id, x: 60, y: 60, w: 44, h: 44, rotation: 0, stroke: 2, opacity: 1, label: '', fontSize: 14, points: [], flipX: false, flipY: false, isExit: false, locked: false };
+  changed.elements.push({ ...extraBase, id: 'probe_detector', type: 'cad_fire_smoke_detector', color: '#b71f2e' });
+  changed.elements.push({ ...extraBase, id: 'probe_brigada', type: 'sig_evac_route', color: '#b91c1c' });
   res = await client.postJson(`api/floors/${floorId}/save`, { design: changed, expected_version: 1, note: 'Prueba funcional' });
   let saved = {};
   try { saved = JSON.parse(res.text); } catch {}
   report.check('Guardar crea la versión 2', res.status === 200 && saved.version === 2, `${res.status} v${saved.version}`);
   ({ body: catalog } = await json(`api/floors/${floorId}`));
   report.check('Guardado conserva el diseño', catalog.design?.elements?.[0]?.label === 'Prueba funcional' && catalog.floor?.version === 2, `v${catalog.floor?.version}`);
+  report.check('El servidor acepta equipos de emergencia y señales de brigada',
+    catalog.design?.elements?.some((element) => element.type === 'cad_fire_smoke_detector' && element.color === '#b71f2e')
+    && catalog.design?.elements?.some((element) => element.type === 'sig_evac_route' && element.color === '#b91c1c'),
+    `${catalog.design?.elements?.length} elementos`);
 
   /* -------------------- auditor de planos y evacuación -------------------- */
   const auditPage = await client.get('projects/new');

@@ -16,7 +16,7 @@ if (PHP_VERSION_ID < 80100) {
 }
 
 define('BASE_PATH', __DIR__);
-define('NORMA_VERSION', '1.4.0');
+define('NORMA_VERSION', '1.5.0');
 
 require BASE_PATH . '/app/Core/Autoloader.php';
 App\Core\Autoloader::register(BASE_PATH . '/app');

@@ -17,6 +17,7 @@ final class LibraryRepository
         'services' => '#0f766e',
         'location' => '#1d4ed8',
         'traffic' => '#b45309',
+        'brigade' => '#b91c1c',
     ];
 
     /** Señales de orientación propias (no ISO 7010): prefijo de código. */
@@ -25,9 +26,9 @@ final class LibraryRepository
     /** Versión y mínimos de los catálogos locales. */
     private const ISO_SIGNS = 332;
     private const ISO_CATEGORIES = 5;
-    private const SERVICE_SIGNS = 57;
-    private const CAD_OBJECTS = 301;
-    private const CAD_CATEGORIES = 23;
+    private const SERVICE_SIGNS = 63;
+    private const CAD_OBJECTS = 350;
+    private const CAD_CATEGORIES = 28;
 
     private static ?array $signs = null;
     private static ?array $signCategories = null;
@@ -350,7 +351,7 @@ final class LibraryRepository
         if (!is_array($catalog) || !isset($catalog['objects'], $catalog['categories'])
             || !is_array($catalog['objects']) || !is_array($catalog['categories'])
             || count($catalog['objects']) < self::CAD_OBJECTS || count($catalog['categories']) < self::CAD_CATEGORIES) {
-            throw new RuntimeException('El catálogo local debe contener al menos 301 objetos CAD y 23 familias.');
+            throw new RuntimeException('El catálogo local debe contener al menos 350 objetos CAD y 28 familias.');
         }
         foreach ($catalog['objects'] as $key => $object) {
             if (preg_match('/^cad_[a-z][a-z0-9_]{2,40}$/D', (string) $key) !== 1 || !is_array($object)

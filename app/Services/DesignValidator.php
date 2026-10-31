@@ -18,6 +18,10 @@ final class DesignValidator
         '#15803d', '#16a34a', '#237f52', '#65a30d', '#b71f2e', '#dc2626',
         '#991b1b', '#ea580c', '#f97316', '#f59e0b', '#f9a800', '#eab308',
         '#facc15', '#7c3aed', '#be185d', '#0891b2', '#ca8a04',
+        // Colores de familia de las bibliotecas sectoriales (EDS, cafetería,
+        // accesibilidad y emergencias): el catálogo los usa y el guardado debe
+        // aceptarlos.
+        '#0e7490', '#b45309', '#0369a1', '#c2410c', '#b91c1c',
     ];
 
     public const DOOR_TYPES = ['door', 'door_double', 'door_garage'];
