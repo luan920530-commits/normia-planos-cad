@@ -744,7 +744,7 @@ empaquetarla sin servidor.
   almacenamiento del teléfono; la pantalla intercepta enlaces, formularios,
   `fetch`, descargas e impresión. El APK no declara permiso de red.
 - **Flujos de trabajo.** `verify.yml` corre la suite en PHP 8.1 y 8.3;
-  `dist-desktop.yml` compila en `macos-13`, `macos-14` y `windows-2022`, instala
+  `dist-desktop.yml` compila en `macos-15` (Apple Silicon), `macos-15-intel` (Intel) y `windows-2022`, instala
   el paquete y lo arranca antes de publicarlo; `dist-android.yml` verifica el
   paquete del editor, compila, firma y comprueba el APK con `apksigner`.
 - **Pruebas nuevas.** `tests/php/desktop.mjs` (32) cubre rutas, lanzador,

@@ -30,6 +30,7 @@ jobs:
   macos:
     name: macOS ${{ matrix.arch }}
     runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
@@ -37,11 +38,14 @@ jobs:
         # matriz. Son las de la release 2.8.5 de static-php-cli.
         include:
           - arch: arm64
-            runner: macos-14
+            runner: macos-15
             spc: spc-macos-aarch64.tar.gz
             sha: acf2f25d56d0cbf8e65aa82e5054fef555f7be7c5c38046c6e0819f266d83225
+          # macOS 13 (Intel) se retiró en diciembre de 2025 y un trabajo que pide
+          # una etiqueta retirada se queda en cola para siempre. La última imagen
+          # Intel es macos-15-intel; el destino sigue siendo macOS 12+.
           - arch: x64
-            runner: macos-13
+            runner: macos-15-intel
             spc: spc-macos-x86_64.tar.gz
             sha: e8b798048f62ca4960764196543b60ae703f7174aa418824cf542aeec1d2cd6a
     steps:
@@ -101,6 +105,7 @@ jobs:
   windows:
     name: Windows x64
     runs-on: windows-2022
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -125,20 +130,62 @@ jobs:
           & $php -r "exit(extension_loaded('pdo_sqlite') ? 0 : 1);"
           echo "PHP_DIR=$(Split-Path $php)" >> $env:GITHUB_ENV
 
-      - name: Armar y probar la aplicación
+      - name: Armar la aplicación
         shell: pwsh
         run: |
           node tools/desktop/build.mjs --platform=win --php="$env:PHP_DIR" --out=dist
+          if (-not (Test-Path "dist\win-app\runtime\php.exe")) { throw "No se copió el intérprete" }
+          if (-not (Test-Path "dist\win-app\Iniciar Normia.vbs")) { throw "Falta el lanzador" }
+          & "dist\win-app\runtime\php.exe" -v
+          & "dist\win-app\runtime\php.exe" -r "exit(extension_loaded('pdo_sqlite') ? 0 : 1);"
+
+      # Arranca el servidor real del paquete y pide la pantalla de instalación.
+      # Si algo falla, el paso siguiente publica los registros como anotaciones.
+      - name: Arrancar y consultar
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
           $env:NORMA_DATA_PATH = "$env:RUNNER_TEMP\normia-data"
           New-Item -ItemType Directory -Force -Path $env:NORMA_DATA_PATH | Out-Null
-          Start-Process -FilePath "dist\win-app\runtime\php.exe" -ArgumentList "dist\win-app\tools\desktop\launcher.php","--no-browser","--port=8792" -NoNewWindow
-          Start-Sleep -Seconds 4
-          $page = Invoke-WebRequest -Uri "http://127.0.0.1:8792/index.php?r=install" -UseBasicParsing
-          if ($page.Content -notmatch "Normia") { throw "La instalación no respondió" }
+          $server = Start-Process -FilePath "dist\win-app\runtime\php.exe" -PassThru -WindowStyle Hidden `
+            -ArgumentList "dist\win-app\tools\desktop\launcher.php","--no-browser","--port=8792" `
+            -RedirectStandardOutput "$env:RUNNER_TEMP\launcher.out" -RedirectStandardError "$env:RUNNER_TEMP\launcher.err"
+          $ok = $false
+          for ($i = 1; $i -le 30; $i++) {
+            Start-Sleep -Seconds 1
+            try {
+              $page = Invoke-WebRequest -Uri "http://127.0.0.1:8792/index.php?r=install" -UseBasicParsing -TimeoutSec 5
+              if ($page.Content -match "Normia") { $ok = $true; break }
+            } catch { }
+          }
+          if (-not $ok) { throw "El servidor no respondió con la pantalla de instalación" }
           # El servidor local no debe entregar nada de storage/: el plano vive ahí.
-          $vault = Invoke-WebRequest -Uri "http://127.0.0.1:8792/storage/normia.sqlite" -UseBasicParsing -SkipHttpErrorCheck
+          $vault = Invoke-WebRequest -Uri "http://127.0.0.1:8792/storage/normia.sqlite" -UseBasicParsing -SkipHttpErrorCheck -TimeoutSec 5
           if ($vault.StatusCode -ne 404) { throw "storage quedó accesible por HTTP ($($vault.StatusCode))" }
           & "dist\win-app\runtime\php.exe" "dist\win-app\tools\desktop\launcher.php" --stop
+          Write-Output "Servidor local comprobado: instalación 200 y storage 404."
+
+      - name: Diagnóstico del arranque
+        if: failure()
+        shell: pwsh
+        run: |
+          $dir = "$env:RUNNER_TEMP\normia-data"
+          foreach ($f in @("storage\logs\servidor.log", "storage\logs\php-desktop.log")) {
+            $path = Join-Path $dir $f
+            if (Test-Path $path) {
+              $tail = ((Get-Content $path -Tail 15) -join " | ")
+              Write-Output "::error title=$f::$tail"
+            } else {
+              Write-Output "::warning title=sin registro::$f"
+            }
+          }
+          foreach ($f in @("launcher.out", "launcher.err")) {
+            $path = Join-Path $env:RUNNER_TEMP $f
+            if (Test-Path $path) { Write-Output "::warning title=$f::$(((Get-Content $path -Tail 15) -join ' | '))" }
+          }
+          if (Test-Path (Join-Path $dir "storage\normia-desktop.json")) {
+            Write-Output "::warning title=estado::$((Get-Content (Join-Path $dir 'storage\normia-desktop.json') -Raw) -replace '\s+',' ')"
+          }
 
       - name: Instalar Inno Setup
         run: choco install innosetup --no-progress -y

@@ -174,6 +174,16 @@ function buildWindows({ php, out }, version) {
   // y no pide instalar nada en el equipo.
   const phpSource = fs.statSync(php).isDirectory() ? php : path.dirname(php);
   fs.cpSync(phpSource, path.join(app, 'runtime'), { recursive: true });
+  // La configuración de PHP del equipo de compilación apunta a su propia
+  // carpeta de extensiones. En el paquete las DLL viajan al lado, así que la
+  // ruta debe ser relativa o el intérprete no encuentra pdo_sqlite al instalar.
+  const ini = path.join(app, 'runtime', 'php.ini');
+  if (fs.existsSync(ini)) {
+    const lines = fs.readFileSync(ini, 'utf8').split(/\r?\n/);
+    const clean = lines.filter((line) => !/^[ \t]*extension_dir[ \t]*=/i.test(line));
+    clean.push('extension_dir = "ext"');
+    fs.writeFileSync(ini, clean.join('\r\n'), 'utf8');
+  }
 
   const icon = path.join(out, 'normia.ico');
   try {
