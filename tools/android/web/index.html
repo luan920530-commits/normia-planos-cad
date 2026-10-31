@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Normia Planos CAD</title>
+  <link rel="stylesheet" href="./shell.css">
+</head>
+<body>
+  <!-- Aviso permanente si el equipo no puede guardar datos. -->
+  <p id="banner" class="banner" role="alert" hidden></p>
+
+  <div id="splash" class="splash" role="status" aria-live="polite">
+    <div class="splash-card">
+      <img class="splash-logo" src="./assets/img/normia-logo.png" alt="" width="96" height="96">
+      <h1>Normia Planos CAD</h1>
+      <p class="splash-sub">Planos de emergencia en el teléfono</p>
+      <div class="splash-bar" aria-hidden="true"><span></span></div>
+      <ol id="steps" class="steps"></ol>
+      <button id="retry" class="retry" type="button" hidden>Reintentar</button>
+      <details id="diagnostics" class="diagnostics" hidden>
+        <summary>Cómo reportar el problema</summary>
+        <p>Este teléfono no pudo iniciar el editor. Copia este texto y envíalo junto con el modelo del equipo y la versión de Android.</p>
+        <pre id="diagnostics-text"></pre>
+      </details>
+    </div>
+  </div>
+
+  <iframe id="app-frame" class="app-frame" title="Editor de planos" src="about:blank"></iframe>
+
+  <script type="module" src="./shell.js"></script>
+</body>
+</html>

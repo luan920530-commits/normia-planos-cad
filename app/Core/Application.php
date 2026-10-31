@@ -71,7 +71,7 @@ final class Application
             self::renderError(422, $exception->getMessage());
         } catch (Throwable $exception) {
             error_log('Normia: ' . $exception->getMessage() . ' @ ' . $exception->getFile() . ':' . $exception->getLine());
-            @file_put_contents(BASE_PATH . '/storage/last-error.log', $exception->getMessage() . ' @ ' . $exception->getFile() . ':' . $exception->getLine() . "\n" . $exception->getTraceAsString());
+            @file_put_contents(Paths::storage() . '/last-error.log', $exception->getMessage() . ' @ ' . $exception->getFile() . ':' . $exception->getLine() . "\n" . $exception->getTraceAsString());
             if ($isApi || $request->wantsJson()) {
                 Response::json(['ok' => false, 'message' => 'No se pudo completar la operación. Inténtalo de nuevo.', 'code' => 'server'], 500);
             }

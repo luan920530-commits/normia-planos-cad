@@ -1,0 +1,190 @@
+# Distribución de escritorio: macOS 12+ y Windows 10/11.
+#
+# Genera el intérprete de PHP estático en el sistema operativo de destino (no hay
+# compilación cruzada razonable), arma la carpeta de la aplicación, produce el
+# instalador y **lo prueba instalado antes de publicarlo**. Los artefactos quedan
+# en la pestaña Actions y, si se dispara con una etiqueta `v*`, se adjuntan a la
+# release.
+#
+# Firmas: sin certificados de Apple ni de Microsoft. En macOS se firma el binario
+# en modo ad-hoc y el instalador sale sin notarizar; en Windows, sin certificado
+# OV/EV. Los dos muestran un aviso en el primer arranque y el instructivo de
+# docs/ESCRITORIO.md explica cómo continuar.
+name: Distribución de escritorio
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+env:
+  PHP_VERSION: '8.3.14'
+  SPC_VERSION: '2.8.5'
+  EXTENSIONS: 'pdo,sqlite3,pdo_sqlite,session,mbstring,openssl,fileinfo,tokenizer,ctype,filter,zlib'
+
+jobs:
+  # ------------------------------------------------------------------ macOS
+  macos:
+    name: macOS ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Las sumas van literales: el contexto `env` no existe al evaluar la
+        # matriz. Son las de la release 2.8.5 de static-php-cli.
+        include:
+          - arch: arm64
+            runner: macos-14
+            spc: spc-macos-aarch64.tar.gz
+            sha: acf2f25d56d0cbf8e65aa82e5054fef555f7be7c5c38046c6e0819f266d83225
+          - arch: x64
+            runner: macos-13
+            spc: spc-macos-x86_64.tar.gz
+            sha: e8b798048f62ca4960764196543b60ae703f7174aa418824cf542aeec1d2cd6a
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Descargar static-php-cli verificado
+        run: |
+          curl -fsSL -o spc.tar.gz "https://github.com/crazywhalecc/static-php-cli/releases/download/${SPC_VERSION}/${{ matrix.spc }}"
+          echo "${{ matrix.sha }}  spc.tar.gz" | shasum -a 256 -c -
+          tar -xzf spc.tar.gz
+          chmod +x spc
+
+      - name: Compilar PHP estático ${{ env.PHP_VERSION }}
+        run: |
+          ./spc download --for-extensions="${EXTENSIONS}" --with-php=${PHP_VERSION} --prefer-pre-built
+          ./spc build "${EXTENSIONS}" --build-cli
+          ls -la buildroot/bin/
+          BIN="$(find buildroot/bin -maxdepth 1 -type f -name 'php*' | head -1)"
+          echo "PHP_BIN=$PWD/$BIN" >> "$GITHUB_ENV"
+
+      - name: Comprobar el intérprete
+        run: |
+          "$PHP_BIN" -v
+          "$PHP_BIN" -r 'exit(extension_loaded("pdo_sqlite") && extension_loaded("mbstring") ? 0 : 1);'
+
+      - name: Armar y probar la aplicación
+        run: |
+          node tools/desktop/build.mjs --platform=mac --php="$PHP_BIN" --out=dist --arch=${{ matrix.arch }}
+          APP="dist/Normia Planos CAD.app"
+          test -x "$APP/Contents/MacOS/Normia"
+          export NORMA_DATA_PATH="$RUNNER_TEMP/normia-data"
+          mkdir -p "$NORMA_DATA_PATH"
+          "$APP/Contents/Resources/app/runtime/php" -v
+          # Arranque real: instalación limpia en la carpeta temporal y respuesta HTTP.
+          "$APP/Contents/MacOS/Normia" --no-browser --port=8791 &
+          sleep 4
+          curl -fsS "http://127.0.0.1:8791/index.php?r=install" | grep -q "Normia"
+          curl -fsS -o /dev/null -w "%{http_code}\n" "http://127.0.0.1:8791/storage/normia.sqlite" | grep -q 404
+          "$APP/Contents/MacOS/Normia" --stop
+
+      - name: Verificar el .pkg
+        run: |
+          PKG="$(ls dist/*-macos-*.pkg | head -1)"
+          pkgutil --check-signature "$PKG" || true
+          pkgutil --payload-files "$PKG" | grep -q "Aplicaciones\|Applications"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: normia-macos-${{ matrix.arch }}
+          path: dist/*.pkg
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------- Windows
+  windows:
+    name: Windows x64
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Descargar PHP para Windows
+        shell: pwsh
+        run: |
+          $url = "https://windows.php.net/downloads/releases/php-${env:PHP_VERSION}-nts-Win32-vs16-x64.zip"
+          Invoke-WebRequest -Uri $url -OutFile php.zip
+          Expand-Archive php.zip -DestinationPath php
+          # Extensiones mínimas de la aplicación.
+          @("extension=pdo_sqlite", "extension=sqlite3", "extension=mbstring", "extension=openssl", "extension=fileinfo", "extension_dir=ext") |
+            Out-File -FilePath php/php.ini -Encoding ascii
+          php/php.exe -v
+          php/php.exe -r "exit(extension_loaded('pdo_sqlite') ? 0 : 1);"
+
+      - name: Armar y probar la aplicación
+        shell: pwsh
+        run: |
+          node tools/desktop/build.mjs --platform=win --php=php --out=dist
+          $env:NORMA_DATA_PATH = "$env:RUNNER_TEMP\normia-data"
+          New-Item -ItemType Directory -Force -Path $env:NORMA_DATA_PATH | Out-Null
+          Start-Process -FilePath "dist\win-app\runtime\php.exe" -ArgumentList "dist\win-app\tools\desktop\launcher.php","--no-browser","--port=8792" -NoNewWindow
+          Start-Sleep -Seconds 4
+          $page = Invoke-WebRequest -Uri "http://127.0.0.1:8792/index.php?r=install" -UseBasicParsing
+          if ($page.Content -notmatch "Normia") { throw "La instalación no respondió" }
+          # El servidor local no debe entregar nada de storage/: el plano vive ahí.
+          $vault = Invoke-WebRequest -Uri "http://127.0.0.1:8792/storage/normia.sqlite" -UseBasicParsing -SkipHttpErrorCheck
+          if ($vault.StatusCode -ne 404) { throw "storage quedó accesible por HTTP ($($vault.StatusCode))" }
+          & "dist\win-app\runtime\php.exe" "dist\win-app\tools\desktop\launcher.php" --stop
+
+      - name: Instalar Inno Setup
+        run: choco install innosetup --no-progress -y
+
+      - name: Compilar el instalador
+        shell: pwsh
+        run: |
+          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          $version = (Get-Content package.json | ConvertFrom-Json).version
+          & $iscc "/DAppVersion=$version" "/DSourceDir=dist\win-app" "/DOutputDir=dist" "/DIconFile=dist\normia.ico" tools\desktop\windows\normia.iss
+          if (-not (Test-Path "dist\normia-planos-cad-$version-windows-x64.exe")) { throw "No se generó el instalador" }
+
+      - name: Instalación silenciosa y arranque
+        shell: pwsh
+        run: |
+          $version = (Get-Content package.json | ConvertFrom-Json).version
+          $exe = "dist\normia-planos-cad-$version-windows-x64.exe"
+          Start-Process -FilePath $exe -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/DIR=$env:RUNNER_TEMP\normia-instalada" -Wait
+          $app = "$env:RUNNER_TEMP\normia-instalada"
+          if (-not (Test-Path "$app\runtime\php.exe")) { throw "La instalación no copió el intérprete" }
+          if (-not (Test-Path "$app\Iniciar Normia.vbs")) { throw "Falta el lanzador" }
+          $env:NORMA_DATA_PATH = "$env:RUNNER_TEMP\normia-data-instalada"
+          Start-Process -FilePath "$app\runtime\php.exe" -ArgumentList "$app\tools\desktop\launcher.php","--no-browser","--port=8793" -NoNewWindow
+          Start-Sleep -Seconds 4
+          $page = Invoke-WebRequest -Uri "http://127.0.0.1:8793/index.php?r=install" -UseBasicParsing
+          if ($page.Content -notmatch "Normia") { throw "La app instalada no respondió" }
+          & "$app\runtime\php.exe" "$app\tools\desktop\launcher.php" --stop
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: normia-windows-x64
+          path: dist/*windows-x64.exe
+          if-no-files-found: error
+
+  # ------------------------------------------------------------- publicación
+  release:
+    name: Adjuntar a la release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [macos, windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artefactos
+      - name: Sumas SHA-256
+        run: |
+          cd artefactos
+          find . -type f \( -name '*.pkg' -o -name '*.exe' \) -exec sha256sum {} \; | sed 's#\./[^/]*/##' > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+      - name: Adjuntar
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "${{ github.ref_name }}" artefactos/*/*.pkg artefactos/*/*.exe --clobber || \
+          gh release create "${{ github.ref_name }}" artefactos/*/*.pkg artefactos/*/*.exe --title "Normia Planos CAD ${{ github.ref_name }}" --notes "Paquetes de escritorio generados por el flujo de trabajo."

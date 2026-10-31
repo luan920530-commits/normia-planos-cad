@@ -1,0 +1,71 @@
+# Verificación continua de Normia Planos CAD.
+#
+# Corre la misma suite que se usa en local (`node tests/run-all.mjs`) sobre PHP
+# 8.1 y 8.3 para cada cambio en `main` y en cada pull request. No genera
+# paquetes: eso lo hacen los flujos de distribución, que parten de una base
+# verificada.
+name: Verificar
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  suites:
+    name: Suites PHP ${{ matrix.php }} · Node ${{ matrix.node }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.1', '8.3']
+        node: ['22']
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Instalar dependencias de prueba
+        run: npm install --no-save --no-audit --no-fund
+
+      # El arnés compila PHP a WebAssembly: la versión del runtime no depende
+      # del PHP del runner, pero se deja la matriz por claridad y para que el
+      # nombre del trabajo diga qué se probó.
+      - name: Sintaxis PHP y JavaScript
+        run: |
+          node tests/php/lint.mjs
+          node tests/js/lint.mjs
+
+      - name: Funcional, interfaz y páginas
+        run: |
+          node tests/php/functional.mjs "${{ matrix.php }}"
+          node tests/js/editor.mjs "${{ matrix.php }}"
+          node tests/js/pages.mjs "${{ matrix.php }}"
+
+      - name: Funcionamiento sin conexión
+        run: node tests/js/offline.mjs
+
+  paquete:
+    name: Paquete y demo
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-save --no-audit --no-fund
+      - name: Construir y verificar los ZIP
+        run: |
+          bash tools/build-packages.sh
+          cp dist/*.zip dist/SHA256SUMS.txt dist/BUILD.txt paquetes/v"$(node -p 'require("./package.json").version')"/
+          node tests/php/package.mjs 8.3

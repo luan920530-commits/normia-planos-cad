@@ -13,7 +13,7 @@ final class Session
             self::$started = true;
             return;
         }
-        $savePath = BASE_PATH . '/storage/sessions';
+        $savePath = Paths::sessions();
         if (!is_dir($savePath)) {
             @mkdir($savePath, 0770, true);
         }

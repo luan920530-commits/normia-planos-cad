@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Tiburón mecánico: la marca de la app, en trazo simple para el icono. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#F5F7FA"
+        android:pathData="M54,26 L74,38 L74,62 C74,74 64,82 54,86 C44,82 34,74 34,62 L34,38 Z" />
+    <path
+        android:fillColor="#0B1220"
+        android:pathData="M48,44 L60,44 L60,52 L48,52 Z M44,58 L64,58 L64,62 L44,62 Z" />
+</vector>

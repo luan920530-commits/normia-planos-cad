@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Sin barra de acciones: la pantalla del editor ocupa todo el alto. -->
+    <style name="Theme.Normia" parent="android:Theme.Material.NoActionBar">
+        <item name="android:statusBarColor">@color/normia_ink</item>
+        <item name="android:navigationBarColor">@color/normia_ink</item>
+        <item name="android:windowBackground">@color/normia_ink</item>
+    </style>
+</resources>

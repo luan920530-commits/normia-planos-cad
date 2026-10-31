@@ -28,3 +28,10 @@ Thumbs.db
 # Artefactos temporales
 *.tmp
 *.zip
+
+# Proyecto de Android: los activos se generan con tools/android/build.mjs
+/tools/android/app/src/main/assets/www/
+/tools/android/.gradle/
+/tools/android/build/
+/tools/android/app/build/
+/tools/android/local.properties
