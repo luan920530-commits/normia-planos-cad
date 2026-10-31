@@ -175,6 +175,7 @@
           </button>
           <div class="rail-flyout" data-analysis-flyout role="menu" hidden>
             <button type="button" role="menuitem" data-open-drawer="audit"><svg class="icon"><use href="#i-audit"></use></svg>Revisión del plano</button>
+            <button type="button" role="menuitem" data-open-drawer="extinguishers"><svg class="icon"><use href="#i-extinguisher"></use></svg>Extintores y cobertura</button>
             <button type="button" role="menuitem" data-open-drawer="schedule"><svg class="icon"><use href="#i-bom"></use></svg>Pliego de señalización</button>
             <button type="button" role="menuitem" data-open-drawer="measure"><svg class="icon"><use href="#i-measure"></use></svg>Rutas internas</button>
             <button type="button" role="menuitem" data-open-drawer="networks"><svg class="icon"><use href="#i-network"></use></svg>Redes y circuitos</button>
@@ -368,6 +369,23 @@
     </div>
   </div>
   <footer class="drawer-foot"><p>Umbrales en <code>resources/audit-criteria.json</code>. El análisis usa el último diseño guardado, no los cambios sin guardar.</p></footer>
+</section>
+
+<section class="drawer drawer-wide" data-drawer="extinguishers" hidden aria-labelledby="extinguishers-title">
+  <header class="drawer-head">
+    <div><span class="eyebrow">Protección contra incendios</span><h2 id="extinguishers-title">Extintores y cobertura</h2></div>
+    <button class="icon-button" type="button" data-close-drawer aria-label="Cerrar extintores"><svg class="icon"><use href="#i-close"></use></svg></button>
+  </header>
+  <div class="drawer-body ext-drawer-body">
+    <div class="notice notice-warning compact-notice">
+      <svg class="icon"><use href="#i-alert"></use></svg>
+      <p>Cálculo de <strong>apoyo</strong> con recorridos y áreas de referencia. No es un dictamen ni certifica cumplimiento: confirma la clasificación en la placa del equipo y revisa con un profesional competente.</p>
+    </div>
+    <div class="ext-content" data-ext-content>
+      <p class="muted">Pulsa <strong>Verificar el plano guardado</strong> para medir cuánto cubre cada extintor y qué superficie queda descubierta.</p>
+    </div>
+  </div>
+  <footer class="drawer-foot"><p>Tablas en <code>resources/extinguisher-criteria.json</code>. El análisis usa el último diseño guardado, no los cambios sin guardar.</p></footer>
 </section>
 
 <section class="drawer drawer-wide" data-drawer="schedule" hidden aria-labelledby="schedule-title">
@@ -575,6 +593,7 @@
 <script src="<?= e(asset('js/editor/inspector.js')) ?>" defer></script>
 <script src="<?= e(asset('js/editor/library.js')) ?>" defer></script>
 <script src="<?= e(asset('js/editor/audit.js')) ?>" defer></script>
+<script src="<?= e(asset('js/editor/extinguishers.js')) ?>" defer></script>
 <script src="<?= e(asset('js/editor/schedule.js')) ?>" defer></script>
 <script src="<?= e(asset('js/editor/measure.js')) ?>" defer></script>
 <script src="<?= e(asset('js/editor/present.js')) ?>" defer></script>

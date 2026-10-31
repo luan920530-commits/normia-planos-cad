@@ -154,7 +154,7 @@ try {
   const designMatch = /<textarea id="editor-design" hidden>([\s\S]*?)<\/textarea>/.exec(editorHtml);
   let design = null;
   try { design = JSON.parse(decodeEntities(designMatch?.[1] || '')); } catch { design = null; }
-  report.check('Editor recibe el diseño guardado', design?.format === 2 && design?.elements?.length === 87, `${design?.elements?.length} elementos`);
+  report.check('Editor recibe el diseño guardado', design?.format === 2 && design?.elements?.length === 93, `${design?.elements?.length} elementos`);
   report.check('La demo trae dos salidas marcadas y la ocupación declarada',
     (design?.elements || []).filter((element) => element.isExit === true).length === 2 && design?.canvas?.occupancy === 30,
     `${(design?.elements || []).filter((element) => element.isExit === true).length} salidas · ${design?.canvas?.occupancy} personas`);
@@ -168,6 +168,87 @@ try {
     && demoAudit.report.travel.freeAreaM2 + demoAudit.report.travel.exteriorAreaM2 > demoAudit.report.travel.freeAreaM2
     && demoAudit.report.travel.freeAreaM2 < demoAudit.report.travel.reachableAreaM2 + 0.01,
     `libre ${demoAudit.report?.travel?.freeAreaM2} m² · exterior ${demoAudit.report?.travel?.exteriorAreaM2} m²`);
+
+  const demoExt = demoAudit.report?.extinguishers || {};
+  report.check('La demo incluye extintores con datos de norma',
+    demoExt.summary?.count === 4 && demoExt.profile === 'colombia'
+    && (demoExt.units || []).every((unit) => unit.agent && unit.rating && unit.travelLimitM > 0),
+    `${demoExt.summary?.count} extintores · ${demoExt.summary?.coveredPct} % · ${demoExt.profileLabel}`);
+  report.check('La cobertura se mide sobre la superficie útil del piso',
+    demoExt.summary?.floorAreaM2 > 0 && demoExt.summary.floorAreaM2 <= demoExt.summary.coveredAreaM2 + demoExt.summary.uncoveredAreaM2 + 0.2
+    && demoExt.summary.requiredByArea === Math.ceil(demoExt.summary.floorAreaM2 / 200),
+    `piso ${demoExt.summary?.floorAreaM2} m² · mínimo por área ${demoExt.summary?.requiredByArea}`);
+  const demoCo2 = (demoExt.units || []).find((unit) => unit.id === 'ext_co2_01');
+  report.check('La demo trae un extintor mal ubicado a propósito',
+    Boolean(demoCo2) && demoCo2.mountCm > demoCo2.mountMaxCm && demoCo2.signCovered === false
+    && (demoExt.findings || []).some((finding) => finding.code === 'ext_height' && finding.elements.includes('ext_co2_01')),
+    demoCo2 ? `${demoCo2.mountCm} cm sobre ${demoCo2.mountMaxCm} cm` : 'sin extintor');
+  report.check('La cobertura declara sus límites y no afirma cumplimiento',
+    /no certifica/i.test(demoExt.notice || '') && /NTC 2885/.test(demoExt.reference || '')
+    && Boolean(demoExt.agents) && demoExt.agents.co2?.classes?.includes('B'));
+
+  // Proyecto aislado: así las pruebas de guardado de extintores no alteran la
+  // versión del piso de demostración, que otras comprobaciones dan por hecha.
+  const extProjectPage = await client.get('projects/new');
+  client.csrf = extractToken(extProjectPage.text);
+  const extProject = await client.postForm('projects', {
+    _token: client.csrf, name: 'Proyecto de extintores', site: 'Sede QA', workplace: 'Bodega',
+    responsible: 'Equipo QA', notes: 'Cobertura de extintores', preset: 'bodega',
+  });
+  const extProjectId = Number(/projects\/(\d+)/.exec(decodeURIComponent(extProject.location))?.[1] || 0);
+  const extProjectHtml = await client.get(`projects/${extProjectId}`);
+  const extFloorHref = [...extProjectHtml.text.matchAll(/href="([^"]+)"/g)]
+    .map((match) => { try { return decodeURIComponent(match[1]); } catch { return match[1]; } })
+    .find((href) => /\/floors\/\d+\/editor/.test(href)) || '';
+  const extFloorId = Number(/floors\/(\d+)\/editor/.exec(extFloorHref)?.[1] || 0);
+  const extFloorBody = (await json(`api/floors/${extFloorId}`)).body;
+  const extDesign = JSON.parse(JSON.stringify(extFloorBody.design));
+  const extLayer = extDesign.layers[0].id;
+  extDesign.canvas = { ...extDesign.canvas, width: 900, height: 600, occupancy: 20 };
+  extDesign.elements = [{
+    id: 'ext_probe', type: 'cad_eds_extinguisher', layerId: extLayer, x: 120, y: 120, w: 44, h: 44,
+    rotation: 0, color: '#b71f2e', stroke: 2, opacity: 1, label: '', locked: false,
+    extAgent: 'pqs_abc', extCapacityLb: 20, extRating: '4-A:60-B:C', extHazard: 'ordinary', extMountCm: 110,
+  }, {
+    id: 'ext_bad', type: 'cad_fire_ext_co2', layerId: extLayer, x: 700, y: 440, w: 44, h: 44,
+    rotation: 0, color: '#b71f2e', stroke: 2, opacity: 1, label: '', locked: false,
+    extAgent: 'co2', extCapacityLb: 5, extRating: '5-B:C', extHazard: 'ordinary', extMountCm: 190,
+  }];
+  extDesign.groups = [];
+  extDesign.extinguishers = { profile: 'colombia', hazard: 'ordinary' };
+  let extCurrent = (await json(`api/floors/${extFloorId}`)).body.floor.version;
+  res = await client.postJson(`api/floors/${extFloorId}/save`, { design: extDesign, expected_version: extCurrent, note: 'Extintores de prueba' });
+  report.check('Guardar extintores con datos de norma', res.status === 200, String(res.status));
+  const extAudit = (await json(`api/floors/${extFloorId}/audit`)).body.report?.extinguishers || {};
+  report.check('El cálculo de cobertura reconoce los extintores guardados',
+    extAudit.summary?.count === 2 && extAudit.profile === 'colombia'
+    && (extAudit.units || []).every((unit) => unit.travelLimitM > 0 && unit.rating === unit.rating.toUpperCase()),
+    `${extAudit.summary?.count} equipos · ${extAudit.summary?.coveredPct} % · piso ${extAudit.summary?.floorAreaM2} m²`);
+  report.check('El extintor sobremontado se marca y el cálculo admite el mínimo por área',
+    (extAudit.findings || []).some((finding) => finding.code === 'ext_height' && finding.elements.includes('ext_bad'))
+    && (extAudit.findings || []).some((finding) => finding.code === 'ext_without_sign'),
+    (extAudit.findings || []).map((finding) => finding.code).join(','));
+  const badRating = JSON.parse(JSON.stringify(extDesign));
+  badRating.elements[0].extRating = 'ABC';
+  res = await client.postJson(`api/floors/${extFloorId}/save`, { design: badRating, expected_version: (await json(`api/floors/${extFloorId}`)).body.floor.version });
+  report.check('La API rechaza una clasificación de extintor inválida', res.status === 422, String(res.status));
+  const badAgent = JSON.parse(JSON.stringify(extDesign));
+  badAgent.elements[0].extAgent = 'gasolina';
+  res = await client.postJson(`api/floors/${extFloorId}/save`, { design: badAgent, expected_version: (await json(`api/floors/${extFloorId}`)).body.floor.version });
+  report.check('La API rechaza un agente extintor fuera del catálogo', res.status === 422, String(res.status));
+  const nfpaDesign = JSON.parse(JSON.stringify(extDesign));
+  nfpaDesign.extinguishers = { profile: 'nfpa10', hazard: 'extra' };
+  nfpaDesign.elements = nfpaDesign.elements.map((element) => ({ ...element, extHazard: 'extra' }));
+  res = await client.postJson(`api/floors/${extFloorId}/save`, { design: nfpaDesign, expected_version: (await json(`api/floors/${extFloorId}`)).body.floor.version });
+  const nfpaAudit = (await json(`api/floors/${extFloorId}/audit`)).body.report?.extinguishers || {};
+  report.check('El perfil internacional se guarda y cambia el cálculo',
+    res.status === 200 && nfpaAudit.profile === 'nfpa10' && nfpaAudit.hazard === 'extra'
+    && nfpaAudit.summary?.requiredByArea === 0 && /NFPA 10/.test(nfpaAudit.reference || ''),
+    `${nfpaAudit.profile} · ${nfpaAudit.hazard} · mínimo ${nfpaAudit.summary?.requiredByArea}`);
+  const extUnit = (nfpaAudit.units || []).find((unit) => unit.id === 'ext_probe');
+  report.check('Cambiar a riesgo extra reduce el área admisible del extintor',
+    Boolean(extUnit) && extUnit.hazard === 'extra' && extUnit.areaLimitM2 > 0 && extUnit.areaLimitM2 < 557.6,
+    extUnit ? `${extUnit.areaLimitM2} m² · ${extUnit.rating}` : 'sin unidad');
 
   res = await client.get('/assets/js/editor.js');
   report.check('JS del editor se sirve completo', res.status === 200 && res.text.length > 20000, `${res.text.length} bytes`);
@@ -228,7 +309,7 @@ try {
   /* ---------------------------- guardado y versiones ---------------------------- */
   ({ body: catalog } = await json(`api/floors/${floorId}`));
   let floor = catalog;
-  report.check('API del piso devuelve diseño y versión', floor.floor?.version === 1 && floor.design?.elements?.length === 87, `v${floor.floor?.version}`);
+  report.check('API del piso devuelve diseño y versión', floor.floor?.version === 1 && floor.design?.elements?.length === 93, `v${floor.floor?.version}`);
   const original = floor.design;
   const changed = JSON.parse(JSON.stringify(original));
   changed.elements[0].label = 'Prueba funcional';
@@ -393,10 +474,10 @@ try {
     `${res.status} · ${String(markedWall?.isExit)}`);
   const sealedDesign = JSON.parse(JSON.stringify(wallMarked));
   sealedDesign.elements.push(
-    wall('recinto_sup', 430, 150, 200, 2, [{ x: 0, y: 0 }, { x: 200, y: 0 }]),
-    wall('recinto_inf', 430, 348, 200, 2, [{ x: 0, y: 0 }, { x: 200, y: 0 }]),
-    wall('recinto_izq', 430, 150, 2, 200, [{ x: 0, y: 0 }, { x: 0, y: 200 }]),
-    wall('recinto_der', 628, 150, 2, 200, [{ x: 0, y: 0 }, { x: 0, y: 200 }])
+    wall('recinto_sup', 430, 150, 240, 2, [{ x: 0, y: 0 }, { x: 240, y: 0 }]),
+    wall('recinto_inf', 430, 388, 240, 2, [{ x: 0, y: 0 }, { x: 240, y: 0 }]),
+    wall('recinto_izq', 430, 150, 2, 240, [{ x: 0, y: 0 }, { x: 0, y: 240 }]),
+    wall('recinto_der', 668, 150, 2, 240, [{ x: 0, y: 0 }, { x: 0, y: 240 }])
   );
   res = await client.postJson(`api/floors/${auditFloorId}/save`, {
     design: sealedDesign,

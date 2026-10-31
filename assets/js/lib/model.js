@@ -20,6 +20,17 @@
   };
   const PATH_TYPES = ['wall', 'route', 'line', 'dimension', 'pipe', 'conduit'];
   const MEP_TYPES = ['pipe', 'conduit'];
+  // Extintores del catálogo con sus datos de referencia. El servidor vuelve a
+  // validarlos contra resources/extinguisher-criteria.json al guardar.
+  const EXT_DEFAULTS = {
+    cad_fire_ext_co2: { agent: 'co2', capacityLb: 10, rating: '10-B:C', mountCm: 120 },
+    cad_fire_ext_wheeled: { agent: 'pqs_abc', capacityLb: 150, rating: '4-A:80-B:C', mountCm: 0 },
+    cad_eds_extinguisher: { agent: 'pqs_abc', capacityLb: 20, rating: '4-A:60-B:C', mountCm: 120 },
+    cad_drg_extinguisher: { agent: 'pqs_abc', capacityLb: 10, rating: '2-A:10-B:C', mountCm: 120 },
+  };
+  const EXT_TYPES = Object.keys(EXT_DEFAULTS);
+  const EXT_PROFILES = ['colombia', 'nfpa10'];
+  const EXT_HAZARDS = ['light', 'ordinary', 'extra'];
   let idCounter = 0;
 
   const deep = (value) => JSON.parse(JSON.stringify(value));
@@ -324,6 +335,14 @@
         if (MEP_TYPES.includes(type) || this.isElectricalDeviceType(type)) {
           this.normalizeMepAttributes(normalized);
         }
+        if (EXT_TYPES.includes(type)) {
+          const base = EXT_DEFAULTS[type];
+          normalized.extAgent = typeof element.extAgent === 'string' && element.extAgent ? element.extAgent : base.agent;
+          normalized.extCapacityLb = G.clamp(Number(element.extCapacityLb) || base.capacityLb, 1, 400);
+          normalized.extRating = typeof element.extRating === 'string' && element.extRating ? element.extRating.toUpperCase() : base.rating;
+          normalized.extHazard = EXT_HAZARDS.includes(element.extHazard) ? element.extHazard : 'ordinary';
+          normalized.extMountCm = G.clamp(Number(element.extMountCm) || base.mountCm, 0, 300);
+        }
         if (PATH_TYPES.includes(type)) {
           const points = Array.isArray(element.points) ? element.points : base.points;
           normalized.points = (points || [{ x: 0, y: 0 }, { x: normalized.w, y: normalized.h }]).slice(0, 40).map((point) => ({
@@ -333,6 +352,11 @@
         }
         return this.clampElement(normalized, canvas);
       });
+      const settings = source.extinguishers && typeof source.extinguishers === 'object' ? source.extinguishers : {};
+      const extinguishers = {
+        profile: EXT_PROFILES.includes(settings.profile) ? settings.profile : 'colombia',
+        hazard: EXT_HAZARDS.includes(settings.hazard) ? settings.hazard : 'ordinary',
+      };
       const ids = new Set(elements.map((element) => element.id));
       const groups = (Array.isArray(source.groups) ? source.groups : []).slice(0, 80).filter((group) => {
         if (!group || !Array.isArray(group.members)) return false;
@@ -343,7 +367,7 @@
         name: String(group.name || `Grupo ${index + 1}`).slice(0, 60),
         members: [...new Set(group.members.filter((id) => ids.has(id)))],
       }));
-      return { format: 2, canvas, layers, elements, groups };
+      return { format: 2, canvas, layers, elements, groups, extinguishers };
     }
 
     clampElement(element, canvas = this.design.canvas) {
@@ -669,6 +693,14 @@
       if (MEP_TYPES.includes(type) || this.isElectricalDeviceType(type)) {
         this.normalizeMepAttributes(element);
       }
+      if (EXT_TYPES.includes(type)) {
+        const base = EXT_DEFAULTS[type];
+        element.extAgent = typeof overrides.extAgent === 'string' ? overrides.extAgent : base.agent;
+        element.extCapacityLb = G.clamp(Number(overrides.extCapacityLb) || base.capacityLb, 1, 400);
+        element.extRating = String(overrides.extRating || base.rating).toUpperCase();
+        element.extHazard = EXT_HAZARDS.includes(overrides.extHazard) ? overrides.extHazard : (this.design?.extinguishers?.hazard || 'ordinary');
+        element.extMountCm = G.clamp(Number(overrides.extMountCm ?? base.mountCm), 0, 300);
+      }
       if (PATH_TYPES.includes(type)) {
         element.points = (Array.isArray(element.points) ? element.points : base.points).map((point) => ({
           x: G.clamp(Number(point.x), 0, element.w),
@@ -898,12 +930,37 @@
       }), true;
     }
 
+    /** ¿El tipo pertenece a un extintor del catálogo? */
+    isExtinguisherType(type) {
+      return EXT_TYPES.includes(type);
+    }
+
+    /**
+     * Ajusta el perfil normativo y el riesgo del piso para el cálculo de
+     * extintores. Afecta a todo el plano, no a un elemento.
+     */
+    setExtinguisherSettings(patch = {}) {
+      const next = { ...this.design.extinguishers };
+      if (patch.profile !== undefined && EXT_PROFILES.includes(patch.profile)) next.profile = patch.profile;
+      if (patch.hazard !== undefined && EXT_HAZARDS.includes(patch.hazard)) next.hazard = patch.hazard;
+      if (next.profile === this.design.extinguishers.profile && next.hazard === this.design.extinguishers.hazard) return false;
+      return this.apply('style', () => {
+        this.design.extinguishers = next;
+        if (patch.hazard !== undefined) {
+          this.design.elements.forEach((element) => {
+            if (this.isExtinguisherType(element.type)) element.extHazard = next.hazard;
+          });
+        }
+      });
+    }
+
     setProps(patch) {
       const elements = this.selectedElements();
       if (!elements.length) return false;
       const allowed = [
         'color', 'stroke', 'opacity', 'label', 'fontSize', 'flipX', 'flipY', 'isExit', 'layerId', 'locked',
         'network', 'diameter', 'material', 'slope', 'pressure', 'circuit', 'voltage', 'gauge', 'phases', 'load',
+        'extAgent', 'extCapacityLb', 'extRating', 'extHazard', 'extMountCm',
       ];
       const keys = Object.keys(patch);
       if (!keys.every((key) => allowed.includes(key))) return false;
@@ -931,6 +988,13 @@
           if (patch.isExit !== undefined) element.isExit = DOOR_TYPES.includes(element.type) ? Boolean(patch.isExit) : false;
           if (patch.layerId !== undefined && this.layer(patch.layerId)) element.layerId = patch.layerId;
           if (patch.locked !== undefined) element.locked = Boolean(patch.locked);
+          if (this.isExtinguisherType(element.type)) {
+            if (patch.extAgent !== undefined && typeof patch.extAgent === 'string' && patch.extAgent) element.extAgent = patch.extAgent;
+            if (patch.extCapacityLb !== undefined) element.extCapacityLb = G.clamp(Number(patch.extCapacityLb) || 0, 1, 400);
+            if (patch.extRating !== undefined && typeof patch.extRating === 'string' && patch.extRating) element.extRating = patch.extRating.toUpperCase().replace(/\s+/g, '');
+            if (patch.extHazard !== undefined && EXT_HAZARDS.includes(patch.extHazard)) element.extHazard = patch.extHazard;
+            if (patch.extMountCm !== undefined) element.extMountCm = G.clamp(Number(patch.extMountCm) || 0, 0, 300);
+          }
           if (patch.network !== undefined && element.type === 'pipe' && this.networkInfo(patch.network)) {
             const style = this.pipeStyle(patch.network);
             element.network = patch.network;

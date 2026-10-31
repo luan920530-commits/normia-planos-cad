@@ -1688,6 +1688,116 @@
             "locked": false,
             "circuit": "C3",
             "load": 3500
+          },
+          {
+            "id": "ext_abc_01",
+            "type": "cad_eds_extinguisher",
+            "layerId": "capa_senalizacion",
+            "x": 120,
+            "y": 120,
+            "w": 44,
+            "h": 44,
+            "rotation": 0,
+            "color": "#b71f2e",
+            "stroke": 2,
+            "opacity": 1,
+            "label": "ABC 20 lb",
+            "locked": false,
+            "extAgent": "pqs_abc",
+            "extCapacityLb": 20,
+            "extRating": "4-A:60-B:C",
+            "extHazard": "ordinary",
+            "extMountCm": 110
+          },
+          {
+            "id": "ext_abc_02",
+            "type": "cad_drg_extinguisher",
+            "layerId": "capa_senalizacion",
+            "x": 690,
+            "y": 760,
+            "w": 44,
+            "h": 44,
+            "rotation": 0,
+            "color": "#b71f2e",
+            "stroke": 2,
+            "opacity": 1,
+            "label": "ABC 10 lb",
+            "locked": false,
+            "extAgent": "pqs_abc",
+            "extCapacityLb": 10,
+            "extRating": "2-A:10-B:C",
+            "extHazard": "ordinary",
+            "extMountCm": 100
+          },
+          {
+            "id": "ext_rod_01",
+            "type": "cad_fire_ext_wheeled",
+            "layerId": "capa_senalizacion",
+            "x": 1450,
+            "y": 850,
+            "w": 44,
+            "h": 44,
+            "rotation": 0,
+            "color": "#b71f2e",
+            "stroke": 2,
+            "opacity": 1,
+            "label": "Rodante 150 lb",
+            "locked": false,
+            "extAgent": "pqs_abc",
+            "extCapacityLb": 150,
+            "extRating": "4-A:80-B:C",
+            "extHazard": "ordinary",
+            "extMountCm": 0
+          },
+          {
+            "id": "ext_co2_01",
+            "type": "cad_fire_ext_co2",
+            "layerId": "capa_senalizacion",
+            "x": 1470,
+            "y": 90,
+            "w": 44,
+            "h": 44,
+            "rotation": 0,
+            "color": "#b71f2e",
+            "stroke": 2,
+            "opacity": 1,
+            "label": "CO₂ 5 lb",
+            "locked": false,
+            "extAgent": "co2",
+            "extCapacityLb": 5,
+            "extRating": "5-B:C",
+            "extHazard": "ordinary",
+            "extMountCm": 180
+          },
+          {
+            "id": "iso_f001b",
+            "type": "iso_f001",
+            "layerId": "capa_senalizacion",
+            "x": 150,
+            "y": 170,
+            "w": 56,
+            "h": 56,
+            "rotation": 0,
+            "color": "#b71f2e",
+            "stroke": 0,
+            "opacity": 1,
+            "label": "",
+            "locked": false
+          },
+          {
+            "id": "iso_f001c",
+            "type": "iso_f001",
+            "layerId": "capa_senalizacion",
+            "x": 1410,
+            "y": 870,
+            "w": 56,
+            "h": 56,
+            "rotation": 0,
+            "color": "#b71f2e",
+            "stroke": 0,
+            "opacity": 1,
+            "label": "",
+            "locked": false
           }
         ],
         "groups": [
@@ -1699,7 +1809,11 @@
               "el_025"
             ]
           }
-        ]
+        ],
+        "extinguishers": {
+          "profile": "colombia",
+          "hazard": "ordinary"
+        }
       }
     },
     {

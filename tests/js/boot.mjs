@@ -18,6 +18,7 @@ export const SCRIPTS = [
   'js/editor/inspector.js',
   'js/editor/library.js',
   'js/editor/audit.js',
+  'js/editor/extinguishers.js',
   'js/editor/schedule.js',
   'js/editor/measure.js',
   'js/editor/present.js',
