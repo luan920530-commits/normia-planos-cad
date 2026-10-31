@@ -951,6 +951,64 @@ async function main() {
       q(window, '[data-pipe-flyout]')?.hidden === true,
       String(q(window, '[data-pipe-flyout]')?.hidden));
 
+    /* ---------------- barra de herramientas alineada ---------------- */
+    const railTiles = qa(window, '.rail .rail-button');
+    report.check('La barra de herramientas cabe en una columna sin scroll',
+      railTiles.length === 14
+      && /grid-template-columns:\s*68px/.test(cssBlock('.editor-workbench')),
+      `${railTiles.length} baldosas · ${cssBlock('.editor-workbench').replace(/\s+/g, ' ').slice(0, 80)}`);
+    report.check('Las baldosas del rail no llevan texto: solo icono y etiqueta flotante',
+      railTiles.every((tile) => !tile.querySelector('span:not(.rail-count):not(.rail-caret-mark)'))
+      && railTiles.every((tile) => tile.hasAttribute('data-tooltip-side')),
+      railTiles.filter((tile) => tile.querySelector('span:not(.rail-count):not(.rail-caret-mark)')).length + ' con texto');
+    report.check('Todas las baldosas miden lo mismo y el chevrón vive dentro de la baldosa',
+      /width:\s*40px;\s*height:\s*40px/.test(cssBlock('.rail-button'))
+      && /position:\s*absolute/.test(cssBlock('.rail-caret'))
+      && railTiles.every((tile) => tile.querySelector('.icon')),
+      cssBlock('.rail-button').replace(/\s+/g, ' ').slice(0, 90));
+    const caretTargets = ['[data-door-menu]', '[data-pipe-menu]', '[data-shape-menu]']
+      .every((selector) => Boolean(q(window, `.rail-caret${selector}`)));
+    report.check('Las tres herramientas con opciones llevan su chevrón dentro de la baldosa',
+      caretTargets && qa(window, '.rail-caret').length === 3
+      && qa(window, '.rail-caret-mark').length === 2,
+      `${qa(window, '.rail-caret').length} chevrones · ${qa(window, '.rail-caret-mark').length} marcas`);
+
+    const analysisMenu = q(window, '[data-analysis-menu]');
+    analysisMenu?.click();
+    report.check('El menú «Análisis» abre y reúne revisión, pliego y rutas',
+      q(window, '[data-analysis-flyout]')?.hidden === false
+      && Boolean(q(window, '[data-analysis-flyout] [data-open-drawer="audit"]'))
+      && Boolean(q(window, '[data-analysis-flyout] [data-open-drawer="schedule"]'))
+      && analysisMenu.getAttribute('aria-expanded') === 'true',
+      `hidden=${q(window, '[data-analysis-flyout]')?.hidden}`);
+    q(window, '[data-view-menu]')?.click();
+    report.check('Abrir «Vista» cierra «Análisis» y ofrece presentación y capas',
+      q(window, '[data-analysis-flyout]')?.hidden === true
+      && q(window, '[data-view-flyout]')?.hidden === false
+      && Boolean(q(window, '[data-view-flyout] [data-present-open]'))
+      && Boolean(q(window, '[data-view-flyout] [data-open-drawer="layers"]')),
+      `análisis=${q(window, '[data-analysis-flyout]')?.hidden} vista=${q(window, '[data-view-flyout]')?.hidden}`);
+    window.document.body.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    report.check('Un clic fuera cierra los menús del rail',
+      q(window, '[data-view-flyout]')?.hidden === true,
+      String(q(window, '[data-view-flyout]')?.hidden));
+
+    const topbarTools = q(window, '.topbar-tools');
+    report.check('Versiones, pie de plano y atajos viven en la barra superior',
+      Boolean(topbarTools)
+      && Boolean(topbarTools.querySelector('[data-open-drawer="versions"]'))
+      && Boolean(topbarTools.querySelector('[data-open-drawer="footer"]'))
+      && Boolean(topbarTools.querySelector('[data-open-drawer="shortcuts"]'))
+      && !qa(window, '.rail [data-open-drawer="versions"]').length,
+      `${qa(window, '.topbar-tools .icon-button').length} accesos`);
+    q(window, '[data-topbar-menu]')?.click();
+    report.check('El menú «Más» de la barra superior se despliega para pantallas estrechas',
+      q(window, '[data-topbar-flyout]')?.hidden === false
+      && Boolean(q(window, '[data-topbar-flyout] [data-open-drawer="versions"]'))
+      && /topbar-flyout-wrap\s*{[^}]*display:\s*none/.test(editorCss),
+      `hidden=${q(window, '[data-topbar-flyout]')?.hidden}`);
+    q(window, '[data-topbar-menu]')?.click();
+
     const inspectorBody = q(window, '[data-properties]');
     const propField = q(window, '[data-section="geometry"] [data-prop="x"]');
     inspectorBody.scrollTop = 260;

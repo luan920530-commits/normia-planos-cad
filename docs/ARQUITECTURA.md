@@ -139,6 +139,7 @@ Editor B: conserva el diseño, muestra aviso, permite recargar v6 o descargar co
 - Vistas PHP con `layout.php` (panel, proyectos, cuenta) y layouts propios para acceso, instalador, editor e impresión.
 - `partials/icons.php` contiene el sprite completo de iconos (`<symbol id="i-*">`, 88 símbolos, retícula de 24 × 24). Desde la v1.1.2 el conjunto usa el estilo «Normia 2.0»: trazo de 1,7 px con remates redondeados, relleno duotono al 12 % y formas simplificadas para leerse a 20 px. No se usan fuentes de iconos ni imágenes remotas; el CSS los presenta como chips con cristal (`assets/css/editor.css`, `.rail-button`).
 - Desde la v1.1.3 el editor se compone como una aplicación de escritorio: chrome oscuro continuo (`.editor-topbar` + `.rail`), lienzo como hoja sobre un escritorio con degradado (`.canvas-shell`), barra de herramientas flotante (`.stage-toolbar`) e inspector flotante (`.properties-panel`). Los cajones se separan 10 px de los bordes.
+- Desde la v1.6.0 el rail es una columna de **14 baldosas de 40 × 40 px** (`grid-template-columns: 68px …`) sin texto: cada una lleva su icono y una etiqueta flotante (`data-tooltip-side="right"`). Los grupos se separan con `.rail-separator` y las herramientas con variantes muestran el chevrón dentro de la baldosa (`.rail-caret`: Puertas, Tubería y Formas). **Análisis** y **Vista** agrupan las acciones que antes ocupaban la mitad inferior, y **Versiones**, **Pie de plano** y **Atajos** viven en `.topbar-tools` de la barra superior, con menú **Más** (`[data-topbar-menu]`) por debajo de 1100 px.
 - Toda salida dinámica pasa por `e()` (`htmlspecialchars` con `ENT_QUOTES`).
 - Los formularios incluyen `_token` (helper `csrf_field()`); los formularios con acciones destructivas piden confirmación con `data-confirm` y `ui.js`.
 
@@ -191,7 +192,8 @@ El editor ocupa la ventana completa (`body { overflow: hidden }`), así que cada
 
 - `.editor-app` reparte el alto con `grid-template-rows: auto auto minmax(0, 1fr)`.
 - `.editor-workbench` fija su única fila con `minmax(0, 1fr)`, `min-height: 0` y `overflow: hidden`: ningún hijo puede estirarla.
-- `.rail` hace su propio scroll (`overflow-y: auto`). Sus desplegables usan `position: fixed` y el editor los coloca junto al botón (`placeFlyout`); se cierran al desplazar la barra, al cambiar el tamaño de la ventana o al hacer clic fuera.
+- `.rail` hace su propio scroll (`overflow-y: auto`) cuando la ventana es muy baja, aunque con las 14 baldosas ya no lo necesita a partir de 720 px de alto. Sus desplegables usan `position: fixed` y el editor los coloca junto al botón (`placeFlyout`); se cierran al desplazar la barra, al cambiar el tamaño de la ventana o al hacer clic fuera.
+- Los seis menús (`door`, `pipe`, `shape`, `analysis`, `view`, `topbar`) comparten `menuPairs()`, `toggleMenu()`, `closeMenu()` y `closeMenus()`: solo hay uno abierto y `aria-expanded` se sincroniza en cada apertura y cierre.
 - `.properties-panel` es una columna flex con `min-height: 0` y `overflow: hidden`; el scroll vive en `.properties-body` (`flex: 1 1 auto; min-height: 0; overflow-y: auto`), y sus bloques llevan `flex: 0 0 auto` para que nunca se compriman.
 - `Inspector.render()` conserva `scrollTop` y el foco del campo cuando la selección no cambió; antes cada retoque devolvía el panel al principio.
 

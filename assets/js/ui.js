@@ -41,11 +41,24 @@
     element.textContent = text;
     element.hidden = false;
     element.dataset.visible = 'true';
+    // La barra lateral usa etiquetas laterales: el texto se lee como una
+    // etiqueta pegada a la baldosa, no como un globo encima del icono.
+    const side = (target.closest('[data-tooltip-side]') || target).getAttribute('data-tooltip-side');
     const tip = element.getBoundingClientRect();
-    let left = rect.left + rect.width / 2 - tip.width / 2;
-    let top = rect.top - tip.height - 9;
-    if (top < 6) top = rect.bottom + 9;
+    let left;
+    let top;
+    if (side === 'right') {
+      left = rect.right + 10;
+      top = rect.top + rect.height / 2 - tip.height / 2;
+      element.dataset.side = 'right';
+    } else {
+      left = rect.left + rect.width / 2 - tip.width / 2;
+      top = rect.top - tip.height - 9;
+      if (top < 6) top = rect.bottom + 9;
+      delete element.dataset.side;
+    }
     left = Math.max(8, Math.min(window.innerWidth - tip.width - 8, left));
+    top = Math.max(6, Math.min(window.innerHeight - tip.height - 6, top));
     element.style.left = `${Math.round(left)}px`;
     element.style.top = `${Math.round(top)}px`;
   };
