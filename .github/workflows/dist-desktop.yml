@@ -107,22 +107,28 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Descargar PHP para Windows
+      # Se usa la acción oficial de PHP porque las compilaciones sueltas de
+      # windows.php.net se archivan al cabo de unos meses y la URL cambia.
+      - name: Instalar PHP para Windows
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_sqlite, sqlite3, mbstring, openssl, fileinfo
+          coverage: none
+          tools: none
+
+      - name: Comprobar el intérprete
         shell: pwsh
         run: |
-          $url = "https://windows.php.net/downloads/releases/php-${env:PHP_VERSION}-nts-Win32-vs16-x64.zip"
-          Invoke-WebRequest -Uri $url -OutFile php.zip
-          Expand-Archive php.zip -DestinationPath php
-          # Extensiones mínimas de la aplicación.
-          @("extension=pdo_sqlite", "extension=sqlite3", "extension=mbstring", "extension=openssl", "extension=fileinfo", "extension_dir=ext") |
-            Out-File -FilePath php/php.ini -Encoding ascii
-          php/php.exe -v
-          php/php.exe -r "exit(extension_loaded('pdo_sqlite') ? 0 : 1);"
+          $php = (Get-Command php).Source
+          & $php -v
+          & $php -r "exit(extension_loaded('pdo_sqlite') ? 0 : 1);"
+          echo "PHP_DIR=$(Split-Path $php)" >> $env:GITHUB_ENV
 
       - name: Armar y probar la aplicación
         shell: pwsh
         run: |
-          node tools/desktop/build.mjs --platform=win --php=php --out=dist
+          node tools/desktop/build.mjs --platform=win --php="$env:PHP_DIR" --out=dist
           $env:NORMA_DATA_PATH = "$env:RUNNER_TEMP\normia-data"
           New-Item -ItemType Directory -Force -Path $env:NORMA_DATA_PATH | Out-Null
           Start-Process -FilePath "dist\win-app\runtime\php.exe" -ArgumentList "dist\win-app\tools\desktop\launcher.php","--no-browser","--port=8792" -NoNewWindow
