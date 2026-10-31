@@ -1,6 +1,6 @@
 {
   "name": "normia-planos-cad",
-  "version": "1.9.0",
+  "version": "1.10.0",
   "private": true,
   "description": "Normia Planos CAD · suite de pruebas de desarrollo (no se requiere Node en producción).",
   "type": "module",
@@ -26,6 +26,7 @@
     "@php-wasm/web": "3.1.61",
     "@php-wasm/web-8-3": "3.1.61",
     "esbuild": "^0.23.0",
-    "jsdom": "^26.1.0"
+    "jsdom": "^26.1.0",
+    "pngjs": "^7.0.0"
   }
 }

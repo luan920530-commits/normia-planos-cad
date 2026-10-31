@@ -1,0 +1,149 @@
+# Edición Electron de Normia Planos CAD.
+#
+# Compila un instalador por plataforma sin necesitar un PHP nativo: el
+# intérprete viaja compilado a WebAssembly dentro de la aplicación. Un mismo
+# paquete sirve para macOS Intel y Apple Silicon, Windows x64 y Linux x64.
+#
+# Firma: no hay certificados de Apple ni de Microsoft. macOS sale con firma
+# ad-hoc (o sin firma) y Windows sin firmar; los avisos de Gatekeeper y
+# SmartScreen se documentan en docs/ELECTRON.md y se muestran en «Acerca de».
+name: Distribución de escritorio (Electron)
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+concurrency:
+  group: electron-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  paquete:
+    name: Instaladores · ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            arch: arm64
+          # La imagen Intel compila también el binario universal: electron-builder
+          # admite las dos arquitecturas desde un solo trabajo.
+          - os: macos-15-intel
+            arch: x64
+          - os: windows-latest
+            arch: x64
+          - os: ubuntu-latest
+            arch: x64
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Dependencias
+        run: npm install --no-audit --no-fund
+
+      - name: Instalar Electron y el empaquetador
+        run: npm install --no-save --no-audit --no-fund electron@45 electron-builder@26
+
+      - name: Comprobar el intérprete armado
+        run: node tools/electron/build.mjs --out=dist/electron --sin-instalador
+
+      - name: Armar y compilar el instalador
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+          # electron-builder descarga el binario de Electron: sin espejos raros.
+          ELECTRON_BUILDER_CACHE: ${{ github.workspace }}/dist/electron/.cache
+        run: node tools/electron/build.mjs --out=dist/electron --arch=${{ matrix.arch }}
+
+      - name: Comprobar el instalador
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(node -p "require('./package.json').version")"
+          ls -lh dist/electron/installers
+          case "${{ matrix.os }}" in
+            macos-*) test -f "dist/electron/installers/normia-planos-cad-${VERSION}-macos-${{ matrix.arch }}.dmg" ;;
+            windows-*) test -f "dist/electron/installers/normia-planos-cad-${VERSION}-windows-${{ matrix.arch }}-instalador.exe" ;;
+            *) test -f "dist/electron/installers/normia-planos-cad-${VERSION}-linux-${{ matrix.arch }}.AppImage" ;;
+          esac
+          (cd dist/electron/installers && sha256sum * > SHA256SUMS.txt 2>/dev/null || shasum -a 256 * > SHA256SUMS.txt)
+          cat dist/electron/installers/SHA256SUMS.txt
+
+      # Prueba real sobre el binario empaquetado: `--check` inicia PHP desde la
+      # carpeta del paquete (no desde node_modules) y comprueba las extensiones.
+      # Es la misma comprobación que hace la edición nativa antes de publicar.
+      - name: Comprobar el paquete en macOS
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -euo pipefail
+          export NORMA_DATA_PATH="$RUNNER_TEMP/normia-electron"
+          mkdir -p "$NORMA_DATA_PATH"
+          APP="$(find dist/electron/installers -maxdepth 2 -name '*.app' | head -1)"
+          test -n "$APP" || { echo "No se encontró la aplicación empaquetada"; ls -R dist/electron/installers | head -40; exit 1; }
+          "$APP/Contents/MacOS/Normia Planos CAD" --check | tee "$RUNNER_TEMP/check.txt"
+          grep -q 'pdo_sqlite' "$RUNNER_TEMP/check.txt"
+
+      - name: Comprobar el paquete en Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem "dist\electron\installers\win-unpacked\*.exe" | Select-Object -First 1
+          if (-not $exe) { throw "No se encontró la aplicación empaquetada" }
+          $env:NORMA_DATA_PATH = "$env:RUNNER_TEMP\normia-electron"
+          New-Item -ItemType Directory -Force -Path $env:NORMA_DATA_PATH | Out-Null
+          & $exe.FullName --check | Tee-Object -FilePath "$env:RUNNER_TEMP\check.txt"
+          if ($LASTEXITCODE -ne 0) { throw "El intérprete del paquete no sirve (código $LASTEXITCODE)" }
+          Select-String -Path "$env:RUNNER_TEMP\check.txt" -Pattern 'pdo_sqlite' -Quiet | Out-Null
+
+      - name: Comprobar el paquete en Linux
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          export NORMA_DATA_PATH="$RUNNER_TEMP/normia-electron"
+          mkdir -p "$NORMA_DATA_PATH"
+          APPIMAGE="$(find dist/electron/installers -maxdepth 1 -name '*.AppImage' | head -1)"
+          chmod +x "$APPIMAGE"
+          sudo apt-get update -qq && sudo apt-get install -y -qq xvfb
+          APPIMAGE_EXTRACT_AND_RUN=1 xvfb-run -a "$APPIMAGE" --no-sandbox --check | tee "$RUNNER_TEMP/check.txt"
+          grep -q 'pdo_sqlite' "$RUNNER_TEMP/check.txt"
+
+      - name: Publicar los instaladores
+        uses: actions/upload-artifact@v4
+        with:
+          name: normia-electron-${{ matrix.os }}-${{ matrix.arch }}
+          path: |
+            dist/electron/installers/*.dmg
+            dist/electron/installers/*.zip
+            dist/electron/installers/*.exe
+            dist/electron/installers/*.AppImage
+            dist/electron/installers/SHA256SUMS.txt
+          if-no-files-found: error
+
+  adjuntar:
+    name: Adjuntar a la release
+    needs: paquete
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Publicar los archivos del release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          find artifacts -type f -print
+          gh release upload "${GITHUB_REF_NAME}" $(find artifacts -type f -not -name 'SHA256SUMS.txt' | tr '\n' ' ') --clobber \
+            || gh release create "${GITHUB_REF_NAME}" $(find artifacts -type f -not -name 'SHA256SUMS.txt' | tr '\n' ' ') \
+                 --title "Normia Planos CAD ${GITHUB_REF_NAME}" --notes "Edición Electron: instaladores de macOS, Windows y Linux."

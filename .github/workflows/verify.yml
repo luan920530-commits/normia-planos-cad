@@ -55,6 +55,9 @@ jobs:
       - name: Funcionamiento sin conexión
         run: node tests/js/offline.mjs
 
+      - name: Edición Electron
+        run: node tests/js/electron.mjs
+
   paquete:
     name: Paquete y demo
     runs-on: ubuntu-latest

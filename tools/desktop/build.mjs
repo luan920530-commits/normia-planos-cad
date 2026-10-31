@@ -14,38 +14,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { copyApp as sharedCopyApp } from '../shared/app-copy.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '../..');
 
-/** Archivos que no forman parte de la aplicación instalada. */
-const EXCLUDED = new Set(['.git', '.github', 'dist', 'node_modules', 'paquetes', 'coverage', 'tests', 'build']);
-
-/** Lo que nunca debe viajar al instalador. */
-function shouldCopy(relative) {
-  const posix = relative.split(path.sep).join('/');
-  if (posix === '') return true;
-  const [first] = posix.split('/');
-  if (EXCLUDED.has(first)) return false;
-  // El proyecto de Android y sus activos generados no forman parte de la app de
-  // escritorio (el APK incluye el intérprete para WebAssembly, no este).
-  if (posix === 'tools/android' || posix.startsWith('tools/android/')) return false;
-  if (/^config\/config\.php$/.test(posix)) return false;
-  if (/^storage\/.+\.(sqlite|sqlite-wal|sqlite-shm)$/.test(posix)) return false;
-  if (/^storage\/(sessions|logs|cache)\/.+/.test(posix) && !posix.endsWith('.gitkeep')) return false;
-  if (/^storage\/last-error\.log$/.test(posix)) return false;
-  if (posix.endsWith('.DS_Store')) return false;
-  return true;
-}
-
 function copyApp(destination) {
-  fs.cpSync(ROOT, destination, {
-    recursive: true,
-    filter: (source) => shouldCopy(path.relative(ROOT, source)),
-  });
-  for (const directory of ['config', 'storage', 'storage/sessions', 'storage/logs', 'storage/cache']) {
-    fs.mkdirSync(path.join(destination, directory), { recursive: true });
-  }
+  return sharedCopyApp(destination);
 }
 
 function readVersion() {
