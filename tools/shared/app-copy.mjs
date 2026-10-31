@@ -27,6 +27,9 @@ export function shouldCopy(relative, { excludeTools = false } = {}) {
   // La edición de Electron guarda su propio código aparte: no necesita el
   // lanzador nativo ni los constructores de paquetes.
   if (excludeTools && (posix === 'tools' || posix.startsWith('tools/'))) return false;
+  // `package.json` es del repositorio (pruebas y herramientas), no de la
+  // aplicación: los paquetes web y de escritorio tampoco lo llevan.
+  if (posix === 'package.json' || posix === 'package-lock.json') return false;
   if (/^config\/config\.php$/.test(posix)) return false;
   if (/^storage\/.+\.(sqlite|sqlite-wal|sqlite-shm)$/.test(posix)) return false;
   if (/^storage\/(sessions|logs|cache)\/.+/.test(posix) && !posix.endsWith('.gitkeep')) return false;

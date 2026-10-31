@@ -167,8 +167,15 @@ jobs:
       - name: Comprobar el intérprete del paquete
         shell: pwsh
         run: |
-          & "dist\win-app\runtime\php.exe" "dist\win-app\tools\desktop\launcher.php" --check
-          if ($LASTEXITCODE -ne 0) { throw "El intérprete del paquete no sirve (código $LASTEXITCODE)" }
+          $env:NORMA_DATA_PATH = "$env:RUNNER_TEMP\normia-data"
+          New-Item -ItemType Directory -Force -Path $env:NORMA_DATA_PATH | Out-Null
+          $salida = & "dist\win-app\runtime\php.exe" "dist\win-app\tools\desktop\launcher.php" --check 2>&1 | Out-String
+          Write-Output $salida
+          if ($LASTEXITCODE -ne 0) {
+            $lineas = ($salida -split "`n" | Select-Object -Last 6) -join " | "
+            Write-Output "::error title=interprete del paquete::$lineas"
+            throw "El intérprete del paquete no sirve (código $LASTEXITCODE)"
+          }
 
       # Arranca el servidor real del paquete y pide la pantalla de instalación.
       # Si algo falla, el paso siguiente publica los registros como anotaciones.
