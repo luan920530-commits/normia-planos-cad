@@ -184,7 +184,13 @@ function buildWindows({ php, out }, version) {
 
   const iss = path.join(HERE, 'windows', 'normia.iss');
   if (process.platform === 'win32') {
-    run('iscc.exe', [`/DAppVersion=${version}`, `/DSourceDir=${app}`, `/DOutputDir=${out}`, `/DIconFile=${icon}`, iss]);
+    // Inno Setup puede no estar instalado todavía (el flujo lo instala después);
+    // en ese caso se avisa y el paso del flujo compila el instalador.
+    try {
+      run('iscc.exe', [`/DAppVersion=${version}`, `/DSourceDir=${app}`, `/DOutputDir=${out}`, `/DIconFile=${icon}`, iss]);
+    } catch {
+      console.warn('Aviso: Inno Setup no respondió. El instalador se compila en el paso siguiente del flujo.');
+    }
   }
   return { app, ico: icon };
 }
