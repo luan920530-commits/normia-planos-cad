@@ -5,6 +5,11 @@
   "license": "GPL-3.0 · pictogramas originales de Normia Planos CAD",
   "note": "Señales de orientación dibujadas para este proyecto. No son señales ISO 7010 ni certifican cumplimiento normativo.",
   "categories": {
+    "brigade": {
+      "label": "Emergencia y brigada",
+      "short": "Brigada",
+      "description": "Rutas, cortes y puestos de la brigada de emergencia. Pictogramas esquemáticos propios de Normia: no son señales oficiales ni certifican cumplimiento normativo."
+    },
     "location": {
       "label": "Ubicación en el plano",
       "short": "Ubicación",
@@ -112,6 +117,21 @@
       ],
       "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"2\" y=\"2\" width=\"96\" height=\"96\" rx=\"12\" fill=\"currentColor\"/><circle cx=\"52\" cy=\"56\" r=\"18\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\"/><path d=\"M20 28L20 76\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\" stroke-linecap=\"round\"/><path d=\"M14 28L14 44\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\" stroke-linecap=\"round\"/><path d=\"M26 28L26 44\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\" stroke-linecap=\"round\"/><path d=\"M14 44L26 44\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\" stroke-linecap=\"round\"/><path d=\"M78 28q8 8 8 18h-10V28z\" fill=\"#fff\" stroke=\"none\" stroke-width=\"0\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><path d=\"M78 46L78 76\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\" stroke-linecap=\"round\"/></svg>"
     },
+    "SVC_COMMAND_POST": {
+      "name": "Puesto de mando",
+      "category": "brigade",
+      "description": "Punto de coordinación de la brigada con mesa, radio y bandera. Pictograma propio de Normia para el plano; no es una señal oficial.",
+      "aliases": [
+        "puesto de mando",
+        "comando",
+        "brigada",
+        "coordinacion",
+        "coordinación",
+        "PMU",
+        "crisis"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"2\" y=\"2\" width=\"96\" height=\"96\" rx=\"12\" fill=\"currentColor\"/><path d=\"M50 22v34\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><path d=\"M50 22h26l-6 8 6 8H50Z\" fill=\"#fff\"/><rect x=\"26\" y=\"60\" width=\"48\" height=\"10\" rx=\"3\" fill=\"none\" stroke=\"#fff\" stroke-width=\"4\"/><path d=\"M34 70v10M66 70v10\" fill=\"none\" stroke=\"#fff\" stroke-width=\"4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><circle cx=\"74\" cy=\"58\" r=\"4\" fill=\"#fff\"/></svg>"
+    },
     "SVC_ELEVATOR": {
       "name": "Ascensor",
       "category": "services",
@@ -122,6 +142,62 @@
         "montacargas de personas"
       ],
       "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"2\" y=\"2\" width=\"96\" height=\"96\" rx=\"12\" fill=\"currentColor\"/><rect x=\"24\" y=\"12\" width=\"52\" height=\"76\" rx=\"6\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\"/><path d=\"M50 12L50 88\" fill=\"none\" stroke=\"#fff\" stroke-width=\"4\" stroke-linecap=\"round\"/><path d=\"M33 34l6-8 6 8z\" fill=\"#fff\" stroke=\"none\" stroke-width=\"0\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><path d=\"M55 26l6 8 6-8z\" fill=\"#fff\" stroke=\"none\" stroke-width=\"0\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>"
+    },
+    "SVC_EVAC_ROUTE": {
+      "name": "Ruta de evacuación",
+      "category": "brigade",
+      "description": "Flecha de recorrido hacia la salida con figura en marcha. Orienta el camino de evacuación dentro del plano. Pictograma propio de Normia para el plano; no es una señal oficial.",
+      "aliases": [
+        "ruta de evacuacion",
+        "ruta evacuación",
+        "evacuacion",
+        "evacuación",
+        "recorrido de salida",
+        "flecha evacuacion",
+        "camino de evacuacion"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"2\" y=\"2\" width=\"96\" height=\"96\" rx=\"12\" fill=\"currentColor\"/><path d=\"M42 20a6 6 0 1 0 0 .1\" fill=\"#fff\"/><path d=\"M42 30 40 48l-8 20M40 48l12 6 4 16M42 38l14 6\" fill=\"none\" stroke=\"#fff\" stroke-width=\"6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><path d=\"M58 74h24M74 66l8 8-8 8\" fill=\"none\" stroke=\"#fff\" stroke-width=\"7\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>"
+    },
+    "SVC_EXIT_TEXT": {
+      "name": "Rótulo «SALIDA»",
+      "category": "brigade",
+      "description": "Placa rectangular con la palabra SALIDA y flecha. Complementa el pictograma ISO en puertas y pasillos. Pictograma propio de Normia para el plano; no es una señal oficial.",
+      "aliases": [
+        "salida",
+        "rotulo salida",
+        "rótulo salida",
+        "letrero salida",
+        "exit",
+        "salida de emergencia"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"2\" y=\"2\" width=\"96\" height=\"96\" rx=\"12\" fill=\"currentColor\"/><rect x=\"10\" y=\"30\" width=\"80\" height=\"40\" rx=\"6\" fill=\"none\" stroke=\"#fff\" stroke-width=\"4\"/><text x=\"50\" y=\"57\" text-anchor=\"middle\" font-family=\"Helvetica, Arial, sans-serif\" font-size=\"15\" font-weight=\"700\" letter-spacing=\".4\" fill=\"#fff\">SALIDA</text><path d=\"M26 78h42M62 70l8 8-8 8\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>"
+    },
+    "SVC_GAS_SHUTOFF": {
+      "name": "Llave de corte de gas",
+      "category": "brigade",
+      "description": "Válvula de corte del suministro de gas. Señala el punto de cierre en una emergencia. Pictograma propio de Normia para el plano; no es una señal oficial.",
+      "aliases": [
+        "corte de gas",
+        "llave de gas",
+        "valvula de gas",
+        "válvula de gas",
+        "cierre de gas",
+        "glp"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"2\" y=\"2\" width=\"96\" height=\"96\" rx=\"12\" fill=\"currentColor\"/><path d=\"M12 62h20M68 62h20\" fill=\"none\" stroke=\"#fff\" stroke-width=\"7\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><path d=\"M32 50h36v24H32Z\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\"/><path d=\"M50 50V38\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><circle cx=\"50\" cy=\"28\" r=\"11\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\"/><path d=\"M50 17v22M39 28h22\" fill=\"none\" stroke=\"#fff\" stroke-width=\"3.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>"
+    },
+    "SVC_HYDRANT": {
+      "name": "Hidrante",
+      "category": "brigade",
+      "description": "Hidrante contra incendios de dos bocas. Úsalo solo si el hidrante existe y está operativo. Pictograma propio de Normia para el plano; no es una señal oficial.",
+      "aliases": [
+        "hidrante",
+        "gabinete",
+        "boca de incendio",
+        "toma de agua",
+        "hydrant"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"2\" y=\"2\" width=\"96\" height=\"96\" rx=\"12\" fill=\"currentColor\"/><path d=\"M34 30h32v40a6 6 0 0 1-6 6H40a6 6 0 0 1-6-6Z\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\"/><path d=\"M34 44h-8v10h8M66 44h8v10h-8\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\"/><path d=\"M50 30v-6\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><path d=\"M40 24h20l-3-6H43Z\" fill=\"#fff\"/><path d=\"M30 82h40\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><path d=\"M42 60h16\" fill=\"none\" stroke=\"#fff\" stroke-width=\"4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>"
     },
     "SVC_LACTARIO": {
       "name": "Lactario",
@@ -189,6 +265,20 @@
         "botiquin"
       ],
       "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"2\" y=\"2\" width=\"96\" height=\"96\" rx=\"12\" fill=\"currentColor\"/><rect x=\"34\" y=\"34\" width=\"32\" height=\"46\" rx=\"7\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\"/><rect x=\"42\" y=\"22\" width=\"16\" height=\"10\" rx=\"3\" fill=\"#fff\"/><path d=\"M46 50h8v8h8v8h-8v8h-8v-8h-8v-8h8z\" fill=\"#fff\" stroke=\"none\" stroke-width=\"0\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>"
+    },
+    "SVC_POWER_SHUTOFF": {
+      "name": "Corte general de energía",
+      "category": "brigade",
+      "description": "Interruptor general del tablero. Marca dónde se corta la energía del área. Pictograma propio de Normia para el plano; no es una señal oficial.",
+      "aliases": [
+        "corte de energia",
+        "corte de energía",
+        "interruptor general",
+        "breaker principal",
+        "tablero general",
+        "apagado general"
+      ],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"2\" y=\"2\" width=\"96\" height=\"96\" rx=\"12\" fill=\"currentColor\"/><rect x=\"22\" y=\"20\" width=\"56\" height=\"60\" rx=\"8\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\"/><path d=\"M53 24l-8 11h5l-3 9 10-12h-5l4-8\" fill=\"#fff\"/><circle cx=\"50\" cy=\"58\" r=\"13\" fill=\"none\" stroke=\"#fff\" stroke-width=\"4\"/><path d=\"M50 58 58 48\" fill=\"none\" stroke=\"#fff\" stroke-width=\"5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><circle cx=\"50\" cy=\"58\" r=\"2.6\" fill=\"#fff\"/><path d=\"M34 72h10M56 72h10\" fill=\"none\" stroke=\"#fff\" stroke-width=\"4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>"
     },
     "SVC_RECEPTION": {
       "name": "Recepción e información",
