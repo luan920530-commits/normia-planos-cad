@@ -1,13 +1,22 @@
-<section class="dashboard-hero">
-  <div>
-    <span class="eyebrow">Espacio de trabajo</span>
+<section class="dashboard-hero welcome-hero">
+  <div class="welcome-copy">
+    <span class="eyebrow"><img class="welcome-dot" src="<?= e(asset('img/normia-emblem.png')) ?>" alt="" width="18" height="18" decoding="async"> Espacio de trabajo</span>
     <h1>Planos claros, evacuación precisa.</h1>
     <p>Crea proyectos por sede y centro de trabajo, organiza pisos y dibuja planos de emergencia con señalización ISO 7010 y equipamiento CAD.</p>
+    <div class="welcome-actions">
+      <a class="button button-primary" href="<?= e(url('projects/new')) ?>">
+        <svg class="icon"><use href="#i-plus"></use></svg>
+        Nuevo proyecto
+      </a>
+      <a class="button button-ghost" href="<?= e(url('/')) ?>#projects-title">
+        <svg class="icon"><use href="#i-folder"></use></svg>
+        Ver mis planos
+      </a>
+    </div>
   </div>
-  <a class="button button-primary" href="<?= e(url('projects/new')) ?>">
-    <svg class="icon"><use href="#i-plus"></use></svg>
-    Nuevo proyecto
-  </a>
+  <figure class="welcome-art" aria-hidden="true">
+    <img src="<?= e(asset('img/normia-logo.png')) ?>" alt="" width="180" height="180" decoding="async">
+  </figure>
 </section>
 
 <section class="stats-grid" aria-label="Resumen">

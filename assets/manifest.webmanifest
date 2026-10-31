@@ -1,0 +1,16 @@
+{
+  "name": "Normia Planos CAD",
+  "short_name": "Normia",
+  "description": "Editor de planos de emergencia, evacuación y distribución de espacios.",
+  "lang": "es",
+  "start_url": "./index.php?r=",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0b1220",
+  "theme_color": "#0b1220",
+  "icons": [
+    { "src": "img/favicon-32.png", "sizes": "32x32", "type": "image/png" },
+    { "src": "img/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "img/normia-logo.png", "sizes": "384x384", "type": "image/png", "purpose": "any" }
+  ]
+}

@@ -6,12 +6,16 @@
   <meta name="color-scheme" content="light">
   <meta name="theme-color" content="#0b1220">
   <title><?= e($title) ?> · Normia Planos CAD</title>
+  <link rel="icon" href="<?= e(asset('img/favicon-32.png')) ?>" sizes="32x32" type="image/png">
   <link rel="icon" href="<?= e(asset('img/favicon.svg')) ?>" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="<?= e(asset('img/apple-touch-icon.png')) ?>">
+  <link rel="manifest" href="<?= e(asset('manifest.webmanifest')) ?>">
   <link rel="stylesheet" href="<?= e(asset('css/app.css')) ?>">
   <link rel="stylesheet" href="<?= e(asset('css/editor.css')) ?>">
 </head>
 <body class="editor-body">
 <?php \App\Core\View::partial('partials/icons'); ?>
+<?php \App\Core\View::partial('partials/splash', ['splashTitle' => 'Abriendo el editor', 'splashLines' => ['Cargando el lienzo y el plano', 'Preparando señalización y equipos', 'Casi listo']]); ?>
 <div class="editor-app" id="editor-app">
   <header class="editor-topbar">
     <div class="editor-topbar-left">
@@ -19,7 +23,7 @@
         <svg class="icon"><use href="#i-chevron-left"></use></svg>
       </a>
       <a class="editor-brand" href="<?= e(url('')) ?>" data-tooltip="Ir a mis planos" aria-label="Normia Planos CAD">
-        <span class="brand-mark small"><svg class="icon"><use href="#i-logo"></use></svg></span>
+        <span class="brand-mark small"><img src="<?= e(asset('img/normia-emblem.png')) ?>" alt="" width="32" height="32" decoding="async"></span>
       </a>
       <div class="editor-doc-title">
         <strong><?= e($project['name']) ?></strong>
@@ -203,6 +207,10 @@
               <div><strong>Todas las herramientas</strong><small>Elige una y sigue dibujando</small></div>
               <kbd>H</kbd>
             </header>
+            <label class="tools-search">
+              <svg class="icon"><use href="#i-search"></use></svg>
+              <input type="search" data-tools-filter placeholder="Buscar herramienta o acción" aria-label="Buscar herramienta o acción" autocomplete="off">
+            </label>
             <div class="tool-group">
               <p class="tool-group-title">Seleccionar</p>
               <div class="tool-group-grid">
@@ -234,6 +242,21 @@
                 <button class="tool-choice" type="button" role="menuitem" data-open-library="cad"><span class="tool-choice-icon"><svg class="icon"><use href="#i-cad"></use></svg></span><span class="tool-choice-name">Equipos</span><span class="tool-choice-badge"><?= e((string) $catalog['cad']) ?></span></button>
               </div>
             </div>
+            <div class="tool-group">
+              <p class="tool-group-title">Acciones del plano</p>
+              <div class="tool-group-grid">
+                <button class="tool-choice" type="button" role="menuitem" data-open-drawer="audit"><span class="tool-choice-icon"><svg class="icon"><use href="#i-audit"></use></svg></span><span class="tool-choice-name">Revisión</span></button>
+                <button class="tool-choice" type="button" role="menuitem" data-open-drawer="schedule"><span class="tool-choice-icon"><svg class="icon"><use href="#i-schedule"></use></svg></span><span class="tool-choice-name">Pliego</span></button>
+                <button class="tool-choice" type="button" role="menuitem" data-open-drawer="measure"><span class="tool-choice-icon"><svg class="icon"><use href="#i-ruler"></use></svg></span><span class="tool-choice-name">Medir rutas</span></button>
+                <button class="tool-choice" type="button" role="menuitem" data-open-drawer="networks"><span class="tool-choice-icon"><svg class="icon"><use href="#i-network"></use></svg></span><span class="tool-choice-name">Redes</span></button>
+                <button class="tool-choice" type="button" role="menuitem" data-open-drawer="layers"><span class="tool-choice-icon"><svg class="icon"><use href="#i-layers"></use></svg></span><span class="tool-choice-name">Capas</span></button>
+                <button class="tool-choice" type="button" role="menuitem" data-present-open><span class="tool-choice-icon"><svg class="icon"><use href="#i-present"></use></svg></span><span class="tool-choice-name">Presentar</span></button>
+                <button class="tool-choice" type="button" role="menuitem" data-open-drawer="versions"><span class="tool-choice-icon"><svg class="icon"><use href="#i-history"></use></svg></span><span class="tool-choice-name">Versiones</span></button>
+                <button class="tool-choice" type="button" role="menuitem" data-open-drawer="footer"><span class="tool-choice-icon"><svg class="icon"><use href="#i-layout-footer"></use></svg></span><span class="tool-choice-name">Pie de plano</span></button>
+                <button class="tool-choice" type="button" role="menuitem" data-open-drawer="shortcuts"><span class="tool-choice-icon"><svg class="icon"><use href="#i-keyboard"></use></svg></span><span class="tool-choice-name">Atajos</span></button>
+              </div>
+            </div>
+            <p class="tools-empty" data-tools-empty hidden>Sin resultados para esa búsqueda.</p>
             <footer class="tools-popover-foot"><span class="tool-tip"><kbd>Ctrl</kbd> + clic sobre un elemento superpuesto baja al de abajo.</span></footer>
           </div>
         </div>

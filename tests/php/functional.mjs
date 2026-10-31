@@ -132,6 +132,20 @@ try {
     editorHtml.includes('/assets/js/editor/present.js') && editorHtml.includes('data-present-open')
     && editorHtml.includes('#i-present'));
   report.check('Editor sin recursos externos', localAssets(editorHtml, `/index.php?r=projects/${projectId}/floors/${floorId}/editor`).external.length === 0);
+  report.check('El editor abre con la pantalla de bienvenida y el emblema',
+    editorHtml.includes('data-splash') && editorHtml.includes('normia-logo.png')
+    && editorHtml.includes('/assets/js/splash.js') && editorHtml.includes('aria-live="polite"'));
+  report.check('La marca usa el emblema como logo en toda la aplicación',
+    editorHtml.includes('normia-emblem.png') && editorHtml.includes('apple-touch-icon.png')
+    && editorHtml.includes('manifest.webmanifest'));
+  report.check('La paleta «Todas las herramientas» reúne herramientas y acciones',
+    editorHtml.includes('data-tools-popover')
+    && (editorHtml.match(/class="tool-choice"/g) || []).length === 25
+    && editorHtml.includes('data-tools-filter')
+    && editorHtml.includes('data-open-drawer="audit"')
+    && editorHtml.includes('data-present-open'));
+  report.check('La paleta declara buscador y estado vacío, sin controles falsos',
+    editorHtml.includes('data-tools-empty') && editorHtml.includes('aria-label="Buscar herramienta o acción"'));
   const bootMatch = /<textarea id="editor-boot" hidden>([\s\S]*?)<\/textarea>/.exec(editorHtml);
   let boot = null;
   try { boot = JSON.parse(decodeEntities(bootMatch?.[1] || '')); } catch { boot = null; }
@@ -616,7 +630,10 @@ try {
   report.check('Exportación SVG válida', res.status === 200 && res.type.includes('svg') && res.text.startsWith('<?xml') && res.text.includes('<svg'), `${res.status} ${res.type}`);
   report.check('SVG limpio sin controles de edición', !/selection-frame|editor-overlay|data-handle|align-guide/.test(res.text));
   report.check('SVG incluye leyenda y aviso', res.text.includes('verifica dimensiones y escala') && res.text.includes('leyenda'));
-  report.check('SVG sin recursos externos', !/(href|src)="https?:/.test(res.text) && !/xlink:href="(?!#)/.test(res.text));
+  report.check('SVG sin recursos externos',
+    !/(href|src)="https?:/.test(res.text)
+    && !/xlink:href="(?!#|data:image\/)/.test(res.text)
+    && !/url\((?!#)/.test(res.text));
   report.check('SVG con pictogramas embebidos', res.text.includes('<svg x=') && res.text.includes('data-layer='));
   const footerSvg = res.text;
   const footerCells = [...footerSvg.matchAll(/data-footer-cell="([a-z]+)"/g)].map((match) => match[1]);
@@ -638,6 +655,18 @@ try {
     !footerSvg.includes('Representación esquemática · verifica dimensiones') && /<title>/.test(footerSvg));
   report.check('El pie cambia de columnas según el ancho del lienzo',
     footerSvg.includes('data-footer-band="1"'), String(res.text.length));
+  const brandBlock = footerSvg.slice(footerSvg.indexOf('data-footer-brand'), footerSvg.indexOf('</svg>', footerSvg.length - 6));
+  report.check('El pie lleva la marca de agua de la app al final del plano',
+    footerSvg.includes('id="marca-normia"')
+    && brandBlock.includes('<image ')
+    && brandBlock.includes('Generado con Normia Planos CAD')
+    && /href="data:image\/png;base64,[A-Za-z0-9+/=]{200,}"/.test(brandBlock),
+    `${brandBlock.length} caracteres`);
+  report.check('La marca de agua se incrusta y no depende de archivos externos',
+    !footerSvg.includes('href="/assets/img/normia-watermark.png"')
+    && !/xlink:href/.test(brandBlock)
+    && (footerSvg.match(/data:image\/png;base64,/g) || []).length === 1,
+    `${(footerSvg.match(/data:image\/png;base64,/g) || []).length} imágenes incrustadas`);
   res = await client.get(`projects/${projectId}/floors/${floorId}/export/json`);
   let exported = {};
   try { exported = JSON.parse(res.text); } catch {}

@@ -268,8 +268,31 @@
         this.toggleToolsPalette();
       });
       q('[data-tools-popover]')?.addEventListener('click', (event) => {
-        if (event.target.closest('[data-tool-choice], [data-open-library]')) this.closeToolsPalette();
+        if (event.target.closest('[data-tool-choice], [data-open-library], [data-open-drawer], [data-present-open]')) {
+          this.closeToolsPalette();
+        }
       });
+      // El buscador filtra las filas de la paleta sin cerrarla; los grupos que
+      // se quedan sin coincidencias desaparecen con su título.
+      const toolsFilter = q('[data-tools-filter]');
+      if (toolsFilter) {
+        toolsFilter.addEventListener('input', () => {
+          const popover = q('[data-tools-popover]');
+          if (!popover) return;
+          const query = toolsFilter.value.trim().toLowerCase();
+          let visible = 0;
+          popover.querySelectorAll('.tool-choice').forEach((choice) => {
+            const match = query === '' || choice.textContent.toLowerCase().includes(query);
+            choice.hidden = !match;
+            if (match) visible += 1;
+          });
+          popover.querySelectorAll('.tool-group').forEach((group) => {
+            group.hidden = !group.querySelector('.tool-choice:not([hidden])');
+          });
+          const empty = popover.querySelector('[data-tools-empty]');
+          if (empty) empty.hidden = visible !== 0;
+        });
+      }
       document.addEventListener('pointerdown', (event) => {
         const popover = q('[data-tools-popover]');
         if (!popover || popover.hidden) return;
@@ -543,9 +566,15 @@
       const toggle = q('[data-tools-toggle]');
       if (!popover || !toggle) return;
       const next = typeof open === 'boolean' ? open : popover.hidden;
+      // Al abrir se limpia la búsqueda anterior: la paleta siempre abre completa.
+      const filter = q('[data-tools-filter]');
+      if (next && filter && filter.value !== '') {
+        filter.value = '';
+        filter.dispatchEvent(new Event('input', { bubbles: true }));
+      }
       popover.hidden = !next;
       toggle.setAttribute('aria-expanded', next ? 'true' : 'false');
-      if (next) popover.querySelector('.tool-choice')?.focus?.();
+      if (next) (popover.querySelector('[data-tools-filter]') || popover.querySelector('.tool-choice'))?.focus?.();
     }
 
     closeToolsPalette(restoreFocus = false) {
@@ -2121,6 +2150,9 @@
       const canvas = this.model.design.canvas;
       const svg = document.createElementNS(NS, 'svg');
       svg.setAttribute('xmlns', NS);
+      // El pie lleva el emblema como `data:` y una copia en XLink: sin declarar
+      // el espacio de nombres, algunos rasterizadores descartan la imagen.
+      svg.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
       const renderer = new root.Renderer(svg, this.catalogs);
       renderer.render(this.model.design, {
         view: { zoom: 1, panX: 0, panY: 0 },

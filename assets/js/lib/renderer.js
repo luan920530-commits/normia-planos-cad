@@ -693,11 +693,14 @@
       return Math.round(rows * Renderer.footerRowHeight(width) * 100) / 100;
     }
 
-    /** Altura total que ocupa el pie (franja + bloque de datos). */
+    /** Alto reservado para la marca de agua del pie. */
+    static get FOOTER_BRAND_HEIGHT() { return 26; }
+
+    /** Altura total que ocupa el pie (franja + bloque de datos + marca). */
     footerHeight(payload, width) {
       const resolved = this.footerPayload(payload, width);
       const data = resolved.lines.reduce((total, line) => total + Renderer.footerLineStep(line.size), 0);
-      return Renderer.footerBandHeight(width, resolved.cells.length) + data + 16;
+      return Renderer.footerBandHeight(width, resolved.cells.length) + data + 16 + Renderer.FOOTER_BRAND_HEIGHT;
     }
 
     /** Dibuja la franja y el bloque de datos a partir de `top`. */
@@ -746,8 +749,48 @@
         }, line.text));
         cursor += Renderer.footerLineStep(line.size);
       }
+      dataGroup.appendChild(this.footerBrand(payload, width, cursor + 5));
       group.appendChild(dataGroup);
       this.svg.appendChild(group);
+      return group;
+    }
+
+    /**
+     * Marca de agua del pie, a la derecha: el emblema pequeño y el nombre de
+     * la aplicación. Es el mismo contenido que dibuja `PlanFooter` en el
+     * servidor, así el SVG y el PNG exportados coinciden.
+     */
+    footerBrand(payload, width, top) {
+      const brand = payload.brand && typeof payload.brand === 'object' ? payload.brand : {};
+      const image = typeof brand.image === 'string' ? brand.image : '';
+      const group = node('g', { id: 'marca-normia', 'data-footer-brand': '1', opacity: '0.82' });
+      if (!image) return group;
+      const size = 20;
+      const pad = 14;
+      const version = brand.version ? ` v${brand.version}` : '';
+      const label = `Generado con ${brand.name || 'Normia Planos CAD'}${version}`;
+      const fontSize = 7.6;
+      const textWidth = Math.min(width * 0.62, label.length * fontSize * 0.54);
+      const textX = width - pad - textWidth;
+      const imageX = textX - size - 6;
+      const imageY = top + 1;
+      // `href` (SVG 2) basta para navegadores actuales y para el rasterizador
+      // del PNG; la copia en XLink duplicaría la imagen incrustada.
+      group.appendChild(node('image', {
+        x: Math.round(imageX * 100) / 100,
+        y: Math.round(imageY * 100) / 100,
+        width: size,
+        height: size,
+        preserveAspectRatio: 'xMidYMid meet',
+        href: image,
+      }));
+      group.appendChild(node('text', {
+        x: Math.round(textX * 100) / 100,
+        y: Math.round((imageY + size / 2 + fontSize * 0.36) * 100) / 100,
+        'font-size': fontSize,
+        fill: '#7c8798',
+        'letter-spacing': '0.2',
+      }, label));
       return group;
     }
 

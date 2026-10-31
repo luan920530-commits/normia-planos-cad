@@ -74,6 +74,24 @@ async function main() {
     const cards = $$(window, '.project-card');
     report.check('Cada proyecto se muestra en su tarjeta', cards.length === 2, `${cards.length} tarjetas`);
 
+    /* ------------------------ marca y bienvenida ------------------------ */
+    const splash = $(window, '[data-splash]');
+    report.check('La página abre con la pantalla de bienvenida y su emblema',
+      Boolean(splash) && Boolean($(window, '.app-splash-emblem img'))
+      && splash.getAttribute('role') === 'status'
+      && Boolean($(window, '[data-splash-status]')),
+      text($(window, '.app-splash-sub')));
+    report.check('La marca usa el emblema como logo y en los iconos del navegador',
+      Boolean($(window, '.brand-mark img[src*="normia-emblem"]'))
+      && Boolean($(window, 'link[rel="apple-touch-icon"]'))
+      && Boolean($(window, 'link[rel="manifest"]'))
+      && Boolean($(window, '.welcome-art img[src*="normia-logo"]')),
+      $(window, '.brand-mark img')?.getAttribute('src') || 'sin logo');
+    window.eval(`${fs.readFileSync(path.join(repoRoot, 'assets/js/splash.js'), 'utf8')}\n//# sourceURL=js/splash.js`);
+    await sleep(1700);
+    report.check('La bienvenida se retira sola y no deja una capa sobre la página',
+      !$(window, '[data-splash]'), $(window, '[data-splash]') ? 'sigue visible' : 'retirada');
+
     const firstToggle = $(window, '.project-card [data-menu-toggle]');
     const firstMenu = $(window, '.project-card .menu');
     report.check('La flecha del proyecto empieza cerrada',

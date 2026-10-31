@@ -20,7 +20,7 @@ body.editor-body { overflow: hidden; background: #eef2f8; }
 .rail-back:hover { background: rgba(255, 255, 255, .1); color: #fff; }
 .rail-back:focus-visible { outline: 2px solid #7db3ff; outline-offset: 2px; }
 .brand-mark.small { width: 32px; height: 32px; border-radius: 10px; }
-.brand-mark.small .icon { width: 18px; height: 18px; }
+.brand-mark.small img { width: 28px; height: 28px; }
 .editor-brand:hover { text-decoration: none; }
 .editor-doc-title { display: flex; flex-direction: column; line-height: 1.25; min-width: 0; }
 .editor-doc-title strong { font-size: .95rem; letter-spacing: -.01em; color: #f4f8ff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 34ch; }
@@ -231,6 +231,7 @@ body.editor-body { overflow: hidden; background: #eef2f8; }
 /* La barra superior tiene `backdrop-filter`, así que es el bloque contenedor
    de sus descendientes fijos: este panel se ancla con `absolute`. */
 .topbar-flyout { position: absolute; left: auto; right: 0; top: calc(100% + 8px); transform-origin: right top; }
+
 
 @media (prefers-reduced-motion: reduce) {
   .rail-button .icon, .rail-caret, .rail-flyout { transition: none; animation: none; }
@@ -802,13 +803,59 @@ body.is-dragging-resource .library-card { cursor: grabbing; }
 
 .tools-popover {
   position: absolute; left: 0; top: calc(100% + 8px); z-index: 70;
-  width: min(430px, calc(100vw - 28px));
-  background: rgba(255, 255, 255, .98); border: 1px solid var(--line); border-radius: 18px;
-  box-shadow: 0 24px 70px rgba(15, 23, 42, .2), 0 4px 12px rgba(15, 23, 42, .06);
+  width: min(452px, calc(100vw - 28px)); max-height: min(74dvh, 640px); overflow-y: auto;
+  overscroll-behavior: contain;
+  /* Paleta oscura, como la de AutoCAD, con el mismo cristal del rail. */
+  background: rgba(15, 26, 45, .95); border: 1px solid rgba(255, 255, 255, .12); border-radius: 18px;
+  color: #dbe3ef;
+  box-shadow: 0 30px 80px rgba(2, 8, 23, .6), inset 0 1px 0 rgba(255, 255, 255, .1);
   padding: 12px; display: flex; flex-direction: column; gap: 10px;
-  backdrop-filter: saturate(180%) blur(16px);
-  animation: pop-in .16s cubic-bezier(.22, .8, .3, 1);
+  -webkit-backdrop-filter: saturate(180%) blur(22px); backdrop-filter: saturate(180%) blur(22px);
+  animation: pop-in .18s cubic-bezier(.22, .8, .3, 1);
 }
+.tools-popover .tools-popover-head strong { color: #f2f7ff; }
+.tools-popover .tools-popover-head small,
+.tools-popover .tool-group-title { color: #8ea3c2; }
+.tools-popover .tool-choice {
+  background: rgba(255, 255, 255, .045); border: 1px solid rgba(255, 255, 255, .08); color: #dbe3ef;
+}
+.tools-popover .tool-choice:hover,
+.tools-popover .tool-choice:focus-visible {
+  background: linear-gradient(180deg, rgba(74, 151, 255, .28), rgba(10, 108, 245, .22));
+  border-color: rgba(125, 179, 255, .5); color: #fff; outline: none;
+}
+.tools-popover .tool-choice.is-current {
+  background: linear-gradient(175deg, #4a97ff 0%, #0a6cf5 60%, #0a55cc 100%);
+  border-color: rgba(255, 255, 255, .3); color: #fff;
+}
+.tools-popover .tool-choice-icon { background: rgba(255, 255, 255, .1); color: #cfe0f8; }
+.tools-popover .tool-choice.is-current .tool-choice-icon { background: rgba(255, 255, 255, .92); color: #0a55cc; }
+.tools-popover .tool-choice kbd,
+.tools-popover .tools-popover-head kbd {
+  background: rgba(255, 255, 255, .1); border-color: rgba(255, 255, 255, .16); color: #c8d8ef;
+}
+.tools-popover .tool-choice-badge { background: rgba(255, 255, 255, .12); color: #dbe9ff; }
+.tools-popover .tools-popover-foot { border-top-color: rgba(255, 255, 255, .12); }
+.tools-popover .tool-tip { color: #93a7c4; }
+.tools-popover .tools-empty { color: #93a7c4; }
+
+/* Buscador de la paleta (filtra sin cerrar el panel). */
+.tools-search {
+  display: flex; align-items: center; gap: 7px; margin: 0 1px;
+  padding: 7px 10px; border-radius: 10px;
+  background: rgba(255, 255, 255, .06); border: 1px solid rgba(255, 255, 255, .12);
+  transition: border-color .18s ease, background .18s ease;
+}
+.tools-search .icon { width: 14px; height: 14px; color: #8ea3c2; flex: 0 0 auto; }
+.tools-search input {
+  flex: 1 1 auto; min-width: 0; border: 0; background: transparent; color: #eaf1fc;
+  font: inherit; font-size: .79rem; padding: 1px 0; outline: none;
+}
+.tools-search input::placeholder { color: #7f93b2; }
+.tools-search:focus-within { border-color: rgba(125, 179, 255, .8); background: rgba(125, 179, 255, .14); }
+.tools-empty { margin: 2px 4px; font-size: .76rem; }
+.tools-empty[hidden] { display: none; }
+.tool-choice[hidden], .tool-group[hidden] { display: none; }
 .tools-popover[hidden] { display: none; }
 @keyframes pop-in { from { opacity: 0; transform: translateY(-6px) scale(.99); } }
 .tools-popover-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; padding: 2px 4px 0; }
