@@ -73,8 +73,13 @@ jobs:
         shell: bash
         run: |
           if [ -f "$RUNNER_TEMP/build.log" ]; then
-            tail -25 "$RUNNER_TEMP/build.log" | while IFS= read -r line; do
+            # La línea del error de electron-builder empieza con ⨯; el resto es
+            # la pila, que no dice nada útil en una anotación.
+            grep -E "⨯|^Error|error:|Cannot|failed" "$RUNNER_TEMP/build.log" | tail -8 | while IFS= read -r line; do
               echo "::error title=armado::${line//$'\r'/}"
+            done
+            tail -4 "$RUNNER_TEMP/build.log" | while IFS= read -r line; do
+              echo "::error title=armado (final)::${line//$'\r'/}"
             done
           fi
           ls -R dist/electron/installers 2>/dev/null | head -30 || true
@@ -86,12 +91,22 @@ jobs:
           VERSION="$(node -p "require('./package.json').version")"
           ls -lh dist/electron/installers
           case "${{ matrix.os }}" in
-            macos-*) test -f "dist/electron/installers/normia-planos-cad-${VERSION}-macos-${{ matrix.arch }}.dmg" ;;
-            windows-*) test -f "dist/electron/installers/normia-planos-cad-${VERSION}-windows-${{ matrix.arch }}-instalador.exe" ;;
-            *) test -f "dist/electron/installers/normia-planos-cad-${VERSION}-linux-${{ matrix.arch }}.AppImage" ;;
+            macos-*) PATRON="*.dmg" ;;
+            windows-*) PATRON="*-instalador.exe" ;;
+            *) PATRON="*.AppImage" ;;
           esac
-          (cd dist/electron/installers && sha256sum * > SHA256SUMS.txt 2>/dev/null || shasum -a 256 * > SHA256SUMS.txt)
-          cat dist/electron/installers/SHA256SUMS.txt
+          if [ -z "$(find dist/electron/installers -maxdepth 1 -name "$PATRON" -print -quit)" ]; then
+            echo "::error title=sin instalador::no se generó ningún archivo $PATRON"
+            find dist/electron/installers -maxdepth 1 -type f -printf '%f\n'
+            exit 1
+          fi
+          # Solo los archivos de la raíz: las carpetas descomprimidas (`win-unpacked`,
+          # `mac/`, `linux-unpacked`) no se suman.
+          cd dist/electron/installers
+          find . -maxdepth 1 -type f ! -name SHA256SUMS.txt -printf '%f\n' | sort | while IFS= read -r file; do
+            if command -v sha256sum >/dev/null; then sha256sum "$file"; else shasum -a 256 "$file"; fi
+          done > SHA256SUMS.txt
+          cat SHA256SUMS.txt
 
       # Prueba real sobre el binario empaquetado: `--check` inicia PHP desde la
       # carpeta del paquete (no desde node_modules) y comprueba las extensiones.
