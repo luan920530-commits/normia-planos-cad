@@ -246,9 +246,23 @@ jobs:
       - name: Compilar el instalador
         shell: pwsh
         run: |
-          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          # Inno Setup resuelve las rutas del script desde la carpeta del .iss,
+          # así que aquí se pasan absolutas y no hay lugar a dudas.
+          $iscc = @(
+            "C:\Program Files (x86)\Inno Setup 6\ISCC.exe",
+            "C:\Program Files\Inno Setup 6\ISCC.exe"
+          ) | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $iscc) { throw "No se encontró ISCC.exe. Revisa la instalación de Inno Setup." }
           $version = (Get-Content package.json | ConvertFrom-Json).version
-          & $iscc "/DAppVersion=$version" "/DSourceDir=dist\win-app" "/DOutputDir=dist" "/DIconFile=dist\normia.ico" tools\desktop\windows\normia.iss
+          $source = (Resolve-Path "dist\win-app").Path
+          $output = (Resolve-Path "dist").Path
+          $icon = (Resolve-Path "dist\normia.ico").Path
+          $salida = & $iscc "/DAppVersion=$version" "/DSourceDir=$source" "/DOutputDir=$output" "/DIconFile=$icon" tools\desktop\windows\normia.iss 2>&1 | Out-String
+          Write-Output $salida
+          if ($LASTEXITCODE -ne 0) {
+            Write-Output "::error title=Inno Setup::$(($salida -split "`n" | Select-Object -Last 5) -join ' | ')"
+            throw "ISCC terminó con código $LASTEXITCODE"
+          }
           if (-not (Test-Path "dist\normia-planos-cad-$version-windows-x64.exe")) { throw "No se generó el instalador" }
 
       - name: Instalación silenciosa y arranque
