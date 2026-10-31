@@ -161,7 +161,7 @@ function build() {
       ...(readElectronVersion() ? { electronVersion: readElectronVersion() } : {}),
       mac: {
         category: 'public.app-category.graphics-design',
-        icon: path.join(buildDir, 'icon.png'),
+        icon: path.join(buildDir, 'icon.icns'),
         identity: null,
         hardenedRuntime: false,
         gatekeeperAssess: false,
@@ -176,7 +176,7 @@ function build() {
         ],
       },
       win: {
-        icon: path.join(buildDir, 'icon-256.png'),
+        icon: path.join(buildDir, 'icon.ico'),
         target: [{ target: 'nsis', arch: [args.arch] }, { target: 'zip', arch: [args.arch] }],
         artifactName: `normia-planos-cad-\${version}-windows-\${arch}.\${ext}`,
       },
