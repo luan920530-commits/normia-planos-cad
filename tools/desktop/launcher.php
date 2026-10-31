@@ -233,27 +233,15 @@ function normaLWaitForExit(array $state): void
 /** Arranca el servidor y devuelve el proceso, o null con el motivo. */
 function normaLStartServer(string $root, int $port, string $dataDir): ?array
 {
-    $command = [PHP_BINARY];
-    // En Windows el intérprete viaja con su carpeta `ext/` y el php.ini del
-    // equipo que lo empaquetó no sirve en el equipo del usuario. Se cargan las
-    // extensiones con rutas absolutas en vez de depender de la configuración.
-    $runtimeExt = $root . '/runtime/ext';
-    if (is_dir($runtimeExt)) {
-        array_push($command, '-n', '-d', 'extension_dir=' . $runtimeExt);
-        foreach (['pdo', 'pdo_sqlite', 'sqlite3', 'mbstring', 'openssl', 'fileinfo'] as $extension) {
-            array_push($command, '-d', 'extension=' . $extension);
-        }
-    }
-    array_push(
-        $command,
+    $command = array_merge([PHP_BINARY], normaLPhpArguments($root), [
         '-d', 'variables_order=EGPCS',
         '-d', 'display_errors=0',
         '-d', 'log_errors=1',
         '-d', 'error_log=' . rtrim($dataDir, '/\\') . '/storage/logs/php-desktop.log',
         '-S', '127.0.0.1:' . $port,
         '-t', $root,
-        $root . '/tools/desktop/router.php'
-    );
+        $root . '/tools/desktop/router.php',
+    ]);
     $descriptors = [
         0 => ['file', PHP_OS_FAMILY === 'Windows' ? 'NUL' : '/dev/null', 'r'],
         1 => ['file', rtrim($dataDir, '/\\') . '/storage/logs/servidor.log', 'a'],
@@ -269,16 +257,60 @@ function normaLStartServer(string $root, int $port, string $dataDir): ?array
 }
 
 /**
+ * Argumentos que necesita el intérprete del paquete.
+ *
+ * En Windows la carpeta del intérprete viaja con su propio `ext/` y el php.ini
+ * del equipo que lo empaquetó no existe en el equipo del usuario. Por eso las
+ * extensiones se cargan con la ruta absoluta del paquete.
+ *
+ * @return array<int,string>
+ */
+function normaLPhpArguments(string $root): array
+{
+    $runtimeExt = $root . '/runtime/ext';
+    if (!is_dir($runtimeExt)) {
+        return [];
+    }
+    $arguments = ['-n', '-d', 'extension_dir=' . $runtimeExt];
+    foreach (['pdo', 'pdo_sqlite', 'sqlite3', 'mbstring', 'openssl', 'fileinfo'] as $extension) {
+        array_push($arguments, '-d', 'extension=' . $extension);
+    }
+    return $arguments;
+}
+
+/**
  * Muestra el intérprete que usará el servidor y sus extensiones.
- * Lo usan la instalación y el flujo de trabajo para comprobar el paquete.
+ *
+ * Con el PHP del paquete se ejecuta un segundo proceso con los mismos
+ * argumentos que el servidor, que es la única forma de verificar el
+ * `extension_dir` real. Con un PHP estático (macOS) se informa en el acto.
  */
 function normaLReportEnvironment(string $root): int
 {
+    $required = ['pdo_sqlite', 'sqlite3', 'mbstring', 'openssl', 'fileinfo', 'session'];
+    if (is_dir($root . '/runtime/ext')) {
+        $code = 'echo "PHP " . PHP_VERSION . PHP_EOL;'
+            . 'foreach (' . var_export($required, true) . ' as $extension) {'
+            . '  echo ($extension . "=" . (extension_loaded($extension) ? "ok" : "falta") . PHP_EOL);'
+            . '}'
+            . 'exit(extension_loaded("pdo_sqlite") ? 0 : 1);';
+        $command = array_merge([PHP_BINARY], normaLPhpArguments($root), ['-r', $code]);
+        $output = [];
+        $status = 0;
+        @exec(implode(' ', array_map('escapeshellarg', $command)) . ' 2>&1', $output, $status);
+        echo implode(PHP_EOL, $output) . PHP_EOL;
+        echo 'Carpeta: ' . $root . PHP_EOL;
+        if ($status !== 0) {
+            fwrite(STDERR, 'El intérprete del paquete no carga pdo_sqlite.' . PHP_EOL);
+        }
+        return $status === 0 ? 0 : 1;
+    }
+
     echo 'PHP ' . PHP_VERSION . ' (' . PHP_SAPI . ')' . PHP_EOL;
     echo 'Binario: ' . PHP_BINARY . PHP_EOL;
     echo 'Carpeta: ' . $root . PHP_EOL;
     $missing = [];
-    foreach (['pdo_sqlite', 'sqlite3', 'mbstring', 'openssl', 'fileinfo', 'session'] as $extension) {
+    foreach ($required as $extension) {
         $loaded = extension_loaded($extension);
         echo ($loaded ? '  ✓ ' : '  ✗ ') . $extension . PHP_EOL;
         if (!$loaded) {
