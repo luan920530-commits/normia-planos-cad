@@ -1,9 +1,11 @@
 # Distribución: macOS, Windows y Android
 
-Normia Planos CAD se entrega de tres formas. Antes de esta versión solo existía
-el paquete web (un ZIP que se descomprime en un servidor con PHP). Esta guía
-cubre las otras dos, que no necesitan instalar PHP ni un servidor: la aplicación
-de escritorio y el APK de Android.
+Normia Planos CAD se entrega de cuatro formas. Antes de la versión 1.9.0 solo
+existía el paquete web (un ZIP que se descomprime en un servidor con PHP). Esta
+guía cubre las tres que no necesitan instalar PHP ni un servidor: la aplicación
+de escritorio **nativa** (esta página), la edición **Electron** —mismo motor en
+macOS, Windows y Linux, con PHP compilado a WebAssembly; ver
+[`ELECTRON.md`](ELECTRON.md)— y el APK de Android.
 
 | Plataforma | Archivo | Requisitos | Cómo se arma |
 | --- | --- | --- | --- |

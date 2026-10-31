@@ -32,11 +32,13 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 15. [Seguridad](#seguridad)
 16. [Pruebas](#pruebas)
 17. [Distribución: escritorio y Android](#distribución-escritorio-y-android)
-18. [Cambios de la versión 1.9.0](#cambios-de-la-versión-190)
-19. [Cambios de la versión 1.8.0](#cambios-de-la-versión-180)
-20. [Paquetes y verificación](#paquetes-y-verificación)
-21. [Limitaciones](#limitaciones)
-22. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
+18. [Edición Electron](#edición-electron)
+19. [Cambios de la versión 1.10.0](#cambios-de-la-versión-1100)
+20. [Cambios de la versión 1.9.0](#cambios-de-la-versión-190)
+21. [Cambios de la versión 1.8.0](#cambios-de-la-versión-180)
+22. [Paquetes y verificación](#paquetes-y-verificación)
+23. [Limitaciones](#limitaciones)
+24. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
 
 ---
 
@@ -661,16 +663,17 @@ Lo único que no funciona sin red es la **vista previa de desarrollo** (`npm run
 | `tests/js/pages.mjs` | 29 comprobaciones de las páginas fuera del editor: menú de acciones de proyectos y pisos (capa fija, colocación, teclado, un solo menú), confirmación de borrado y borrado real de piso y proyecto, con la protección del último piso. |
 | `tests/php/package.mjs` | 39 comprobaciones: construye ambos ZIP, verifica que no haya bases, sesiones, credenciales, logs ni carpetas de desarrollo, valida los SHA-256 y hace una instalación limpia de la demo comprobando assets, catálogos (395/350), los cuatro pisos del proyecto de ejemplo, señales de servicios y redes en la demo, la señal «Usted está aquí», **el auditor y su informe en la demo empaquetada**, editor, SVG, JSON e impresión. |
 | `tests/php/desktop.mjs` | 37 comprobaciones del escritorio: rutas de datos separadas del código, `NORMA_DATA_PATH` (solo absolutas), lanzador (argumentos, puerto, estado, cierre), enrutador (bloqueos, saltos de directorio, byte nulo) y una instalación completa escribiendo en una carpeta de datos externa. |
+| `tests/js/electron.mjs` | 22 comprobaciones de la edición Electron: ventana sin acceso a Node, puente mínimo, enlaces externos, instancia única, menú en español, descargas, servidor en `127.0.0.1` sin cookies en memoria, entorno de php-wasm, instalación completa con datos fuera del código, `storage/` inaccesible, armado del paquete (aplicación, ventana e intérprete) y ausencia de ICU y de versiones de PHP que no se usan. |
 | `tests/js/android.mjs` | 18 comprobaciones del APK: arranque de PHP 8.3 sobre WebAssembly, instalación, sesión, panel, editor, auditor, guardado, reapertura y verificación del contenedor nativo (permisos, descargas, impresión, selección de archivos, firma). |
 | `tests/js/offline.mjs` | 0 dependencias de red: revisa las vistas, los estilos, los scripts y los catálogos y falla si aparece un `fetch`, un `WebSocket`, un `src`/`href`/`url()` externo, una llamada de red desde PHP o un dominio no declarado. |
 
 Resultados esperados de la última ejecución completa:
 
 ```text
-✓ Sintaxis PHP 8.1 · 56 archivos, sin errores
-✓ Sintaxis PHP 8.3 · 56 archivos, sin errores
-✓ Sintaxis JavaScript · 21 archivos, sin errores
-✓ Funcionamiento sin conexión · 85 archivos, sin referencias externas
+✓ Sintaxis PHP 8.1 · 63 archivos, sin errores
+✓ Sintaxis PHP 8.3 · 63 archivos, sin errores
+✓ Sintaxis JavaScript · 50 archivos, sin errores
+✓ Funcionamiento sin conexión · 96 archivos, sin referencias externas
 ✓ Funcional PHP 8.1 · 197/197
 ✓ Funcional PHP 8.3 · 197/197
 ✓ Interfaz (JSDOM) PHP 8.1 · 317/317
@@ -679,8 +682,9 @@ Resultados esperados de la última ejecución completa:
 ✓ Páginas y menús PHP 8.3 · 32/32
 ✓ Escritorio (instaladores) · 37/37
 ✓ Android (APK) · 18/18
+✓ Escritorio (Electron) · 22/22
 ✓ Paquetes y demo · 39/39
-13/13 pasos correctos
+14/14 pasos correctos
 ```
 
 Las pruebas trabajan sobre copias temporales: no escriben configuración ni bases en el repositorio. `node_modules` solo contiene dependencias de desarrollo y se excluye de los paquetes.
@@ -712,10 +716,81 @@ más en el equipo.
 - **Windows 7, 8 y 8.1 no están soportados**: PHP 8.x exige Windows 8 o superior
   y esos sistemas ya no reciben navegadores actualizados.
 
+### Dos ediciones
+
+| | Nativa | Electron |
+| --- | --- | --- |
+| Intérprete | PHP estático (macOS) o copia de PHP (Windows) | PHP 8.3 en WebAssembly, sin compilar nada |
+| Instaladores | `.pkg` por arquitectura, `.exe` | `.dmg` por arquitectura, `.exe`, `.AppImage` |
+| Tamaño instalado | ~40–60 MB | ~260 MB |
+| Ventana propia y menús | abre el navegador del sistema | sí |
+
+La edición nativa es la que menos ocupa. La de Electron es la misma en macOS,
+Windows y Linux y no depende de compilar PHP para cada sistema; se explica en
+[`docs/ELECTRON.md`](docs/ELECTRON.md).
+
 Guía completa, requisitos, rutas de datos y solución de problemas:
 [`docs/ESCRITORIO.md`](docs/ESCRITORIO.md).
 
 ---
+
+## Edición Electron
+
+Nueva forma de distribuir el editor: una aplicación de escritorio que lleva PHP
+8.3 compilado a **WebAssembly** dentro del propio paquete. Es el mismo motor que
+usa el APK y no necesita compilar un intérprete por sistema: un `.dmg` para
+macOS Intel, otro para Apple Silicon, un instalador para Windows y un `AppImage`
+para Linux.
+
+- **La ventana** (`tools/electron/main.mjs`) muestra la aplicación real servida
+  desde el mismo proceso, en `127.0.0.1` y en un puerto libre. Menú en español,
+  instancia única, enlaces externos en el navegador del sistema, descargas a la
+  carpeta de Descargas con nombre libre e impresión en A4.
+- **Los datos** quedan en una carpeta del usuario, separada del programa:
+  `Archivo → Abrir la carpeta de datos` y `Archivo → Guardar una copia de los
+  datos…` (copia fechada de la carpeta completa).
+- **El servidor** (`tools/electron/server.mjs`) atiende las peticiones con las
+  cabeceras del navegador, así que la sesión vive en cookies de Chromium y no en
+  memoria; mientras PHP arranca muestra una pantalla de «Preparando».
+- **El armado** (`tools/electron/build.mjs`) copia la aplicación, el intérprete
+  y la ventana, quita las extensiones que no se usan y llama a
+  `electron-builder`. El flujo `.github/workflows/dist-electron.yml` compila en
+  macOS, Windows y Linux y ejecuta `--check` sobre el paquete ya empaquetado.
+- **Sin firma comercial**, igual que la edición nativa: Gatekeeper y SmartScreen
+  se explican en la guía y en **Ayuda → Acerca de esta edición**.
+
+Guía completa: [`docs/ELECTRON.md`](docs/ELECTRON.md).
+
+## Cambios de la versión 1.10.0
+
+Entrega de la **edición Electron**. La edición nativa y el paquete web no
+cambian: se añade una tercera forma de instalar la misma aplicación.
+
+- **Aplicación de escritorio con PHP en WebAssembly.** `tools/electron/` reúne
+  la ventana, el servidor local y el armado. Se elimina la dependencia de
+  `static-php-cli` y de la copia de PHP para Windows en esta edición: el
+  intérprete es el mismo en las tres plataformas y arranca en menos de un
+  segundo.
+- **Émulos del lanzador nativo.** `--check` informa el intérprete y las
+  extensiones; `--datos=<ruta>` cambia la carpeta de datos. Las descargas, la
+  impresión y los enlaces externos se comportan como en un navegador moderno.
+- **Copia de seguridad de los datos.** El menú Archivo copia la carpeta completa
+  con la fecha en el nombre y ofrece abrirla: sirve para mover los planos a otro
+  equipo.
+- **Un solo origen para copiar la aplicación.** `tools/shared/app-copy.mjs` es
+  ahora la lista compartida de lo que viaja en las dos ediciones de escritorio;
+  `tools/desktop/build.mjs` y `tools/electron/build.mjs` la usan.
+- **Icono generado del logo.** `tools/electron/make-icon.mjs` escala el emblema a
+  512 y 256 px con un filtro bilineal, sin dependencias externas.
+- **Flujo nuevo.** `dist-electron.yml` compila en `macos-latest`,
+  `macos-15-intel`, `windows-latest` y `ubuntu-latest`, comprueba el paquete
+  empaquetado con `--check` y publica los instaladores con `SHA256SUMS.txt`.
+- **Pruebas.** `tests/js/electron.mjs` (22) instala, entra, recorre el editor y
+  arma el paquete con el intérprete real; `tests/js/lint.mjs` revisa ahora
+  también `tools/`.
+- **Documentación.** Nueva guía [`docs/ELECTRON.md`](docs/ELECTRON.md) con
+  requisitos, avisos de Gatekeeper y SmartScreen, rutas de datos, copia de
+  seguridad y diferencias con la edición nativa.
 
 ## Cambios de la versión 1.9.0
 

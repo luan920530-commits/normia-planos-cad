@@ -18,6 +18,7 @@ const walk = (directory) => {
 
 walk(path.join(root, 'assets'));
 walk(path.join(root, 'tests'));
+walk(path.join(root, 'tools'));
 
 let failures = 0;
 for (const file of targets.sort()) {
