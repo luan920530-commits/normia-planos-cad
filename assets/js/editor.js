@@ -66,6 +66,7 @@
       this.audit = root.Audit ? new root.Audit(this) : null;
       this.schedule = root.Schedule ? new root.Schedule(this) : null;
       this.measure = root.Measure ? new root.Measure(this) : null;
+      this.present = root.Present ? new root.Present(this) : null;
       this.tool = 'select';
       this.view = { zoom: 1, panX: 0, panY: 0 };
       this.showGrid = true;
@@ -240,6 +241,9 @@
       });
       qa('[data-close-drawer]').forEach((button) => {
         button.addEventListener('click', () => this.closeDrawer());
+      });
+      qa('[data-present-open]').forEach((button) => {
+        button.addEventListener('click', () => this.present?.open());
       });
       q('[data-tools-toggle]')?.addEventListener('click', (event) => {
         event.stopPropagation();
@@ -750,6 +754,7 @@
 
     /* -------------------------------- puntero -------------------------------- */
     onPointerDown(event) {
+      if (this.present?.active) return;
       const pointNode = event.target.closest?.('.selection-frame .vertex-handle');
       if (pointNode && this.tool === 'select') {
         const element = this.model.selectedElements()[0];
@@ -1485,6 +1490,7 @@
 
     /* ------------------------------- teclado ------------------------------- */
     onKeyDown(event) {
+      if (this.present?.active) return;
       const target = event.target;
       const typing = target instanceof Element && (target.closest('input, textarea, select, [contenteditable="true"]') !== null);
       if (event.key === 'Escape') {

@@ -20,6 +20,7 @@ export const SCRIPTS = [
   'js/editor/audit.js',
   'js/editor/schedule.js',
   'js/editor/measure.js',
+  'js/editor/present.js',
   'js/editor.js',
 ];
 

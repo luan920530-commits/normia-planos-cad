@@ -1055,3 +1055,95 @@ body.is-dragging-resource .library-card { cursor: grabbing; }
 .measure-saved li span { flex: 1; color: var(--muted); }
 .measure-saved li strong { font-variant-numeric: tabular-nums; }
 .measure-saved li small { color: var(--muted); font-size: .68rem; }
+
+/* --------------------------- modo presentación --------------------------- */
+body.is-presenting .editor-topbar,
+body.is-presenting .editor-banners,
+body.is-presenting .rail,
+body.is-presenting .properties-panel,
+body.is-presenting .stage-toolbar,
+body.is-presenting .stage-statusbar,
+body.is-presenting .drawer,
+body.is-presenting .drawer-backdrop { display: none !important; }
+body.is-presenting .canvas-stage { position: fixed; inset: 0; margin: 0; z-index: 5; }
+body.is-presenting .canvas-shell { margin: 0; border-radius: 0; height: 100%; }
+body.is-presenting .ruler { display: none; }
+
+.present[hidden] { display: none; }
+.present { position: fixed; inset: 0; z-index: 60; pointer-events: none; color: #eef4ff; }
+.present-bar {
+  pointer-events: auto; position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap; justify-content: center;
+  max-width: calc(100% - 24px); padding: 9px 12px; border-radius: 16px;
+  background: rgba(9, 16, 28, .9); border: 1px solid rgba(255, 255, 255, .12);
+  box-shadow: 0 18px 44px rgba(2, 8, 20, .45);
+  -webkit-backdrop-filter: blur(16px) saturate(160%); backdrop-filter: blur(16px) saturate(160%);
+}
+.present-title { display: flex; flex-direction: column; line-height: 1.25; padding-right: 6px; border-right: 1px solid rgba(255, 255, 255, .12); }
+.present-title strong { font-size: .9rem; }
+.present-title small { font-size: .7rem; color: #9fb2cc; }
+.present-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.present-btn {
+  appearance: none; border: 1px solid rgba(255, 255, 255, .14); background: rgba(255, 255, 255, .06);
+  color: inherit; font: inherit; font-size: .78rem; font-weight: 600; padding: 6px 11px; border-radius: 9px;
+  display: inline-flex; align-items: center; gap: 7px; cursor: pointer; min-height: 32px;
+}
+.present-btn:hover { background: rgba(255, 255, 255, .13); }
+.present-btn:focus-visible { outline: 2px solid #8ec5ff; outline-offset: 2px; }
+.present-btn.is-on { background: #2b6ee8; border-color: #4d8bf5; box-shadow: 0 0 0 3px rgba(43, 110, 232, .28); }
+.present-btn.is-primary { background: #2b6ee8; border-color: #4d8bf5; }
+.present-btn.is-exit { background: rgba(220, 60, 60, .22); border-color: rgba(248, 113, 113, .45); }
+.present-dot-icon { width: 9px; height: 9px; border-radius: 50%; background: #f87171; box-shadow: 0 0 0 3px rgba(248, 113, 113, .25); }
+.present-speed { display: inline-flex; align-items: center; gap: 6px; font-size: .74rem; color: #b8c7dd; }
+.present-speed select {
+  font: inherit; font-size: .74rem; color: #eef4ff; background: rgba(255, 255, 255, .08);
+  border: 1px solid rgba(255, 255, 255, .16); border-radius: 7px; padding: 4px 6px;
+}
+.present-hint {
+  position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); margin: 0;
+  font-size: .74rem; color: #dbe6f7; background: rgba(9, 16, 28, .78); padding: 7px 13px; border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, .12);
+}
+.present-hint kbd { font: inherit; font-size: .7rem; padding: 1px 5px; border-radius: 5px; background: rgba(255, 255, 255, .16); }
+.present-laser { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 3; overflow: hidden; }
+.present-beam { fill: #f87171; filter: drop-shadow(0 0 7px rgba(248, 113, 113, .85)); animation: present-fade 900ms ease-out forwards; }
+.present-spotlight {
+  position: absolute; inset: 0; z-index: 2; pointer-events: none;
+  background: radial-gradient(circle 170px at var(--x, 50%) var(--y, 50%), rgba(2, 8, 20, 0) 0 52%, rgba(2, 8, 20, .8) 100%);
+}
+.present-spotlight[hidden] { display: none; }
+.present-panel {
+  pointer-events: auto; position: absolute; right: 18px; top: 84px; width: min(370px, calc(100% - 36px));
+  max-height: calc(100% - 120px); overflow: auto; padding: 16px; border-radius: 16px;
+  background: #fff; color: #0f172a; box-shadow: 0 24px 60px rgba(2, 8, 20, .38);
+}
+.present-panel[hidden] { display: none; }
+.present-panel header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.present-panel h2 { margin: 0; font-size: .92rem; }
+.present-panel h2 em { font-style: normal; color: #64748b; font-weight: 600; font-size: .76rem; }
+.present-x { border: 0; background: #f1f5f9; color: #475569; width: 28px; height: 28px; border-radius: 8px; font-size: 1rem; line-height: 1; cursor: pointer; }
+.present-layers { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.present-layers label { display: flex; align-items: center; gap: 9px; padding: 8px 10px; border: 1px solid #e2e8f0; border-radius: 10px; font-size: .8rem; }
+.present-layers span { flex: 1; }
+.present-layers small { color: #64748b; font-size: .7rem; }
+.present-question { margin: 0 0 10px; font-size: .88rem; font-weight: 600; }
+.present-options { display: flex; flex-direction: column; gap: 7px; margin-bottom: 10px; }
+.present-option { text-align: left; padding: 9px 12px; border: 1px solid #dbe3ee; border-radius: 10px; background: #f8fafc; font: inherit; font-size: .82rem; cursor: pointer; }
+.present-option:hover:not(:disabled) { border-color: #93b8ea; background: #eef4ff; }
+.present-option:disabled { cursor: default; opacity: .85; }
+.present-option.is-correct { border-color: #86efac; background: #f0fdf4; font-weight: 700; }
+.present-option.is-wrong { border-color: #fca5a5; background: #fef2f2; }
+.present-feedback { margin: 0 0 10px; font-size: .78rem; color: #475569; min-height: 1.2em; }
+.present-feedback.is-ok { color: #15803d; }
+.present-feedback.is-bad { color: #b91c1c; }
+.present-quiz-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: .74rem; color: #475569; }
+.present-note { margin: 10px 0 0; font-size: .7rem; color: #64748b; }
+.present-btn:focus-visible, .present-option:focus-visible, .present-x:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+
+@keyframes present-trace { to { stroke-dashoffset: 0; } }
+@keyframes present-fade { from { opacity: .95; } to { opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .present-beam { animation: none; opacity: .85; }
+  .present-option, .present-btn { transition: none; }
+}

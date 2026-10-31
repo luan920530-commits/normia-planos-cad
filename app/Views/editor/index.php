@@ -149,6 +149,9 @@
         <button class="rail-button" type="button" data-open-drawer="measure" data-tooltip="Medir rutas internas · distancias de recorrido" aria-label="Medir rutas internas">
           <svg class="icon"><use href="#i-measure"></use></svg><span>Rutas</span>
         </button>
+        <button class="rail-button" type="button" data-present-open data-tooltip="Modo presentación · pantalla limpia, láser y quiz" aria-label="Modo presentación">
+          <svg class="icon"><use href="#i-present"></use></svg><span>Presentar</span>
+        </button>
         <button class="rail-button" type="button" data-open-drawer="networks" data-tooltip="Redes y circuitos" aria-label="Redes y circuitos">
           <svg class="icon"><use href="#i-network"></use></svg><span>Redes</span>
         </button>
@@ -534,6 +537,7 @@
 <script src="<?= e(asset('js/editor/audit.js')) ?>" defer></script>
 <script src="<?= e(asset('js/editor/schedule.js')) ?>" defer></script>
 <script src="<?= e(asset('js/editor/measure.js')) ?>" defer></script>
+<script src="<?= e(asset('js/editor/present.js')) ?>" defer></script>
 <script src="<?= e(asset('js/editor.js')) ?>" defer></script>
 </body>
 </html>
