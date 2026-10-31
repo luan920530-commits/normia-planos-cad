@@ -956,3 +956,102 @@ body.is-dragging-resource .library-card { cursor: grabbing; }
 .audit-note { margin: 0; font-size: .68rem; line-height: 1.45; color: var(--muted); }
 .audit-error { padding: 10px; border: 1px solid #fecaca; border-radius: 10px; background: #fef2f2; font-size: .78rem; }
 .audit-error p { margin: 4px 0 8px; color: #7f1d1d; }
+
+/* ---------------------- pliego de señalización ---------------------- */
+.drawer-wide { width: min(880px, calc(94vw - 10px)); }
+.schedule-body { gap: 12px; }
+.schedule-toolbar { display: flex; flex-wrap: wrap; gap: 8px; }
+.schedule-content { display: flex; flex-direction: column; gap: 14px; }
+.schedule-stats {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0;
+}
+.schedule-stats div {
+  padding: 9px 11px; border: 1px solid var(--line); border-radius: 12px; background: #fff;
+}
+.schedule-stats dt { font-size: .62rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.schedule-stats dd { margin: 2px 0 0; font-size: .92rem; font-weight: 700; color: var(--ink); }
+.schedule-table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
+.schedule-table { width: 100%; border-collapse: collapse; font-size: .76rem; min-width: 660px; }
+.schedule-table th {
+  text-align: left; font-size: .62rem; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--muted); font-weight: 700; padding: 8px 10px; border-bottom: 1px solid var(--line);
+  background: #f8fafc; white-space: nowrap;
+}
+.schedule-table td { padding: 8px 10px; border-bottom: 1px solid #eef2f7; vertical-align: middle; }
+.schedule-table tr:last-child td { border-bottom: 0; }
+.schedule-table small { display: block; color: var(--muted); font-size: .66rem; }
+.schedule-table code { font-size: .7rem; background: #f1f5f9; border-radius: 6px; padding: 1px 5px; }
+.schedule-swatch {
+  display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-right: 6px;
+  background: var(--schedule-color, #334155); vertical-align: middle;
+}
+.schedule-num { text-align: right; font-variant-numeric: tabular-nums; }
+.schedule-price input {
+  width: 84px; padding: 4px 6px; border: 1px solid var(--line); border-radius: 8px;
+  font: inherit; font-size: .74rem; text-align: right; background: #fff; color: var(--ink);
+}
+.schedule-price input:focus-visible { outline: 2px solid #2563eb; outline-offset: 1px; }
+.schedule-locate {
+  padding: 3px 8px; border-radius: 999px; border: 1px solid var(--line); background: #fff;
+  font-size: .66rem; font-weight: 600; color: var(--muted); cursor: pointer;
+}
+.schedule-locate:hover { border-color: #94a3b8; color: var(--ink); }
+.schedule-locate:focus-visible { outline: 2px solid #2563eb; outline-offset: 1px; }
+.schedule-review h3 { margin: 0 0 6px; font-size: .8rem; }
+.schedule-review h3 em { font-style: normal; color: var(--muted); font-weight: 600; }
+.schedule-checks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+.schedule-checks li {
+  display: flex; align-items: flex-start; gap: 8px; padding: 9px 11px;
+  border: 1px solid #fde68a; border-left: 4px solid #f59e0b; border-radius: 11px; background: #fffbeb;
+}
+.schedule-checks .icon { width: 14px; height: 14px; color: #b45309; flex: 0 0 auto; margin-top: 1px; }
+.schedule-checks strong { display: block; font-size: .78rem; }
+.schedule-checks p { margin: 3px 0 0; font-size: .72rem; line-height: 1.45; color: var(--ink); }
+.schedule-checks .schedule-locate { margin-left: auto; }
+.schedule-ok {
+  margin: 0; padding: 9px 11px; border: 1px solid #bbf7d0; border-radius: 11px;
+  background: #f0fdf4; color: #166534; font-size: .76rem;
+}
+.schedule-empty { margin: 0; font-size: .8rem; color: var(--muted); }
+.schedule-stale {
+  margin: 0; padding: 8px 11px; border-radius: 10px; background: #eff6ff;
+  border: 1px solid #bfdbfe; color: #1e40af; font-size: .74rem;
+}
+.schedule-note { margin: 0; font-size: .68rem; line-height: 1.45; color: var(--muted); }
+@media (max-width: 560px) { .schedule-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* ------------------------ medición de rutas ------------------------ */
+.measure-body { gap: 12px; }
+.measure-controls { display: flex; flex-wrap: wrap; gap: 8px; }
+.measure-modes { display: inline-flex; padding: 3px; border-radius: 999px; background: var(--surface-sunken); gap: 3px; }
+.measure-mode {
+  border: 0; background: transparent; padding: 5px 12px; border-radius: 999px;
+  font: inherit; font-size: .72rem; font-weight: 600; color: var(--muted); cursor: pointer;
+}
+.measure-mode.is-active { background: #fff; color: var(--ink); box-shadow: 0 1px 2px rgba(15, 23, 42, .12); }
+.measure-mode:focus-visible { outline: 2px solid #2563eb; outline-offset: 1px; }
+.measure-content { display: flex; flex-direction: column; gap: 12px; }
+.measure-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 0; }
+.measure-stats div { padding: 9px 11px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+.measure-stats dt { font-size: .62rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.measure-stats dd { margin: 2px 0 0; font-size: .9rem; font-weight: 700; color: var(--ink); }
+.measure-table { width: 100%; border-collapse: collapse; font-size: .76rem; background: #fff; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.measure-table th { text-align: left; padding: 6px 10px; font-size: .62rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); background: #f8fafc; }
+.measure-table td { padding: 6px 10px; border-top: 1px solid #eef2f7; }
+.measure-num { text-align: right; font-variant-numeric: tabular-nums; }
+.measure-hint { margin: 0; font-size: .76rem; color: var(--ink); }
+.measure-note { margin: 0; font-size: .68rem; line-height: 1.45; color: var(--muted); }
+#plan-canvas.is-measuring { cursor: crosshair; }
+@media (max-width: 560px) { .measure-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+.measure-saved h3 { margin: 0 0 6px; font-size: .8rem; }
+.measure-saved h3 em { font-style: normal; color: var(--muted); font-weight: 600; }
+.measure-saved ul { list-style: none; margin: 0 0 6px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.measure-saved li {
+  display: flex; align-items: baseline; gap: 8px; padding: 7px 10px;
+  border: 1px solid var(--line); border-radius: 10px; background: #fff; font-size: .74rem;
+}
+.measure-saved li.is-shortest { border-color: #bbf7d0; background: #f0fdf4; }
+.measure-saved li span { flex: 1; color: var(--muted); }
+.measure-saved li strong { font-variant-numeric: tabular-nums; }
+.measure-saved li small { color: var(--muted); font-size: .68rem; }

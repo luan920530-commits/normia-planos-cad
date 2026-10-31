@@ -1398,6 +1398,102 @@ async function main() {
     app.applyTool('select');
     app.renderNow();
 
+    /* --------------------------- pliego de señalización --------------------------- */
+    q(window, '[data-open-drawer="schedule"]').click();
+    report.check('La barra lateral abre el pliego de señalización',
+      app.activeDrawer === 'schedule' && app.schedule !== null && q(window, '[data-drawer="schedule"]')?.hidden === false,
+      `cajón ${app.activeDrawer}`);
+    const scheduleSummary = app.schedule.summary();
+    report.check('El pliego cuenta las señales del plano',
+      scheduleSummary.total > 0 && qa(window, '[data-drawer="schedule"] .schedule-table tbody tr').length === app.schedule.rows.length,
+      `${scheduleSummary.total} señales · ${app.schedule.rows.length} códigos`);
+    report.check('El pliego sugiere el tamaño de lámina por área',
+      /mm/.test(q(window, '[data-drawer="schedule"] .schedule-stats')?.textContent || '')
+      && app.schedule.size.mm >= 150,
+      `${app.schedule.size.label} · ${Math.round(scheduleSummary.areaM2)} m²`);
+    const csv = app.schedule.csv();
+    report.check('El CSV del pliego trae encabezado y filas',
+      csv.startsWith('\uFEFFCódigo;Señal;Familia;Cantidad') && csv.includes(app.schedule.rows[0].code)
+      && csv.split('\r\n').length >= app.schedule.rows.length + 1,
+      `${csv.split('\r\n').length - 1} filas`);
+    const priceField = q(window, '[data-drawer="schedule"] [data-schedule-price]');
+    const priceCode = priceField?.dataset.schedulePrice || '';
+    priceField.value = '12000';
+    priceField.dispatchEvent(new window.Event('input', { bubbles: true }));
+    report.check('El precio unitario recalcula el subtotal y el total',
+      app.schedule.prices[priceCode] === 12000
+      && /12\.000|\$ 12\.000/.test(q(window, `[data-schedule-subtotal="${priceCode}"]`)?.textContent || '')
+      && /Total estimado/.test(q(window, '[data-drawer="schedule"]')?.textContent || ''),
+      `${priceCode} · ${q(window, `[data-schedule-subtotal="${priceCode}"]`)?.textContent}`);
+    const locateSign = q(window, '[data-schedule-locate]');
+    locateSign?.click();
+    await sleep(20);
+    report.check('«Ver» selecciona las señales del pliego en el plano',
+      app.model.selection.size > 0, `${app.model.selection.size} seleccionadas`);
+    report.check('El pliego revisa que los equipos tengan su señal cerca',
+      /Consistencia/.test(q(window, '[data-drawer="schedule"]')?.textContent || '')
+      && qa(window, '[data-drawer="schedule"] .schedule-checks li').length === app.schedule.checks.length,
+      `${app.schedule.checks.length} avisos`);
+    app.model.addElement('cad_eds_extinguisher', { x: 640, y: 640, w: 44, h: 44 });
+    app.schedule.run({ silent: true });
+    report.check('El pliego avisa del extintor sin su señal cerca',
+      app.schedule.checks.some((check) => /F001/.test(`${check.title} ${check.detail}`))
+      && qa(window, '[data-drawer="schedule"] .schedule-checks li').length >= 1,
+      `${app.schedule.checks.length} avisos · ${app.schedule.checks[0]?.title || '—'}`);
+    app.undo();
+    app.schedule.run({ silent: true });
+    q(window, '[data-drawer="schedule"] [data-close-drawer]').click();
+    report.check('El cajón del pliego se cierra', app.activeDrawer === null);
+
+    /* --------------------------- medición de rutas internas --------------------------- */
+    q(window, '[data-open-drawer="measure"]').click();
+    report.check('La barra lateral abre la medición de rutas',
+      app.activeDrawer === 'measure' && app.measure !== null,
+      `cajón ${app.activeDrawer}`);
+    q(window, '[data-measure-trace]').click();
+    report.check('El trazado de rutas queda activo', app.measure.tracing === true);
+    const straight = app.measure.route({ x: 90, y: 120 }, { x: 520, y: 120 });
+    report.check('La ruta rodea los muros en lugar de cruzarlos',
+      Boolean(straight) && straight.distance >= 430,
+      straight ? `${straight.distance.toFixed(1)} unidades · ${straight.points.length} puntos` : 'sin ruta');
+    app.measure.addPoint({ x: 90, y: 120 });
+    app.measure.addPoint({ x: 520, y: 120 });
+    const measured = app.measure.total();
+    report.check('La medición suma distancia y tiempo de recorrido',
+      measured.legs === 1 && measured.meters > 0 && measured.seconds > 0
+      && app.measure.saveButton.disabled === false,
+      `${measured.meters.toFixed(2)} m · ${Math.round(measured.seconds)} s`);
+    report.check('El lienzo pinta la ruta medida',
+      Boolean(app.svg.querySelector('.measure-preview polyline')), 'trazo de medición');
+    const beforeMeasure = app.model.design.elements.length;
+    app.measure.save();
+    const measureLayer = app.model.layers().find((layer) => layer.name === 'Mediciones de ruta');
+    report.check('Guardar la medición crea su capa con trazo y etiqueta',
+      Boolean(measureLayer)
+      && app.model.design.elements.length === beforeMeasure + 2
+      && app.model.design.elements.some((element) => element.type === 'line' && element.layerId === measureLayer.id)
+      && app.model.design.elements.some((element) => element.type === 'text' && /m ·/.test(element.label)),
+      `${app.model.design.elements.length - beforeMeasure} elementos`);
+    report.check('Las mediciones guardadas se comparan y marcan la más corta',
+      app.measure.saved.length === 1
+      && /la más corta/.test(q(window, '[data-drawer="measure"]')?.textContent || ''),
+      `${app.measure.saved.length} en la lista`);
+    app.undo();
+    report.check('La medición guardada se deshace en un solo paso',
+      app.model.design.elements.length === beforeMeasure);
+    app.measure.setMode('wheelchair');
+    report.check('El modo silla de ruedas cambia la velocidad y limpia el trazo',
+      app.measure.mode === 'wheelchair' && app.measure.legs.length === 0
+      && /0,8 m\/s/.test(q(window, '[data-drawer="measure"]')?.textContent || ''),
+      app.measure.mode);
+    app.measure.addPoint({ x: 120, y: 140 });
+    app.measure.addPoint({ x: 480, y: 140 });
+    report.check('El recorrido accesible también mide distancia',
+      app.measure.total().meters > 0, `${app.measure.total().meters.toFixed(2)} m`);
+    q(window, '[data-drawer="measure"] [data-close-drawer]').click();
+    report.check('Cerrar el cajón detiene el trazado',
+      app.activeDrawer === null && app.measure.tracing === false && !app.svg.classList.contains('is-measuring'));
+
     report.check('Sin errores de JavaScript durante la sesión', window.__errors.length === 0, window.__errors.join(' | ').slice(0, 200));
   } finally {
     closeEditor(editor);

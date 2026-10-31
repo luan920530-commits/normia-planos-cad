@@ -143,6 +143,12 @@
           <svg class="icon"><use href="#i-audit"></use></svg><span>Revisión</span>
           <em class="rail-count rail-count-alert" data-audit-count hidden></em>
         </button>
+        <button class="rail-button" type="button" data-open-drawer="schedule" data-tooltip="Pliego de señalización · inventario de compra" aria-label="Pliego de señalización">
+          <svg class="icon"><use href="#i-bom"></use></svg><span>Pliego</span>
+        </button>
+        <button class="rail-button" type="button" data-open-drawer="measure" data-tooltip="Medir rutas internas · distancias de recorrido" aria-label="Medir rutas internas">
+          <svg class="icon"><use href="#i-measure"></use></svg><span>Rutas</span>
+        </button>
         <button class="rail-button" type="button" data-open-drawer="networks" data-tooltip="Redes y circuitos" aria-label="Redes y circuitos">
           <svg class="icon"><use href="#i-network"></use></svg><span>Redes</span>
         </button>
@@ -321,6 +327,54 @@
   <footer class="drawer-foot"><p>Umbrales en <code>resources/audit-criteria.json</code>. El análisis usa el último diseño guardado, no los cambios sin guardar.</p></footer>
 </section>
 
+<section class="drawer drawer-wide" data-drawer="schedule" hidden aria-labelledby="schedule-title">
+  <header class="drawer-head">
+    <div><span class="eyebrow">Compras y montaje</span><h2 id="schedule-title">Pliego de señalización</h2></div>
+    <button class="icon-button" type="button" data-close-drawer aria-label="Cerrar pliego"><svg class="icon"><use href="#i-close"></use></svg></button>
+  </header>
+  <div class="drawer-body schedule-body">
+    <div class="notice notice-info compact-notice">
+      <svg class="icon"><use href="#i-info"></use></svg>
+      <p>Inventario de <strong>referencia</strong> calculado con las señales y equipos que hay en el plano. Los tamaños y las cantidades son una guía de compra: ajústalos a la norma aplicable y verifica en sitio.</p>
+    </div>
+    <div class="schedule-toolbar">
+      <button class="button button-primary button-small" type="button" data-schedule-run><svg class="icon"><use href="#i-bom"></use></svg>Recalcular</button>
+      <button class="button button-ghost button-small" type="button" data-schedule-csv><svg class="icon"><use href="#i-download"></use></svg>Descargar CSV</button>
+      <button class="button button-ghost button-small" type="button" data-schedule-copy><svg class="icon"><use href="#i-copy"></use></svg>Copiar tabla</button>
+    </div>
+    <div class="schedule-content" data-schedule-content>
+      <p class="muted">Abre el pliego para contar las señales del plano, agruparlas por código y revisar qué equipos quedaron sin su señal.</p>
+    </div>
+  </div>
+  <footer class="drawer-foot"><p>Los precios unitarios se guardan solo en este navegador. Usa el CSV para llevarlo a Excel o a una orden de compra.</p></footer>
+</section>
+
+<section class="drawer" data-drawer="measure" hidden aria-labelledby="measure-title">
+  <header class="drawer-head">
+    <div><span class="eyebrow">Rutas internas</span><h2 id="measure-title">Medir recorridos</h2></div>
+    <button class="icon-button" type="button" data-close-drawer aria-label="Cerrar medición"><svg class="icon"><use href="#i-close"></use></svg></button>
+  </header>
+  <div class="drawer-body measure-body">
+    <div class="notice notice-info compact-notice">
+      <svg class="icon"><use href="#i-measure"></use></svg>
+      <p>Distancias de <strong>referencia</strong> sobre el recorrido caminable: rodea muros y equipos, y usa los vanos de las puertas. No sustituye una medición en sitio ni un cálculo de evacuación.</p>
+    </div>
+    <div class="measure-controls">
+      <button class="button button-primary button-small" type="button" data-measure-trace><svg class="icon"><use href="#i-measure"></use></svg>Trazar ruta</button>
+      <button class="button button-ghost button-small" type="button" data-measure-clear><svg class="icon"><use href="#i-close"></use></svg>Empezar de nuevo</button>
+      <button class="button button-ghost button-small" type="button" data-measure-save disabled><svg class="icon"><use href="#i-layers"></use></svg>Guardar en el plano</button>
+    </div>
+    <div class="measure-modes" role="group" aria-label="Tipo de recorrido">
+      <button class="measure-mode is-active" type="button" data-measure-mode="walk" aria-pressed="true">A pie · 1,2 m/s</button>
+      <button class="measure-mode" type="button" data-measure-mode="wheelchair" aria-pressed="false">Silla de ruedas · 0,8 m/s</button>
+    </div>
+    <div class="measure-content" data-measure-content>
+      <p class="muted">Pulsa <strong>Trazar ruta</strong> y haz clic en el origen y en el destino. Puedes añadir paradas intermedias antes de guardar.</p>
+    </div>
+  </div>
+  <footer class="drawer-foot"><p>Leyenda de referencia: 1,2 m/s a pie y 0,8 m/s en silla de ruedas sobre superficie plana. Los anchos libres reales se verifican en sitio.</p></footer>
+</section>
+
 <section class="drawer" data-drawer="networks" hidden aria-labelledby="networks-title">
   <header class="drawer-head">
     <div><span class="eyebrow">Instalaciones</span><h2 id="networks-title">Redes y circuitos</h2></div>
@@ -478,6 +532,8 @@
 <script src="<?= e(asset('js/editor/inspector.js')) ?>" defer></script>
 <script src="<?= e(asset('js/editor/library.js')) ?>" defer></script>
 <script src="<?= e(asset('js/editor/audit.js')) ?>" defer></script>
+<script src="<?= e(asset('js/editor/schedule.js')) ?>" defer></script>
+<script src="<?= e(asset('js/editor/measure.js')) ?>" defer></script>
 <script src="<?= e(asset('js/editor.js')) ?>" defer></script>
 </body>
 </html>

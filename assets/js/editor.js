@@ -64,6 +64,8 @@
       this.inspector = new root.Inspector(this);
       this.library = new root.Library(this);
       this.audit = root.Audit ? new root.Audit(this) : null;
+      this.schedule = root.Schedule ? new root.Schedule(this) : null;
+      this.measure = root.Measure ? new root.Measure(this) : null;
       this.tool = 'select';
       this.view = { zoom: 1, panX: 0, panY: 0 };
       this.showGrid = true;
@@ -374,6 +376,9 @@
       this.scheduleRender();
       if (this.activeDrawer === 'layers') this.renderLayers();
       if (this.activeDrawer === 'networks') this.renderNetworks();
+      // El pliego se recalcula solo si su cajón está abierto; si no, se marca
+      // como desactualizado para no recalcular en cada arrastre.
+      this.schedule?.invalidate();
     }
 
     /* -------------------------------- estado -------------------------------- */
@@ -602,6 +607,7 @@
       this.updateZoomLabel();
       this.updateEmptyHint();
       this.updateRulers();
+      this.measure?.drawOverlay();
     }
 
     updateHistoryButtons() {
@@ -788,6 +794,10 @@
       }
       if (event.button !== 0) return;
       const point = this.clampPoint(this.toCanvas(event));
+      if (this.measure?.tracing) {
+        this.measure.addPoint(point);
+        return;
+      }
       if (this.tool === 'hand') {
         this.beginPan(event);
         return;
@@ -2211,12 +2221,15 @@
       if (name === 'layers') this.renderLayers();
       if (name === 'networks') this.renderNetworks();
       if (name === 'audit') this.audit?.open();
+      if (name === 'schedule') this.schedule?.open();
+      if (name === 'measure') this.measure?.open();
       if (name === 'footer') this.renderFooterPreview();
       const focusable = drawer.querySelector('input, button, select, textarea, a[href]');
       window.setTimeout(() => focusable?.focus(), 40);
     }
 
     closeDrawer(keepBody = false) {
+      if (this.activeDrawer === 'measure') this.measure?.stop();
       qa('[data-drawer]').forEach((drawer) => { drawer.hidden = true; });
       const backdrop = q('[data-drawer-backdrop]');
       if (backdrop) backdrop.hidden = true;
