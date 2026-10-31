@@ -1494,6 +1494,71 @@ async function main() {
     report.check('Cerrar el cajón detiene el trazado',
       app.activeDrawer === null && app.measure.tracing === false && !app.svg.classList.contains('is-measuring'));
 
+    /* ---------------------------- modo presentación ---------------------------- */
+    const routes = app.model.design.elements.filter((element) => element.type === 'route');
+    const railPresent = q(window, '[data-present-open]');
+    report.check('La barra lateral ofrece el modo presentación', Boolean(railPresent && app.present));
+    railPresent.click();
+    report.check('El modo presentación oculta el editor y muestra su barra',
+      app.present.active && window.document.body.classList.contains('is-presenting')
+      && !q(window, '[data-present]')?.hidden
+      && /modo presentación/.test(q(window, '[data-present]')?.textContent || ''));
+    report.check('El modo presentación desactiva la selección sobre el lienzo',
+      app.presenting === true);
+    q(window, '[data-present-laser]').click();
+    window.document.body.dispatchEvent(new window.MouseEvent('pointermove', { clientX: 220, clientY: 180, bubbles: true }));
+    window.document.body.dispatchEvent(new window.MouseEvent('pointermove', { clientX: 290, clientY: 240, bubbles: true }));
+    report.check('El puntero láser deja una estela sobre el plano',
+      app.present.laser && qa(window, '[data-present-laser-layer] .present-beam').length >= 1
+      && q(window, '[data-present-laser]').getAttribute('aria-pressed') === 'true',
+      `${qa(window, '.present-beam').length} marcas`);
+    q(window, '[data-present-spot]').click();
+    window.document.body.dispatchEvent(new window.MouseEvent('pointermove', { clientX: 410, clientY: 320, bubbles: true }));
+    const spot = q(window, '[data-present-spotlight]');
+    report.check('El spotlight sigue al puntero',
+      app.present.spotlight && spot && !spot.hidden && spot.style.getPropertyValue('--x') === '410px',
+      spot?.style.getPropertyValue('--x') || 'sin foco');
+    q(window, '[data-present-routes]').click();
+    report.check('Las rutas se animan con la velocidad elegida',
+      routes.length > 0 && qa(window, '#plan-canvas polyline.is-tracing').length === routes.length
+      && /present-trace/.test(q(window, '#plan-canvas polyline.is-tracing')?.style.animation || ''),
+      `${qa(window, 'polyline.is-tracing').length} de ${routes.length}`);
+    const slowDuration = app.present.animationDuration(routes[0]);
+    const speedSelect = q(window, '[data-present-speed]');
+    speedSelect.value = 'fast';
+    speedSelect.dispatchEvent(new window.Event('change', { bubbles: true }));
+    report.check('La velocidad de las rutas se ajusta desde la barra',
+      app.present.speed === 'fast' && app.present.animationDuration(routes[0]) < slowDuration,
+      `${app.present.animationDuration(routes[0])} ms`);
+    const selectedBefore = [...app.model.selection];
+    app.svg.dispatchEvent(new window.MouseEvent('pointerdown', { clientX: 300, clientY: 300, bubbles: true }));
+    report.check('Durante la presentación el lienzo no edita ni selecciona',
+      JSON.stringify([...app.model.selection]) === JSON.stringify(selectedBefore));
+    q(window, '[data-present-layers]').click();
+    const layerBox = q(window, '[data-present-panel] [data-layer-toggle]');
+    const firstLayer = app.model.design.layers.find((layer) => layer.id === layerBox.dataset.layerToggle);
+    layerBox.checked = false;
+    layerBox.dispatchEvent(new window.Event('change', { bubbles: true }));
+    report.check('El panel de capas oculta capas sin tocar el editor',
+      firstLayer.visible === false && qa(window, '[data-present-panel] [data-layer-toggle]').length === app.model.design.layers.length);
+    q(window, '[data-present-quiz]').click();
+    const question = app.present.quiz[0];
+    const answerIndex = question.options.indexOf(String(question.answer));
+    report.check('El quiz se genera del plano actual',
+      app.present.quiz.length === 4 && Boolean(q(window, '[data-present-panel] .present-question'))
+      && /salidas de emergencia/.test(q(window, '.present-question')?.textContent || ''),
+      `${app.present.quiz.length} preguntas`);
+    qa(window, '[data-present-panel] [data-present-answer]')[answerIndex].click();
+    report.check('El quiz corrige la respuesta y explica',
+      app.present.quizScore === 1
+      && q(window, '[data-present-feedback]')?.classList.contains('is-ok')
+      && /Acertadas 1 de 4/.test(q(window, '[data-present-panel]')?.textContent || ''));
+    q(window, '[data-present-exit]').click();
+    report.check('Al salir se restauran capas, selección y estado del editor',
+      !app.present.active && !window.document.body.classList.contains('is-presenting')
+      && app.presenting === false && firstLayer.visible === true
+      && q(window, '[data-present]').hidden);
+
     report.check('Sin errores de JavaScript durante la sesión', window.__errors.length === 0, window.__errors.join(' | ').slice(0, 200));
   } finally {
     closeEditor(editor);

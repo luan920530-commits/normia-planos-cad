@@ -155,6 +155,7 @@ assets/js/editor/library.js  Cajón de bibliotecas: chips, búsqueda, grilla y d
 assets/js/editor/audit.js    Cajón de revisión: pide el informe, pinta métricas y hallazgos, filtra y enlaza al plano
 assets/js/editor/schedule.js Cajón del pliego: agrupa señales, tamaños, precios, consistencia y CSV
 assets/js/editor/measure.js  Cajón de rutas internas: retícula, A*, tramos, tiempos y guardado en capa
+assets/js/editor/present.js   Modo presentación: láser, spotlight, rutas animadas, capas y quiz
 assets/js/editor.js          EditorApp: arranque, herramientas, puntero, teclado, guardado, exportación
 ```
 
@@ -317,3 +318,13 @@ Cada prueba corre en PHP 8.1 y 8.3 (la de paquetes en 8.3), sin instalar PHP en 
 - **Pliego (`schedule.js`)** trabaja sobre el diseño en pantalla: cuenta los elementos cuyo tipo empieza por `iso_` o `sig_`, resuelve su código con `Model.signCodeForType()`, agrupa por código, suma cantidades y toma nombre, familia y color de los catálogos ya cargados. El tamaño sugerido depende del área del piso (150/300/450 mm) y los precios unitarios viven en `localStorage` (`normia.schedule.prices`), nunca en la base. La consistencia compara el centro de cada equipo (extintor, botiquín, hidrante, alarma) con las señales `F001`, `E003`, `F002` y `F005`, y el final de cada ruta con las señales `E002`. La exportación es CSV con BOM y `;` y TSV al portapapeles.
 - **Rutas (`measure.js`)** construye una retícula de 10 unidades sobre el lienzo, bloquea los muros por distancia al segmento (+ holgura), libera el rectángulo de cada puerta y rodea los equipos grandes; en modo silla de ruedas sube la holgura y bloquea también escaleras y equipos medianos. Busca el camino con A* (heap binario, 8 vecinos sin cortar esquinas) y lo suaviza con «tira de la cuerda» para que el trazo guardado no quede en escalera. El tiempo usa 1,2 m/s a pie y 0,8 m/s en silla de ruedas. **Guardar en el plano** crea la capa *Mediciones de ruta* y añade una `line` con etiqueta y un `text` con la distancia, todo dentro de `Model.begin()/end()` para que sea un solo paso del historial.
 - Ambos cajones se registran en `EditorApp` como `app.schedule` y `app.measure`. El editor les pasa el clic del lienzo mientras `measure.tracing` está activo, redibuja su superposición al final de `renderNow()` y marca el pliego como desactualizado cuando cambia el modelo.
+
+## Modo presentación
+
+`assets/js/editor/present.js` es un controlador de vista que se monta una vez en `document.body` y se abre desde el botón `[data-present-open]`. Al abrir guarda un *snapshot* (selección, herramienta, vista y visibilidad de capas), añade `is-presenting` al `body` —el CSS oculta barra superior, rail, inspector, paleta y barra de estado y fija el lienzo a pantalla completa— y pide pantalla completa al navegador si está disponible.
+
+- **Láser y spotlight** escuchan `pointermove` en el documento y pintan en una capa SVG propia; `track()` filtra movimientos menores de 7 px y limita la estela a 40 marcas.
+- **Rutas** localiza el `polyline` de cada elemento `route` en el SVG del renderer, calcula su longitud con los puntos y aplica `stroke-dasharray`/`stroke-dashoffset` con la animación `present-trace`; la duración sale de la longitud y de la velocidad elegida.
+- **Capas** escribe `layer.visible` y repinta con `scheduleRender()`; el snapshot devuelve el estado original al salir.
+- **Quiz** se construye con el diseño en pantalla (puertas con `isExit`, códigos `F001` y `E007`, rutas) y se corrige en el cliente.
+- **Salida** restaura selección, vista, herramienta y capas, y quita la clase del `body`. Mientras `app.presenting` es verdadero, `onPointerDown` y `onKeyDown` del editor no hacen nada.

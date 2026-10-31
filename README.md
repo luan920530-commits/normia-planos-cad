@@ -23,16 +23,17 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 6. [Bibliotecas de señalización y CAD](#bibliotecas-de-señalización-y-cad)
 7. [Revisión del plano y evacuación](#revisión-del-plano-y-evacuación)
 8. [Pliego de señalización y rutas internas](#pliego-de-señalización-y-rutas-internas)
-9. [Guardado, versiones y borradores](#guardado-versiones-y-borradores)
-10. [Exportaciones](#exportaciones)
-11. [Formato de datos](#formato-de-datos)
-12. [Arquitectura](#arquitectura)
-13. [Seguridad](#seguridad)
-14. [Pruebas](#pruebas)
-15. [Cambios de la versión 1.3.0](#cambios-de-la-versión-130)
-16. [Paquetes y verificación](#paquetes-y-verificación)
-17. [Limitaciones](#limitaciones)
-18. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
+9. [Modo presentación](#modo-presentación)
+10. [Guardado, versiones y borradores](#guardado-versiones-y-borradores)
+11. [Exportaciones](#exportaciones)
+12. [Formato de datos](#formato-de-datos)
+13. [Arquitectura](#arquitectura)
+14. [Seguridad](#seguridad)
+15. [Pruebas](#pruebas)
+16. [Cambios de la versión 1.4.0](#cambios-de-la-versión-140)
+17. [Paquetes y verificación](#paquetes-y-verificación)
+18. [Limitaciones](#limitaciones)
+19. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
 
 ---
 
@@ -53,6 +54,7 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 | Revisión | Cajón **Revisión** con recorrido más largo hasta las salidas, salidas y anchos, ocupación declarada o estimada, ancho requerido, tiempo de evacuación y hallazgos por severidad enlazados al plano. |
 | Pliego | Cajón **Pliego** con las señales agrupadas por código y familia, cantidades, tamaño de lámina sugerido, desglose por capa, precios unitarios locales, total estimado, avisos de consistencia y exportación CSV/portapapeles. |
 | Rutas internas | Cajón **Rutas** que mide el recorrido caminable entre dos o más puntos: rodea muros y equipos, respeta los vanos, suma tramos, estima el tiempo a pie o en silla de ruedas y guarda la medición como capa. |
+| Presentación | Modo pantalla limpia con puntero láser, spotlight, animación de rutas con velocidad ajustable, panel de capas, quiz generado del plano y vuelta al editor con el mismo estado. |
 | Persistencia | Guardado manual con nota, versiones inmutables, restaurar versión, borrador automático cada 30 s y detección de conflictos. |
 | Exportación | SVG, JSON, PNG (generado en el navegador) e impresión lista para PDF desde el navegador. |
 | Datos | Base SQLite con claves foráneas, consultas preparadas y copia de seguridad = 2 archivos. |
@@ -178,7 +180,7 @@ Luego importa `resources/schema.sql` en el archivo SQLite y crea el usuario admi
 - **Todas las herramientas** (arriba del lienzo): paleta agrupada con icono, nombre y atajo de cada herramienta, incluida la Mano.
 - **Señalización ISO 7010** y **Equipamiento CAD**: abren el cajón de biblioteca con búsqueda, familias y vista previa.
 - **Revisión**, **Pliego**, **Rutas**, **Redes y circuitos**, **Capas**, **Versiones**, **Pie de plano**, **Ajustes**, **Atajos** e **Imprimir** en la parte inferior.
-- **Pliego** cuenta las señales del plano para comprar; **Rutas** mide recorridos internos y los guarda como capa.
+- **Pliego** cuenta las señales del plano para comprar; **Rutas** mide recorridos internos y los guarda como capa; **Presentar** entra al modo presentación.
 
 ### Gestos y puntero
 
@@ -409,6 +411,25 @@ El botón **Rutas** mide distancias caminables dentro del plano, sin necesidad d
 
 ---
 
+## Modo presentación
+
+El botón **Presentar** de la barra lateral deja el plano a pantalla completa, sin barras ni paneles, para explicarlo en una reunión, una capacitación o una brigada.
+
+| Recurso | Cómo funciona |
+| --- | --- |
+| Láser | Cada movimiento del puntero o del dedo deja una estela roja que se desvanece. Atajo `L`. |
+| Spotlight | Oscurece el plano salvo un círculo que sigue al puntero. Atajo `S`. |
+| Rutas animadas | Reproduce el trazo de cada ruta de evacuación con la velocidad **lenta, normal o rápida**. Atajo `R`. |
+| Capas visibles | Oculta o muestra capas para contar la historia por partes; al salir se restauran las del editor. |
+| Quiz | Cuatro preguntas generadas del plano actual (salidas, extintores, punto de encuentro y rutas) con corrección y explicación. |
+| Salida | `Esc`, el botón **Salir** o la tecla de salir del navegador devuelven al editor con la selección, el zoom y la herramienta que tenías. |
+
+La barra de presentación muestra el piso y el proyecto, y el lienzo no edita mientras está activo: un clic no mueve ni selecciona nada. Respeta `prefers-reduced-motion` y el foco de teclado es visible en todos sus botones.
+
+> El quiz sirve para repasar el plano, no evalúa competencias ni sustituye la capacitación. Las animaciones y el láser son ayudas visuales: no certifican rutas ni tiempos reales.
+
+---
+
 ## Guardado, versiones y borradores
 
 - **Guardar** crea una versión nueva e inmutable en `floor_versions`; el piso apunta siempre a la última.
@@ -599,8 +620,8 @@ Lo único que no funciona sin red es la **vista previa de desarrollo** (`npm run
 | Bloque | Comprobaciones |
 | --- | --- |
 | `tests/php/lint.mjs` | `php -l` sobre todo `app/`, `bootstrap.php` e `index.php` en 8.1 y 8.3. |
-| `tests/php/functional.mjs` | 175 comprobaciones: instalador, requisitos, contraseñas débiles, CSRF, sesión, autorización entre cuentas, CRUD de proyectos/pisos, duplicados, importación v1/v2, catálogos (389 señales y 301 objetos), catálogo y guardado de redes, señales de baño y de servicios (guardado, color de familia y exportación SVG), **auditor y medición de evacuación** (salidas, recorrido máximo, zonas inalcanzables, rutas que cruzan muros o no llegan a la salida, ocupación declarada y estimada, señalización, validación de `isExit`, informe imprimible y demo coherente), puertas y portones (geometría, sentidos de apertura, exportación con trazo), validaciones de la API, guardado/versiones/borradores/conflictos, exportaciones, ciclo de vida y logout. |
-| `tests/js/editor.mjs` | 266 comprobaciones de interfaz sobre la app real: arranque, 389 señales y 301 objetos, **trazado de tuberías y circuitos, inspector de red y panel de redes**, **mano y paneo, selección de superpuestos, inspector plegable y paleta de herramientas**, puertas dobles y portones, **vértices de ruta editables (arrastrar, doble clic, Alt+clic)**, **señal de baño insertada desde la biblioteca**, **posiciones reales del trazo**, **clic sobre muros finos, pictogramas y equipos**, **cambio de señal y de equipo desde el inspector**, **auditor de planos** (interruptor de salida, ocupación declarada, cajón de revisión, contador, filtros, «Ver en el plano», cierre sin dejar el fondo bloqueado), **pliego de señalización** (conteo, tamaño sugerido, CSV, precios y consistencia), **medición de rutas internas** (ruta que rodea muros, tramos, guardado en capa y comparación), **rotación**, **rutas cerradas**, **arrastrar y soltar desde la biblioteca sin que el cajón lo bloquee**, reglas, herramientas, inserción con puntero, selección, mover, escalar, rotar, color, cambio de tipo, deshacer/rehacer, duplicar, agrupar, bloquear, desplazar, texto y saneado, guardar, reabrir, borradores, conflictos, exportación SVG/JSON/PNG, tooltips sin acumulación, capas, versiones y límites. |
+| `tests/php/functional.mjs` | 176 comprobaciones: instalador, requisitos, contraseñas débiles, CSRF, sesión, autorización entre cuentas, CRUD de proyectos/pisos, duplicados, importación v1/v2, catálogos (389 señales y 301 objetos), catálogo y guardado de redes, señales de baño y de servicios (guardado, color de familia y exportación SVG), **auditor y medición de evacuación** (salidas, recorrido máximo, zonas inalcanzables, rutas que cruzan muros o no llegan a la salida, ocupación declarada y estimada, señalización, validación de `isExit`, informe imprimible y demo coherente), puertas y portones (geometría, sentidos de apertura, exportación con trazo), validaciones de la API, guardado/versiones/borradores/conflictos, exportaciones, ciclo de vida y logout. |
+| `tests/js/editor.mjs` | 278 comprobaciones de interfaz sobre la app real: arranque, 389 señales y 301 objetos, **trazado de tuberías y circuitos, inspector de red y panel de redes**, **mano y paneo, selección de superpuestos, inspector plegable y paleta de herramientas**, puertas dobles y portones, **vértices de ruta editables (arrastrar, doble clic, Alt+clic)**, **señal de baño insertada desde la biblioteca**, **posiciones reales del trazo**, **clic sobre muros finos, pictogramas y equipos**, **cambio de señal y de equipo desde el inspector**, **auditor de planos** (interruptor de salida, ocupación declarada, cajón de revisión, contador, filtros, «Ver en el plano», cierre sin dejar el fondo bloqueado), **pliego de señalización** (conteo, tamaño sugerido, CSV, precios y consistencia), **medición de rutas internas** (ruta que rodea muros, tramos, guardado en capa y comparación), **modo presentación** (pantalla limpia, láser, spotlight, rutas animadas, capas, quiz y salida sin perder el estado), **rotación**, **rutas cerradas**, **arrastrar y soltar desde la biblioteca sin que el cajón lo bloquee**, reglas, herramientas, inserción con puntero, selección, mover, escalar, rotar, color, cambio de tipo, deshacer/rehacer, duplicar, agrupar, bloquear, desplazar, texto y saneado, guardar, reabrir, borradores, conflictos, exportación SVG/JSON/PNG, tooltips sin acumulación, capas, versiones y límites. |
 | `tests/js/pages.mjs` | 29 comprobaciones de las páginas fuera del editor: menú de acciones de proyectos y pisos (capa fija, colocación, teclado, un solo menú), confirmación de borrado y borrado real de piso y proyecto, con la protección del último piso. |
 | `tests/php/package.mjs` | 39 comprobaciones: construye ambos ZIP, verifica que no haya bases, sesiones, credenciales, logs ni carpetas de desarrollo, valida los SHA-256 y hace una instalación limpia de la demo comprobando assets, catálogos (389/301), los cuatro pisos del proyecto de ejemplo, señales de servicios y redes en la demo, la señal «Usted está aquí», **el auditor y su informe en la demo empaquetada**, editor, SVG, JSON e impresión. |
 | `tests/js/offline.mjs` | 0 dependencias de red: revisa las vistas, los estilos, los scripts y los catálogos y falla si aparece un `fetch`, un `WebSocket`, un `src`/`href`/`url()` externo, una llamada de red desde PHP o un dominio no declarado. |
@@ -625,6 +646,12 @@ Resultados esperados de la última ejecución completa:
 Las pruebas trabajan sobre copias temporales: no escriben configuración ni bases en el repositorio. `node_modules` solo contiene dependencias de desarrollo y se excluye de los paquetes.
 
 ---
+
+## Cambios de la versión 1.4.0
+
+- **Modo presentación** (punto 7 del [#6](https://github.com/luan920530-commits/normia-planos-cad/issues/6)). Pantalla limpia sobre el plano con barra flotante: puntero láser con estela, spotlight que sigue al puntero, animación de las rutas de evacuación con velocidad lenta, normal o rápida, panel de capas, quiz de cuatro preguntas generado del plano y salida que devuelve al editor con la selección, el zoom y la herramienta intactos. El lienzo no edita mientras se presenta y las capas se restauran al salir.
+- La barra lateral gana el botón **Presentar** y el icono correspondiente; la suite funcional comprueba que la vista carga el módulo.
+- **Pruebas.** La interfaz pasa de 266 a **278** comprobaciones y la suite funcional a **176**.
 
 ## Cambios de la versión 1.3.0
 
@@ -788,14 +815,14 @@ Versión de corrección sobre la 1.0.0. Reemplaza los paquetes anteriores: la 1.
 
 ## Paquetes y verificación
 
-Las versiones publicadas están en la página de **[Liberaciones](https://github.com/luan920530-commits/normia-planos-cad/releases)**. La versión vigente es la **v1.3.0**, con sus notas, sus sumas SHA-256 y los enlaces de descarga de los paquetes que viven en `paquetes/v1.3.0/`. Las entregas anteriores (v1.0.0 a v1.0.9 y las v1.1.0 a v1.2.0) no deben usarse: la v1.3.0 las reemplaza.
+Las versiones publicadas están en la página de **[Liberaciones](https://github.com/luan920530-commits/normia-planos-cad/releases)**. La versión vigente es la **v1.4.0**, con sus notas, sus sumas SHA-256 y los enlaces de descarga de los paquetes que viven en `paquetes/v1.4.0/`. Las entregas anteriores (v1.0.0 a v1.0.9 y las v1.1.0 a v1.3.0) no deben usarse: la v1.4.0 las reemplaza.
 
-La entrega v1.3.0 incluye los ZIP ya construidos en **`paquetes/v1.3.0/`** (misma composición que genera el script, verificada por `tests/php/package.mjs`):
+La entrega v1.4.0 incluye los ZIP ya construidos en **`paquetes/v1.4.0/`** (misma composición que genera el script, verificada por `tests/php/package.mjs`):
 
 ```text
-paquetes/v1.3.0/
-├── normia-planos-cad-1.3.0.zip
-├── normia-planos-cad-demo-1.3.0.zip
+paquetes/v1.4.0/
+├── normia-planos-cad-1.4.0.zip
+├── normia-planos-cad-demo-1.4.0.zip
 ├── SHA256SUMS.txt
 ├── BUILD.txt
 └── LEEME.txt
@@ -810,8 +837,8 @@ npm run build          # o: bash tools/build-packages.sh
 El script deja los artefactos en `dist/`:
 
 ```text
-normia-planos-cad-1.3.0.zip
-normia-planos-cad-demo-1.3.0.zip
+normia-planos-cad-1.4.0.zip
+normia-planos-cad-demo-1.4.0.zip
 SHA256SUMS.txt
 BUILD.txt
 ```
@@ -825,7 +852,7 @@ cd paquetes/v1.1.2
 sha256sum -c SHA256SUMS.txt
 ```
 
-Los hashes exactos de los ZIP publicados están en `paquetes/v1.3.0/SHA256SUMS.txt`; `dist/` es solo la salida de trabajo y está ignorada por Git.
+Los hashes exactos de los ZIP publicados están en `paquetes/v1.4.0/SHA256SUMS.txt`; `dist/` es solo la salida de trabajo y está ignorada por Git.
 
 ---
 

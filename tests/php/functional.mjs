@@ -128,6 +128,9 @@ try {
     editorHtml.includes('data-drawer="schedule"') && editorHtml.includes('data-drawer="measure"')
     && editorHtml.includes('/assets/js/editor/schedule.js') && editorHtml.includes('/assets/js/editor/measure.js')
     && editorHtml.includes('data-open-drawer="schedule"') && editorHtml.includes('data-open-drawer="measure"'));
+  report.check('Editor incluye el modo presentación',
+    editorHtml.includes('/assets/js/editor/present.js') && editorHtml.includes('data-present-open')
+    && editorHtml.includes('#i-present'));
   report.check('Editor sin recursos externos', localAssets(editorHtml, `/index.php?r=projects/${projectId}/floors/${floorId}/editor`).external.length === 0);
   const bootMatch = /<textarea id="editor-boot" hidden>([\s\S]*?)<\/textarea>/.exec(editorHtml);
   let boot = null;
