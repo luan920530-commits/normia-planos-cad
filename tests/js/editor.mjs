@@ -413,6 +413,320 @@ async function main() {
     app.applyTool('select');
     app.renderNow();
 
+    /* ------------------ muros curvos: arco de tres puntos ------------------ */
+    app.model.clearSelection();
+    app.applyTool('wall');
+    const curveStart = clientPoint(app, 480, 560);
+    pointer(window, app.svg, 'pointerdown', curveStart);
+    pointer(window, app.svg, 'pointermove', clientPoint(app, 720, 560));
+    pointer(window, app.svg, 'pointerup', clientPoint(app, 720, 560));
+    app.renderNow();
+    const curvedWall = app.model.design.elements.at(-1);
+    report.check('El muro de prueba para curvar se dibuja recto', curvedWall?.type === 'wall'
+      && curvedWall.points.length === 2 && !curvedWall.curves,
+      `${curvedWall?.points?.length} vértices`);
+    // Se guarda el marcado del muro recto para comprobar después que, sin
+    // curvas, el SVG vuelve a salir igual que en la 1.10.0.
+    const straightMarkup = app.svg.querySelector(`.plan-element[data-id="${curvedWall.id}"]`)?.outerHTML || '';
+    app.applyTool('select');
+    app.model.select([curvedWall.id]);
+    app.renderNow();
+    const curveHandles = () => qa(window, '.selection-frame .curve-handle');
+    report.check('El muro seleccionado muestra un tirador de comba por tramo', curveHandles().length === 1,
+      `${curveHandles().length} tiradores`);
+    const curveHandle = curveHandles()[0];
+    const curveHandlePoint = clientPoint(app, Number(curveHandle.getAttribute('d').match(/-?\d+(\.\d+)?/g)[0]), Number(curveHandle.getAttribute('d').match(/-?\d+(\.\d+)?/g)[1]));
+    pointer(window, curveHandle, 'pointerdown', curveHandlePoint);
+    const apexPoint = clientPoint(app, (curvedWall.x + curvedWall.points[0].x + curvedWall.x + curvedWall.points[1].x) / 2, curvedWall.y + curvedWall.points[0].y - 90);
+    pointer(window, app.svg, 'pointermove', apexPoint);
+    pointer(window, app.svg, 'pointerup', apexPoint);
+    app.renderNow();
+    let curved = app.model.element(curvedWall.id);
+    report.check('Arrastrar el rombo comba el tramo en un arco de tres puntos',
+      Array.isArray(curved.curves) && curved.curves[0]?.kind === 'arc'
+      && curved.points.length === 2 && near(curved.curves[0].through.y, curved.points[0].y - 90, 14),
+      JSON.stringify(curved.curves?.[0] || null));
+    const curvedNode = app.svg.querySelector(`.plan-element[data-id="${curved.id}"]`);
+    report.check('El muro curvo se dibuja con un path y arcos A, sin polilínea',
+      Boolean(curvedNode?.querySelector('path:not(.hit-area)')?.getAttribute('d')?.includes(' A '))
+      && !curvedNode?.querySelector('polyline:not(.hit-area)'),
+      curvedNode?.querySelector('path:not(.hit-area)')?.getAttribute('d')?.slice(0, 60));
+    report.check('La caja de selección es analítica e incluye el bombeo del arco',
+      curved.h > 60 && near(curved.h, 90, 16),
+      `${Math.round(curved.w)} × ${Math.round(curved.h)}`);
+    const curvedLength = app.model.pathLength(curved);
+    report.check('La longitud del trazo suma el arco y no la cuerda',
+      curvedLength > curved.w + 1 && curvedLength < curved.w * 1.5,
+      `${Math.round(curvedLength)} de arco · ${Math.round(curved.w)} de cuerda`);
+    const beforeUndoCurve = app.model.snapshot();
+    app.model.undo();
+    app.renderNow();
+    const undoCurve = app.model.element(curvedWall.id);
+    report.check('Deshacer devuelve el muro a recto en un solo paso',
+      !undoCurve.curves && undoCurve.points.length === 2 && beforeUndoCurve !== app.model.snapshot(),
+      String(undoCurve.curves));
+    app.model.redo();
+    app.renderNow();
+    curved = app.model.element(curvedWall.id);
+    report.check('Rehacer recupera el arco', Boolean(curved.curves?.[0]));
+
+    /* ---------------- puertas ubicadas por longitud de arco ---------------- */
+    const arcFlat = app.model.flatPoints(app.model.element(curved.id));
+    const arcApexPoint = arcFlat[Math.floor(arcFlat.length / 2)];
+    const arcMid = app.model.nearestOnPath(app.model.element(curved.id), arcApexPoint);
+    const arcTotal = app.model.pathLength(app.model.element(curved.id));
+    report.check('La medición sobre el arco informa la longitud recorrida',
+      Boolean(arcMid) && Math.abs(arcMid.length - arcTotal / 2) <= 6,
+      `${Math.round(arcMid?.length || 0)} de ${Math.round(arcTotal)} cm`);
+    app.model.clearSelection();
+    app.applyTool('door');
+    pointer(window, app.svg, 'pointerdown', clientPoint(app, arcApexPoint.x, arcApexPoint.y));
+    pointer(window, app.svg, 'pointerup', clientPoint(app, arcApexPoint.x, arcApexPoint.y));
+    app.renderNow();
+    const arcDoor = app.model.design.elements.at(-1);
+    const arcDoorFoot = arcDoor ? { x: arcDoor.x + arcDoor.w / 2, y: arcDoor.y + arcDoor.h } : null;
+    report.check('La puerta se apoya en el arco y no en la cuerda del tramo',
+      arcDoor?.type === 'door' && near(arcDoorFoot.y, arcApexPoint.y, 3)
+      && Math.abs(arcApexPoint.y - (app.model.element(curved.id).y + app.model.element(curved.id).h)) > 30,
+      `pie en ${Math.round(arcDoorFoot?.y || 0)} · arco ${Math.round(arcApexPoint.y)} · cuerda ${Math.round(app.model.element(curved.id).y + app.model.element(curved.id).h)}`);
+    app.model.select([arcDoor.id]);
+    app.model.deleteSelected();
+    app.model.clearSelection();
+    app.applyTool('select');
+    app.renderNow();
+
+    /* -------------------- radio y flecha desde el inspector -------------------- */
+    app.model.select([curved.id]);
+    app.inspector.render(true);
+    const radiusField = q(window, '[data-curve-prop="radius"]');
+    const sagittaField = q(window, '[data-curve-prop="sagitta"]');
+    report.check('El inspector ofrece radio y flecha del tramo curvo',
+      Boolean(radiusField) && Boolean(sagittaField)
+      && Number(radiusField.value) > 0 && near(Number(sagittaField.value), 90, 16),
+      `R ${radiusField?.value} · flecha ${sagittaField?.value}`);
+    report.check('El inspector muestra el botón para enderezar el tramo',
+      Boolean(q(window, '[data-action="straighten"]')));
+    const beforeRadiusSagitta = Number(sagittaField.value);
+    radiusField.value = String(Math.round(Number(radiusField.value) * 2));
+    radiusField.dispatchEvent(new window.Event('change', { bubbles: true }));
+    app.renderNow();
+    const afterRadiusField = q(window, '[data-curve-prop="sagitta"]');
+    report.check('Subir el radio aplana el arco y actualiza la flecha',
+      Number(afterRadiusField.value) < beforeRadiusSagitta - 10,
+      `${Math.round(beforeRadiusSagitta)} → ${afterRadiusField?.value}`);
+    const sagittaBefore = Number(q(window, '[data-curve-prop="sagitta"]').value);
+    const sagittaInput = q(window, '[data-curve-prop="sagitta"]');
+    sagittaInput.value = String(Math.round(sagittaBefore + 30));
+    sagittaInput.dispatchEvent(new window.Event('change', { bubbles: true }));
+    app.renderNow();
+    const sagittaAfter = Number(q(window, '[data-curve-prop="sagitta"]').value);
+    report.check('La flecha editada redibuja el arco', sagittaAfter > sagittaBefore + 20,
+      `${Math.round(sagittaBefore)} → ${Math.round(sagittaAfter)} cm`);
+    q(window, '[data-action="straighten"]').click();
+    app.renderNow();
+    report.check('Enderezar el tramo elimina la curva y deja la polilínea',
+      !app.model.element(curved.id).curves
+      && Boolean(app.svg.querySelector(`.plan-element[data-id="${curved.id}"] polyline`)),
+      String(app.model.element(curved.id).curves));
+    const straightAgain = app.svg.querySelector(`.plan-element[data-id="${curved.id}"]`)?.outerHTML || '';
+    report.check('Sin curvas el muro vuelve a salir igual que antes de combarlo',
+      straightAgain === straightMarkup,
+      straightAgain === straightMarkup ? 'idéntico' : 'cambió el marcado');
+    app.model.undo();
+    app.renderNow();
+
+    /* ------------------- doble clic parte el arco en dos ------------------- */
+    app.model.select([curved.id]);
+    app.applyTool('select');
+    app.renderNow();
+    // El punto de doble clic se toma del aplanado real del arco (su mitad),
+    // no de una fórmula paralela: así la prueba usa la misma geometría que
+    // dibuja el lienzo.
+    const flatArc = app.model.flatPoints(app.model.element(curved.id));
+    const apex = flatArc[Math.floor(flatArc.length / 2)] || { x: 0, y: 0 };
+    const bulgeBefore = app.model.element(curved.id).h;
+    const apexClient = clientPoint(app, apex.x, apex.y);
+    const arcHit = app.svg.querySelector(`.plan-element[data-id="${curved.id}"] .hit-area`);
+    arcHit.dispatchEvent(new window.MouseEvent('dblclick', {
+      bubbles: true, cancelable: true, view: window, button: 0,
+      clientX: Math.round(apexClient.clientX), clientY: Math.round(apexClient.clientY),
+    }));
+    app.renderNow();
+    const splitWall = app.model.element(curved.id);
+    report.check('Doble clic sobre el arco añade un vértice y parte la curva en dos',
+      splitWall.points.length === 3 && splitWall.curves.filter(Boolean).length === 2,
+      `${splitWall.points.length} vértices · ${splitWall.curves.filter(Boolean).length} arcos`);
+    report.check('Partir el arco conserva el bombeo y no aplana el muro',
+      Math.abs(splitWall.h - bulgeBefore) < 10
+      && app.model.curvedSegments(curved.id).every((part) => part.sagitta > 4),
+      `${Math.round(bulgeBefore)} → ${Math.round(splitWall.h)} cm de alto`);
+
+    /* --------- Alt + arrastrar el vértice conserva la comba vecina --------- */
+    app.model.select([curved.id]);
+    app.applyTool('select');
+    app.renderNow();
+    const midVertex = () => qa(window, '.selection-frame .vertex-handle:not(.is-midpoint)')[1];
+    // Los puntos de paso se comparan en coordenadas del lienzo: en local
+    // cambian al recalcularse la caja aunque el arco no se mueva.
+    const beforeAlt = JSON.parse(JSON.stringify(app.model.visualCurves(app.model.element(curved.id)) || []));
+    const midStart = clientPoint(app, Number(midVertex().getAttribute('cx')), Number(midVertex().getAttribute('cy')));
+    pointer(window, midVertex(), 'pointerdown', midStart, { altKey: true });
+    pointer(window, app.svg, 'pointermove', { clientX: midStart.clientX, clientY: midStart.clientY + 40 }, { altKey: true });
+    pointer(window, app.svg, 'pointerup', { clientX: midStart.clientX, clientY: midStart.clientY + 40 }, { altKey: true });
+    app.renderNow();
+    const afterAltElement = app.model.element(curved.id);
+    const afterAlt = app.model.visualCurves(afterAltElement) || [];
+    report.check('Alt + arrastrar el vértice lleva consigo los puntos de paso',
+      afterAltElement.points.length === 3
+      && afterAlt[0]?.through.y > beforeAlt[0].through.y + 20
+      && afterAlt[1]?.through.y > beforeAlt[1].through.y + 20,
+      `${Math.round(beforeAlt[0]?.through.y ?? 0)}→${Math.round(afterAlt[0]?.through.y ?? 0)} · ${Math.round(beforeAlt[1]?.through.y ?? 0)}→${Math.round(afterAlt[1]?.through.y ?? 0)}`);
+    app.model.undo();
+    app.renderNow();
+    const beforePlain = JSON.parse(JSON.stringify(app.model.visualCurves(app.model.element(curved.id)) || []));
+    const plainStart = clientPoint(app, Number(midVertex().getAttribute('cx')), Number(midVertex().getAttribute('cy')));
+    pointer(window, midVertex(), 'pointerdown', plainStart);
+    pointer(window, app.svg, 'pointermove', { clientX: plainStart.clientX + 30, clientY: plainStart.clientY + 40 });
+    pointer(window, app.svg, 'pointerup', { clientX: plainStart.clientX + 30, clientY: plainStart.clientY + 40 });
+    app.renderNow();
+    const afterPlain = app.model.visualCurves(app.model.element(curved.id)) || [];
+    report.check('Sin Alt el vértice se mueve y los puntos de paso quedan donde estaban',
+      afterPlain.filter(Boolean).length === 2
+      && near(afterPlain[0].through.x, beforePlain[0].through.x, 1)
+      && near(afterPlain[0].through.y, beforePlain[0].through.y, 1),
+      `${afterPlain.length} arcos · x ${Math.round(beforePlain[0]?.through.x ?? 0)}→${Math.round(afterPlain[0]?.through.x ?? 0)} · y ${Math.round(beforePlain[0]?.through.y ?? 0)}→${Math.round(afterPlain[0]?.through.y ?? 0)}`);
+    app.model.undo();
+    app.renderNow();
+    app.applyTool('select');
+    app.model.clearSelection();
+    app.renderNow();
+
+    /* --------------------------- vías y andenes --------------------------- */
+    app.model.clearSelection();
+    app.applyTool('road');
+    pointer(window, app.svg, 'pointerdown', clientPoint(app, 140, 360));
+    pointer(window, app.svg, 'pointermove', clientPoint(app, 400, 360));
+    pointer(window, app.svg, 'pointerup', clientPoint(app, 400, 360));
+    app.renderNow();
+    const road = app.model.design.elements.at(-1);
+    report.check('La herramienta de vía crea una vía vehicular con carriles', road?.type === 'road'
+      && road.lanes === 2 && road.widthM === 6, `${road?.type} · ${road?.lanes} carriles`);
+    const roadBand = app.svg.querySelector(`.plan-element[data-id="${road.id}"] polyline, .plan-element[data-id="${road.id}"] path`);
+    report.check('La vía se dibuja como banda de 6 m con línea de eje',
+      Number(roadBand?.getAttribute('stroke-width')) >= 600,
+      `${roadBand?.getAttribute('stroke-width')} de ancho`);
+    app.model.select([road.id]);
+    app.inspector.render(true);
+    report.check('El inspector ofrece ancho y carriles de la vía',
+      Boolean(q(window, '[data-prop="widthM"]')) && Boolean(q(window, '[data-prop="lanes"]'))
+      && Boolean(q(window, '[data-section="outdoor"]'))
+      && Boolean(q(window, '[data-section="curves"]')),
+      q(window, '[data-properties-title]')?.textContent);
+    q(window, '[data-prop="lanes"]').value = '3';
+    q(window, '[data-prop="lanes"]').dispatchEvent(new window.Event('change', { bubbles: true }));
+    app.renderNow();
+    app.inspector.render(true);
+    q(window, '[data-prop="widthM"]').value = '3';
+    q(window, '[data-prop="widthM"]').dispatchEvent(new window.Event('change', { bubbles: true }));
+    app.renderNow();
+    report.check('El inspector ajusta ancho y carriles de la vía',
+      app.model.element(road.id).widthM === 3 && app.model.element(road.id).lanes === 3,
+      `${app.model.element(road.id).widthM} m · ${app.model.element(road.id).lanes} carriles`);
+    app.model.clearSelection();
+    app.applyTool('parking');
+    pointer(window, app.svg, 'pointerdown', clientPoint(app, 520, 300));
+    pointer(window, app.svg, 'pointermove', clientPoint(app, 760, 460));
+    pointer(window, app.svg, 'pointerup', clientPoint(app, 760, 460));
+    app.renderNow();
+    const parking = app.model.design.elements.at(-1);
+    const parkingLabel = app.svg.querySelector(`.plan-element[data-id="${parking.id}"] text`)?.textContent || '';
+    report.check('El parqueadero dibuja puestos de 2,50 × 5,00 m y los cuenta',
+      parking?.type === 'parking' && /puestos/.test(parkingLabel), parkingLabel);
+    app.applyTool('crosswalk');
+    pointer(window, app.svg, 'pointerdown', clientPoint(app, 860, 640));
+    pointer(window, app.svg, 'pointermove', clientPoint(app, 1020, 730));
+    pointer(window, app.svg, 'pointerup', clientPoint(app, 1020, 730));
+    app.renderNow();
+    const crosswalk = app.model.design.elements.at(-1);
+    const crosswalkStripes = app.svg.querySelectorAll(`.plan-element[data-id="${crosswalk?.id}"] line, .plan-element[data-id="${crosswalk?.id}"] rect`).length;
+    report.check('El paso cebra se dibuja con franjas paralelas',
+      crosswalk?.type === 'crosswalk' && crosswalkStripes >= 3, `${crosswalk?.type} · ${crosswalkStripes} franjas`);
+    app.applyTool('property');
+    pointer(window, app.svg, 'pointerdown', clientPoint(app, 860, 560));
+    pointer(window, app.svg, 'pointermove', clientPoint(app, 1060, 560));
+    pointer(window, app.svg, 'pointerup', clientPoint(app, 1060, 560));
+    app.renderNow();
+    const boundary = app.model.design.elements.at(-1);
+    report.check('El límite de predio se dibuja como lindero con su rótulo',
+      boundary?.type === 'property' && Boolean(app.svg.querySelector(`.plan-element[data-id="${boundary?.id}"] text`)),
+      `${boundary?.type} · ${app.svg.querySelector(`.plan-element[data-id="${boundary?.id}"] text`)?.textContent}`);
+    app.applyTool('select');
+    app.model.clearSelection();
+    app.renderNow();
+    report.check('El diseño con curvas se serializa en formato 3',
+      app.model.serialize().format === 3 && app.model.documentFormat() === 3,
+      String(app.model.serialize().format));
+
+    /* ------------- apertura de planos v2 y degradación de los v3 ------------- */
+    const v3Doc = {
+      format: 3,
+      canvas: { width: 800, height: 600, unit: 'cm', scale: '1:100' },
+      layers: [{ id: 'capa_planta', name: 'Planta', visible: true, locked: false }],
+      elements: [{
+        id: 'muro_v3',
+        type: 'wall',
+        layerId: 'capa_planta',
+        x: 100,
+        y: 300,
+        w: 240,
+        h: 100,
+        points: [{ x: 0, y: 100 }, { x: 240, y: 100 }],
+        curves: [{ kind: 'arc', through: { x: 120, y: 0 } }, null],
+      }],
+    };
+    const importedV3 = new window.Normia.Model(v3Doc, app.catalogs, {});
+    const importedV3Wall = importedV3.element('muro_v3');
+    report.check('Un plano v3 con curvas se abre como formato 3 y conserva los arcos',
+      importedV3.documentFormat() === 3 && importedV3.hasCurves(importedV3Wall)
+      && importedV3.serialize().format === 3,
+      `formato ${importedV3.documentFormat()}`);
+    report.check('El muro importado mide el arco y no la cuerda',
+      importedV3.pathLength(importedV3Wall) > 260,
+      `${Math.round(importedV3.pathLength(importedV3Wall))} cm`);
+    const v2Doc = JSON.parse(JSON.stringify(v3Doc));
+    v2Doc.format = 2;
+    v2Doc.elements[0].id = 'muro_v2';
+    delete v2Doc.elements[0].curves;
+    const importedV2 = new window.Normia.Model(v2Doc, app.catalogs, {});
+    report.check('Un plano v2 de la 1.10 se abre sin curvas y sigue en formato 2',
+      importedV2.documentFormat() === 2 && !importedV2.hasCurves(importedV2.element('muro_v2'))
+      && importedV2.flatPoints(importedV2.element('muro_v2')).length === 2);
+    // La 1.10 ignora las claves que no conoce: al abrir un v3 descarta
+    // `curves` y dibuja la polilínea recta de los vértices.
+    const degraded = JSON.parse(JSON.stringify(v3Doc));
+    degraded.elements.forEach((element) => { delete element.curves; });
+    const legacyView = new window.Normia.Model(degraded, app.catalogs, {});
+    const legacyWall = legacyView.element('muro_v3');
+    report.check('Sin `curves` el muro v3 se ve recto: degradación a la 1.10',
+      !legacyView.hasCurves(legacyWall) && legacyView.flatPoints(legacyWall).length === 2
+      && legacyView.documentFormat() === 2);
+
+    // La vía ocupa una banda ancha: se retira junto con el resto de elementos
+    // de esta sección para no tapar el muro que usan las pruebas siguientes.
+    app.model.select([curved.id, road.id, parking.id, crosswalk.id, boundary.id]);
+    report.check('Las vías y el muro curvo se pueden borrar como cualquier elemento',
+      app.model.deleteSelected() && !app.model.element(curved.id) && !app.model.element(road.id)
+      && !app.model.element(crosswalk.id) && !app.model.element(boundary.id),
+      `${app.model.design.elements.length} elementos`);
+    app.model.clearSelection();
+    app.applyTool('select');
+    app.renderNow();
+    report.check('Sin curvas el plano vuelve a serializarse en formato 2',
+      app.model.serialize().format === 2, String(app.model.serialize().format));
+    // Deshacer y rehacer reconstruyen los elementos: se refresca la referencia
+    // del muro de las pruebas anteriores para no leer un objeto obsoleto.
+    wall = app.model.element(wallId);
+
     app.applyTool('door');
     const beforeDoor = app.model.design.elements.length;
     pointer(window, app.svg, 'pointerdown', clientPoint(app, 640, 320));
@@ -1014,7 +1328,7 @@ async function main() {
     const toolsPopover = q(window, '[data-tools-popover]');
     const toolsChoices = qa(window, '.tool-choice');
     report.check('La paleta reúne herramientas y acciones del plano',
-      toolsPopover?.hidden === false && toolsChoices.length === 25
+      toolsPopover?.hidden === false && toolsChoices.length === 30
       && Boolean(q(window, '.tool-choice[data-open-drawer="audit"]'))
       && Boolean(q(window, '.tool-choice[data-present-open]'))
       && Boolean(q(window, '.tool-choice[data-open-library="sign"]')),

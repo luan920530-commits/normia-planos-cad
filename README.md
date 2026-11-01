@@ -2,7 +2,7 @@
 
 Editor de planos de emergencia y evacuación, en español, pensado para pequeñas y medianas organizaciones que necesitan documentar plantas, rutas, señalización y equipamiento sin depender de software CAD de escritorio ni de servicios externos.
 
-- **Editor completo**: instalador web, cuentas, proyectos y pisos, editor SVG real, biblioteca de **395 pictogramas** (332 ISO 7010 + 23 de orientación y servicios como baños, vestidores, cafetería y **«Usted está aquí»** + **34 de señalización de tránsito** + **6 de emergencia y brigada**), **350 objetos CAD esquemáticos en 28 familias** (estación de servicio, droguería, gimnasio, colegio, cafetería, supermercado, restaurante, bodega, comercio, hospital, costura, asadero, vivienda, deportes, exteriores, instalaciones eléctricas y redes hidrosanitarias, entre otras), puertas de uno y dos batientes y portones, **rutas con vértices editables**, **redes de tubería (agua, gas, desagües e incendio) y circuitos eléctricos**, cambio de señal y de equipo desde el inspector, guardado con versiones, borradores automáticos, deshacer/rehacer y exportación SVG/JSON/PNG/impresión.
+- **Editor completo**: instalador web, cuentas, proyectos y pisos, editor SVG real, biblioteca de **395 pictogramas** (332 ISO 7010 + 23 de orientación y servicios como baños, vestidores, cafetería y **«Usted está aquí»** + **34 de señalización de tránsito** + **6 de emergencia y brigada**), **350 objetos CAD esquemáticos en 28 familias** (estación de servicio, droguería, gimnasio, colegio, cafetería, supermercado, restaurante, bodega, comercio, hospital, costura, asadero, vivienda, deportes, exteriores, instalaciones eléctricas y redes hidrosanitarias, entre otras), puertas de uno y dos batientes y portones, **muros curvos con arcos de tres puntos** (radio y flecha editables), **rutas con vértices editables**, **vías, andenes, pasos cebra, parqueaderos y límites de predio esquemáticos**, **redes de tubería (agua, gas, desagües e incendio) y circuitos eléctricos**, cambio de señal y de equipo desde el inspector, guardado con versiones, borradores automáticos, deshacer/rehacer y exportación SVG/JSON/PNG/impresión.
 - **Auditor de planos y evacuación**: el cajón **Revisión** mide el recorrido más largo hasta las salidas marcadas, cuenta salidas y anchos útiles, estima la ocupación (declarada o por densidad), calcula el ancho requerido y el tiempo de evacuación, y lista los hallazgos por severidad con un botón para verlos en el plano. Los umbrales viven en `resources/audit-criteria.json`, el cálculo también corre en el servidor y el informe se imprime o se guarda como PDF.
 - **Instalaciones**: tuberías de agua, gas, desagües e incendio y red eléctrica con longitudes, diámetros, circuitos, cargas y caída de tensión estimada.
 - **PHP ≥ 8.1 + SQLite/PDO**, arquitectura MVC propia, sin Composer, sin `node_modules` en producción y sin CDN.
@@ -33,12 +33,13 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 16. [Pruebas](#pruebas)
 17. [Distribución: escritorio y Android](#distribución-escritorio-y-android)
 18. [Edición Electron](#edición-electron)
-19. [Cambios de la versión 1.10.0](#cambios-de-la-versión-1100)
-20. [Cambios de la versión 1.9.0](#cambios-de-la-versión-190)
-21. [Cambios de la versión 1.8.0](#cambios-de-la-versión-180)
-22. [Paquetes y verificación](#paquetes-y-verificación)
-23. [Limitaciones](#limitaciones)
-24. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
+19. [Cambios de la versión 1.11.0](#cambios-de-la-versión-1110)
+20. [Cambios de la versión 1.10.0](#cambios-de-la-versión-1100)
+21. [Cambios de la versión 1.9.0](#cambios-de-la-versión-190)
+22. [Cambios de la versión 1.8.0](#cambios-de-la-versión-180)
+23. [Paquetes y verificación](#paquetes-y-verificación)
+24. [Limitaciones](#limitaciones)
+25. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
 
 ---
 
@@ -51,7 +52,7 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 | Proyectos | Nombre, sede, área de trabajo, responsable y notas. Duplicar, editar y eliminar con confirmación. |
 | Pisos | Varios pisos por proyecto, orden, duplicación y protección del último piso. |
 | Editor | Lienzo SVG con rejilla, reglas, ajuste, zoom, paneo, selección múltiple, marquesina, capas y grupos. |
-| Herramientas | Muro, puerta sencilla, puerta doble, portón o reja, ruta de evacuación, texto, medida, línea, rectángulo, elipse, **tubería** y **tubería eléctrica**. |
+| Herramientas | Muro (recto o **curvo**), puerta sencilla, puerta doble, portón o reja, ruta de evacuación, texto, medida, línea, rectángulo, elipse, **tubería**, **tubería eléctrica**, **vía vehicular**, **andén**, **paso cebra**, **parqueadero** y **límite de predio**. |
 | Bibliotecas | 395 señales (332 ISO 7010 + 23 de orientación y servicios + 34 de tránsito + 6 de emergencia y brigada) en 9 familias y 350 objetos CAD en 28 familias, con búsqueda y filtros por familia. |
 | Propiedades | Posición, tamaño, rotación, sentido de apertura, color (paleta de 34), grosor, opacidad, texto, capa, bloqueo, cambio de tipo y, en redes, **sistema, diámetro, material, pendiente, presión, circuito, tensión, calibre, fases y carga**. |
 | Historial | Deshacer/rehacer con 120 pasos, duplicar, pegar, agrupar, alinear, distribuir y orden de dibujo. |
@@ -521,7 +522,7 @@ El mismo contenido se calcula una sola vez en `app/Services/PlanFooter.php`; el 
 
 ## Formato de datos
 
-El detalle completo está en [`docs/FORMATO-PLANO.md`](docs/FORMATO-PLANO.md). Resumen del esquema **v2**:
+El detalle completo está en [`docs/FORMATO-PLANO.md`](docs/FORMATO-PLANO.md) y la guía de curvas y entorno en [`docs/MUROS_Y_VIAAS.md`](docs/MUROS_Y_VIAAS.md). Resumen del esquema **v2/v3**:
 
 ```json
 {
@@ -545,6 +546,8 @@ El detalle completo está en [`docs/FORMATO-PLANO.md`](docs/FORMATO-PLANO.md). R
   "groups": [{ "id": "grupo_puesto", "name": "Puesto de trabajo", "members": ["el_...", "el_..."] }]
 }
 ```
+
+Con curvas, el documento sube a `format: 3` y cada trazo añade `curves`, un arreglo alineado con `points` cuyos tramos son `{ "kind": "arc", "through": { "x", "y" } }` o `null`. Sin curvas el documento queda en `format: 2` y el SVG sale idéntico al de la 1.10.0 (polilíneas, sin `path`). Un plano v3 abierto en la 1.10.0 se ve con los tramos rectos: esa versión ignora `curves`.
 
 `canvas.occupancy` es la ocupación declarada en personas (0–10 000; 0 = sin declarar). `isExit` solo se conserva en puertas y marca la salida de emergencia que usa el auditor. Límites del validador: lienzo 400–4000 × 300–3000, rejilla 5–100, hasta 1200 elementos, 24 capas y 80 grupos de 2–80 miembros, identificadores `^[A-Za-z][A-Za-z0-9_-]{2,63}$`, etiquetas de hasta 240 caracteres sin `<` ni `>`, 34 colores permitidos, trazos de hasta 40 puntos (línea y medida exactamente 2), JSON de hasta 2.5 MB.
 
@@ -658,9 +661,9 @@ Lo único que no funciona sin red es la **vista previa de desarrollo** (`npm run
 | Bloque | Comprobaciones |
 | --- | --- |
 | `tests/php/lint.mjs` | `php -l` sobre todo `app/`, `bootstrap.php` e `index.php` en 8.1 y 8.3. |
-| `tests/php/functional.mjs` | 180 comprobaciones: instalador, requisitos, contraseñas débiles, CSRF, sesión, autorización entre cuentas, CRUD de proyectos/pisos, duplicados, importación v1/v2, catálogos (395 señales y 350 objetos), catálogo y guardado de redes, señales de baño y de servicios (guardado, color de familia y exportación SVG), **auditor y medición de evacuación** (salidas, recorrido máximo, zonas inalcanzables, rutas que cruzan muros o no llegan a la salida, ocupación declarada y estimada, señalización, validación de `isExit`, informe imprimible y demo coherente), puertas y portones (geometría, sentidos de apertura, exportación con trazo), validaciones de la API, guardado/versiones/borradores/conflictos, exportaciones, ciclo de vida y logout. |
-| `tests/js/editor.mjs` | 282 comprobaciones de interfaz sobre la app real: arranque, 395 señales y 350 objetos, **trazado de tuberías y circuitos, inspector de red y panel de redes**, **mano y paneo, selección de superpuestos, inspector plegable y paleta de herramientas**, puertas dobles y portones, **vértices de ruta editables (arrastrar, doble clic, Alt+clic)**, **señal de baño insertada desde la biblioteca**, **posiciones reales del trazo**, **clic sobre muros finos, pictogramas y equipos**, **cambio de señal y de equipo desde el inspector**, **auditor de planos** (interruptor de salida, ocupación declarada, cajón de revisión, contador, filtros, «Ver en el plano», cierre sin dejar el fondo bloqueado), **pliego de señalización** (conteo, tamaño sugerido, CSV, precios y consistencia), **medición de rutas internas** (ruta que rodea muros, tramos, guardado en capa y comparación), **modo presentación** (pantalla limpia, láser, spotlight, rutas animadas, capas, quiz y salida sin perder el estado), **rotación**, **rutas cerradas**, **arrastrar y soltar desde la biblioteca sin que el cajón lo bloquee**, reglas, herramientas, inserción con puntero, selección, mover, escalar, rotar, color, cambio de tipo, deshacer/rehacer, duplicar, agrupar, bloquear, desplazar, texto y saneado, guardar, reabrir, borradores, conflictos, exportación SVG/JSON/PNG, tooltips sin acumulación, capas, versiones y límites. |
-| `tests/js/pages.mjs` | 29 comprobaciones de las páginas fuera del editor: menú de acciones de proyectos y pisos (capa fija, colocación, teclado, un solo menú), confirmación de borrado y borrado real de piso y proyecto, con la protección del último piso. |
+| `tests/php/functional.mjs` | 211 comprobaciones: instalador, requisitos, contraseñas débiles, CSRF, sesión, autorización entre cuentas, CRUD de proyectos/pisos, duplicados, importación v1/v2, catálogos (395 señales y 350 objetos), catálogo y guardado de redes, señales de baño y de servicios (guardado, color de familia y exportación SVG), **auditor y medición de evacuación** (salidas, recorrido máximo, zonas inalcanzables, rutas que cruzan muros o no llegan a la salida, ocupación declarada y estimada, señalización, validación de `isExit`, informe imprimible y demo coherente), **muros curvos y vías** (guardado en formato 3, auditor con el muro curvo separando recintos, arco `A` en el SVG, vía que no bloquea frente a muro que sí, `422` para curvas desalineadas, `kind` desconocido, curvas en una puerta y formato desconocido), puertas y portones (geometría, sentidos de apertura, exportación con trazo), validaciones de la API, guardado/versiones/borradores/conflictos, exportaciones, ciclo de vida y logout. |
+| `tests/js/editor.mjs` | 351 comprobaciones de interfaz sobre la app real: arranque, 395 señales y 350 objetos, **muros curvos** (rombo del tramo, arco de tres puntos, radio y flecha en el inspector, enderezar, doble clic que parte el arco, caja analítica, puerta sobre el arco, formato 3 y degradación a v2, marcado idéntico sin curvas), **vías y andenes** (banda de 6 m con carriles, cambio de ancho y carriles, parqueadero contado en la etiqueta, franjas del paso cebra y rótulo del lindero), **trazado de tuberías y circuitos, inspector de red y panel de redes**, **mano y paneo, selección de superpuestos, inspector plegable y paleta de herramientas**, puertas dobles y portones, **vértices de ruta editables (arrastrar, doble clic, Alt+clic)**, **señal de baño insertada desde la biblioteca**, **posiciones reales del trazo**, **clic sobre muros finos, pictogramas y equipos**, **cambio de señal y de equipo desde el inspector**, **auditor de planos** (interruptor de salida, ocupación declarada, cajón de revisión, contador, filtros, «Ver en el plano», cierre sin dejar el fondo bloqueado), **pliego de señalización** (conteo, tamaño sugerido, CSV, precios y consistencia), **medición de rutas internas** (ruta que rodea muros, tramos, guardado en capa y comparación), **modo presentación** (pantalla limpia, láser, spotlight, rutas animadas, capas, quiz y salida sin perder el estado), **rotación**, **rutas cerradas**, **arrastrar y soltar desde la biblioteca sin que el cajón lo bloquee**, reglas, herramientas, inserción con puntero, selección, mover, escalar, rotar, color, cambio de tipo, deshacer/rehacer, duplicar, agrupar, bloquear, desplazar, texto y saneado, guardar, reabrir, borradores, conflictos, exportación SVG/JSON/PNG, tooltips sin acumulación, capas, versiones y límites. |
+| `tests/js/pages.mjs` | 32 comprobaciones de las páginas fuera del editor: menú de acciones de proyectos y pisos (capa fija, colocación, teclado, un solo menú), confirmación de borrado y borrado real de piso y proyecto, con la protección del último piso. |
 | `tests/php/package.mjs` | 39 comprobaciones: construye ambos ZIP, verifica que no haya bases, sesiones, credenciales, logs ni carpetas de desarrollo, valida los SHA-256 y hace una instalación limpia de la demo comprobando assets, catálogos (395/350), los cuatro pisos del proyecto de ejemplo, señales de servicios y redes en la demo, la señal «Usted está aquí», **el auditor y su informe en la demo empaquetada**, editor, SVG, JSON e impresión. |
 | `tests/php/desktop.mjs` | 37 comprobaciones del escritorio: rutas de datos separadas del código, `NORMA_DATA_PATH` (solo absolutas), lanzador (argumentos, puerto, estado, cierre), enrutador (bloqueos, saltos de directorio, byte nulo) y una instalación completa escribiendo en una carpeta de datos externa. |
 | `tests/js/electron.mjs` | 30 comprobaciones de la edición Electron: ventana sin acceso a Node, puente mínimo, enlaces externos, instancia única, menú en español, descargas, servidor en `127.0.0.1` sin cookies en memoria, entorno de php-wasm, instalación completa con datos fuera del código, `storage/` inaccesible, armado del paquete (aplicación, ventana e intérprete) y ausencia de ICU y de versiones de PHP que no se usan. |
@@ -670,14 +673,14 @@ Lo único que no funciona sin red es la **vista previa de desarrollo** (`npm run
 Resultados esperados de la última ejecución completa:
 
 ```text
-✓ Sintaxis PHP 8.1 · 63 archivos, sin errores
-✓ Sintaxis PHP 8.3 · 63 archivos, sin errores
-✓ Sintaxis JavaScript · 50 archivos, sin errores
-✓ Funcionamiento sin conexión · 96 archivos, sin referencias externas
-✓ Funcional PHP 8.1 · 197/197
-✓ Funcional PHP 8.3 · 197/197
-✓ Interfaz (JSDOM) PHP 8.1 · 317/317
-✓ Interfaz (JSDOM) PHP 8.3 · 317/317
+✓ Sintaxis PHP 8.1 · 64 archivos, sin errores
+✓ Sintaxis PHP 8.3 · 64 archivos, sin errores
+✓ Sintaxis JavaScript · 51 archivos, sin errores
+✓ Funcionamiento sin conexión · 97 archivos, sin referencias externas
+✓ Funcional PHP 8.1 · 211/211
+✓ Funcional PHP 8.3 · 211/211
+✓ Interfaz (JSDOM) PHP 8.1 · 351/351
+✓ Interfaz (JSDOM) PHP 8.3 · 351/351
 ✓ Páginas y menús PHP 8.1 · 32/32
 ✓ Páginas y menús PHP 8.3 · 32/32
 ✓ Escritorio (instaladores) · 37/37
@@ -765,22 +768,66 @@ para Linux.
 
 Guía completa: [`docs/ELECTRON.md`](docs/ELECTRON.md).
 
-### Archivos de la entrega 1.10.0
+### Archivos de la entrega 1.11.0
 
-Todos se publican en la [release v1.10.0](https://github.com/luan920530-commits/normia-planos-cad/releases/tag/v1.10.0)
+Todos se publican en la [release v1.11.0](https://github.com/luan920530-commits/normia-planos-cad/releases/tag/v1.11.0)
 y llevan su suma SHA-256 junto a ellos.
 
-| Edición | Archivo | Tamaño |
-| --- | --- | --- |
-| Nativa macOS Apple Silicon | `normia-planos-cad-1.10.0-macos-arm64.pkg` | 118 MB |
-| Nativa macOS Intel | `normia-planos-cad-1.10.0-macos-x64.pkg` | 117 MB |
-| Nativa Windows x64 | `normia-planos-cad-1.10.0-windows-x64.exe` | 67 MB |
-| Electron macOS Apple Silicon | `…-macos-arm64.dmg` · `…-macos-arm64.zip` | 118 MB · 114 MB |
-| Electron macOS Intel | `…-macos-x64.dmg` · `…-macos-x64.zip` | 122 MB · 118 MB |
-| Electron Windows x64 | `…-windows-x64-instalador.exe` · `…-windows-x64.zip` | 117 MB · 147 MB |
-| Electron Linux x64 | `…-linux-x86_64.AppImage` | 121 MB |
-| Android | `normia-planos-cad-1.10.0-android.apk` | 11 MB |
-| Web (PHP ≥ 8.1) | `paquetes/v1.10.0/normia-planos-cad-1.10.0.zip` y `…-demo…` | 1,2 MB |
+| Edición | Archivo |
+| --- | --- |
+| Nativa macOS Apple Silicon | `normia-planos-cad-1.11.0-macos-arm64.pkg` |
+| Nativa macOS Intel | `normia-planos-cad-1.11.0-macos-x64.pkg` |
+| Nativa Windows x64 | `normia-planos-cad-1.11.0-windows-x64.exe` |
+| Electron macOS Apple Silicon | `…-1.11.0-macos-arm64.dmg` · `…-1.11.0-macos-arm64.zip` |
+| Electron macOS Intel | `…-1.11.0-macos-x64.dmg` · `…-1.11.0-macos-x64.zip` |
+| Electron Windows x64 | `…-1.11.0-windows-x64-instalador.exe` · `…-1.11.0-windows-x64.zip` |
+| Electron Linux x64 | `…-1.11.0-linux-x86_64.AppImage` |
+| Android | `normia-planos-cad-1.11.0-android.apk` |
+| Web (PHP ≥ 8.1) | `paquetes/v1.11.0/normia-planos-cad-1.11.0.zip` y `…-1.11.0-demo.zip` |
+
+Las ediciones de escritorio se compilan en los flujos de trabajo y su tamaño exacto
+se publica en la release junto con el `SHA256SUMS.txt`; los paquetes web se
+construyen con `tools/build-packages.sh` y se verifican con la suite.
+
+## Cambios de la versión 1.11.0
+
+Entrega de **muros curvos y entorno esquemático**. El plano gana geometría real
+(arcos de circunferencia) y una capa de vías y andenes que no bloquea el paso.
+
+- **Muros curvos con arco de tres puntos.** Cada tramo de un trazo puede combarse
+  arrastrando el **rombo** que aparece en su centro; la curva es una
+  circunferencia que pasa por el inicio, el punto de paso y el fin del tramo, no
+  una Bézier. El inspector muestra **radio y flecha**, permite editarlos y ofrece
+  **Enderezar tramo** / **Enderezar todo el trazo**.
+- **Edición de vértices sobre curvas.** Doble clic sobre el trazo añade un vértice
+  en el punto más cercano del arco y lo **parte en dos**; `Alt` + arrastrar un
+  vértice mueve solo ese punto sin deformar los tramos vecinos; `Alt` + clic lo
+  elimina. Cada arrastre completo es **un** paso de deshacer.
+- **Caja de selección analítica.** La caja se recalcula con los límites del
+  aplanado, así que abraza el bombeo del arco y la prueba de impacto acierta
+  sobre la curva, no sobre la cuerda.
+- **Un solo aplanado.** Cliente y servidor comparten tolerancia (0,5 cm) y
+  límites (40 vértices, 720 cuerdas por arco); la misma geometría alimenta el
+  lienzo, la medición, el pliego, las redes, el auditor de recorridos y la
+  cobertura de extintores. Las puertas se ubican por **longitud de arco**.
+- **Vías y andenes.** Cinco tipos nuevos: `road` (ancho y carriles), `sidewalk`,
+  `crosswalk`, `parking` (puestos de 2,50 × 5,00 m contados en la etiqueta) y
+  `property`. **No bloquean el tránsito** y cuentan como exterior en la
+  cuadrícula y en el auditor: restan área útil y no generan área inalcanzable.
+  Los muros, rectos o curvos, sí bloquean. Atajos `A`, `S`, `C`, `Q` e `I`.
+- **Formato v3.** `curves` alineado a `points`; sin curvas el documento sigue en
+  `format: 2` y el SVG del servidor sale **idéntico** al de la 1.10.0. Un v3
+  abierto en la 1.10.0 se ve con los tramos rectos (degradación documentada).
+- **Pruebas.** `tests/js/editor.mjs` pasa de 317 a **351** comprobaciones y
+  `tests/php/functional.mjs` de 197 a **211**, incluidas las de auditor con y sin
+  vía, el SVG con `A`, la degradación v3→v2 y el marcado idéntico sin curvas.
+- **Documentación.** Nueva guía [`docs/MUROS_Y_VIAAS.md`](docs/MUROS_Y_VIAAS.md)
+  con el aviso esquemático (INVÍAS y POT), los límites y la degradación;
+  `docs/FORMATO-PLANO.md` sube al esquema v3.
+
+> Las vías y los andenes son **esquemáticos**: no sustituyen los perfiles de la
+> INVÍAS, la clasificación del POT ni un estudio de tránsito, y no acreditan
+> accesibilidad ni cumplimiento normativo.
 
 ## Cambios de la versión 1.10.0
 

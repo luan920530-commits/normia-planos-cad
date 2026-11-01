@@ -219,9 +219,9 @@
       const walls = elements.filter((element) => element.type === 'wall');
       for (const wall of walls) {
         const stroke = Math.max(1, Number(wall.stroke) || 2) / 2 + clearance;
-        const points = (wall.points && wall.points.length >= 2)
-          ? wall.points.map((point) => ({ x: wall.x + point.x, y: wall.y + point.y }))
-          : [{ x: wall.x, y: wall.y }, { x: wall.x + wall.w, y: wall.y + wall.h }];
+        // Mismo aplanado que el auditor: un muro curvo bloquea el arco real,
+        // no la cuerda entre sus vértices.
+        const points = this.app.model.flatPoints(wall);
         for (let i = 1; i < points.length; i += 1) {
           const a = points[i - 1];
           const b = points[i];

@@ -140,7 +140,7 @@ try {
     && editorHtml.includes('manifest.webmanifest'));
   report.check('La paleta «Todas las herramientas» reúne herramientas y acciones',
     editorHtml.includes('data-tools-popover')
-    && (editorHtml.match(/class="tool-choice"/g) || []).length === 25
+    && (editorHtml.match(/class="tool-choice"/g) || []).length === 30
     && editorHtml.includes('data-tools-filter')
     && editorHtml.includes('data-open-drawer="audit"')
     && editorHtml.includes('data-present-open'));
@@ -878,6 +878,151 @@ try {
   report.check('Eliminar proyecto funciona', [302, 303].includes(res.status));
   res = await client.get(`projects/${duplicatedId}`);
   report.check('Proyecto eliminado no existe', res.status === 422, String(res.status));
+
+  /* ------------------- muros curvos, vías y andenes (v3) ------------------- */
+  const curveProjectPage = await client.get('projects/new');
+  client.csrf = extractToken(curveProjectPage.text);
+  const curveProject = await client.postForm('projects', {
+    _token: client.csrf, name: 'Proyecto de vías', site: 'Sede QA', workplace: 'Planta',
+    responsible: 'Equipo QA', notes: 'Muros curvos y vías', preset: 'planta',
+  });
+  const curveProjectId = Number(/projects\/(\d+)/.exec(decodeURIComponent(curveProject.location))?.[1] || 0);
+  const curveProjectHtml = (await client.get(`projects/${curveProjectId}`)).text;
+  const curveFloorHref = [...curveProjectHtml.matchAll(/href="([^"]+)"/g)]
+    .map((match) => { try { return decodeURIComponent(match[1]); } catch { return match[1]; } })
+    .find((href) => /\/floors\/\d+\/editor/.test(href)) || '';
+  const curveFloorId = Number(/floors\/(\d+)\/editor/.exec(curveFloorHref)?.[1] || 0);
+  const curveBase = JSON.parse(JSON.stringify((await json(`api/floors/${curveFloorId}`)).body.design));
+  const curveLayer = curveBase.layers[0].id;
+  curveBase.canvas = { ...curveBase.canvas, width: 800, height: 600, unit: 'cm', scale: '1:100', occupancy: 20 };
+  curveBase.layers = [{ id: curveLayer, name: 'Planta', visible: true, locked: false }];
+  curveBase.groups = [];
+  const curveWall = (id, x, y, w, h, points, curves = null) => ({
+    id, type: 'wall', layerId: curveLayer, x, y, w, h, rotation: 0, color: '#0f172a',
+    stroke: 10, opacity: 1, label: '', locked: false, points,
+    ...(curves ? { curves } : {}),
+  });
+  const curveDoor = {
+    id: 'salida_curva', type: 'door', layerId: curveLayer, x: 300, y: 410, w: 90, h: 90, rotation: 0,
+    color: '#475569', stroke: 2, opacity: 1, label: '', locked: false, flipX: false, flipY: false, isExit: true,
+  };
+  const roomWalls = () => [
+    curveWall('muro_sup', 100, 100, 600, 2, [{ x: 0, y: 0 }, { x: 600, y: 0 }]),
+    curveWall('muro_izq', 100, 100, 2, 400, [{ x: 0, y: 0 }, { x: 0, y: 400 }]),
+    curveWall('muro_inf_a', 100, 500, 200, 2, [{ x: 0, y: 0 }, { x: 200, y: 0 }]),
+    curveWall('muro_inf_b', 390, 500, 310, 2, [{ x: 0, y: 0 }, { x: 310, y: 0 }]),
+  ];
+  const straightRoom = { ...curveBase, elements: [
+    ...roomWalls(),
+    curveWall('muro_der', 700, 100, 2, 400, [{ x: 0, y: 0 }, { x: 0, y: 400 }]),
+    curveDoor,
+  ] };
+  res = await client.postJson(`api/floors/${curveFloorId}/save`, { design: straightRoom, expected_version: 1, note: 'Cuarto recto' });
+  report.check('La API sigue aceptando planos de formato 2 sin curvas', res.status === 200, `${res.status} · ${res.text.slice(0, 90)}`);
+  const straightAudit = (await json(`api/floors/${curveFloorId}/audit`)).body.report || {};
+  const straightFree = Number(straightAudit.travel?.freeAreaM2 || 0);
+  report.check('El auditor mide el cuarto recto', straightAudit.travel?.computed === true && straightFree > 15,
+    `${straightFree} m² libres`);
+
+  // Muro derecho curvo: el arco se comba hacia el interior del cuarto.
+  const curvedRoom = {
+    ...curveBase,
+    format: 3,
+    elements: [
+      ...roomWalls(),
+      curveWall('muro_der', 550, 100, 150, 400, [{ x: 150, y: 0 }, { x: 150, y: 400 }], [
+        { kind: 'arc', through: { x: 0, y: 200 } },
+        null,
+      ]),
+      curveDoor,
+    ],
+  };
+  res = await client.postJson(`api/floors/${curveFloorId}/save`, { design: curvedRoom, expected_version: (await json(`api/floors/${curveFloorId}`)).body.floor.version, note: 'Cuarto curvo' });
+  const curvedSaved = (await json(`api/floors/${curveFloorId}`)).body;
+  report.check('El servidor acepta muros con curvas y los guarda en formato 3',
+    res.status === 200 && curvedSaved.design?.format === 3
+    && Array.isArray(curvedSaved.design?.elements?.find((element) => element.id === 'muro_der')?.curves)
+    && curvedSaved.design.elements.find((element) => element.id === 'muro_der').curves[0]?.through?.y === 200,
+    `${res.status} · formato ${curvedSaved.design?.format}`);
+  const curvedAudit = (await json(`api/floors/${curveFloorId}/audit`)).body.report || {};
+  const curvedFree = Number(curvedAudit.travel?.freeAreaM2 || 0);
+  report.check('El muro curvo separa recintos en el auditor (tolerancia de aplanado)',
+    curvedFree > 0 && curvedFree < straightFree - 2,
+    `recto ${straightFree} m² · curvo ${curvedFree} m²`);
+  res = await client.get(`projects/${curveProjectId}/floors/${curveFloorId}/export/svg`);
+  const curveSvg = res.text;
+  const curveGroup = (/<g data-element="muro_der"[\s\S]*?<\/g>/.exec(curveSvg) || [''])[0];
+  report.check('El SVG exporta el muro curvo con arcos A y sin aplanar a polilínea',
+    res.status === 200 && /<path [^>]*d="M [^"]* A /.test(curveGroup) && !/<polyline/.test(curveGroup),
+    curveGroup.slice(0, 160));
+  report.check('El SVG conserva el arco con su radio y bandera de barrido',
+    /A \d+(\.\d+)? \d+(\.\d+)? 0 [01] [01] /.test(curveGroup), curveGroup.slice(0, 160));
+
+  // Vías y andenes: no bloquean, cuentan como exterior.
+  const roadRoom = {
+    ...curveBase,
+    elements: [
+      ...roomWalls(),
+      curveWall('muro_der', 700, 100, 2, 400, [{ x: 0, y: 0 }, { x: 0, y: 400 }]),
+      curveDoor,
+      {
+        id: 'via_central', type: 'road', layerId: curveLayer, x: 100, y: 300, w: 600, h: 2,
+        rotation: 0, color: '#64748b', stroke: 1.5, opacity: 1, label: 'Vía de prueba', locked: false,
+        widthM: 2, lanes: 2, points: [{ x: 0, y: 1 }, { x: 600, y: 1 }],
+      },
+      {
+        id: 'anden_norte', type: 'sidewalk', layerId: curveLayer, x: 100, y: 180, w: 600, h: 2,
+        rotation: 0, color: '#94a3b8', stroke: 1.2, opacity: 1, label: '', locked: false,
+        widthM: 1, points: [{ x: 0, y: 1 }, { x: 600, y: 1 }],
+      },
+    ],
+  };
+  res = await client.postJson(`api/floors/${curveFloorId}/save`, { design: roadRoom, expected_version: (await json(`api/floors/${curveFloorId}`)).body.floor.version, note: 'Vía interior' });
+  const roadSaved = (await json(`api/floors/${curveFloorId}`)).body.design?.elements?.find((element) => element.id === 'via_central');
+  report.check('La API acepta vías y andenes con su ancho y carriles',
+    res.status === 200 && roadSaved?.widthM === 2 && roadSaved?.lanes === 2,
+    `${res.status} · ${roadSaved?.widthM} m · ${roadSaved?.lanes} carriles`);
+  const roadAudit = (await json(`api/floors/${curveFloorId}/audit`)).body.report || {};
+  const roadFree = Number(roadAudit.travel?.freeAreaM2 || 0);
+  const roadExterior = Number(roadAudit.travel?.exteriorAreaM2 || 0);
+  const roadUnreachable = Number(roadAudit.travel?.unreachableAreaM2 || 0);
+  report.check('La vía y el andén cuentan como exterior y no como área útil',
+    roadFree < straightFree - 8 && roadExterior > Number(straightAudit.travel?.exteriorAreaM2 || 0) + 8,
+    `libre ${roadFree} m² · exterior ${roadExterior} m² (recto: ${straightFree} m²)`);
+  report.check('La vía no bloquea el tránsito: el recorrido no deja área inalcanzable',
+    roadUnreachable <= 0.5, `${roadUnreachable} m² inalcanzables`);
+
+  // Un muro interior sí bloquea: sirve de control negativo.
+  const splitRoom = {
+    ...curveBase,
+    elements: [
+      ...roomWalls(),
+      curveWall('muro_der', 700, 100, 2, 400, [{ x: 0, y: 0 }, { x: 0, y: 400 }]),
+      curveWall('muro_medio', 100, 300, 600, 2, [{ x: 0, y: 0 }, { x: 600, y: 0 }]),
+      curveDoor,
+    ],
+  };
+  res = await client.postJson(`api/floors/${curveFloorId}/save`, { design: splitRoom, expected_version: (await json(`api/floors/${curveFloorId}`)).body.floor.version, note: 'Muro interior' });
+  const splitAudit = (await json(`api/floors/${curveFloorId}/audit`)).body.report || {};
+  report.check('Un muro recto en el mismo sitio sí bloquea el paso (control)',
+    Number(splitAudit.travel?.unreachableAreaM2 || 0) > 2,
+    `${splitAudit.travel?.unreachableAreaM2} m² inalcanzables`);
+
+  // Validación de curvas.
+  const wrongCurves = JSON.parse(JSON.stringify(curvedRoom));
+  wrongCurves.elements.find((element) => element.id === 'muro_der').curves = [{ kind: 'arc', through: { x: 0, y: 200 } }];
+  res = await client.postJson(`api/floors/${curveFloorId}/save`, { design: wrongCurves, expected_version: (await json(`api/floors/${curveFloorId}`)).body.floor.version });
+  report.check('Una curva desalineada con los vértices se rechaza', res.status === 422, String(res.status));
+  const badCurve = JSON.parse(JSON.stringify(curvedRoom));
+  badCurve.elements.find((element) => element.id === 'muro_der').curves = [{ kind: 'bezier', through: { x: 0, y: 200 } }, null];
+  res = await client.postJson(`api/floors/${curveFloorId}/save`, { design: badCurve, expected_version: (await json(`api/floors/${curveFloorId}`)).body.floor.version });
+  report.check('Solo se admiten arcos de tres puntos', res.status === 422, String(res.status));
+  const doorCurve = JSON.parse(JSON.stringify(straightRoom));
+  doorCurve.elements.find((element) => element.id === 'salida_curva').curves = [{ kind: 'arc', through: { x: 1, y: 1 } }];
+  res = await client.postJson(`api/floors/${curveFloorId}/save`, { design: doorCurve, expected_version: (await json(`api/floors/${curveFloorId}`)).body.floor.version });
+  report.check('Una puerta no admite curvas', res.status === 422, String(res.status));
+  res = await client.postJson(`api/floors/${curveFloorId}/save`, { design: { ...straightRoom, format: 4 }, expected_version: (await json(`api/floors/${curveFloorId}`)).body.floor.version });
+  report.check('Un formato de plano desconocido se rechaza', res.status === 422, String(res.status));
 
   /* ---------------------------- aislamiento entre cuentas ---------------------------- */
   const createUser = await app.run(`

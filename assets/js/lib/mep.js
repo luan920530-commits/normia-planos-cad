@@ -84,7 +84,10 @@
     ? element.points
     : [{ x: 0, y: 0 }, { x: Number(element.w) || 0, y: Number(element.h) || 0 }]);
 
-  const elementLength = (element) => pathLength(elementPoints(element));
+  // La longitud incluye los tramos curvos: misma geometría que el auditor.
+  const elementLength = (element) => (root.Geometry && root.Geometry.pathLength
+    ? root.Geometry.pathLength(elementPoints(element), element.curves)
+    : pathLength(elementPoints(element)));
 
   const elementLengthMeters = (element, canvas) => elementLength(element) * unitsToMeters(canvas.unit, canvas.scale);
 

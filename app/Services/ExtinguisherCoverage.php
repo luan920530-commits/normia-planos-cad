@@ -88,7 +88,7 @@ final class ExtinguisherCoverage
             }
             if ($type === 'wall') {
                 $walls[] = [
-                    'points' => PlanGrid::visualPoints($element),
+                    'points' => PlanGrid::visualPoints($element, (string) $design['canvas']['unit']),
                     'stroke' => max(1.0, (float) ($element['stroke'] ?? 2)),
                 ];
                 continue;

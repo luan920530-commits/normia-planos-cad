@@ -1,4 +1,4 @@
-# Formato de plano (esquema v2)
+# Formato de plano (esquema v3)
 
 Normia Planos CAD guarda cada piso como un documento JSON normalizado. El mismo documento se usa en la base de datos (`floors.design_json` y `floor_versions.design_json`), en la API del editor y en las exportaciones.
 
@@ -28,7 +28,7 @@ Normia Planos CAD guarda cada piso como un documento JSON normalizado. El mismo 
 
 | Campo | Tipo | Reglas |
 | --- | --- | --- |
-| `format` | entero | Siempre `2` al guardar. |
+| `format` | entero | `2` cuando ningún trazo lleva curvas (idéntico a la 1.10.0) y `3` cuando al menos uno trae `curves`. Cualquier otro valor se rechaza con `422`. |
 | `canvas.width` / `canvas.height` | entero | 400–4000 / 300–3000. |
 | `canvas.grid` | entero | 5–100. |
 | `canvas.unit` | texto | `cm`, `m` o `mm`. |
@@ -88,8 +88,37 @@ Todos los elementos comparten:
 | `ellipse` | Elipse | — |
 | `pipe` | Tubería hidrosanitaria, de gas o de incendio | `network`, `diameter`, `material`, `slope` (0–15 %), `pressure` (0–5000 kPa) y `points` (2–40). |
 | `conduit` | Tubería eléctrica de un circuito | `circuit` (1–12 caracteres `A-Z 0-9 . -`), `voltage`, `gauge`, `phases` (1 o 3) y `points` (2–40). |
+| `road` | Vía vehicular esquemática | `widthM` (0,8–30 m), `lanes` (1–6) y `points` (2–40). No bloquea el tránsito; cuenta como exterior. |
+| `sidewalk` | Andén esquemático | `widthM` (0,8–30 m) y `points` (2–40). Cuenta como exterior. |
+| `crosswalk` | Paso cebra | Caja; cuenta como exterior. |
+| `parking` | Parqueadero con puestos de 2,50 × 5,00 m | Caja; cuenta como exterior. La etiqueta indica cuántos puestos caben. |
+| `property` | Límite de predio (línea y punto) | `points` (2–40); cuenta como exterior. |
 
 Los tipos con trazo guardan `points` **en coordenadas locales** a la caja (`0..w`, `0..h`). Mover o escalar la caja transforma el trazo de forma proporcional.
+
+### Trazos con curvas (formato 3)
+
+Los tipos `wall`, `route`, `line`, `pipe`, `conduit`, `road`, `sidewalk` y
+`property` admiten **arcos de tres puntos**:
+
+```json
+{
+  "points": [{ "x": 0, "y": 100 }, { "x": 240, "y": 100 }],
+  "curves": [{ "kind": "arc", "through": { "x": 120, "y": 0 } }, null]
+}
+```
+
+| Regla | Detalle |
+| --- | --- |
+| Alineación | `curves` tiene exactamente el mismo largo que `points`; `curves[i]` describe el tramo `points[i] → points[i+1]` y el último hueco es `null`. |
+| Contenido | Solo `{ "kind": "arc", "through": { "x", "y" } }` o `null`. `through` va en coordenadas locales, como los vértices. |
+| Tipos | Curvas en un tipo que no es de trazo → `422`. `kind` distinto de `arc` → `422`. Arreglo desalineado → `422`. |
+| Recto | Si `through` es colineal con el tramo, la curva se normaliza a `null`; sin ninguna curva el documento queda en `format: 2`. |
+| SVG | Con curvas el exportador escribe `<path d="M … A r r 0 large sweep x y">`; sin curvas sigue escribiendo `<polyline>`, idéntico al de la 1.10.0. |
+| Aplanado | Tolerancia compartida cliente/servidor: 0,5 cm en `cm`, 0,005 m en `m` y 5 mm en `mm`; máximo 720 cuerdas por arco. |
+
+Los detalles de dibujo, límites y degradación están en
+[`docs/MUROS_Y_VIAAS.md`](MUROS_Y_VIAAS.md).
 
 ### Señales y equipos
 
@@ -209,6 +238,8 @@ Al exportar, los símbolos se incrustan con identificadores únicos por plano y 
 
 ## Compatibilidad
 
-- El editor normaliza siempre al cargar (`format: 2`), descarta tipos desconocidos y recorta valores fuera de rango.
+- El editor normaliza siempre al cargar y elige el formato de salida: `3` si algún trazo conserva curvas y `2` si no. Descarta tipos desconocidos y recorta valores fuera de rango.
+- Los planos **v2** se abren sin cambios. Un plano **v3** abierto en la 1.10.0 se ve con los tramos rectos porque esa versión ignora `curves` y normaliza a `format: 2`.
 - Los documentos guardados con el esquema actual no se modifican al exportar; el JSON es una copia íntegra del diseño normalizado.
-- Si en el futuro cambia el esquema, `schema_version` permitirá migraciones explícitas; hoy solo existe la versión 2.
+- La API acepta `format` 2 y 3; el resto responde `422`. `schema_version: 2` de la envoltura de exportación describe el sobre, no la versión del diseño.
+- Si en el futuro cambia el esquema, `schema_version` permitirá migraciones explícitas.
