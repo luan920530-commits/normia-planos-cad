@@ -42,6 +42,17 @@
     <div>
       <p class="pres-footer-brand"><strong>Normia Planos CAD</strong> · versión <?= e(defined('NORMA_VERSION') ? (string) constant('NORMA_VERSION') : '') ?></p>
       <p class="pres-footer-note">Representación esquemática. Verifica medidas, escalas y rutas en el sitio antes de usarlas como referencia de obra. No es un dictamen ni certifica cumplimiento normativo.</p>
+      <p class="pres-footer-autor">
+        <svg class="icon" aria-hidden="true"><use href="#i-user"></use></svg>
+        <span>
+          <strong>Luis Antonio Aguilar R</strong><br>
+          Profesional en Seguridad y Salud en el Trabajo<br>
+          Universidad Autónoma de Nariño
+        </span>
+      </p>
+      <p class="pres-footer-autor pres-footer-autor-ia">
+        Hecha con <strong>Arena.ai · Agent Mode</strong>, el asistente de programación en línea que acompañó el diseño y las pruebas de cada entrega.
+      </p>
     </div>
     <ul class="pres-footer-links">
       <li><a href="#funciones">Funciones</a></li>

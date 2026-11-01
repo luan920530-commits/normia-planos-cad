@@ -23,6 +23,9 @@
   <?php \App\Core\View::partial('partials/flashes', ['flashes' => $flashes]); ?>
   <?= $content ?>
   <p class="auth-foot">Planos de emergencia, evacuación y distribución de espacios. Representación esquemática; verifica dimensiones y escala en sitio.</p>
+  <p class="auth-creditos">
+    <strong>Luis Antonio Aguilar R</strong> · profesional en Seguridad y Salud en el Trabajo · Universidad Autónoma de Nariño
+  </p>
 </main>
 <script src="<?= e(asset('js/ui.js')) ?>" defer></script>
 <script src="<?= e(asset('js/app.js')) ?>" defer></script>

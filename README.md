@@ -37,21 +37,22 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 20. [Distribución: escritorio y Android](#distribución-escritorio-y-android)
 21. [Edición Electron](#edición-electron)
 22. [Guía de primeros pasos](#guía-de-primeros-pasos)
-23. [Cambios de la versión 1.15.1](#cambios-de-la-versión-1151)
-24. [Cambios de la versión 1.15.0](#cambios-de-la-versión-1150)
-25. [Cambios de la versión 1.14.2](#cambios-de-la-versión-1142)
-26. [Cambios de la versión 1.14.1](#cambios-de-la-versión-1141)
-27. [Cambios de la versión 1.14.0](#cambios-de-la-versión-1140)
-28. [Cambios de la versión 1.13.0](#cambios-de-la-versión-1130)
-29. [Cambios de la versión 1.12.0](#cambios-de-la-versión-1120)
-30. [Cambios de la versión 1.11.1](#cambios-de-la-versión-1111)
-31. [Cambios de la versión 1.11.0](#cambios-de-la-versión-1110)
-32. [Cambios de la versión 1.10.0](#cambios-de-la-versión-1100)
-33. [Cambios de la versión 1.9.0](#cambios-de-la-versión-190)
-34. [Cambios de la versión 1.8.0](#cambios-de-la-versión-180)
-35. [Paquetes y verificación](#paquetes-y-verificación)
-36. [Limitaciones](#limitaciones)
-37. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
+23. [Cambios de la versión 1.15.2](#cambios-de-la-versión-1152)
+24. [Cambios de la versión 1.15.1](#cambios-de-la-versión-1151)
+25. [Cambios de la versión 1.15.0](#cambios-de-la-versión-1150)
+26. [Cambios de la versión 1.14.2](#cambios-de-la-versión-1142)
+27. [Cambios de la versión 1.14.1](#cambios-de-la-versión-1141)
+28. [Cambios de la versión 1.14.0](#cambios-de-la-versión-1140)
+29. [Cambios de la versión 1.13.0](#cambios-de-la-versión-1130)
+30. [Cambios de la versión 1.12.0](#cambios-de-la-versión-1120)
+31. [Cambios de la versión 1.11.1](#cambios-de-la-versión-1111)
+32. [Cambios de la versión 1.11.0](#cambios-de-la-versión-1110)
+33. [Cambios de la versión 1.10.0](#cambios-de-la-versión-1100)
+34. [Cambios de la versión 1.9.0](#cambios-de-la-versión-190)
+35. [Cambios de la versión 1.8.0](#cambios-de-la-versión-180)
+36. [Paquetes y verificación](#paquetes-y-verificación)
+37. [Limitaciones](#limitaciones)
+38. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
 
 ---
 
@@ -747,7 +748,7 @@ Lo único que no funciona sin red es la **vista previa de desarrollo** (`npm run
 | Bloque | Comprobaciones |
 | --- | --- |
 | `tests/php/lint.mjs` | `php -l` sobre todo `app/`, `bootstrap.php` e `index.php` en 8.1 y 8.3. |
-| `tests/php/functional.mjs` | 279 comprobaciones: instalador, requisitos, contraseñas débiles, CSRF, sesión, autorización entre cuentas, CRUD de proyectos/pisos, duplicados, importación v1/v2, catálogos (395 señales y 420 objetos), catálogo y guardado de redes, señales de baño y de servicios (guardado, color de familia y exportación SVG), **auditor y medición de evacuación** (salidas, recorrido máximo, zonas inalcanzables, rutas que cruzan muros o no llegan a la salida, ocupación declarada y estimada, señalización, validación de `isExit`, informe imprimible y demo coherente), **muros curvos y vías** (guardado en formato 3, auditor con el muro curvo separando recintos, arco `A` en el SVG, vía que no bloquea frente a muro que sí, `422` para curvas desalineadas, `kind` desconocido, curvas en una puerta y formato desconocido), **sección tipo y glorieta** (formato 4 con ancho derivado, SVG con calzada, andenes, anillo e isla, y `422` para una medida fuera de rango, una clave desconocida, una glorieta sin sección y un cruce desconocido), **modo brigadista** (panel, token de 32 caracteres, página pública sin sesión ni scripts inline, API del plan, service worker, regeneración y desactivación del enlace) y **verificación física** (lista sin trazos, tres estados, novedad sin nota rechazada, rondas e historial, cobertura, aviso de días y foto servida solo a la cuenta dueña), puertas y portones (geometría, sentidos de apertura, exportación con trazo), validaciones de la API, guardado/versiones/borradores/conflictos, exportaciones, ciclo de vida y logout. |
+| `tests/php/functional.mjs` | 284 comprobaciones: instalador, requisitos, contraseñas débiles, CSRF, sesión, autorización entre cuentas, CRUD de proyectos/pisos, duplicados, importación v1/v2, catálogos (395 señales y 420 objetos), catálogo y guardado de redes, señales de baño y de servicios (guardado, color de familia y exportación SVG), **auditor y medición de evacuación** (salidas, recorrido máximo, zonas inalcanzables, rutas que cruzan muros o no llegan a la salida, ocupación declarada y estimada, señalización, validación de `isExit`, informe imprimible y demo coherente), **muros curvos y vías** (guardado en formato 3, auditor con el muro curvo separando recintos, arco `A` en el SVG, vía que no bloquea frente a muro que sí, `422` para curvas desalineadas, `kind` desconocido, curvas en una puerta y formato desconocido), **sección tipo y glorieta** (formato 4 con ancho derivado, SVG con calzada, andenes, anillo e isla, y `422` para una medida fuera de rango, una clave desconocida, una glorieta sin sección y un cruce desconocido), **modo brigadista** (panel, token de 32 caracteres, página pública sin sesión ni scripts inline, API del plan, service worker, regeneración y desactivación del enlace) y **verificación física** (lista sin trazos, tres estados, novedad sin nota rechazada, rondas e historial, cobertura, aviso de días y foto servida solo a la cuenta dueña), puertas y portones (geometría, sentidos de apertura, exportación con trazo), validaciones de la API, guardado/versiones/borradores/conflictos, exportaciones, ciclo de vida y logout. |
 | `tests/js/editor.mjs` | 380 comprobaciones de interfaz sobre la app real: arranque, 395 señales y 420 objetos, **muros curvos** (rombo del tramo, arco de tres puntos, radio y flecha en el inspector, enderezar, doble clic que parte el arco, caja analítica, puerta sobre el arco, formato 3 y degradación a v2, marcado idéntico sin curvas), **vías y andenes** (banda de 6 m con carriles, cambio de ancho y carriles, parqueadero contado en la etiqueta, franjas del paso cebra y rótulo del lindero), **sección tipo y cruces** (avenida de 20 m en formato 4, perfil transversal en el inspector, cambio de andén que recalcula el ancho, glorieta de cinco accesos, vuelta a vía normal, corredor de ejemplo en una acción y sinónimos «carro», «bici» y «semáforo»), **trazado de tuberías y circuitos, inspector de red y panel de redes**, **mano y paneo, selección de superpuestos, inspector plegable y paleta de herramientas**, **guía de primeros pasos** (apertura en el primer uso, siete pasos, progreso tomado del plano, salto a la herramienta con la baldosa resaltada, reinicio y desactivación), **buscador con sinónimos y sin tildes** (calle → vía, anden → andén, parqueo → parqueadero), **baldosa propia de vías y andenes**, puertas dobles y portones, **vértices de ruta editables (arrastrar, doble clic, Alt+clic)**, **señal de baño insertada desde la biblioteca**, **posiciones reales del trazo**, **clic sobre muros finos, pictogramas y equipos**, **cambio de señal y de equipo desde el inspector**, **auditor de planos** (interruptor de salida, ocupación declarada, cajón de revisión, contador, filtros, «Ver en el plano», cierre sin dejar el fondo bloqueado), **pliego de señalización** (conteo, tamaño sugerido, CSV, precios y consistencia), **medición de rutas internas** (ruta que rodea muros, tramos, guardado en capa y comparación), **modo presentación** (pantalla limpia, láser, spotlight, rutas animadas, capas, quiz y salida sin perder el estado), **rotación**, **rutas cerradas**, **arrastrar y soltar desde la biblioteca sin que el cajón lo bloquee**, reglas, herramientas, inserción con puntero, selección, mover, escalar, rotar, color, cambio de tipo, deshacer/rehacer, duplicar, agrupar, bloquear, desplazar, texto y saneado, guardar, reabrir, borradores, conflictos, exportación SVG/JSON/PNG, tooltips sin acumulación, capas, versiones y límites. |
 | `tests/js/pages.mjs` | 50 comprobaciones de las páginas fuera del editor y de la portada pública: menú de acciones de proyectos y pisos (capa fija, colocación, teclado, un solo menú), confirmación de borrado y borrado real de piso y proyecto, con la protección del último piso, la **portada pública** (cinco capturas con texto alternativo, flechas de la galería y token del formulario) y **la página pública del modo brigadista** ejecutando su JavaScript: acciones rápidas, atenuado del plano, alto contraste recordado, zoom y borrado de la copia local. |
 | `tests/php/package.mjs` | 39 comprobaciones: construye ambos ZIP, verifica que no haya bases, sesiones, credenciales, logs ni carpetas de desarrollo, valida los SHA-256 y hace una instalación limpia de la demo comprobando assets, catálogos (395/420), los cuatro pisos del proyecto de ejemplo, señales de servicios y redes en la demo, la señal «Usted está aquí», **el auditor y su informe en la demo empaquetada**, editor, SVG, JSON e impresión. |
@@ -925,6 +926,18 @@ encontraban nada. Desde la 1.12.0:
   exacto. Cuando no hay resultados, propone palabras cercanas.
 - El lienzo muestra la **pista de la herramienta** al elegir cualquiera de las
   cinco (antes caía en la pista de «Seleccionar»).
+
+## Cambios de la versión 1.15.2
+
+- **Autoría visible.** El nombre del autor aparece en el pie de todas las
+  pantallas de la aplicación, en la portada pública y en la pantalla de acceso,
+  junto a su condición de **profesional en Seguridad y Salud en el Trabajo** y su
+  universidad. También queda en el campo `author` de `package.json`.
+- **Reconocimiento del desarrollo.** La portada cita **Arena.ai · Agent Mode**
+  como herramienta con la que se escribió y probó el proyecto, sin atribuirle la
+  autoría, que es del autor.
+- **Sin efectos en el plano.** Es un cambio de texto: no toca el formato del
+  plano, la base de datos ni los cálculos.
 
 ## Cambios de la versión 1.15.1
 
@@ -1519,6 +1532,15 @@ Los hashes exactos de los ZIP publicados están en `paquetes/v1.8.0/SHA256SUMS.t
 
 ## Créditos, licencias y atribución
 
+- **Autoría.** *Normia Planos CAD* es un proyecto de **Luis Antonio Aguilar R**,
+  profesional en Seguridad y Salud en el Trabajo, egresado de la **Universidad
+  Autónoma de Nariño**. Su nombre aparece en el pie de todas las pantallas, en la
+  portada pública, en la pantalla de acceso y en los metadatos del paquete.
+- **Desarrollo asistido.** El código, la documentación y las pruebas se
+  construyeron con **Arena.ai · Agent Mode**, el asistente de programación en
+  línea de Arena, en sesiones de trabajo guiadas y revisadas por el autor. La
+  autoría del proyecto es del autor; las herramientas se citan como
+  colaboradoras, no como autoras.
 - **Normia Planos CAD** se distribuye bajo **GNU GPL-3.0** (ver `LICENSE`).
 - **Pictogramas ISO 7010**: provienen de `@iso-safety-signs/core` 1.1.0, licencia **MIT**, © Karl Norling (<https://github.com/karlnorling/iso-safety-signs>). La atribución de archivos procedentes de Wikimedia Commons está en `resources/licenses/iso-safety-signs.NOTICE.txt`; los términos completos, en `resources/licenses/iso-safety-signs.LICENSE.txt`.
 - **Objetos CAD**: creados para Normia como representaciones esquemáticas; se incluyen en el proyecto bajo la misma licencia GPL-3.0.

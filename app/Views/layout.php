@@ -50,7 +50,13 @@
 </main>
 <footer class="site-footer">
   <p>Representaciones CAD esquemáticas. Las dimensiones, rutas y la escala deben verificarse en sitio por una persona competente. Esta herramienta no certifica ni aprueba planos automáticamente.</p>
-  <p class="footer-meta">Pictogramas ISO 7010 locales · atribuciones incluidas en el README · Normia Planos CAD <?= e(NORMA_VERSION) ?></p>
+  <p class="footer-meta">
+    <span>Pictogramas ISO 7010 locales · atribuciones incluidas en el README · Normia Planos CAD <?= e(NORMA_VERSION) ?></span>
+    <span class="footer-credits">
+      <svg class="icon" aria-hidden="true"><use href="#i-user"></use></svg>
+      <strong>Luis Antonio Aguilar R</strong> · profesional en Seguridad y Salud en el Trabajo · Universidad Autónoma de Nariño
+    </span>
+  </p>
 </footer>
 <script src="<?= e(asset('js/ui.js')) ?>" defer></script>
 <script src="<?= e(asset('js/app.js')) ?>" defer></script>
