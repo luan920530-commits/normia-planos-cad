@@ -136,11 +136,43 @@ node tools/electron/build.mjs --out=dist/electron                     # + instal
 intérprete con **solo** `@php-wasm/node`, `@php-wasm/node-8-3` y sus
 dependencias, escribe un punto de entrada (`runtime/php-wasm.mjs`) y llama a
 `electron-builder`. Sin `electron-builder` instalado deja la carpeta armada y lo
-avisa.
+avisa. Al terminar, revisa el instalador producido: si alguna copia de
+`resources/runtime` quedó sin `node_modules`, el armado **falla** en vez de
+publicar un paquete que no arranca.
+
+### El intérprete y `node_modules`
+
+`electron-builder` descarta en silencio cualquier carpeta llamada
+`node_modules` que esté en la **raíz del origen** de `extraResources`
+(`fileMatcher`: `if (relative === "node_modules") return false`). Un
+`{ from: 'runtime', to: 'runtime' }` deja el paquete con `php-wasm.mjs` suelto y
+sin dependencias: se instala y, al abrir, muere con
+
+```text
+Cannot find package '@php-wasm/node' imported from
+/Applications/Normia Planos CAD.app/Contents/Resources/runtime/php-wasm.mjs
+```
+
+Por eso el intérprete se copia desde la raíz del armado con filtro:
+
+```js
+{ from: '.', to: '.', filter: ['runtime{,/**/*}'] }
+```
+
+La ruta relativa pasa a ser `runtime/node_modules/…` y se copia completa. Si
+alguna vez se toca esa línea, la comprobación del instalador y la suite de
+Electron lo detectan antes de publicar.
 
 El flujo `.github/workflows/dist-electron.yml` compila en `macos-latest`,
 `macos-15-intel`, `windows-latest` y `ubuntu-latest`, ejecuta `--check` sobre el
-paquete ya empaquetado y publica los instaladores con su `SHA256SUMS.txt`.
+paquete ya empaquetado, lee `LSMinimumSystemVersion` del `.app` (debe ser 12.x) y
+publica los instaladores con su `SHA256SUMS.txt`.
+
+`verify-package.mjs` comprueba los ocho paquetes de php-wasm dentro de
+`runtime/node_modules` y **copia el intérprete a una carpeta temporal fuera del
+repositorio** antes de importarlo. Importarlo en su sitio no prueba nada: Node
+sube por el árbol de carpetas y encuentra el `node_modules` del propio
+repositorio, así que un paquete incompleto pasaba la revisión.
 
 ## Problemas conocidos
 

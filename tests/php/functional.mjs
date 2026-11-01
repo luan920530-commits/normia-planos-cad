@@ -131,6 +131,13 @@ try {
   report.check('Editor incluye el modo presentación',
     editorHtml.includes('/assets/js/editor/present.js') && editorHtml.includes('data-present-open')
     && editorHtml.includes('#i-present'));
+  report.check('El editor trae la guía de primeros pasos y su buscador con sinónimos',
+    editorHtml.includes('/assets/js/editor/guide.js') && editorHtml.includes('/assets/js/editor/toolsearch.js')
+    && editorHtml.includes('data-drawer="guide"') && editorHtml.includes('data-guide-steps')
+    && editorHtml.includes('data-open-drawer="guide"'));
+  report.check('Las vías y andenes tienen baldosa propia en el rail',
+    /data-tool="road"[^>]*data-tooltip="Vía vehicular/.test(editorHtml)
+    && editorHtml.includes('data-road-flyout') && editorHtml.includes('data-road-menu'));
   report.check('Editor sin recursos externos', localAssets(editorHtml, `/index.php?r=projects/${projectId}/floors/${floorId}/editor`).external.length === 0);
   report.check('El editor abre con la pantalla de bienvenida y el emblema',
     editorHtml.includes('data-splash') && editorHtml.includes('normia-logo.png')
@@ -140,7 +147,7 @@ try {
     && editorHtml.includes('manifest.webmanifest'));
   report.check('La paleta «Todas las herramientas» reúne herramientas y acciones',
     editorHtml.includes('data-tools-popover')
-    && (editorHtml.match(/class="tool-choice"/g) || []).length === 30
+    && (editorHtml.match(/class="tool-choice"/g) || []).length === 31
     && editorHtml.includes('data-tools-filter')
     && editorHtml.includes('data-open-drawer="audit"')
     && editorHtml.includes('data-present-open'));

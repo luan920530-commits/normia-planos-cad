@@ -111,6 +111,14 @@ admita ese equipo, asumiendo que ya no recibe actualizaciones de seguridad.
 > `LSMinimumSystemVersion 12.0`. Los `DMG` de la 1.11.0 (Electron 45) piden
 > macOS 13 y no abren en Monterey; si los tienes descargados, usa el `.pkg` de
 > esta edición o el `DMG` de la 1.11.1 o posterior.
+>
+> **Si al abrir la edición Electron aparece** «Cannot find package
+> '@php-wasm/node' imported from …/Resources/runtime/php-wasm.mjs», es el `DMG`
+> de la **1.11.1**: el empaquetador descartó `runtime/node_modules` y el
+> intérprete quedó sin sus dependencias. No se arregla reinstalando ni
+> cambiando permisos; la **1.12.0** corrige el empaquetado, revisa el instalador
+> terminado y prueba el intérprete desde una copia aislada. Mientras tanto, la
+> edición nativa `.pkg` de macOS abre sin problema.
 
 ### Qué contiene el instalador
 

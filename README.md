@@ -33,14 +33,16 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 16. [Pruebas](#pruebas)
 17. [Distribución: escritorio y Android](#distribución-escritorio-y-android)
 18. [Edición Electron](#edición-electron)
-19. [Cambios de la versión 1.11.1](#cambios-de-la-versión-1111)
-20. [Cambios de la versión 1.11.0](#cambios-de-la-versión-1110)
-21. [Cambios de la versión 1.10.0](#cambios-de-la-versión-1100)
-22. [Cambios de la versión 1.9.0](#cambios-de-la-versión-190)
-23. [Cambios de la versión 1.8.0](#cambios-de-la-versión-180)
-24. [Paquetes y verificación](#paquetes-y-verificación)
-25. [Limitaciones](#limitaciones)
-26. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
+19. [Guía de primeros pasos](#guía-de-primeros-pasos)
+20. [Cambios de la versión 1.12.0](#cambios-de-la-versión-1120)
+21. [Cambios de la versión 1.11.1](#cambios-de-la-versión-1111)
+22. [Cambios de la versión 1.11.0](#cambios-de-la-versión-1110)
+23. [Cambios de la versión 1.10.0](#cambios-de-la-versión-1100)
+24. [Cambios de la versión 1.9.0](#cambios-de-la-versión-190)
+25. [Cambios de la versión 1.8.0](#cambios-de-la-versión-180)
+26. [Paquetes y verificación](#paquetes-y-verificación)
+27. [Limitaciones](#limitaciones)
+28. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
 
 ---
 
@@ -176,6 +178,13 @@ Luego importa `resources/schema.sql` en el archivo SQLite y crea el usuario admi
 3. El proyecto nace con un primer piso; puedes duplicarlo, añadir más o importar un diseño.
 4. Abre el piso en el editor, dibuja la planta, coloca señalización y equipos y guarda una versión.
 5. Exporta el SVG/JSON o usa **Imprimir** para generar un PDF desde el navegador.
+
+La primera vez que abres un piso, el editor ofrece la **guía de primeros pasos**:
+siete pasos que llevan a la herramienta real (muro, puerta, vías, señalización,
+ruta, revisión y guardado) y se marcan solos cuando el plano los cumple. Se
+reabre con el botón de la guía en la barra superior, desde la paleta de
+herramientas o desde **Atajos**. Los detalles están en
+[Guía de primeros pasos](#guía-de-primeros-pasos).
 
 ---
 
@@ -662,12 +671,12 @@ Lo único que no funciona sin red es la **vista previa de desarrollo** (`npm run
 | Bloque | Comprobaciones |
 | --- | --- |
 | `tests/php/lint.mjs` | `php -l` sobre todo `app/`, `bootstrap.php` e `index.php` en 8.1 y 8.3. |
-| `tests/php/functional.mjs` | 211 comprobaciones: instalador, requisitos, contraseñas débiles, CSRF, sesión, autorización entre cuentas, CRUD de proyectos/pisos, duplicados, importación v1/v2, catálogos (395 señales y 350 objetos), catálogo y guardado de redes, señales de baño y de servicios (guardado, color de familia y exportación SVG), **auditor y medición de evacuación** (salidas, recorrido máximo, zonas inalcanzables, rutas que cruzan muros o no llegan a la salida, ocupación declarada y estimada, señalización, validación de `isExit`, informe imprimible y demo coherente), **muros curvos y vías** (guardado en formato 3, auditor con el muro curvo separando recintos, arco `A` en el SVG, vía que no bloquea frente a muro que sí, `422` para curvas desalineadas, `kind` desconocido, curvas en una puerta y formato desconocido), puertas y portones (geometría, sentidos de apertura, exportación con trazo), validaciones de la API, guardado/versiones/borradores/conflictos, exportaciones, ciclo de vida y logout. |
-| `tests/js/editor.mjs` | 351 comprobaciones de interfaz sobre la app real: arranque, 395 señales y 350 objetos, **muros curvos** (rombo del tramo, arco de tres puntos, radio y flecha en el inspector, enderezar, doble clic que parte el arco, caja analítica, puerta sobre el arco, formato 3 y degradación a v2, marcado idéntico sin curvas), **vías y andenes** (banda de 6 m con carriles, cambio de ancho y carriles, parqueadero contado en la etiqueta, franjas del paso cebra y rótulo del lindero), **trazado de tuberías y circuitos, inspector de red y panel de redes**, **mano y paneo, selección de superpuestos, inspector plegable y paleta de herramientas**, puertas dobles y portones, **vértices de ruta editables (arrastrar, doble clic, Alt+clic)**, **señal de baño insertada desde la biblioteca**, **posiciones reales del trazo**, **clic sobre muros finos, pictogramas y equipos**, **cambio de señal y de equipo desde el inspector**, **auditor de planos** (interruptor de salida, ocupación declarada, cajón de revisión, contador, filtros, «Ver en el plano», cierre sin dejar el fondo bloqueado), **pliego de señalización** (conteo, tamaño sugerido, CSV, precios y consistencia), **medición de rutas internas** (ruta que rodea muros, tramos, guardado en capa y comparación), **modo presentación** (pantalla limpia, láser, spotlight, rutas animadas, capas, quiz y salida sin perder el estado), **rotación**, **rutas cerradas**, **arrastrar y soltar desde la biblioteca sin que el cajón lo bloquee**, reglas, herramientas, inserción con puntero, selección, mover, escalar, rotar, color, cambio de tipo, deshacer/rehacer, duplicar, agrupar, bloquear, desplazar, texto y saneado, guardar, reabrir, borradores, conflictos, exportación SVG/JSON/PNG, tooltips sin acumulación, capas, versiones y límites. |
+| `tests/php/functional.mjs` | 213 comprobaciones: instalador, requisitos, contraseñas débiles, CSRF, sesión, autorización entre cuentas, CRUD de proyectos/pisos, duplicados, importación v1/v2, catálogos (395 señales y 350 objetos), catálogo y guardado de redes, señales de baño y de servicios (guardado, color de familia y exportación SVG), **auditor y medición de evacuación** (salidas, recorrido máximo, zonas inalcanzables, rutas que cruzan muros o no llegan a la salida, ocupación declarada y estimada, señalización, validación de `isExit`, informe imprimible y demo coherente), **muros curvos y vías** (guardado en formato 3, auditor con el muro curvo separando recintos, arco `A` en el SVG, vía que no bloquea frente a muro que sí, `422` para curvas desalineadas, `kind` desconocido, curvas en una puerta y formato desconocido), puertas y portones (geometría, sentidos de apertura, exportación con trazo), validaciones de la API, guardado/versiones/borradores/conflictos, exportaciones, ciclo de vida y logout. |
+| `tests/js/editor.mjs` | 363 comprobaciones de interfaz sobre la app real: arranque, 395 señales y 350 objetos, **muros curvos** (rombo del tramo, arco de tres puntos, radio y flecha en el inspector, enderezar, doble clic que parte el arco, caja analítica, puerta sobre el arco, formato 3 y degradación a v2, marcado idéntico sin curvas), **vías y andenes** (banda de 6 m con carriles, cambio de ancho y carriles, parqueadero contado en la etiqueta, franjas del paso cebra y rótulo del lindero), **trazado de tuberías y circuitos, inspector de red y panel de redes**, **mano y paneo, selección de superpuestos, inspector plegable y paleta de herramientas**, **guía de primeros pasos** (apertura en el primer uso, siete pasos, progreso tomado del plano, salto a la herramienta con la baldosa resaltada, reinicio y desactivación), **buscador con sinónimos y sin tildes** (calle → vía, anden → andén, parqueo → parqueadero), **baldosa propia de vías y andenes**, puertas dobles y portones, **vértices de ruta editables (arrastrar, doble clic, Alt+clic)**, **señal de baño insertada desde la biblioteca**, **posiciones reales del trazo**, **clic sobre muros finos, pictogramas y equipos**, **cambio de señal y de equipo desde el inspector**, **auditor de planos** (interruptor de salida, ocupación declarada, cajón de revisión, contador, filtros, «Ver en el plano», cierre sin dejar el fondo bloqueado), **pliego de señalización** (conteo, tamaño sugerido, CSV, precios y consistencia), **medición de rutas internas** (ruta que rodea muros, tramos, guardado en capa y comparación), **modo presentación** (pantalla limpia, láser, spotlight, rutas animadas, capas, quiz y salida sin perder el estado), **rotación**, **rutas cerradas**, **arrastrar y soltar desde la biblioteca sin que el cajón lo bloquee**, reglas, herramientas, inserción con puntero, selección, mover, escalar, rotar, color, cambio de tipo, deshacer/rehacer, duplicar, agrupar, bloquear, desplazar, texto y saneado, guardar, reabrir, borradores, conflictos, exportación SVG/JSON/PNG, tooltips sin acumulación, capas, versiones y límites. |
 | `tests/js/pages.mjs` | 32 comprobaciones de las páginas fuera del editor: menú de acciones de proyectos y pisos (capa fija, colocación, teclado, un solo menú), confirmación de borrado y borrado real de piso y proyecto, con la protección del último piso. |
 | `tests/php/package.mjs` | 39 comprobaciones: construye ambos ZIP, verifica que no haya bases, sesiones, credenciales, logs ni carpetas de desarrollo, valida los SHA-256 y hace una instalación limpia de la demo comprobando assets, catálogos (395/350), los cuatro pisos del proyecto de ejemplo, señales de servicios y redes en la demo, la señal «Usted está aquí», **el auditor y su informe en la demo empaquetada**, editor, SVG, JSON e impresión. |
 | `tests/php/desktop.mjs` | 37 comprobaciones del escritorio: rutas de datos separadas del código, `NORMA_DATA_PATH` (solo absolutas), lanzador (argumentos, puerto, estado, cierre), enrutador (bloqueos, saltos de directorio, byte nulo) y una instalación completa escribiendo en una carpeta de datos externa. |
-| `tests/js/electron.mjs` | 34 comprobaciones de la edición Electron: ventana sin acceso a Node, puente mínimo, enlaces externos, instancia única, menú en español, descargas, servidor en `127.0.0.1` sin cookies en memoria, entorno de php-wasm, instalación completa con datos fuera del código, `storage/` inaccesible, armado del paquete (aplicación, ventana e intérprete) y ausencia de ICU y de versiones de PHP que no se usan. |
+| `tests/js/electron.mjs` | 37 comprobaciones de la edición Electron: ventana sin acceso a Node, puente mínimo, enlaces externos, instancia única, menú en español, descargas, servidor en `127.0.0.1` sin cookies en memoria, entorno de php-wasm, instalación completa con datos fuera del código, `storage/` inaccesible, armado del paquete (aplicación, ventana e intérprete), los ocho paquetes de php-wasm dentro de `runtime/node_modules`, el rechazo de un paquete sin ellos, el mínimo de macOS y la ausencia de ICU y de versiones de PHP que no se usan. |
 | `tests/js/android.mjs` | 18 comprobaciones del APK: arranque de PHP 8.3 sobre WebAssembly, instalación, sesión, panel, editor, auditor, guardado, reapertura y verificación del contenedor nativo (permisos, descargas, impresión, selección de archivos, firma). |
 | `tests/js/offline.mjs` | 0 dependencias de red: revisa las vistas, los estilos, los scripts y los catálogos y falla si aparece un `fetch`, un `WebSocket`, un `src`/`href`/`url()` externo, una llamada de red desde PHP o un dominio no declarado. |
 
@@ -678,15 +687,15 @@ Resultados esperados de la última ejecución completa:
 ✓ Sintaxis PHP 8.3 · 64 archivos, sin errores
 ✓ Sintaxis JavaScript · 51 archivos, sin errores
 ✓ Funcionamiento sin conexión · 97 archivos, sin referencias externas
-✓ Funcional PHP 8.1 · 211/211
-✓ Funcional PHP 8.3 · 211/211
-✓ Interfaz (JSDOM) PHP 8.1 · 351/351
-✓ Interfaz (JSDOM) PHP 8.3 · 351/351
+✓ Funcional PHP 8.1 · 213/213
+✓ Funcional PHP 8.3 · 213/213
+✓ Interfaz (JSDOM) PHP 8.1 · 363/363
+✓ Interfaz (JSDOM) PHP 8.3 · 363/363
 ✓ Páginas y menús PHP 8.1 · 32/32
 ✓ Páginas y menús PHP 8.3 · 32/32
 ✓ Escritorio (instaladores) · 37/37
 ✓ Android (APK) · 18/18
-✓ Escritorio (Electron) · 34/34
+✓ Escritorio (Electron) · 37/37
 ✓ Paquetes y demo · 39/39
 14/14 pasos correctos
 ```
@@ -773,10 +782,15 @@ para Linux.
 
 Guía completa: [`docs/ELECTRON.md`](docs/ELECTRON.md).
 
-### Archivos de la entrega 1.11.1
+### Archivos de la última entrega publicada (1.11.1)
 
 Todos se publican en la [release v1.11.1](https://github.com/luan920530-commits/normia-planos-cad/releases/tag/v1.11.1)
 y llevan su suma SHA-256 junto a ellos.
+
+> **La 1.12.0 todavía no se publica**: está en el repositorio, con sus paquetes
+> web en `paquetes/v1.12.0/`, y falta compilar los instaladores. Los `DMG` de la
+> release 1.11.1 **no arrancan** por el fallo de empaquetado de php-wasm que
+> corrige la 1.12.0; mientras tanto usa la edición nativa `.pkg`.
 
 | Edición | Archivo |
 | --- | --- |
@@ -793,6 +807,68 @@ y llevan su suma SHA-256 junto a ellos.
 Las ediciones de escritorio se compilan en los flujos de trabajo y su tamaño exacto
 se publica en la release junto con el `SHA256SUMS.txt`; los paquetes web se
 construyen con `tools/build-packages.sh` y se verifican con la suite.
+
+## Guía de primeros pasos
+
+El editor explica dónde está cada cosa **en su sitio**, sin manuales aparte ni
+controles de mentira:
+
+- **Se abre sola la primera vez** que se entra a un piso (una sola vez por
+  navegador o instalación) y se puede desactivar desde su propio pie. Vuelve a
+  abrirse con el icono de la guía en la barra superior, con la entrada «Guía de
+  primeros pasos» de la paleta de herramientas o desde el cajón de **Atajos**.
+- **Siete pasos**: muro, puerta, vías y entorno, señalización y equipos, ruta de
+  evacuación, revisión del plano y guardado de una versión.
+- **Progreso real**: cada paso se marca con el plano, no con un temporizador. La
+  revisión se marca cuando el informe se generó de verdad y el guardado cuando
+  el piso tiene más de una versión. **Reiniciar progreso** borra solo las marcas
+  de la guía (el plano no se toca).
+- **«Ir al paso pendiente»** activa la herramienta o abre el cajón que toca y
+  **resalta la baldosa del rail**; si la herramienta vive dentro de un menú, el
+  menú se abre para que se vea dónde está. Sin animación cuando el sistema pide
+  movimiento reducido.
+- **Con teclado**: el cajón se cierra con `Esc`, el foco vuelve al botón que lo
+  abrió y la barra de progreso es un `progressbar` con su valor en `aria-valuenow`.
+
+### Vías y andenes, ahora en su propia baldosa
+
+Las vías estaban escondidas dentro del menú de «Línea y formas» y el buscador
+comparaba el texto literal, así que «calle», «carretera» o «anden» sin tilde no
+encontraban nada. Desde la 1.12.0:
+
+- El rail tiene una **baldosa propia de vía vehicular** (atajo `A`) con su
+  chevrón: vía vehicular, andén, paso cebra, parqueadero y límite de predio.
+- El **buscador de la paleta** ignora tildes y entiende sinónimos: *calle*,
+  *carrera*, *carretera*, *avenida*, *acera*, *anden*, *parqueo*,
+  *estacionamiento*, *cebra*, *lindero*, *guía*, *revisión*… La búsqueda por
+  palabras encuentra «vía» dentro de «Vía vehicular» sin depender del nombre
+  exacto. Cuando no hay resultados, propone palabras cercanas.
+- El lienzo muestra la **pista de la herramienta** al elegir cualquiera de las
+  cinco (antes caía en la pista de «Seleccionar»).
+
+## Cambios de la versión 1.12.0
+
+Dos frentes: la app vuelve a arrancar en el Mac del usuario y el editor deja de
+esconder herramientas.
+
+- **Corregido el arranque de la edición Electron** («Cannot find package
+  '@php-wasm/node' imported from …/Resources/runtime/php-wasm.mjs»).
+  `electron-builder` descarta en silencio cualquier carpeta `node_modules` que
+  esté en la raíz del origen de `extraResources`, así que el paquete de la
+  1.11.1 se publicó con el intérprete suelto: se instalaba y no arrancaba. Ahora
+  el intérprete se copia desde la raíz del armado con un filtro explícito, el
+  armado **revisa el instalador terminado** y `tools/electron/verify-package.mjs`
+  comprueba los ocho paquetes de php-wasm e importa el intérprete desde una
+  **copia temporal fuera del repositorio** (antes lo importaba dentro del
+  repositorio, Node subía hasta el `node_modules` del proyecto y la comprobación
+  pasaba con un paquete roto).
+- **Guía de primeros pasos** con progreso tomado del plano y salto a la
+  herramienta real, descrita arriba.
+- **Vías y andenes con baldosa propia** en el rail y **buscador con sinónimos y
+  sin tildes**, además de las pistas del lienzo para las cinco herramientas.
+- **Pruebas**: `tests/js/editor.mjs` pasa de 351 a **363** comprobaciones y
+  `tests/js/electron.mjs` de 34 a **37**, con un paquete roto a propósito para
+  confirmar que el verificador lo rechaza.
 
 ## Cambios de la versión 1.11.1
 

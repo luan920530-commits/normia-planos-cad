@@ -1268,7 +1268,7 @@ async function main() {
     /* ---------------- barra de herramientas alineada ---------------- */
     const railTiles = qa(window, '.rail .rail-button');
     report.check('La barra de herramientas cabe en una columna sin scroll',
-      railTiles.length === 14
+      railTiles.length === 15
       && /grid-template-columns:\s*68px/.test(cssBlock('.editor-workbench')),
       `${railTiles.length} baldosas · ${cssBlock('.editor-workbench').replace(/\s+/g, ' ').slice(0, 80)}`);
     report.check('Las baldosas del rail no llevan texto: solo icono y etiqueta flotante',
@@ -1280,12 +1280,18 @@ async function main() {
       && /position:\s*absolute/.test(cssBlock('.rail-caret'))
       && railTiles.every((tile) => tile.querySelector('.icon')),
       cssBlock('.rail-button').replace(/\s+/g, ' ').slice(0, 90));
-    const caretTargets = ['[data-door-menu]', '[data-pipe-menu]', '[data-shape-menu]']
+    const caretTargets = ['[data-door-menu]', '[data-pipe-menu]', '[data-shape-menu]', '[data-road-menu]']
       .every((selector) => Boolean(q(window, `.rail-caret${selector}`)));
-    report.check('Las tres herramientas con opciones llevan su chevrón dentro de la baldosa',
-      caretTargets && qa(window, '.rail-caret').length === 3
+    report.check('Las cuatro herramientas con opciones llevan su chevron dentro de la baldosa',
+      caretTargets && qa(window, '.rail-caret').length === 4
       && qa(window, '.rail-caret-mark').length === 2,
       `${qa(window, '.rail-caret').length} chevrones · ${qa(window, '.rail-caret-mark').length} marcas`);
+    const roadTile = q(window, '.rail [data-tool="road"]');
+    report.check('Las vías y el entorno tienen baldosa propia en el rail, con su menú',
+      Boolean(roadTile) && Boolean(q(window, '[data-road-flyout] [data-tool="sidewalk"]'))
+      && Boolean(q(window, '[data-road-flyout] [data-tool="parking"]'))
+      && !qa(window, '[data-shape-flyout] [data-tool="road"]').length,
+      roadTile?.getAttribute('data-tooltip') || 'sin baldosa');
 
     const analysisMenu = q(window, '[data-analysis-menu]');
     analysisMenu?.click();
@@ -1328,7 +1334,7 @@ async function main() {
     const toolsPopover = q(window, '[data-tools-popover]');
     const toolsChoices = qa(window, '.tool-choice');
     report.check('La paleta reúne herramientas y acciones del plano',
-      toolsPopover?.hidden === false && toolsChoices.length === 30
+      toolsPopover?.hidden === false && toolsChoices.length === 31
       && Boolean(q(window, '.tool-choice[data-open-drawer="audit"]'))
       && Boolean(q(window, '.tool-choice[data-present-open]'))
       && Boolean(q(window, '.tool-choice[data-open-library="sign"]')),
@@ -1344,13 +1350,33 @@ async function main() {
       && toolsVisibles.every((choice) => /puerta/i.test(choice.textContent))
       && qa(window, '.tool-group').filter((group) => !group.hidden).length === 1,
       `${toolsVisibles.length} coincidencias`);
+    const probe = (text) => {
+      if (toolsFilter) {
+        toolsFilter.value = text;
+        toolsFilter.dispatchEvent(new window.Event('input', { bubbles: true }));
+      }
+      return qa(window, '.tool-choice').filter((choice) => !choice.hidden)
+        .map((choice) => choice.dataset.tool || choice.dataset.openDrawer || '');
+    };
+    report.check('El buscador encuentra la vía por «calle», «carretera» o «avenida»',
+      probe('calle').includes('road') && probe('carretera').includes('road') && probe('avenida').includes('road'),
+      `calle → ${probe('calle').join(', ') || 'nada'}`);
+    report.check('El buscador ignora las tildes y entiende «acera», «anden» y «parqueo»',
+      probe('anden').includes('sidewalk') && probe('andén').includes('sidewalk')
+      && probe('acera').includes('sidewalk') && probe('parqueo').includes('parking')
+      && probe('cebra').includes('crosswalk'));
+    report.check('El buscador también llega a los cajones y a la guía',
+      probe('guia').includes('guide') && probe('revision').includes('audit') && probe('atajos').includes('shortcuts'),
+      `guia → ${probe('guia').join(', ') || 'nada'}`);
     if (toolsFilter) {
       toolsFilter.value = 'sin-resultados';
       toolsFilter.dispatchEvent(new window.Event('input', { bubbles: true }));
     }
-    report.check('Sin coincidencias la paleta lo dice',
-      q(window, '[data-tools-empty]')?.hidden === false,
-      String(q(window, '[data-tools-empty]')?.hidden));
+    report.check('Sin coincidencias la paleta lo dice y propone palabras cercanas',
+      q(window, '[data-tools-empty]')?.hidden === false
+      && /vía/.test(q(window, '[data-tools-empty]')?.textContent || '')
+      && /andén/.test(q(window, '[data-tools-empty]')?.textContent || ''),
+      q(window, '[data-tools-empty]')?.textContent?.trim().slice(0, 80));
     q(window, '[data-tools-toggle]')?.click();
     q(window, '[data-tools-toggle]')?.click();
     report.check('Al reabrir, la paleta vuelve completa y con el buscador vacío',
@@ -1452,6 +1478,57 @@ async function main() {
     await waitFor(() => q(window, '[data-version-list]')?.textContent.includes('v4'), 8000);
     report.check('El cajón de versiones muestra el historial', /v4/.test(q(window, '[data-version-list]').textContent) && /v1/.test(q(window, '[data-version-list]').textContent));
     app.closeDrawer();
+
+    /* ------------------------------ guía de primeros pasos ------------------------------ */
+    const guideDrawer = q(window, '[data-drawer="guide"]');
+    window.localStorage.setItem('normia.guia.auto', '1');
+    window.localStorage.removeItem('normia.guia.visto');
+    const autoOpened = app.guide?.maybeAutoOpen();
+    report.check('La guía de primeros pasos se abre sola en el primer uso',
+      autoOpened === true && app.activeDrawer === 'guide' && guideDrawer.hidden === false
+      && q(window, '[data-drawer-backdrop]').hidden === false,
+      `cajón ${app.activeDrawer}`);
+    const guideSteps = qa(window, '[data-guide-step]');
+    report.check('La guía tiene siete pasos, cada uno con su estado y su control',
+      guideSteps.length === 7
+      && guideSteps.every((row) => ['done', 'pending'].includes(row.dataset.state)
+        && row.querySelector('[data-guide-go]') && row.querySelector('.guide-step-state')),
+      `${guideSteps.length} pasos`);
+    const derived = app.guide.state();
+    const wallsNow = app.model.design.elements.filter((element) => element.type === 'wall').length;
+    const outdoorNow = app.model.design.elements.filter((element) => ['road', 'sidewalk', 'crosswalk', 'parking', 'property'].includes(element.type)).length;
+    report.check('El progreso se deduce del plano y no de un temporizador',
+      derived.length === 7 && derived[0].done === (wallsNow > 0) && derived[2].done === (outdoorNow > 0)
+      && q(window, '[data-guide-bar]')?.getAttribute('aria-valuenow') === String(app.guide.completed())
+      && q(window, '[data-guide-count]')?.textContent === `${app.guide.completed()} de 7 pasos`,
+      `${app.guide.completed()} de 7 · ${wallsNow} muros · ${outdoorNow} de vías`);
+    q(window, '[data-guide-go="vias"]')?.click();
+    report.check('El botón del paso activa la herramienta real y señala la baldosa del rail',
+      app.tool === 'road' && app.activeDrawer === null
+      && Boolean(q(window, '.rail [data-tool="road"].is-guide-target')),
+      `herramienta ${app.tool} · resaltada ${Boolean(q(window, '.rail .is-guide-target'))}`);
+    app.applyTool('select');
+    q(window, '[data-open-drawer="guide"]')?.click();
+    report.check('La guía se reabre desde la barra superior y desde los atajos',
+      app.activeDrawer === 'guide' && Boolean(q(window, '[data-drawer="shortcuts"] [data-open-drawer="guide"]'))
+      && Boolean(q(window, '.tool-choice[data-open-drawer="guide"]')));
+    const autoBox = q(window, '[data-guide-auto]');
+    autoBox.checked = false;
+    autoBox.dispatchEvent(new window.Event('change', { bubbles: true }));
+    window.localStorage.removeItem('normia.guia.visto');
+    report.check('Desactivar la guía se recuerda y no vuelve a abrirse sola',
+      window.localStorage.getItem('normia.guia.auto') === '0' && app.guide.maybeAutoOpen() === false);
+    window.localStorage.setItem('normia.guia.auto', '1');
+    app.guide.mark('revision');
+    const revisionDone = app.guide.state().find((step) => step.id === 'revision')?.done;
+    q(window, '[data-guide-reset]')?.click();
+    app.guide.render();
+    report.check('Reiniciar la guía borra sus marcas y no toca el plano',
+      revisionDone === true && app.guide.flag('revision') === false
+      && app.model.design.elements.length > 0,
+      `${app.model.design.elements.length} elementos`);
+    app.closeDrawer();
+    window.localStorage.setItem('normia.guia.auto', '0');
 
     /* ------------------------------ límites/seguridad ------------------------------ */
     const previousTool = app.tool;
@@ -1779,6 +1856,8 @@ async function main() {
     report.check('La barra lateral abre el cajón de revisión', app.activeDrawer === 'audit' && app.audit !== null, `cajón ${app.activeDrawer} · auditor ${Boolean(app.audit)} · oculto ${q(window, '[data-drawer="audit"]')?.hidden}`);
     await waitFor(() => q(window, '[data-drawer="audit"] .audit-stat'), 20000);
     const auditReport = app.audit.report;
+    report.check('La revisión real marca su paso en la guía de primeros pasos',
+      app.guide?.flag('revision') === true);
     report.check('La revisión mide salidas, recorrido y tiempo de evacuación',
       auditReport?.exits?.count >= 1 && Boolean(auditReport.travel) && Boolean(auditReport.egress)
       && qa(window, '[data-drawer="audit"] .audit-stat').length === 4,

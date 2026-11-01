@@ -147,7 +147,15 @@ function build() {
       files: ['electron/**/*', 'package.json'],
       extraResources: [
         { from: 'app', to: 'app' },
-        { from: 'runtime', to: 'runtime' },
+        // El intérprete PHP se copia desde la raíz del armado y con filtro, no
+        // con `{ from: 'runtime' }`: electron-builder descarta en silencio
+        // cualquier carpeta `node_modules` que esté en la raíz del origen de
+        // `extraResources` (fileMatcher: `if (relative === 'node_modules')
+        // return false`). Con el origen en la raíz, la ruta relativa pasa a ser
+        // «runtime/node_modules/…» y sí se copia. Sin esto el paquete instala
+        // pero no arranca: «Cannot find package '@php-wasm/node' imported from
+        // …/Resources/runtime/php-wasm.mjs».
+        { from: '.', to: '.', filter: ['runtime{,/**/*}'] },
       ],
       asar: true,
       compression: 'normal',
@@ -237,6 +245,41 @@ function build() {
     stdio: 'inherit',
     env: { ...process.env, ELECTRON_BUILDER_CACHE: path.join(out, '.cache'), CSC_IDENTITY_AUTO_DISCOVERY: 'false' },
   });
+  verifyInstallers(out);
+}
+
+/**
+ * Comprueba que el instalador recién compilado lleve el intérprete completo.
+ * Electron-builder puede terminar «bien» y dejar fuera `runtime/node_modules`
+ * —el paquete se instala y luego no arranca—, así que se mira el resultado y no
+ * solo la carpeta de trabajo.
+ */
+function verifyInstallers(out) {
+  const installers = path.join(out, 'installers');
+  if (!fs.existsSync(installers)) return;
+  const entries = [];
+  const walk = (directory, depth = 0) => {
+    if (depth > 8) return;
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+      const full = path.join(directory, entry.name);
+      if (entry.isDirectory()) walk(full, depth + 1);
+      else if (entry.name === 'php-wasm.mjs' && path.basename(directory) === 'runtime') entries.push(directory);
+    }
+  };
+  walk(installers);
+  if (!entries.length) {
+    throw new Error('El instalador no contiene resources/runtime/php-wasm.mjs.');
+  }
+  const missing = [];
+  for (const runtime of entries) {
+    for (const name of REQUIRED_PHP_PACKAGES) {
+      if (!fs.existsSync(path.join(runtime, 'node_modules', name, 'package.json'))) missing.push(`${path.relative(installers, runtime)} → ${name}`);
+    }
+  }
+  if (missing.length) {
+    throw new Error(`El instalador quedó sin paquetes de php-wasm: ${missing.join(', ')}.\nElectron-builder descarta «node_modules» en la raíz de extraResources; revisa el filtro de build.mjs.`);
+  }
+  console.log(`· Instalador comprobado: ${entries.length} copia(s) del intérprete con sus ${REQUIRED_PHP_PACKAGES.length} paquetes.`);
 }
 
 function readElectronVersion() {
