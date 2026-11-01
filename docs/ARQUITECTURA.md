@@ -96,10 +96,19 @@ Los errores se traducen en un único punto:
 users (id, name, email único, password_hash, is_admin, timestamps)
 projects (id, user_id → users, name, site, workplace, responsible, notes, timestamps)
 floors (id, project_id → projects, name, level, sort_order, design_json,
-        version, draft_json, draft_base_version, draft_updated_at, timestamps)
+        version, draft_json, draft_base_version, draft_updated_at, check_days, timestamps)
 floor_versions (id, floor_id → floors, version, design_json, note,
                 created_by → users, created_at, UNIQUE(floor_id, version))
+brigade_links (id, floor_id → floors UNIQUE, token UNIQUE, enabled, timestamps)
+verification_rounds (id, floor_id → floors, status, note, started_by, started_at,
+                     closed_by, closed_at)
+element_checks (id, floor_id → floors, round_id → verification_rounds, element_id,
+                element_type, sector, status, note, photo, photo_type, photo_name,
+                checked_by, checked_at)
 ```
+
+- **Esquema versionado.** `resources/schema.sql` crea todo en instalaciones nuevas con `PRAGMA user_version = 4`. En instalaciones anteriores, `Database::migrate()` aplica los pasos que falten al arrancar (2 → 3 → 4: enlace brigadista, verificación y `floors.check_days`), comprueba la columna con `PRAGMA table_info` y no vuelve a ejecutarse dentro de la misma petición.
+- **Fotos de evidencia.** Se guardan en la tabla como base64 (512 KB como máximo) porque algunos controladores SQLite empaquetados truncan los binarios con bytes de control; el tipo se detecta por la firma del archivo, sin depender de GD. Solo se sirven a la cuenta dueña del plano.
 
 - Todas las lecturas de piso incluyen la condición de propiedad (`projects.user_id = :userId`) en la misma consulta; no se confía en el `id` recibido.
 - Los guardados y las duplicaciones usan transacciones.
@@ -122,6 +131,9 @@ Editor B: conserva el diseño, muestra aviso, permite recargar v6 o descargar co
 | `User` | Alta, búsqueda por correo, verificación de contraseña y cambio de clave. |
 | `Project` | CRUD de proyectos con validación de nombre/sede/área/responsable/notas; crea el primer piso. |
 | `Floor` | Acceso por usuario, guardado con versión, borradores, historial y restauración. |
+| `Brigade` | Enlace público del piso: token de 32 caracteres, activar/desactivar, regenerar y fecha de actualización. |
+| `Check` | Verificaciones de campo por elemento (estado, nota, foto en base64 y responsable), rondas e historial. |
+| `VerificationInventory` | Inventario verificable del plano: excluye muros y trazos, toma el nombre del catálogo (CAD o señal) y el sector de la capa, y calcula cobertura % por familia y por sector. |
 | `DesignFactory` | Diseño en blanco por preset (A4 horizontal/vertical, A3, planta amplia, lienzo libre) con capas iniciales. |
 | `DesignValidator` | Normalización y límites del esquema v2/v3/**v4** (lienzo, capas, elementos, grupos, etiquetas, colores, puntos, curvas, sección tipo, tamaño JSON). Acepta `canvas.occupancy` (0–10 000), `isExit` en puertas (y lo descarta en cualquier otro tipo), `curves` solo en trazos, `widthM`/`lanes` en vías y andenes, y `section`/`junction` en vías (lista blanca de claves y rangos; el ancho se deriva de la sección y un cruce sin sección responde `422`). |
 | `DesignImporter` | Importación del JSON propio (v2) y del formato heredado v1 con alias de herramientas y señales. |
@@ -329,7 +341,7 @@ Cada prueba corre en PHP 8.1 y 8.3 (la de paquetes en 8.3), sin instalar PHP en 
 - Sin DWG/DXF: fuera de alcance; se documenta explícitamente para no prometer compatibilidad inexistente.
 - Sin colaboración en tiempo real: el bloqueo optimista por versión evita pérdidas silenciosas, pero la coordinación es humana.
 - Sin gestor de usuarios en la interfaz: la fase 1 crea la cuenta administradora en el instalador. El esquema y las consultas ya soportan varias cuentas con proyectos aislados, pero las cuentas adicionales se crean por base de datos; un gestor de usuarios queda para una fase posterior.
-- Sin migraciones automáticas: el esquema es estable y `PRAGMA user_version = 1`; una versión futura podrá migrar con un paso explícito.
+- Migraciones automáticas y repetibles por `PRAGMA user_version` (hoy 4). Cada paso crea solo lo que falta; las instalaciones nuevas ya traen el esquema completo en `resources/schema.sql`.
 - La escala es una **referencia declarada**: el editor no mide el mundo real ni convierte unidades físicas a píxeles de impresión.
 
 

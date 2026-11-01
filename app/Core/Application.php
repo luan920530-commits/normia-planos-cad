@@ -6,6 +6,7 @@ namespace App\Core;
 use App\Controllers\AccountController;
 use App\Controllers\AuthController;
 use App\Controllers\BrigadeController;
+use App\Controllers\VerificationController;
 use App\Controllers\DashboardController;
 use App\Controllers\EditorController;
 use App\Controllers\ExportController;
@@ -140,6 +141,13 @@ final class Application
         $router->get('api/floors/{id}/mep', static fn (array $p) => (new FloorApiController())->mep($p['id']));
         $router->get('api/floors/{id}/audit', static fn (array $p) => (new FloorApiController())->audit($p['id']));
         $router->get('projects/{id}/floors/{floorId}/audit', static fn (array $p) => (new ExportController())->audit($p['id'], $p['floorId']));
+
+        // Verificación física: estado por elemento, rondas y cobertura.
+        $router->get('projects/{id}/floors/{floorId}/verifications', static fn (array $p) => (new VerificationController())->show($p['id'], $p['floorId']));
+        $router->post('projects/{id}/floors/{floorId}/verifications', static fn (array $p) => (new VerificationController())->store($p['id'], $p['floorId']));
+        $router->post('projects/{id}/floors/{floorId}/verifications/rounds', static fn (array $p) => (new VerificationController())->round($p['id'], $p['floorId']));
+        $router->post('projects/{id}/floors/{floorId}/verifications/settings', static fn (array $p) => (new VerificationController())->settings($p['id'], $p['floorId']));
+        $router->get('projects/{id}/floors/{floorId}/verifications/{checkId}/photo', static fn (array $p) => (new VerificationController())->photo($p['id'], $p['floorId'], $p['checkId']));
 
         // Modo brigadista: enlace público de solo lectura (sin sesión).
         $router->get('b/{token}', static fn (array $p) => (new BrigadeController())->publicPage($p['token']));

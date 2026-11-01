@@ -49,6 +49,7 @@
                 <a class="menu-item" href="<?= e(url('projects/' . (int) $project['id'] . '/floors/' . (int) $floor['id'] . '/print')) ?>" target="_blank" rel="noopener"><svg class="icon"><use href="#i-print"></use></svg>Imprimir o PDF</a>
                 <a class="menu-item" href="<?= e(url('projects/' . (int) $project['id'] . '/floors/' . (int) $floor['id'] . '/export/json')) ?>"><svg class="icon"><use href="#i-file"></use></svg>Exportar JSON</a>
                 <a class="menu-item" href="<?= e(url('projects/' . (int) $project['id'] . '/floors/' . (int) $floor['id'] . '/audit')) ?>" target="_blank" rel="noopener"><svg class="icon"><use href="#i-audit"></use></svg>Informe de revisión</a>
+                <a class="menu-item" href="<?= e(url('projects/' . (int) $project['id'] . '/floors/' . (int) $floor['id'] . '/verifications')) ?>"><svg class="icon"><use href="#i-check"></use></svg>Verificación física</a>
                 <a class="menu-item" href="<?= e(url('projects/' . (int) $project['id'] . '/floors/' . (int) $floor['id'] . '/brigade')) ?>"><svg class="icon"><use href="#i-evacuation"></use></svg>Modo brigadista</a>
                 <form method="post" action="<?= e(url('projects/' . (int) $project['id'] . '/floors/' . (int) $floor['id'] . '/duplicate')) ?>">
                   <?= csrf_field() ?>

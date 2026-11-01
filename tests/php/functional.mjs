@@ -1097,6 +1097,84 @@ try {
   res = await client.postJson(`api/floors/${curveFloorId}/save`, { design: badJunction, expected_version: (await json(`api/floors/${curveFloorId}`)).body.floor.version });
   report.check('Un tipo de cruce desconocido se rechaza', res.status === 422, String(res.status));
 
+  /* ---------------------------- verificación física ---------------------------- */
+  const verifUrl = `projects/${projectId}/floors/${floorId}/verifications`;
+  res = await client.get(verifUrl);
+  report.check('La verificación física abre con cobertura y lista de elementos',
+    res.status === 200 && /Verificación física/.test(res.text) && /Cobertura/.test(res.text)
+    && /data-verif-card/.test(res.text) && /Modo ronda/.test(res.text), String(res.status));
+  const verifAssets = localAssets(res.text, `/index.php?r=${verifUrl}`);
+  report.check('La verificación usa recursos locales y formularios protegidos',
+    verifAssets.external.length === 0 && verifAssets.formsWithoutToken === 0 && verifAssets.inlineScripts === 0,
+    `${verifAssets.postForms} formularios · ${verifAssets.external.length} externos`);
+  report.check('La verificación no lista muros ni trazos', !/data-element-id="muro/.test(res.text));
+  res = await client.postJson(verifUrl, { element_id: 'ext_co2_01', status: 'ok', note: 'Revisado en ronda de prueba' });
+  let verifBody = {};
+  try { verifBody = JSON.parse(res.text); } catch { verifBody = {}; }
+  report.check('La API guarda una verificación y devuelve autor y fecha',
+    res.status === 200 && verifBody.ok === true && verifBody.check?.label === 'Verificado'
+    && /\d{4}-\d{2}-\d{2}/.test(verifBody.check?.checked_at || ''), String(res.status));
+  res = await client.postJson(verifUrl, { element_id: 'ext_co2_01', status: 'issue', note: 'Manguera vencida' });
+  report.check('La API marca «Con novedad» con su nota', res.status === 200 && JSON.parse(res.text).check?.note === 'Manguera vencida', String(res.status));
+  res = await client.postJson(verifUrl, { element_id: 'ext_co2_01', status: 'excelente' });
+  report.check('Un estado de verificación desconocido se rechaza', res.status === 422, String(res.status));
+  res = await client.postJson(verifUrl, { element_id: 'no_existe', status: 'ok' });
+  report.check('Un elemento que no está en el plano se rechaza', res.status === 422 && /no pertenece/i.test(res.text), String(res.status));
+  res = await client.postForm(verifUrl, { _token: homeToken, element_id: 'ext_co2_01', status: 'issue', note: '' });
+  report.check('«Con novedad» sin nota no se guarda', [302, 303].includes(res.status), String(res.status));
+  res = await client.get(verifUrl);
+  report.check('La lista muestra la última verificación con su responsable',
+    /Manguera vencida/.test(res.text) && /Con novedad/.test(res.text) && /Administrador/.test(res.text));
+  const coverageMatch = /(\d+) %<\/span>\s*<span class="verif-metric-label">Cobertura/.exec(res.text);
+  report.check('La cobertura se calcula sobre los elementos verificables',
+    Boolean(coverageMatch) && Number(coverageMatch[1]) > 0 && Number(coverageMatch[1]) < 100, coverageMatch?.[1]);
+  const familyRows = (res.text.match(/<th scope="row">[^<]+<\/th>/g) || []).length;
+  report.check('La cobertura se desglosa por tipo y por sector', familyRows >= 2, `${familyRows} filas`);
+
+  res = await client.postForm(verifUrl + '/rounds', { _token: homeToken, action: 'start', note: 'Ronda QA' });
+  report.check('Iniciar una ronda redirige a la lista', [302, 303].includes(res.status), String(res.status));
+  res = await client.get(verifUrl);
+  const roundId = Number(/name="round_id" value="(\d+)"/.exec(res.text)?.[1] || 0);
+  report.check('La lista muestra la ronda abierta con su responsable', /Ronda abierta/.test(res.text) && roundId > 0, String(roundId));
+  await client.postJson(verifUrl, { element_id: 'ext_co2_01', status: 'ok', note: 'Cerrada la novedad' });
+  await client.postForm(verifUrl + '/rounds', { _token: homeToken, action: 'close', round_id: roundId });
+  res = await client.get(verifUrl);
+  report.check('Cerrar la ronda la deja en el historial con sus hallazgos',
+    /Historial de rondas/.test(res.text) && /Ronda QA/.test(res.text) && /1 verificaciones · 0 novedades/.test(res.text));
+  await client.postForm(verifUrl + '/settings', { _token: homeToken, check_days: 15 });
+  res = await client.get(verifUrl);
+  report.check('El aviso de días sin verificación se guarda',
+    /name="check_days" min="1" max="365" value="15"/.test(res.text) && /más de 15 días sin revisión/.test(res.text));
+  await client.postForm(verifUrl + '/settings', { _token: homeToken, check_days: 30 });
+  res = await client.get(verifUrl + '/999999/photo');
+  report.check('La foto de evidencia inexistente responde 404', res.status === 404, String(res.status));
+
+  // Foto opcional: se guarda en la base y se sirve solo a la cuenta dueña.
+  const pngBytes = Uint8Array.from(atob(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
+  ), (char) => char.charCodeAt(0));
+  res = await client.request(verifUrl, {
+    method: 'POST',
+    body: {
+      _token: homeToken,
+      element_id: 'ext_co2_01',
+      status: 'ok',
+      note: 'Con foto de evidencia',
+      photo: new File([pngBytes], 'evidencia.png', { type: 'image/png' }),
+    },
+  });
+  report.check('Una verificación con foto se guarda', [302, 303].includes(res.status), String(res.status));
+  res = await client.get(verifUrl);
+  const photoHref = ((text) => {
+    const raw = /href="([^"]*verifications(?:%2F|\/)\d+(?:%2F|\/)photo[^"]*)"/.exec(text)?.[1] || '';
+    return raw ? decodeEntities(raw) : '';
+  })(res.text);
+  report.check('La lista enlaza la foto de evidencia', photoHref !== '' && /Ver foto de evidencia/.test(res.text), photoHref.slice(0, 40));
+  res = await client.get(photoHref);
+  report.check('La foto se sirve como imagen', res.status === 200 && /^image\//.test(res.type), `${res.status} · ${res.type}`);
+  res = await guest.get(photoHref);
+  report.check('Sin sesión la foto de evidencia no se entrega', [302, 303, 401].includes(res.status), String(res.status));
+
   /* ---------------------------- modo brigadista ---------------------------- */
   res = await client.get(`projects/${projectId}/floors/${floorId}/brigade`);
   report.check('El panel del modo brigadista abre con enlace desactivado', res.status === 200 && /Modo brigadista/.test(res.text) && /Enlace desactivado/.test(res.text), String(res.status));
@@ -1134,6 +1212,30 @@ try {
   report.check('Desactivar el enlace corta el acceso público', res.status === 404, String(res.status));
   res = await guest.get('b/' + 'x' + 'f'.repeat(31));
   report.check('Un token con caracteres inválidos no llega al controlador', res.status === 404, String(res.status));
+
+  res = await guest.get(`b/${tokenValue}/brigade-sw.js`);
+  report.check('El service worker del modo brigadista se sirve sin sesión',
+    res.status === 200 && /javascript/.test(res.type) && /normia-brigade/.test(res.text)
+    && res.headers['service-worker-allowed'] !== undefined, `${res.status} · ${res.type}`);
+  await client.postForm(`projects/${projectId}/floors/${floorId}/brigade`, { _token: homeToken, action: 'enable' });
+  res = await client.get(`projects/${projectId}/floors/${floorId}/brigade`);
+  const publicToken = /b%2F([a-f0-9]{32})|b\/([a-f0-9]{32})/.exec(res.text || '');
+  res = await guest.get(`b/${publicToken ? (publicToken[1] || publicToken[2]) : tokenValue}`);
+  const brigadeAssets = localAssets(res.text, '/index.php');
+  const brigadeBoot = /<script type="application\/json" id="brigade-boot">([\s\S]*?)<\/script>/.exec(res.text)?.[1] || '';
+  let brigadeData = null;
+  try { brigadeData = JSON.parse(brigadeBoot); } catch { brigadeData = null; }
+  report.check('La página pública trae su configuración para el celular',
+    Boolean(brigadeData?.token) && Boolean(brigadeData?.dataUrl) && Boolean(brigadeData?.swUrl)
+    && typeof brigadeData?.groups === 'object', brigadeData ? Object.keys(brigadeData.groups).join(',') : 'sin datos');
+  report.check('La página pública usa solo recursos locales',
+    brigadeAssets.external.length === 0 && brigadeAssets.lang === 'es', brigadeAssets.external.join(','));
+  report.check('La página pública no ejecuta scripts inline',
+    brigadeAssets.dom.window.document.querySelectorAll('script:not([src]):not([type="application/json"])').length === 0);
+  report.check('La página pública tiene las cuatro acciones rápidas',
+    brigadeAssets.dom.window.document.querySelectorAll('[data-brigade-filter], .brigade-action.is-call').length === 4);
+  report.check('La página pública trae salida de emergencia y borrado de datos',
+    /tel:123/.test(res.text) && /data-brigade-clear/.test(res.text) && /Alto contraste/.test(res.text));
 
   /* ---------------------------- aislamiento entre cuentas ---------------------------- */
   const createUser = await app.run(`
