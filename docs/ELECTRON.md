@@ -140,6 +140,26 @@ avisa. Al terminar, revisa el instalador producido: si alguna copia de
 `resources/runtime` quedó sin `node_modules`, el armado **falla** en vez de
 publicar un paquete que no arranca.
 
+### Compilar en un Mac, paso a paso
+
+El `.dmg` y el `.zip` de macOS **solo se generan en macOS**: electron-builder
+llama a `hdiutil` y a las herramientas de Apple, que no existen en Linux. En
+macOS 12 Monterey alcanza con Node 20 o superior y unos minutos:
+
+```sh
+npm ci                                                   # dependencias del proyecto
+npm install --no-save electron@43 electron-builder@26    # Electron 43: abre en macOS 12
+node tools/electron/build.mjs --out=dist/electron --arch=arm64   # Apple Silicon (M1/M2/M3…)
+node tools/electron/build.mjs --out=dist/electron --arch=x64     # Intel
+```
+
+Quedan en `dist/electron/installers/`:
+`normia-planos-cad-<versión>-macos-<arch>.dmg` (se arrastra a Aplicaciones) y el
+`.zip` equivalente. Para saber la arquitectura del equipo: menú Apple › *Acerca de
+este Mac* › «Chip» (Apple M…) o «Procesador» (Intel). Sin certificados de
+Apple el sistema pide confirmar la primera apertura: clic derecho sobre la app
+› *Abrir*, o `xattr -dr com.apple.quarantine "/Applications/Normia Planos CAD.app"`.
+
 ### El intérprete y `node_modules`
 
 `electron-builder` descarta en silencio cualquier carpeta llamada
