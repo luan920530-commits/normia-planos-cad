@@ -117,18 +117,37 @@ jobs:
           cat SHA256SUMS.txt
 
       # Comprobación del contenido con el Node del flujo: arranca PHP desde
-      # `resources/` del paquete (no desde node_modules) y instala en una carpeta
+      # `resources/` del paquete (no desde node_modules) e instala en una carpeta
       # temporal. Es la que decide si el paquete sirve.
       - name: Comprobar el contenido del paquete
         shell: bash
         run: |
           set -euo pipefail
-          RUNTIME="$(find dist/electron/installers -maxdepth 3 -type d -name runtime | head -1)"
-          RESOURCES="$(dirname "$RUNTIME")"
+          # En macOS el intérprete queda en `…/Normia Planos CAD.app/Contents/Resources`,
+          # cinco niveles por debajo; en Windows y Linux, en `…/<unpacked>/resources`.
+          RUNTIME="$(find dist/electron/installers -type d -name runtime -path '*resources*' | head -1)"
+          if [ -z "$RUNTIME" ]; then
+            echo "::error title=paquete::no se encontró resources/runtime en dist/electron/installers"
+            find dist/electron/installers -maxdepth 5 -type d | head -30
+            exit 1
+          fi
+          RESOURCES="$(cd "$(dirname "$RUNTIME")" && pwd)"
           test -d "$RESOURCES/app" || { echo "::error title=paquete::falta resources/app"; exit 1; }
-          export NORMA_DATA_PATH="$RUNNER_TEMP/normia-electron-contenido"
-          rm -rf "$NORMA_DATA_PATH"
-          node tools/electron/server.mjs --check --app="$RESOURCES/app" --data="$NORMA_DATA_PATH" --runtime="$RESOURCES/runtime"
+          # Git Bash entrega rutas /d/a/… que Node en Windows no reconoce como
+          # absolutas: se convierten antes de pasarlas.
+          convertir() { if command -v cygpath >/dev/null 2>&1; then cygpath -w "$1"; else printf '%s' "$1"; fi; }
+          APP_DIR="$(convertir "$RESOURCES/app")"
+          RUNTIME_DIR="$(convertir "$RESOURCES/runtime")"
+          DATA_DIR="$(convertir "$RUNNER_TEMP/normia-electron-contenido")"
+          rm -rf "$RUNNER_TEMP/normia-electron-contenido"
+          echo "· app: $APP_DIR"
+          echo "· intérprete: $RUNTIME_DIR"
+          if ! node tools/electron/server.mjs --check --app="$APP_DIR" --data="$DATA_DIR" --runtime="$RUNTIME_DIR" 2>&1 | tee "$RUNNER_TEMP/contenido.log"; then
+            tail -12 "$RUNNER_TEMP/contenido.log" | while IFS= read -r line; do
+              echo "::error title=contenido::${line//$'\r'/}"
+            done
+            exit 1
+          fi
 
       # Prueba de humo del binario ya empaquetado. Lo que decide es la
       # comprobación del contenido: en un servidor sin pantalla Electron puede
@@ -158,6 +177,16 @@ jobs:
           esac
           echo "::notice title=humo::el binario empaquetado arrancó y respondió a --check"
 
+
+      - name: Diagnóstico del paquete
+        if: failure()
+        shell: bash
+        run: |
+          if [ -f "$RUNNER_TEMP/contenido.log" ]; then
+            tail -12 "$RUNNER_TEMP/contenido.log" | while IFS= read -r line; do
+              echo "::error title=contenido (final)::${line//$'\r'/}"
+            done
+          fi
 
       - name: Publicar los instaladores
         uses: actions/upload-artifact@v4
