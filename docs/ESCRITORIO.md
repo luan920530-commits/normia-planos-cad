@@ -321,6 +321,7 @@ node tools/android/build.mjs --apk
 | «Ya había una instancia abierta» | El lanzador reutiliza la ventana existente. Detén la anterior con «Detener Normia». |
 | El instalador no arranca en Windows | SmartScreen: «Más información → Ejecutar de todas formas». |
 | macOS dice que la app está dañada | Suele ser la cuarentena de un archivo descargado: clic derecho → Abrir. Si persiste, `xattr -dr com.apple.quarantine "/Applications/Normia Planos CAD.app"`. |
+| Android muestra el instalador pero el botón «Instalar» no hace nada | APK de la **1.15.6**: el puente que intercepta el formulario iba incrustado en el documento y el envío se quedaba sin respuesta. Instala la **1.15.7** o posterior. |
 | Android se queda en blanco nada más abrir | APK de la **1.15.5** o anterior: sin base de datos la raíz responde un 303 al instalador y la pantalla lo trataba como una descarga, así que no dibujaba nada. Instala la **1.15.6** o posterior, que sigue la redirección. |
 | Android se queda en blanco y al reabrir vuelve a pedir la instalación | APK de la **1.15.4** o anterior: el guardado bloqueaba cada recurso de la pantalla y, si se cerraba a media escritura, los datos no quedaban. Instala la **1.15.5** o posterior. |
 | Android muestra `TypeError: root.getDirectory is not a function` | APK de la **1.15.3**: llamaba a `getDirectory()`, que no existe en el sistema de archivos del navegador (es `getDirectoryHandle()`). Instala la 1.15.4 o posterior. |

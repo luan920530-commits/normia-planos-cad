@@ -25,7 +25,7 @@ const bad = (label, detail = '') => {
   console.log(`✗ ${label}${detail ? ' · ' + detail : ''}`);
 };
 
-for (const file of ['index.html', 'shell.js', 'shell.css', 'app-core.js', 'opfs.js', 'php/runtime.js', 'php/php_8_3_asyncify.wasm', 'php/php_8_3_jspi.wasm', 'php/app-files.json', 'css/app.css', 'css/editor.css', 'js/app.js', 'img/normia-logo.png']) {
+for (const file of ['index.html', 'shell.js', 'shell.css', 'app-core.js', 'opfs.js', 'bridge.js', 'php/runtime.js', 'php/php_8_3_asyncify.wasm', 'php/php_8_3_jspi.wasm', 'php/app-files.json', 'css/app.css', 'css/editor.css', 'js/app.js', 'img/normia-logo.png']) {
   if (!fs.existsSync(path.join(ASSETS, file))) bad(`Falta ${file}`);
 }
 if (failures.length) {
@@ -125,6 +125,25 @@ if (/openOpfsStorage\(/.test(shellSource) && /onUnavailable/.test(shellSource)
  * teléfono se quedaría en blanco esperando.
  */
 const coreSource = fs.readFileSync(path.join(ASSETS, 'app-core.js'), 'utf8');
+/*
+ * El puente va como archivo (`/assets/bridge.js`), no incrustado en el
+ * documento. El botón «Instalar» de una 1.15.6 no hacía nada: el formulario
+ * quedaba sin interceptar y el envío nativo no tenía a quién pedirle la página.
+ */
+const bridgeSource = fs.readFileSync(path.join(ASSETS, 'bridge.js'), 'utf8');
+if (/\/assets\/bridge\.js/.test(shellSource) && /guestBootstrap/.test(shellSource) === false
+  && /__normiaBridgeListo/.test(bridgeSource) && /addEventListener\('submit'/.test(bridgeSource)) {
+  ok('El puente del editor viaja como archivo y se carga en cada página');
+} else {
+  bad('El puente del editor no se carga como archivo');
+}
+if (/bridge\.fail\(/.test(bridgeSource) && /bridge\.busy\(/.test(bridgeSource)
+  && /__normiaBridgeListo/.test(shellSource)) {
+  ok('Si enviar un formulario falla, se ve el motivo y no un botón que no responde');
+} else {
+  bad('Un fallo al enviar un formulario queda invisible');
+}
+
 // La raíz sin base de datos responde 303 al instalador. Si la pantalla no sigue
 // la redirección y la trata como descarga, se queda en blanco sin aviso.
 if (/async fetchPage\(/.test(coreSource) && /app\.fetchPage\(target\)/.test(shellSource)

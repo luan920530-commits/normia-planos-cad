@@ -221,7 +221,7 @@ function copyWasm() {
 
 /** Copia la pantalla del contenedor (HTML, CSS y JS). */
 function copyShell() {
-  for (const name of ['index.html', 'shell.css', 'shell.js', 'app-core.js', 'opfs.js']) {
+  for (const name of ['index.html', 'shell.css', 'shell.js', 'app-core.js', 'opfs.js', 'bridge.js']) {
     fs.copyFileSync(path.join(HERE, 'web', name), path.join(TARGET, name));
   }
 }

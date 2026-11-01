@@ -217,7 +217,7 @@ function baseUrlOf(url) {
   return new URL(url, ORIGIN).href;
 }
 
-/* Errores que reporta el editor dentro del marco (ver `guestBootstrap`). */
+/* Errores que reporta el editor dentro del marco (ver `bridge.js`). */
 const frameProblems = [];
 
 /**
@@ -230,6 +230,12 @@ function watchFrame() {
   paintTimer = setTimeout(() => {
     paintTimer = null;
     try {
+      const listo = Boolean(frame.contentWindow && frame.contentWindow.__normiaBridgeListo);
+      if (!listo) {
+        const detail = frameProblems.length ? ` Último error: ${frameProblems.slice(-2).join(' · ')}` : '';
+        fail(new Error(`El puente del editor no se cargó en la página, así que los botones y enlaces no responden.${detail}`));
+        return;
+      }
       const document = frame.contentDocument;
       const text = document && document.body ? document.body.textContent.replace(/\s+/g, ' ').trim() : '';
       if (text.length > 20) return;
@@ -278,148 +284,25 @@ async function navigate(url, options = {}) {
   }
 }
 
-const guestBootstrap = function guestBootstrap() {
-  const bridge = window.parent.__normiaBridge;
-  const ORIGIN = 'https://appassets.androidplatform.net';
-  const nativeFetch = window.fetch ? window.fetch.bind(window) : null;
-
-  const toHeaders = (list) => list.map(([name, value]) => [name, value]);
-
-  // Cualquier error de JavaScript del editor se ve en la pantalla de arranque en
-  // vez de quedarse como una página a medio dibujar.
-  const avisar = (texto) => {
-    try {
-      bridge.problem(String(texto || ''));
-    } catch (error) { /* el padre pudo desaparecer */ }
-  };
-  window.addEventListener('error', (event) => {
-    avisar(`${event.message || 'Error'} en ${event.filename || ''}:${event.lineno || 0}`);
-  });
-  window.addEventListener('unhandledrejection', (event) => {
-    const reason = event.reason && event.reason.message ? event.reason.message : event.reason;
-    avisar(`Promesa rechazada: ${reason}`);
-  });
-
-  async function send(url, method, headers, body) {
-    return bridge.request({ url, method, headers: toHeaders(headers), body });
-  }
-
-  const toResponse = (result) => {
-    const headers = new Headers();
-    for (const [name, value] of Object.entries(result.headers || {})) {
-      if (Array.isArray(value)) value.forEach((item) => headers.append(name, String(item)));
-      else headers.append(name, String(value));
-    }
-    return new Response(result.bytes ? result.bytes.slice().buffer : null, {
-      status: result.status,
-      headers,
-    });
-  };
-
-  window.fetch = async function patchedFetch(input, init) {
-    let request;
-    try {
-      request = new Request(input, init);
-    } catch (error) {
-      return nativeFetch ? nativeFetch(input, init) : Promise.reject(error);
-    }
-    if (!request.url.startsWith(ORIGIN)) {
-      return nativeFetch ? nativeFetch(input, init) : Promise.reject(new TypeError('Sin conexión'));
-    }
-    const bytes = request.method === 'GET' || request.method === 'HEAD'
-      ? null
-      : new Uint8Array(await request.arrayBuffer());
-    const result = await send(request.url, request.method, [...request.headers], bytes);
-    return toResponse(result);
-  };
-
-  window.__normiaSave = async function (blob, name) {
-    const bytes = new Uint8Array(await blob.arrayBuffer());
-    let binary = '';
-    for (let index = 0; index < bytes.length; index += 0x8000) {
-      binary += String.fromCharCode.apply(null, bytes.subarray(index, index + 0x8000));
-    }
-    bridge.save(name, blob.type || 'application/octet-stream', btoa(binary));
-  };
-
-  document.addEventListener('click', (event) => {
-    const anchor = event.target && event.target.closest ? event.target.closest('a') : null;
-    if (!anchor) return;
-    const href = anchor.getAttribute('href') || '';
-    if (href.startsWith('#')) return;
-    if (href.startsWith('blob:')) {
-      event.preventDefault();
-      event.stopPropagation();
-      fetch(href)
-        .then((response) => response.blob())
-        .then((blob) => window.__normiaSave(blob, anchor.getAttribute('download') || 'normia'))
-        .catch(() => {});
-      return;
-    }
-    if (href.startsWith('mailto:') || href.startsWith('tel:')) return;
-    const absolute = new URL(href, document.baseURI);
-    event.preventDefault();
-    event.stopPropagation();
-    if (anchor.target === '_blank' || anchor.hasAttribute('data-print')) {
-      bridge.open(absolute.href);
-    } else {
-      bridge.go(absolute.href);
-    }
-  }, true);
-
-  document.addEventListener('submit', async (event) => {
-    const form = event.target;
-    if (!form || form.tagName !== 'FORM') return;
-    event.preventDefault();
-    event.stopPropagation();
-    const data = new FormData(form);
-    const method = (form.getAttribute('method') || 'GET').toUpperCase();
-    const action = new URL(form.getAttribute('action') || document.baseURI, document.baseURI);
-    if (method === 'GET') {
-      const query = new URLSearchParams();
-      for (const [name, value] of data.entries()) if (typeof value === 'string') query.append(name, value);
-      for (const [name, value] of new URLSearchParams(action.search)) query.append(name, value);
-      action.search = query.toString();
-      bridge.go(action.href);
-      return;
-    }
-    let body;
-    let headers = [];
-    if ([...data.values()].some((value) => typeof value !== 'string')) {
-      const encoded = new Response(data);
-      headers = [['content-type', encoded.headers.get('content-type') || 'multipart/form-data']];
-      body = new Uint8Array(await encoded.arrayBuffer());
-    } else {
-      const query = new URLSearchParams();
-      for (const [name, value] of data.entries()) query.append(name, String(value));
-      headers = [['content-type', 'application/x-www-form-urlencoded']];
-      body = new TextEncoder().encode(query.toString());
-    }
-    try {
-      const result = await bridge.submit(action.href, headers, body);
-      if (result.html) bridge.renderHtml(result.html);
-      else if (result.download) bridge.save(result.download.name, result.download.mime, result.download.base64);
-    } catch (error) {
-      bridge.log(String(error));
-    }
-  }, true);
-
-  window.open = function patchedOpen(url) {
-    bridge.open(new URL(String(url), document.baseURI).href);
-    return null;
-  };
-};
-
 function render(html) {
-  // El documento del marco lleva una <base> y el puente antes que cualquier
-  // script de la aplicación, para que ningún `fetch` se escape.
-  const script = `<script>(${guestBootstrap.toString()})();</script>`;
+  /*
+   * El documento del marco lleva una <base> y el puente antes que cualquier
+   * script de la aplicación, para que ningún `fetch` se escape. El puente es un
+   * archivo (`/assets/bridge.js`), no código incrustado: así no depende de que
+   * el navegador permita scripts en línea dentro del documento escrito.
+   *
+   * «Cargando…» queda a la vista si el puente no llega a ejecutarse; el
+   * vigilante del marco lo detecta y lo cuenta en la pantalla de arranque.
+   */
+  const script = `<script src="${ORIGIN}/assets/bridge.js"></script>`;
   const base = `<base href="${ORIGIN}/">`;
+  const cargando = '<p id="normia-cargando" style="margin:0;padding:14px 18px;font:14px/1.4 system-ui,sans-serif;color:#475569;background:#f1f5f9">Cargando…</p>';
   let content = String(html);
   if (/<head[^>]*>/i.test(content)) {
     content = content.replace(/<head([^>]*)>/i, `<head$1>${base}${script}`);
+    content = content.replace(/<body([^>]*)>/i, `<body$1>${cargando}`);
   } else {
-    content = `<!doctype html><html lang="es"><head>${base}${script}</head><body>${content}</body></html>`;
+    content = `<!doctype html><html lang="es"><head>${base}${script}</head><body>${cargando}${content}</body></html>`;
   }
   const document = frame.contentDocument;
   document.open();
@@ -471,6 +354,20 @@ window.__normiaBridge = {
     render(html);
     showFrame();
     watchFrame();
+  },
+  /** Lo usa el puente para avisar de que está trabajando (o de que terminó). */
+  busy(active, label = '', detail = '') {
+    if (active) {
+      step(label || 'Procesando', detail);
+      splash.classList.remove('is-error');
+      splash.classList.remove('is-hidden');
+    } else {
+      showFrame();
+    }
+  },
+  /** Lo usa el puente cuando algo falla: se ve en la pantalla de arranque. */
+  fail(text) {
+    fail(text instanceof Error ? text : new Error(String(text || 'Fallo en la página')));
   },
   /** El editor avisa de un error de JavaScript: se guarda para el diagnóstico. */
   problem(text) {
