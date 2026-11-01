@@ -49,6 +49,19 @@ const workflow = read('.github/workflows/dist-electron.yml');
 report.check('El flujo compila las tres plataformas y publica lo que produce',
   /macos-latest/.test(workflow) && /windows-latest/.test(workflow) && /ubuntu-latest/.test(workflow)
   && /electron-builder/.test(workflow) && /upload-artifact/.test(workflow));
+report.check('El flujo comprueba el contenido del paquete, no solo que se haya generado',
+  /server\.mjs --check --app="\$RESOURCES\/app"/.test(workflow) && /--runtime="\$RESOURCES\/runtime"/.test(workflow));
+report.check('Las sumas del flujo evitan opciones de GNU que macOS no tiene',
+  !/^\s*find .* -printf/m.test(workflow) && /sha256sum "\$archivo"/.test(workflow) && /shasum -a 256/.test(workflow));
+// Se mira la línea de comando del paso y no el texto: los comentarios explican
+// justamente por qué ya no se usa `gh release upload`.
+const commands = (text) => text.split('\n').filter((line) => !line.trim().startsWith('#')); 
+report.check('Los instaladores se adjuntan con una acción, no con gh release upload',
+  /softprops\/action-gh-release@v2/.test(workflow) && !commands(workflow).some((line) => /gh release upload/.test(line)));
+const desktopWorkflow = read('.github/workflows/dist-desktop.yml');
+report.check('El flujo nativo también adjunta con la acción',
+  /softprops\/action-gh-release@v2/.test(desktopWorkflow)
+  && !commands(desktopWorkflow).some((line) => /gh release upload/.test(line)));
 
 /* ------------------------------- de punta a punta ------------------------------ */
 
