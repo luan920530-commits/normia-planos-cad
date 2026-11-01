@@ -34,6 +34,23 @@ if (failures.length) {
 }
 ok('El paquete incluye pantalla, estilo, intérprete y aplicación');
 
+/*
+ * La pantalla que pide el contenedor tiene que existir **debajo** del prefijo
+ * que registra `WebViewAssetLoader`. Con el prefijo en la raíz y la URL
+ * `/index.html`, el cargador buscaba `assets/index.html`, no lo encontraba y el
+ * WebView mostraba «net::ERR_INVALID_RESPONSE» en vez del editor.
+ */
+const activitySource = fs.readFileSync(path.join(HERE, 'app/src/main/java/co/normia/cad/MainActivity.kt'), 'utf8');
+const assetPrefix = (/private const val ASSETS_PREFIX = "([^"]+)"/.exec(activitySource) || [])[1] || '';
+const entryTail = (/private val ENTRY = "[^"]*ASSETS_PREFIX\}([^"]+)"/.exec(activitySource) || [])[1] || '';
+// El prefijo se descarta al buscar en disco: `/assets/` es la raíz de `assets/`.
+const entryFile = path.join(HERE, 'app/src/main/assets', entryTail);
+if (assetPrefix === '/assets/' && entryTail && fs.existsSync(entryFile)) {
+  ok('El contenedor abre una pantalla que existe debajo del prefijo registrado', `${assetPrefix}${entryTail}`);
+} else {
+  bad('El contenedor pide una pantalla que no está debajo del prefijo registrado', `${assetPrefix}${entryTail || '?'}`);
+}
+
 const info = JSON.parse(fs.readFileSync(path.join(ASSETS, 'php/app-files.json'), 'utf8'));
 const version = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).version;
 if (info.version === version) ok('La versión del paquete coincide con package.json', info.version);
