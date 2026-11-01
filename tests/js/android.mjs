@@ -85,6 +85,20 @@ report.check('El paquete incluye la aplicación completa para el intérprete',
 const storage = memoryStorage();
 const app = await boot(storage);
 
+/*
+ * La raíz de una instalación nueva responde `303 → ?r=install` con el cuerpo
+ * vacío. La 1.15.4 trataba ese 303 como una descarga, ocultaba el arranque y
+ * dejaba el marco en blanco. Ahora la pantalla sigue la redirección.
+ */
+const antesDeInstalar = await app.request({ url: '/' });
+const instalador = await app.fetchPage('/');
+report.check('La raíz nueva redirige al instalador y la redirección se sigue',
+  antesDeInstalar.status === 303
+  && instalador.status === 200
+  && /name="_token"/.test(instalador.text)
+  && /install/.test(instalador.url),
+  `${antesDeInstalar.status} → ${instalador.status} · ${instalador.url} · ${instalador.hops} salto(s)`);
+
 let response = await app.request({ url: '/index.php?r=install' });
 const token = /name="_token" value="([^"]+)"/.exec(response.text)?.[1] || '';
 report.check('El editor arranca dentro del teléfono y muestra el instalador',
