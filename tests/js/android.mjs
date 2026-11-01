@@ -502,6 +502,47 @@ report.check('Una instalación del usuario manda sobre la de fábrica',
 conPropia.php.exit(0);
 reabierta.php.exit(0);
 
+/*
+ * Entrada directa al editor (solo APK).
+ *
+ * En el teléfono no se muestra ni el acceso ni la portada: la cuenta la crea la
+ * compilación, la sesión se abre sola y la aplicación arranca dentro del editor
+ * del último plano. La web y el escritorio siguen igual.
+ */
+const directo = await boot(memoryStorage(), { seed: semilla });
+const entro = await directo.signIn('fabrica@normia.local', 'ClaveSegura2026');
+const destino = await directo.editorUrl();
+report.check('En el APK la sesión se abre sola y el destino es el editor',
+  entro && /r=projects\/\d+\/floors\/\d+\/editor$/.test(destino), destino || 'sin destino');
+const editor = await directo.fetchPage(destino);
+report.check('El editor abre de una vez, sin pasar por el acceso',
+  editor.status === 200 && /id="editor-app"/.test(editor.text) && !/id="login-title"/.test(editor.text),
+  `${editor.status} · ${editor.url}`);
+report.check('La pantalla sabe cuándo una página es el acceso o la portada',
+  NormiaApp.needsSession('<h1 id="login-title">Inicia sesión</h1>')
+  && NormiaApp.needsSession('<section id="capturas"></section>')
+  && NormiaApp.needsSession(editor.text) === false);
+directo.php.exit(0);
+
+// Sin planos: se crea uno vacío para no dejar al usuario en una lista.
+const vacia = await boot(memoryStorage(), { seed: semilla });
+await vacia.signIn('fabrica@normia.local', 'ClaveSegura2026');
+const primerPlano = await vacia.createFirstProject('Plano 1', 'Piso 1');
+const nuevo = await vacia.fetchPage(primerPlano || '/');
+report.check('Si no hay planos, el APK crea uno y abre su editor',
+  /\/editor$/.test(primerPlano) && nuevo.status === 200 && /id="editor-app"/.test(nuevo.text),
+  primerPlano || 'sin destino');
+vacia.php.exit(0);
+
+// La versión web no cambia: sin sesión, la raíz sigue siendo la portada.
+// Sin semilla y sin instalación, la raíz lleva al instalador (como la web).
+const web = await boot(memoryStorage());
+const portadaWeb = await web.fetchPage('/');
+report.check('Fuera del APK la entrada sigue siendo la de siempre (instalador o acceso)',
+  portadaWeb.status === 200 && /name="_token"/.test(portadaWeb.text) && /install/.test(portadaWeb.url),
+  `${portadaWeb.status} ${portadaWeb.url}`);
+web.php.exit(0);
+
 /* ------------------------- archivos del contenedor ------------------------- */
 
 const manifest = fs.readFileSync(new URL('../../tools/android/app/src/main/AndroidManifest.xml', import.meta.url), 'utf8');

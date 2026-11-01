@@ -360,6 +360,81 @@ export class NormiaApp {
     return result;
   }
 
+  /* ------------------------- entrada directa (APK) ------------------------- */
+
+  /**
+   * Inicia sesión con las credenciales indicadas.
+   *
+   * En el APK la cuenta la crea la compilación: no hay pantalla de acceso, así
+   * que la sesión se abre sola y el usuario cae directamente en el editor.
+   *
+   * @returns {Promise<boolean>} si quedó con sesión
+   */
+  async signIn(email, password) {
+    const page = await this.fetchPage('/index.php?r=login');
+    const token = /name="_token" value="([^"]+)"/.exec(page.text)?.[1] || '';
+    if (!token) return this.cookies.size > 0;
+    const body = new TextEncoder().encode(new URLSearchParams({
+      _token: token,
+      email: String(email || ''),
+      password: String(password || ''),
+    }).toString());
+    const response = await this.request({
+      url: '/index.php?r=login',
+      method: 'POST',
+      headers: [['content-type', 'application/x-www-form-urlencoded']],
+      body,
+    });
+    return response.status >= 300 && response.status < 400 && this.cookies.size > 0;
+  }
+
+  /** ¿La página es la portada pública o el formulario de acceso? */
+  static needsSession(html) {
+    const text = String(html || '');
+    return /id="capturas"/.test(text) || /id="login-title"/.test(text);
+  }
+
+  /**
+   * Ruta del editor que hay que abrir al arrancar: el último plano tocado.
+   *
+   * @returns {Promise<string>} `/index.php?r=projects/1/floors/2/editor` o ''
+   */
+  async editorUrl() {
+    const panel = await this.fetchPage('/');
+    const directo = editorLinkIn(panel.text);
+    if (directo) return directo;
+    const proyecto = /href="([^"]*\?r=projects(?:%2F|\/)\d+)[^"]*"/.exec(panel.text)?.[1];
+    if (proyecto) {
+      const pagina = await this.fetchPage(decodeURIComponent(proyecto).replace(/&amp;/g, '&'));
+      const enlace = editorLinkIn(pagina.text);
+      if (enlace) return enlace;
+    }
+    return '';
+  }
+
+  /**
+   * Crea el primer proyecto (con su piso) y devuelve la ruta de su editor.
+   * Solo se usa en el APK, cuando no hay ningún plano que abrir.
+   *
+   * @returns {Promise<string>}
+   */
+  async createFirstProject(name = 'Plano 1', floorName = 'Piso 1') {
+    const formulario = await this.fetchPage('/index.php?r=projects/new');
+    const token = /name="_token" value="([^"]+)"/.exec(formulario.text)?.[1] || '';
+    const body = new TextEncoder().encode(new URLSearchParams({
+      _token: token,
+      name: String(name),
+      floor_name: String(floorName),
+    }).toString());
+    await this.request({
+      url: '/index.php?r=projects',
+      method: 'POST',
+      headers: [['content-type', 'application/x-www-form-urlencoded']],
+      body,
+    });
+    return this.editorUrl();
+  }
+
   /** Convierte una URL del marco en la ruta que entiende el intérprete. */
   relative(url) {
     const value = String(url || '/');
@@ -383,6 +458,13 @@ export class NormiaApp {
       lastSaveError: this.lastSaveError ? String(this.lastSaveError.message || this.lastSaveError) : '',
     };
   }
+}
+
+/** Primer enlace al editor que aparezca en una página, ya decodificado. */
+export function editorLinkIn(html) {
+  const match = /href="([^"]*\?r=projects(?:%2F|\/)\d+(?:%2F|\/)floors(?:%2F|\/)\d+(?:%2F|\/)editor)"/.exec(String(html || ''));
+  if (!match) return '';
+  return decodeURIComponent(match[1]).replace(/&amp;/g, '&');
 }
 
 /** Lee una cabecera sin depender de mayúsculas ni de si viene en lista. */
