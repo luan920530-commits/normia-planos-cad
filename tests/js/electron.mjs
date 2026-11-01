@@ -72,6 +72,9 @@ report.check('La edición Electron se compila con la rama que abre en macOS 12',
 report.check('El paquete declara macOS 12 como mínimo y no lo deja al azar',
   /minimumSystemVersion:\s*'12\.0'/.test(build) && /macOS 12/.test(build),
   /minimumSystemVersion: '([^']+)'/.exec(build)?.[1] || 'sin declaración');
+report.check('El flujo lee el mínimo de macOS del paquete compilado y falla si pide más de 12',
+  /LSMinimumSystemVersion/.test(workflow) && /PlistBuddy/.test(workflow)
+  && /12\.\*\)/.test(workflow));
 report.check('La guía de Electron explica el requisito de macOS 12 y qué hacer si el DMG pide 13',
   /macOS 12 Monterey/.test(docsElectron) && /Electron 44/.test(docsElectron)
   && /requiere macOS 13/.test(docsElectron));

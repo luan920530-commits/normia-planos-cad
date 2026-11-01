@@ -137,6 +137,30 @@ jobs:
           fi
           node tools/electron/verify-package.mjs "$RESOURCES" --completo
 
+      # El requisito de macOS se comprueba en el artefacto, no solo en la
+      # configuración: Electron 44 subió el mínimo a macOS 13 y el síntoma que
+      # ve el usuario es un DMG que no abre. Aquí se lee lo que macOS leerá.
+      - name: Comprobar el mínimo de macOS del paquete
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP="$(find dist/electron/installers -maxdepth 2 -name '*.app' | head -1)"
+          if [ -z "$APP" ]; then
+            echo "::error title=paquete::no se encontró la aplicación .app"
+            exit 1
+          fi
+          PLIST="$APP/Contents/Info.plist"
+          MIN="$(/usr/libexec/PlistBuddy -c 'Print :LSMinimumSystemVersion' "$PLIST")"
+          echo "LSMinimumSystemVersion del paquete: $MIN"
+          case "$MIN" in
+            12.*) echo "Abre en macOS 12 Monterey o superior." ;;
+            *)
+              echo "::error title=macOS::el paquete exige macOS $MIN; Electron 44 o superior deja fuera Monterey"
+              exit 1
+              ;;
+          esac
+
       # Prueba de humo del binario ya empaquetado. Lo que decide es la
       # comprobación del contenido: en un servidor sin pantalla Electron puede
       # no arrancar aunque el paquete esté bien, así que esta no invalida.
