@@ -105,6 +105,13 @@ admita ese equipo, asumiendo que ya no recibe actualizaciones de seguridad.
 
 ## macOS 12 Monterey o superior
 
+> **Si tu Mac no pasa de macOS 12.** Esta edición nativa funciona en Monterey
+> porque usa el navegador del sistema. La edición Electron también, desde la
+> **1.11.1**: su `DMG` se compila con Electron 43 y declara
+> `LSMinimumSystemVersion 12.0`. Los `DMG` de la 1.11.0 (Electron 45) piden
+> macOS 13 y no abren en Monterey; si los tienes descargados, usa el `.pkg` de
+> esta edición o el `DMG` de la 1.11.1 o posterior.
+
 ### Qué contiene el instalador
 
 Un `.pkg` que copia `Normia Planos CAD.app` en `/Aplicaciones`. La app incluye

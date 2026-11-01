@@ -165,6 +165,11 @@ function build() {
         identity: null,
         hardenedRuntime: false,
         gatekeeperAssess: false,
+        // Electron 43 declara LSMinimumSystemVersion 12.0, la última rama que
+        // abre en macOS 12 Monterey (39–43). Electron 44 sube el mínimo a
+        // macOS 13: si algún día se actualiza, hay que cambiar este valor, la
+        // tabla de requisitos de docs/ELECTRON.md y el mensaje del instalador.
+        minimumSystemVersion: '12.0',
         target: [{ target: 'dmg', arch: [args.arch] }, { target: 'zip', arch: [args.arch] }],
         artifactName: `normia-planos-cad-\${version}-macos-\${arch}.\${ext}`,
       },
@@ -217,6 +222,13 @@ function build() {
   }
   const electronVersion = readElectronVersion();
   if (!electronVersion) throw new Error('Falta electron en node_modules. Ejecuta: npm install --no-save electron');
+  // Desde Electron 44 el binario exige macOS 13 o superior. Se avisa aquí
+  // porque el síntoma en el equipo del usuario es «requiere macOS 13» al abrir
+  // el DMG, no un error de compilación.
+  const electronMajor = Number(String(electronVersion).split('.')[0]) || 0;
+  if (electronMajor >= 44 && args.installer) {
+    console.warn(`Aviso: Electron ${electronVersion} exige macOS 13 o superior; el DMG ya no abrirá en macOS 12 Monterey.`);
+  }
   console.log(`· Compilando el instalador con electron-builder (Electron ${electronVersion}, ${args.arch})…`);
   // Se ejecuta desde la carpeta armada y sin opciones raras: electron-builder
   // lee su `package.json` (con la clave `build`) y resuelve todo desde ahí.

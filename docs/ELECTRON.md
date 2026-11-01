@@ -12,6 +12,19 @@ plataformas, sin servidor que instalar ni extensiones que configurar.
 | Windows 10 y 11 de 64 bits | `normia-planos-cad-<versión>-windows-x64-instalador.exe` | Ninguno adicional |
 | Linux de 64 bits | `normia-planos-cad-<versión>-linux-x64.AppImage` | `libfuse2` o ejecutar con `--appimage-extract-and-run` |
 
+> **Por qué macOS 12 y no 13.** La edición se compila con **Electron 43**, la
+> última rama que abre en **macOS 12 Monterey** (Electron 39–43). Electron 44 y
+> posteriores subieron el mínimo a macOS 13 Ventura, así que la versión está
+> **fijada a propósito** y el paquete declara `LSMinimumSystemVersion 12.0`.
+> Si algún día se sube de rama mayor, hay que cambiar esa declaración
+> (`mac.minimumSystemVersion` en `tools/electron/build.mjs`), la tabla de arriba
+> y este aviso: el síntoma que ve el usuario es un mensaje de macOS diciendo que
+> la aplicación «requiere macOS 13 o posterior».
+>
+> En macOS 12 también funciona la **edición nativa** (`.pkg`), que usa el
+> navegador del sistema y no depende de Electron; ver
+> [`ESCRITORIO.md`](ESCRITORIO.md).
+
 ## Cómo funciona
 
 ```
@@ -52,6 +65,18 @@ Electron
 
 Debe mostrar `PHP 8.3.x (WebAssembly)` y las seis extensiones en ✓
 (`pdo_sqlite`, `sqlite3`, `mbstring`, `openssl`, `fileinfo`, `session`).
+
+## Problemas al abrir en macOS
+
+| Mensaje | Causa | Solución |
+| --- | --- | --- |
+| «Normia Planos CAD no se puede abrir porque requiere macOS 13 o posterior» | Es un DMG compilado con Electron 44 o superior. | Usa el paquete de la **1.11.1** o posterior (Electron 43, macOS 12+) o la edición nativa `.pkg`. |
+| «No se puede verificar el desarrollador» | La app no tiene certificado comercial (firma ad-hoc). | **Ajustes del sistema → Privacidad y seguridad → Abrir de todos modos**, o clic derecho → **Abrir**. |
+| «La aplicación está dañada y debe moverse a la papelera» | Descarga incompleta o cuarentena de Gatekeeper. | Vuelve a descargar el DMG, comprueba su SHA-256 y arrastra la app a **Aplicaciones** antes de abrirla. No hace falta `sudo` ni desactivar Gatekeeper. |
+
+La arquitectura importa: en un Mac con chip **Intel** va `…-macos-x64.dmg`; en
+uno con **Apple Silicon** (M1 o posterior), `…-macos-arm64.dmg`. El `.pkg` de la
+edición nativa sigue la misma regla.
 
 ## Instalación y avisos del sistema
 

@@ -33,13 +33,14 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 16. [Pruebas](#pruebas)
 17. [Distribución: escritorio y Android](#distribución-escritorio-y-android)
 18. [Edición Electron](#edición-electron)
-19. [Cambios de la versión 1.11.0](#cambios-de-la-versión-1110)
-20. [Cambios de la versión 1.10.0](#cambios-de-la-versión-1100)
-21. [Cambios de la versión 1.9.0](#cambios-de-la-versión-190)
-22. [Cambios de la versión 1.8.0](#cambios-de-la-versión-180)
-23. [Paquetes y verificación](#paquetes-y-verificación)
-24. [Limitaciones](#limitaciones)
-25. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
+19. [Cambios de la versión 1.11.1](#cambios-de-la-versión-1111)
+20. [Cambios de la versión 1.11.0](#cambios-de-la-versión-1110)
+21. [Cambios de la versión 1.10.0](#cambios-de-la-versión-1100)
+22. [Cambios de la versión 1.9.0](#cambios-de-la-versión-190)
+23. [Cambios de la versión 1.8.0](#cambios-de-la-versión-180)
+24. [Paquetes y verificación](#paquetes-y-verificación)
+25. [Limitaciones](#limitaciones)
+26. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
 
 ---
 
@@ -666,7 +667,7 @@ Lo único que no funciona sin red es la **vista previa de desarrollo** (`npm run
 | `tests/js/pages.mjs` | 32 comprobaciones de las páginas fuera del editor: menú de acciones de proyectos y pisos (capa fija, colocación, teclado, un solo menú), confirmación de borrado y borrado real de piso y proyecto, con la protección del último piso. |
 | `tests/php/package.mjs` | 39 comprobaciones: construye ambos ZIP, verifica que no haya bases, sesiones, credenciales, logs ni carpetas de desarrollo, valida los SHA-256 y hace una instalación limpia de la demo comprobando assets, catálogos (395/350), los cuatro pisos del proyecto de ejemplo, señales de servicios y redes en la demo, la señal «Usted está aquí», **el auditor y su informe en la demo empaquetada**, editor, SVG, JSON e impresión. |
 | `tests/php/desktop.mjs` | 37 comprobaciones del escritorio: rutas de datos separadas del código, `NORMA_DATA_PATH` (solo absolutas), lanzador (argumentos, puerto, estado, cierre), enrutador (bloqueos, saltos de directorio, byte nulo) y una instalación completa escribiendo en una carpeta de datos externa. |
-| `tests/js/electron.mjs` | 30 comprobaciones de la edición Electron: ventana sin acceso a Node, puente mínimo, enlaces externos, instancia única, menú en español, descargas, servidor en `127.0.0.1` sin cookies en memoria, entorno de php-wasm, instalación completa con datos fuera del código, `storage/` inaccesible, armado del paquete (aplicación, ventana e intérprete) y ausencia de ICU y de versiones de PHP que no se usan. |
+| `tests/js/electron.mjs` | 33 comprobaciones de la edición Electron: ventana sin acceso a Node, puente mínimo, enlaces externos, instancia única, menú en español, descargas, servidor en `127.0.0.1` sin cookies en memoria, entorno de php-wasm, instalación completa con datos fuera del código, `storage/` inaccesible, armado del paquete (aplicación, ventana e intérprete) y ausencia de ICU y de versiones de PHP que no se usan. |
 | `tests/js/android.mjs` | 18 comprobaciones del APK: arranque de PHP 8.3 sobre WebAssembly, instalación, sesión, panel, editor, auditor, guardado, reapertura y verificación del contenedor nativo (permisos, descargas, impresión, selección de archivos, firma). |
 | `tests/js/offline.mjs` | 0 dependencias de red: revisa las vistas, los estilos, los scripts y los catálogos y falla si aparece un `fetch`, un `WebSocket`, un `src`/`href`/`url()` externo, una llamada de red desde PHP o un dominio no declarado. |
 
@@ -685,7 +686,7 @@ Resultados esperados de la última ejecución completa:
 ✓ Páginas y menús PHP 8.3 · 32/32
 ✓ Escritorio (instaladores) · 37/37
 ✓ Android (APK) · 18/18
-✓ Escritorio (Electron) · 30/30
+✓ Escritorio (Electron) · 33/33
 ✓ Paquetes y demo · 39/39
 14/14 pasos correctos
 ```
@@ -718,6 +719,10 @@ más en el equipo.
   instalador sin avisos.
 - **Windows 7, 8 y 8.1 no están soportados**: PHP 8.x exige Windows 8 o superior
   y esos sistemas ya no reciben navegadores actualizados.
+- **macOS 12 Monterey está soportado en las dos ediciones.** La edición Electron
+  se compila con **Electron 43**, la última rama que abre en Monterey (Electron
+  44 exige macOS 13 Ventura); el paquete declara `LSMinimumSystemVersion 12.0`.
+  En macOS 12 también sirve el `.pkg` de la edición nativa.
 
 ### Dos ediciones
 
@@ -768,26 +773,52 @@ para Linux.
 
 Guía completa: [`docs/ELECTRON.md`](docs/ELECTRON.md).
 
-### Archivos de la entrega 1.11.0
+### Archivos de la entrega 1.11.1
 
-Todos se publican en la [release v1.11.0](https://github.com/luan920530-commits/normia-planos-cad/releases/tag/v1.11.0)
+Todos se publican en la [release v1.11.1](https://github.com/luan920530-commits/normia-planos-cad/releases/tag/v1.11.1)
 y llevan su suma SHA-256 junto a ellos.
 
 | Edición | Archivo |
 | --- | --- |
-| Nativa macOS Apple Silicon | `normia-planos-cad-1.11.0-macos-arm64.pkg` |
-| Nativa macOS Intel | `normia-planos-cad-1.11.0-macos-x64.pkg` |
-| Nativa Windows x64 | `normia-planos-cad-1.11.0-windows-x64.exe` |
-| Electron macOS Apple Silicon | `…-1.11.0-macos-arm64.dmg` · `…-1.11.0-macos-arm64.zip` |
-| Electron macOS Intel | `…-1.11.0-macos-x64.dmg` · `…-1.11.0-macos-x64.zip` |
-| Electron Windows x64 | `…-1.11.0-windows-x64-instalador.exe` · `…-1.11.0-windows-x64.zip` |
-| Electron Linux x64 | `…-1.11.0-linux-x86_64.AppImage` |
-| Android | `normia-planos-cad-1.11.0-android.apk` |
-| Web (PHP ≥ 8.1) | `paquetes/v1.11.0/normia-planos-cad-1.11.0.zip` y `…-1.11.0-demo.zip` |
+| Nativa macOS Apple Silicon | `normia-planos-cad-1.11.1-macos-arm64.pkg` |
+| Nativa macOS Intel | `normia-planos-cad-1.11.1-macos-x64.pkg` |
+| Nativa Windows x64 | `normia-planos-cad-1.11.1-windows-x64.exe` |
+| Electron macOS Apple Silicon | `…-1.11.1-macos-arm64.dmg` · `…-1.11.1-macos-arm64.zip` |
+| Electron macOS Intel | `…-1.11.1-macos-x64.dmg` · `…-1.11.1-macos-x64.zip` |
+| Electron Windows x64 | `…-1.11.1-windows-x64-instalador.exe` · `…-1.11.1-windows-x64.zip` |
+| Electron Linux x64 | `…-1.11.1-linux-x86_64.AppImage` |
+| Android | `normia-planos-cad-1.11.1-android.apk` |
+| Web (PHP ≥ 8.1) | `paquetes/v1.11.0/normia-planos-cad-1.11.0.zip` y `…-1.11.1-demo.zip` |
 
 Las ediciones de escritorio se compilan en los flujos de trabajo y su tamaño exacto
 se publica en la release junto con el `SHA256SUMS.txt`; los paquetes web se
 construyen con `tools/build-packages.sh` y se verifican con la suite.
+
+## Cambios de la versión 1.11.1
+
+Corrección de compatibilidad de la edición Electron: **el DMG vuelve a abrir en
+macOS 12 Monterey**.
+
+- **Electron fijado a la rama 43.** Electron 44 y posteriores exigen macOS 13
+  Ventura, y el DMG de la 1.11.0 se compilaba con Electron 45: en un Mac con
+  Monterey el sistema respondía «requiere macOS 13 o posterior» antes de abrir la
+  aplicación. La 43 es la última rama que soporta macOS 12 y sigue dentro de la
+  ventana de soporte de Electron.
+- **El paquete declara el mínimo.** `mac.minimumSystemVersion: '12.0'` en
+  `tools/electron/build.mjs` deja `LSMinimumSystemVersion 12.0` en el `Info.plist`
+  en lugar de heredarlo del binario de Electron; si alguna vez se sube de rama,
+  el aviso del instalador y la tabla de `docs/ELECTRON.md` deben cambiar a la vez.
+- **Aviso al compilar.** `tools/electron/build.mjs` advierte si el Electron
+  instalado es 44 o superior, porque el síntoma aparece en el equipo del usuario
+  («requiere macOS 13») y no como error de compilación.
+- **Ayuda en la guía.** `docs/ELECTRON.md` explica el requisito, qué archivo usar
+  según la arquitectura del Mac y una tabla de problemas al abrir (macOS 13,
+  desarrollador no verificado, aplicación «dañada»).
+- **Pruebas.** `tests/js/electron.mjs` pasa de 30 a **33** comprobaciones y falla
+  si el flujo deja de compilar con la rama 43, si el paquete no declara el mínimo
+  o si la guía pierde el aviso.
+
+La edición nativa (`.pkg`) y el APK no cambian: ya funcionaban en macOS 12.
 
 ## Cambios de la versión 1.11.0
 
