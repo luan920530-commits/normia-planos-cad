@@ -264,7 +264,9 @@
         // sección Apariencia.
         const name = this.model.catalogs.signs?.[code]?.name;
         if (name) return name;
-        const label = String(code).startsWith('SVC_') ? 'Señal de orientación' : TYPE_NAMES.sign;
+        const label = String(code).startsWith('PLG_')
+          ? 'Señal de complemento'
+          : String(code).startsWith('SVC_') ? 'Señal de orientación' : TYPE_NAMES.sign;
         return `${label} · ${code}`;
       }
       if (element.type === 'pipe') {
@@ -280,7 +282,10 @@
     kindLabel(element) {
       if (!element) return 'Selección múltiple';
       const code = this.model.signCodeForType(element.type);
-      if (code) return String(code).startsWith('SVC_') ? 'Señal de servicios' : 'Señal ISO 7010';
+      if (code) {
+        if (String(code).startsWith('PLG_')) return 'Señal de complemento';
+        return String(code).startsWith('SVC_') ? 'Señal de servicios' : 'Señal ISO 7010';
+      }
       if (element.type === 'pipe') return 'Red de tubería';
       if (element.type === 'conduit') return 'Red eléctrica';
       if (this.model.cadForType(element.type)) return 'Equipo CAD';

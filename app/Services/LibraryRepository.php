@@ -23,6 +23,9 @@ final class LibraryRepository
     /** Señales de orientación propias (no ISO 7010): prefijo de código. */
     public const SERVICE_PREFIX = 'SVC_';
 
+    /** Señales de los complementos instalados: `PLG_<COMPLEMENTO>_<SEÑAL>`. */
+    public const PLUGIN_PREFIX = 'PLG_';
+
     /** Versión y mínimos de los catálogos locales. */
     private const ISO_SIGNS = 332;
     private const ISO_CATEGORIES = 5;
@@ -164,6 +167,9 @@ final class LibraryRepository
     /** Tipo del editor para un código de señal (`iso_e002`, `sig_wc_men`). */
     public static function typeForCode(string $code): string
     {
+        if (str_starts_with($code, self::PLUGIN_PREFIX)) {
+            return 'plg_' . strtolower(substr($code, strlen(self::PLUGIN_PREFIX)));
+        }
         if (str_starts_with($code, self::SERVICE_PREFIX)) {
             return 'sig_' . strtolower(substr($code, strlen(self::SERVICE_PREFIX)));
         }
@@ -173,6 +179,10 @@ final class LibraryRepository
     /** Código del catálogo para un tipo del editor, o null si no es una señal. */
     public static function codeForType(string $type): ?string
     {
+        if (preg_match('/^plg_([a-z][a-z0-9_]{1,58})$/iD', $type, $matches) === 1) {
+            $code = self::PLUGIN_PREFIX . strtoupper($matches[1]);
+            return self::sign($code) !== null ? $code : null;
+        }
         if (preg_match('/^iso_([efmpw][0-9]{3})$/iD', $type, $matches) === 1) {
             $code = strtoupper($matches[1]);
             return self::sign($code) !== null ? $code : null;
@@ -193,15 +203,19 @@ final class LibraryRepository
     {
         $signs = self::signs();
         $services = 0;
+        $plugins = 0;
         foreach (array_keys($signs) as $code) {
             if (str_starts_with((string) $code, self::SERVICE_PREFIX)) {
                 $services++;
+            } elseif (str_starts_with((string) $code, self::PLUGIN_PREFIX)) {
+                $plugins++;
             }
         }
         return [
             'signs' => count($signs),
-            'iso' => count($signs) - $services,
+            'iso' => count($signs) - $services - $plugins,
             'services' => $services,
+            'plugins' => $plugins,
             'cad' => count(self::cad()),
         ];
     }
@@ -224,7 +238,17 @@ final class LibraryRepository
         if ($sign === null) {
             return null;
         }
-        return self::SIGN_COLORS[$sign['category']] ?? null;
+        return self::colorForCategory((string) $sign['category']);
+    }
+
+    /** Color de una familia: las conocidas del catálogo o las de un complemento. */
+    public static function colorForCategory(string $category): ?string
+    {
+        if (isset(self::SIGN_COLORS[$category])) {
+            return self::SIGN_COLORS[$category];
+        }
+        $plugin = PluginManager::rawCategories()[$category] ?? null;
+        return $plugin !== null ? (string) $plugin['color'] : null;
     }
 
     public static function allowedTypes(): array
@@ -237,6 +261,17 @@ final class LibraryRepository
             $types[] = $key;
         }
         return $types;
+    }
+
+    /** Olvida los catálogos cargados (lo usan las pruebas y los complementos). */
+    public static function forget(): void
+    {
+        self::$signs = null;
+        self::$signCategories = null;
+        self::$cad = null;
+        self::$cadCategories = null;
+        self::$aliases = null;
+        self::$mep = null;
     }
 
     public static function safeSvg(string $svg): bool
@@ -329,6 +364,18 @@ final class LibraryRepository
             }
             $signs[$code] = $sign;
         }
+        // Complementos activos: se suman al final, con su prefijo propio, para
+        // que compartan búsqueda, inserción, validación y exportación.
+        foreach (PluginManager::rawCategories() as $key => $category) {
+            if (!isset($categories[$key])) {
+                $categories[$key] = $category;
+            }
+        }
+        foreach (PluginManager::signs() as $code => $sign) {
+            if (!isset($signs[$code])) {
+                $signs[$code] = $sign;
+            }
+        }
         ksort($signs);
         self::$signs = $signs;
         self::$signCategories = $categories;
@@ -361,7 +408,21 @@ final class LibraryRepository
                 throw new RuntimeException('El catálogo CAD contiene un objeto inválido: ' . (string) $key);
             }
         }
-        self::$cad = $catalog['objects'];
-        self::$cadCategories = $catalog['categories'];
+        $objects = $catalog['objects'];
+        $families = $catalog['categories'];
+        // Complementos activos: objetos CAD declarados por el usuario.
+        foreach (PluginManager::cad() as $key => $object) {
+            if (!isset($objects[$key])) {
+                $objects[$key] = $object;
+            }
+            if (!isset($families[$object['category']])) {
+                $families[$object['category']] = [
+                    'label' => $object['category'],
+                    'short' => $object['category'],
+                ];
+            }
+        }
+        self::$cad = $objects;
+        self::$cadCategories = $families;
     }
 }

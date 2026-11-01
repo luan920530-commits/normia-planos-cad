@@ -14,6 +14,7 @@ use App\Controllers\ExportController;
 use App\Controllers\FloorApiController;
 use App\Controllers\InstallController;
 use App\Controllers\LibraryController;
+use App\Controllers\PluginController;
 use App\Controllers\ProjectController;
 use Throwable;
 
@@ -165,6 +166,14 @@ final class Application
         $router->get('b/{token}/brigade-sw.js', static fn () => (new BrigadeController())->serviceWorker());
         $router->get('projects/{id}/floors/{floorId}/brigade', static fn (array $p) => (new BrigadeController())->manage($p['id'], $p['floorId']));
         $router->post('projects/{id}/floors/{floorId}/brigade', static fn (array $p) => (new BrigadeController())->update($p['id'], $p['floorId']));
+
+        // Complementos (plugins): señales y equipos que aporta el usuario.
+        $router->get('plugins', static fn () => (new PluginController())->index());
+        $router->post('plugins', static fn () => (new PluginController())->install());
+        $router->post('plugins/{id:slug}/toggle', static fn (array $p) => (new PluginController())->toggle((string) $p['id']));
+        $router->post('plugins/{id:slug}/delete', static fn (array $p) => (new PluginController())->destroy((string) $p['id']));
+        $router->get('plugins/manual', static fn () => (new PluginController())->manual());
+        $router->get('plugins/plantilla/{tipo:word}', static fn (array $p) => (new PluginController())->template((string) $p['tipo']));
 
         // Cuenta
         $router->get('account/password', static fn () => (new AccountController())->show());

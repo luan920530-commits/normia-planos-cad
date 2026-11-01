@@ -181,8 +181,9 @@
     /* ----------------------------- catálogos ----------------------------- */
     /**
      * Traduce el tipo del editor al código del catálogo de señalización.
-     * ISO 7010 usa `iso_<código>` (iso_e002) y las señales de orientación
-     * propias usan `sig_<nombre>` (sig_wc_men → SVC_WC_MEN).
+     * ISO 7010 usa `iso_<código>` (iso_e002), las señales de orientación
+     * propias usan `sig_<nombre>` (sig_wc_men → SVC_WC_MEN) y los complementos
+     * usan `plg_<resto>` (plg_labo_ducha → PLG_LABO_DUCHA).
      */
     signCodeForType(type) {
       const raw = String(type || '');
@@ -196,12 +197,20 @@
         const code = `SVC_${own[1].toUpperCase()}`;
         return this.catalogs.signs[code] ? code : null;
       }
+      const plugin = /^plg_([a-z][a-z0-9_]{1,58})$/i.exec(raw);
+      if (plugin) {
+        const code = `PLG_${plugin[1].toUpperCase()}`;
+        return this.catalogs.signs[code] ? code : null;
+      }
       return null;
     }
 
     /** Código de catálogo → tipo del editor (lo usan la biblioteca y las pruebas). */
     typeForSignCode(code) {
-      return String(code).startsWith('SVC_') ? `sig_${String(code).slice(4).toLowerCase()}` : `iso_${String(code).toLowerCase()}`;
+      const value = String(code);
+      if (value.startsWith('PLG_')) return `plg_${value.slice(4).toLowerCase()}`;
+      if (value.startsWith('SVC_')) return `sig_${value.slice(4).toLowerCase()}`;
+      return `iso_${value.toLowerCase()}`;
     }
 
     cadForType(type) {

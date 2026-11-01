@@ -25,6 +25,7 @@ function shouldCopy(relative) {
   if (/^storage\/.+\.sqlite(-wal|-shm)?$/.test(posix)) return false;
   if (/^storage\/sessions\/.+/.test(posix)) return false;
   if (/^storage\/logs\/.+/.test(posix) && !posix.endsWith('.gitkeep')) return false;
+  if (/^storage\/plugins\//.test(posix)) return false;
   if (posix.endsWith('.log') || posix.endsWith('.tmp')) return false;
   return true;
 }

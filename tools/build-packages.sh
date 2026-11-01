@@ -38,6 +38,7 @@ EXCLUDES=(
   --exclude='storage/sessions/*'
   --exclude='storage/logs/*'
   --exclude='storage/cache/*'
+  --exclude='storage/plugins/*'
   --exclude=resources/demo/.demo-build
   --exclude='*.zip'
   --exclude='*.log'

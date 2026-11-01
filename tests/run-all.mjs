@@ -15,6 +15,7 @@ const steps = [
   { name: 'Sintaxis PHP 8.1', script: 'tests/php/lint.mjs', args: ['8.1'] },
   { name: 'Sintaxis PHP 8.3', script: 'tests/php/lint.mjs', args: ['8.3'] },
   { name: 'Sintaxis JavaScript', script: 'tests/js/lint.mjs', args: [] },
+  { name: 'Complementos (JS)', script: 'tests/js/plugins.mjs', args: [] },
   { name: 'Funcionamiento sin conexión', script: 'tests/js/offline.mjs', args: [] },
   { name: 'Funcional PHP 8.1', script: 'tests/php/functional.mjs', args: ['8.1'] },
   { name: 'Funcional PHP 8.3', script: 'tests/php/functional.mjs', args: ['8.3'] },
