@@ -100,7 +100,98 @@ function packAppFiles() {
   const payload = { version: version(), generatedAt: new Date().toISOString(), files };
   fs.mkdirSync(path.join(TARGET, 'php'), { recursive: true });
   fs.writeFileSync(path.join(TARGET, 'php/app-files.json'), JSON.stringify(payload), 'utf8');
-  return Object.keys(files).length;
+  return { count: Object.keys(files).length, files };
+}
+
+/** Cuenta que el APK trae creada. Se muestra en la pantalla de acceso. */
+const SEED_EMAIL = 'admin@normia.local';
+const SEED_PASSWORD = 'ClaveSegura2026';
+
+/**
+ * Deja la aplicación **ya instalada** dentro del APK: base de datos, cuenta
+ * administradora y proyecto de demostración.
+ *
+ * En un teléfono, el instalador es un formulario que hay que enviar y esperar;
+ * si ese envío falla, el usuario se queda mirando una pantalla que no avanza.
+ * Como el APK es una aplicación de un solo usuario y no se instala por web, la
+ * instalación se hace **aquí**, en la máquina que compila, y el resultado viaja
+ * como semilla (`php/seed.json`). Al primer arranque, `NormiaApp` la escribe en
+ * el intérprete y la guarda en el teléfono.
+ *
+ * Las credenciales son fijas y se muestran en la pantalla de acceso.
+ *
+ * @returns {Promise<null|object>} contenido de la semilla
+ */
+async function makeSeed(files) {
+  if (args.has('--no-seed')) {
+    console.log('· sin semilla (--no-seed): el APK arrancará con el instalador');
+    return null;
+  }
+  const { createRequire } = await import('node:module');
+  globalThis.require = createRequire(import.meta.url);
+  const { PHP, PHPRequestHandler } = await import('@php-wasm/universal');
+  const { loadWebRuntime } = await import('@php-wasm/web');
+  const { NormiaApp } = await import('./web/app-core.js');
+
+  const base = path.join(ROOT, 'node_modules/@php-wasm/web-8-3/asyncify');
+  const versions = fs.existsSync(base) ? fs.readdirSync(base) : [];
+  const wasm = versions.map((v) => path.join(base, v, 'php_8_3.wasm')).find((file) => fs.existsSync(file));
+  if (!wasm) throw new Error('Falta el intérprete asyncify para preparar la instalación de fábrica.');
+
+  const php = new PHP(await loadWebRuntime('8.3', { emscriptenOptions: { wasmBinary: fs.readFileSync(wasm) } }));
+  const app = new NormiaApp({
+    php,
+    files,
+    storage: null,
+    createHandler: (instance, documentRoot) => new PHPRequestHandler({ php: instance, documentRoot, absoluteUrl: 'http://127.0.0.1' }),
+  });
+  await app.start();
+
+  const page = await app.fetchPage('/');
+  const token = /name="_token" value="([^"]+)"/.exec(page.text)?.[1] || '';
+  if (!token) throw new Error('El instalador no devolvió su token; no se puede preparar la semilla.');
+
+  const body = new TextEncoder().encode(new URLSearchParams({
+    _token: token,
+    name: 'Equipo Android',
+    email: SEED_EMAIL,
+    password: SEED_PASSWORD,
+    password_confirm: SEED_PASSWORD,
+    demo: '1',
+  }).toString());
+  const post = await app.request({
+    url: '/index.php?r=install',
+    method: 'POST',
+    headers: [['content-type', 'application/x-www-form-urlencoded']],
+    body,
+  });
+  if (post.status !== 303) {
+    const detalle = String(post.text || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 300);
+    throw new Error(`La instalación de fábrica falló (${post.status}). ${detalle}`);
+  }
+
+  // Solo lo que forma los datos del usuario: configuración y base de datos.
+  // Solo lo que forma la instalación: la configuración generada y la base de
+  // datos. Los archivos de ejemplo de `config/` no aportan y no se copian.
+  const elegidos = app.dataFiles().filter((relative) => relative === 'config/config.php' || /\.sqlite$/.test(relative));
+  const seedFiles = {};
+  for (const relative of elegidos) {
+    seedFiles[relative] = Buffer.from(php.readFileAsBuffer(`${app.dataDir}/${relative}`)).toString('base64');
+  }
+  const sqlite = elegidos.find((relative) => relative.endsWith('.sqlite'));
+  if (!sqlite) throw new Error('La instalación de fábrica no creó la base de datos.');
+  app.dispose();
+  php.exit(0);
+
+  const seed = {
+    version: version(),
+    generatedAt: new Date().toISOString(),
+    account: { email: SEED_EMAIL, password: SEED_PASSWORD, name: 'Equipo Android', demo: true },
+    files: seedFiles,
+    bytes: Object.values(seedFiles).reduce((sum, value) => sum + Buffer.from(value, 'base64').length, 0),
+  };
+  fs.writeFileSync(path.join(TARGET, 'php/seed.json'), JSON.stringify(seed), 'utf8');
+  return seed;
 }
 
 /** Genera `php/runtime.js` con el intérprete y el manejador de peticiones. */
@@ -240,11 +331,16 @@ async function main() {
     return;
   }
   const staticCount = copyStatic();
-  const count = packAppFiles();
+  const packed = packAppFiles();
   copyShell();
   const wasm = copyWasm();
   await bundleRuntime();
-  console.log(`· ${count} archivos de la aplicación para el intérprete`);
+  const seed = await makeSeed(packed.files);
+  console.log(`· ${packed.count} archivos de la aplicación para el intérprete`);
+  if (seed) {
+    console.log(`· instalación de fábrica: ${Object.keys(seed.files).join(', ')} (${(seed.bytes / 1024).toFixed(0)} KB)`);
+    console.log(`· cuenta del APK: ${seed.account.email} · ${seed.account.demo ? 'con demo' : 'sin demo'}`);
+  }
   console.log(`· ${staticCount} activos estáticos para el WebView`);
   for (const [modo, info] of Object.entries(wasm)) {
     console.log(`· intérprete ${modo}: ${(info.size / 1048576).toFixed(1)} MB`);

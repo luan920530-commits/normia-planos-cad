@@ -66,16 +66,41 @@ if (!wasmPath) {
 const wasmBinary = fs.readFileSync(wasmPath);
 const files = collectFiles(repoRoot);
 
-async function boot(storage) {
+async function boot(storage, extra = {}) {
   const php = new PHP(await loadWebRuntime('8.3', { emscriptenOptions: { wasmBinary } }));
   const app = new NormiaApp({
     php,
     files,
     storage,
     createHandler: (instance, documentRoot) => new PHPRequestHandler({ php: instance, documentRoot, absoluteUrl: 'http://127.0.0.1' }),
+    ...extra,
   });
   await app.start();
   return app;
+}
+
+/**
+ * Instalación de fábrica para las pruebas: se construye con el propio
+ * instalador, igual que hace `build.mjs`, y se queda con la configuración y la
+ * base de datos.
+ */
+async function installSeed(email, password, name = 'Equipo Android') {
+  const app = await boot(memoryStorage());
+  const page = await app.fetchPage('/');
+  const token = /name="_token" value="([^"]+)"/.exec(page.text)?.[1] || '';
+  const post = await app.request({
+    url: '/index.php?r=install',
+    method: 'POST',
+    headers: URLENCODED,
+    body: form({ _token: token, name, email, password, password_confirm: password, demo: '1' }),
+  });
+  if (post.status !== 303) throw new Error(`no se pudo preparar la semilla (${post.status})`);
+  const files = {};
+  for (const relative of app.dataFiles().filter((f) => f === 'config/config.php' || f.endsWith('.sqlite'))) {
+    files[relative] = encodeBase64(app.php.readFileAsBuffer(`${app.dataDir}/${relative}`));
+  }
+  app.php.exit(0);
+  return { account: { email, password, name, demo: true }, files };
 }
 
 const form = (fields) => new TextEncoder().encode(new URLSearchParams(fields).toString());
@@ -428,6 +453,54 @@ dom2.window.document.querySelector('form').dispatchEvent(new dom2.window.Event('
 await new Promise((resolve) => setTimeout(resolve, 20));
 report.check('Si el envío falla, el motivo se ve en la pantalla',
   fallos.length > 0 && /sin espacio/.test(fallos.join(' ')), fallos.join(' ') || 'sin aviso');
+
+/*
+ * El APK se entrega **ya instalado**: base de datos, cuenta y demo dentro del
+ * paquete (`php/seed.json`, que arma `build.mjs`). Así el teléfono no envía el
+ * formulario del instalador —lo que dejó la pantalla sin avanzar— y abre en el
+ * acceso. Aquí se comprueba el mecanismo completo con el intérprete real.
+ */
+const semilla = await installSeed('fabricа@normia.local'.replace('а', 'a'), 'ClaveSegura2026');
+const storageSemilla = memoryStorage();
+const conSemilla = await boot(storageSemilla, { seed: semilla });
+report.check('La instalación de fábrica se escribe en el teléfono al primer arranque',
+  conSemilla.sembrado === 2 && conSemilla.isInstalled()
+  && storageSemilla.files.has('config/config.php')
+  && [...storageSemilla.files.keys()].some((file) => file.endsWith('.sqlite')),
+  `${conSemilla.sembrado} archivos · ${conSemilla.dataFiles().length} de datos`);
+
+const portada = await conSemilla.fetchPage('/');
+report.check('El APK abre en la portada sin pedir instalación',
+  portada.status === 200 && /id="capturas"/.test(portada.text), `${portada.status} ${portada.url}`);
+
+const acceso = await conSemilla.fetchPage('/index.php?r=login');
+const tokenAcceso = /name="_token" value="([^"]+)"/.exec(acceso.text)?.[1] || '';
+const entrada = await conSemilla.request({
+  url: '/index.php?r=login',
+  method: 'POST',
+  headers: URLENCODED,
+  body: form({ _token: tokenAcceso, email: 'fabrica@normia.local', password: 'ClaveSegura2026' }),
+});
+const panel = await conSemilla.fetchPage('/');
+report.check('La cuenta que trae el APK entra y la demo está ahí',
+  entrada.status === 303 && /Mis planos/.test(panel.text),
+  `${entrada.status} · ${panel.url}`);
+conSemilla.php.exit(0);
+
+// Segundo arranque: los datos vuelven del teléfono y la semilla no se repite.
+const reabierta = await boot(storageSemilla, { seed: semilla });
+report.check('Al reabrir, la semilla no se vuelve a aplicar y los datos son los del usuario',
+  reabierta.sembrado === 0 && reabierta.restored >= 2 && reabierta.isInstalled(),
+  `${reabierta.restored} recuperados · ${reabierta.sembrado} sembrados`);
+
+// Si el usuario ya tenía su propia base, la de fábrica no la pisa.
+const propia = memoryStorage();
+await propia.save({ fileExists: () => true, listFiles: () => ['propia.sqlite'], isDir: () => false, readFileAsBuffer: () => Buffer.from('x') }, '/www', () => true, ['config/config.php', 'storage/propia.sqlite']);
+const conPropia = await boot(propia, { seed: semilla });
+report.check('Una instalación del usuario manda sobre la de fábrica',
+  conPropia.sembrado === 0 && conPropia.isInstalled(), `${conPropia.sembrado} sembrados`);
+conPropia.php.exit(0);
+reabierta.php.exit(0);
 
 /* ------------------------- archivos del contenedor ------------------------- */
 

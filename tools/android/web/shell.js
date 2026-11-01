@@ -138,10 +138,26 @@ async function boot() {
   const info = await (await fetch('./php/app-files.json')).json();
   step('Aplicación empaquetada', `${Object.keys(info.files).length} archivos · versión ${info.version}`);
 
+  /*
+   * El APK viaja con la instalación hecha (base de datos, cuenta y demo). Si el
+   * archivo no está —compilación sin semilla— se sigue con el instalador.
+   */
+  let seed = null;
+  try {
+    const respuesta = await fetch('./php/seed.json');
+    if (respuesta.ok) {
+      seed = await respuesta.json();
+      seedAccount = seed.account || null;
+    }
+  } catch (error) {
+    HOST.log(`[normia] sin instalación de fábrica: ${error}`);
+  }
+
   const storage = await openStorage();
   app = new NormiaApp({
     php,
     files: info.files,
+    seed,
     storage,
     log: (label, detail) => HOST.log(`[normia] ${label} ${JSON.stringify(detail || {})}`),
     createHandler: (instance, documentRoot) => new runtime.PHPRequestHandler({
@@ -152,7 +168,8 @@ async function boot() {
   });
   const arranque = Date.now();
   await app.start();
-  step('Datos del equipo listos', `${app.restored} recuperados · ${app.status().dataFiles} archivos · ${Date.now() - arranque} ms`);
+  const como = app.sembrado > 0 ? `instalación de fábrica (${app.sembrado} archivos)` : `${app.restored} recuperados del teléfono`;
+  step('Datos del equipo listos', `${como} · ${app.status().dataFiles} archivos · ${Date.now() - arranque} ms`);
 
   step('Listo', `Normia ${info.version}`);
   await navigate('/', { replace: true });
@@ -212,6 +229,50 @@ function bytesToBase64(bytes) {
 }
 
 /* -------------------------------- pantalla ------------------------------- */
+
+/** Cuenta que trae el APK instalada de fábrica (la escribe `build.mjs`). */
+let seedAccount = null;
+
+/**
+ * En la pantalla de acceso se recuerdan las credenciales del APK: son las que
+ * la aplicación trae creadas y nadie las ha elegido, así que tienen que estar a
+ * la vista (y no en un README que no se lee en el teléfono).
+ */
+function withCredentials(html, url) {
+  if (!seedAccount || !seedAccount.email) return html;
+  if (!/r=login(?:&|$)|\/login(?:\?|$)/.test(String(url || ''))) return html;
+  const aviso = `<div style="margin:0 0 18px;padding:14px 16px;border:1px solid #bfdbfe;background:#eff6ff;border-radius:12px;font:14px/1.5 system-ui,sans-serif;color:#1e3a8a">`
+    + '<strong>Cuenta de este teléfono</strong><br>'
+    + `Correo: <code>${seedAccount.email}</code><br>`
+    + `Contraseña: <code>${seedAccount.password}</code>`
+    + '</div>';
+  if (/<form[^>]*login/i.test(html)) {
+    return html.replace(/(<form[^>]*>)/i, `$1${aviso}`);
+  }
+  return html.replace(/<body([^>]*)>/i, `<body$1>${aviso}`);
+}
+
+/**
+ * El puente tiene que estar vivo antes de dejar la página al usuario: es quien
+ * atiende los formularios, los enlaces y las descargas. Si el `<script src>` no
+ * llegó a ejecutarse, se inyecta otra vez por DOM y, si aun así no aparece, se
+ * avisa en vez de dejar botones que no responden.
+ */
+async function ensureBridge(timeout = 4000) {
+  const inicio = Date.now();
+  for (;;) {
+    const listo = Boolean(frame.contentWindow && frame.contentWindow.__normiaBridgeListo);
+    if (listo) {
+      const aviso = frame.contentDocument && frame.contentDocument.getElementById('normia-cargando');
+      if (aviso) aviso.remove();
+      return true;
+    }
+    if (Date.now() - inicio > timeout) {
+      throw new Error('El puente del editor no se cargó; los botones y enlaces no responderían.');
+    }
+    await new Promise((resolve) => setTimeout(resolve, 60));
+  }
+}
 
 function baseUrlOf(url) {
   return new URL(url, ORIGIN).href;
@@ -273,7 +334,8 @@ async function navigate(url, options = {}) {
     if (!String(response.text).trim()) {
       throw new Error(`La aplicación devolvió una página vacía (${response.url}).`);
     }
-    render(response.text);
+    render(withCredentials(response.text, response.url));
+    await ensureBridge();
     if (!options.replace) history.push(url);
     currentUrl = response.url || url;
     window.__normiaUrl = currentUrl;
@@ -296,7 +358,7 @@ function render(html) {
    */
   const script = `<script src="${ORIGIN}/assets/bridge.js"></script>`;
   const base = `<base href="${ORIGIN}/">`;
-  const cargando = '<p id="normia-cargando" style="margin:0;padding:14px 18px;font:14px/1.4 system-ui,sans-serif;color:#475569;background:#f1f5f9">Cargando…</p>';
+  const cargando = '<p id="normia-cargando" style="margin:0;padding:10px 18px;font:13px/1.4 system-ui,sans-serif;color:#64748b;background:#f1f5f9">Preparando…</p>';
   let content = String(html);
   if (/<head[^>]*>/i.test(content)) {
     content = content.replace(/<head([^>]*)>/i, `<head$1>${base}${script}`);
@@ -330,7 +392,7 @@ window.__normiaBridge = {
         window.__normiaUrl = url;
         return;
       }
-      render(response.text);
+      render(withCredentials(response.text, url));
       history.push(url);
       window.__normiaUrl = url;
       return;
@@ -351,9 +413,10 @@ window.__normiaBridge = {
     return { download: { name: fileName(response, 'normia'), mime: type, base64: bytesToBase64(response.bytes) } };
   },
   renderHtml(html) {
-    render(html);
+    render(withCredentials(html, currentUrl));
     showFrame();
     watchFrame();
+    ensureBridge().catch((error) => fail(error));
   },
   /** Lo usa el puente para avisar de que está trabajando (o de que terminó). */
   busy(active, label = '', detail = '') {
