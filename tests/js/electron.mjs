@@ -57,6 +57,25 @@ report.check('El flujo compila las tres plataformas y publica lo que produce',
   && /electron-builder/.test(workflow) && /upload-artifact/.test(workflow));
 report.check('El flujo comprueba el contenido del paquete, no solo que se haya generado',
   /verify-package\.mjs "\$RESOURCES" --completo/.test(workflow));
+/*
+ * Compatibilidad de macOS. Electron 44 subió el mínimo a macOS 13 Ventura y el
+ * síntoma en el equipo del usuario es un DMG que «requiere macOS 13» sin abrir.
+ * La versión queda fijada a la rama 43 (macOS 12 Monterey) y el paquete declara
+ * el mínimo; estas comprobaciones evitan que una actualización lo rompa en
+ * silencio.
+ */
+const docsElectron = read('docs/ELECTRON.md');
+const workflowElectron = /electron@(\d+)/.exec(workflow.replace(/electron-builder@\d+/, ''));
+report.check('La edición Electron se compila con la rama que abre en macOS 12',
+  Boolean(workflowElectron) && Number(workflowElectron[1]) <= 43,
+  workflowElectron ? `electron@${workflowElectron[1]}` : 'sin versión fijada');
+report.check('El paquete declara macOS 12 como mínimo y no lo deja al azar',
+  /minimumSystemVersion:\s*'12\.0'/.test(build) && /macOS 12/.test(build),
+  /minimumSystemVersion: '([^']+)'/.exec(build)?.[1] || 'sin declaración');
+report.check('La guía de Electron explica el requisito de macOS 12 y qué hacer si el DMG pide 13',
+  /macOS 12 Monterey/.test(docsElectron) && /Electron 44/.test(docsElectron)
+  && /requiere macOS 13/.test(docsElectron));
+
 report.check('Las sumas del flujo evitan opciones de GNU que macOS no tiene',
   !/^\s*find .* -printf/m.test(workflow) && /sha256sum "\$archivo"/.test(workflow) && /shasum -a 256/.test(workflow));
 // Se mira la línea de comando del paso y no el texto: los comentarios explican

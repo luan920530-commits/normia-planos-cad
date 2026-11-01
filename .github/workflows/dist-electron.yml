@@ -51,7 +51,10 @@ jobs:
         run: npm install --no-audit --no-fund
 
       - name: Instalar Electron y el empaquetador
-        run: npm install --no-save --no-audit --no-fund electron@45 electron-builder@26
+        # Electron 43 es la última rama que abre en macOS 12 Monterey (39–43);
+        # desde Electron 44 el mínimo es macOS 13. No subir sin cambiar
+        # `mac.minimumSystemVersion` y la tabla de requisitos de docs/ELECTRON.md.
+        run: npm install --no-save --no-audit --no-fund electron@43 electron-builder@26
 
       - name: Comprobar el intérprete armado
         run: node tools/electron/build.mjs --out=dist/electron --sin-instalador
