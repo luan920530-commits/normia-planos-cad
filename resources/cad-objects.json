@@ -6,6 +6,12 @@
       "short": "Accesibilidad",
       "description": "Refugio, franjas podotáctiles, vados, pasamanos, escaleras de evacuación, ascensor accesible y puertas antipánico."
     },
+    "bikes": {
+      "label": "Bicicletas y micromovilidad",
+      "short": "Bicis",
+      "description": "Bicicletas, patinetas y estaciones para ciclorrutas, bicicleteros y planes de movilidad.",
+      "color": "#15803d"
+    },
     "cafeteria": {
       "label": "Cafetería y panadería",
       "short": "Cafetería",
@@ -86,6 +92,12 @@
       "label": "Comercio y centro comercial",
       "short": "Comercio"
     },
+    "road": {
+      "label": "Vías y tránsito",
+      "short": "Vías",
+      "description": "Semáforos, señales de tránsito, resaltos, conos y mobiliario vial para corredores y parqueaderos.",
+      "color": "#0f766e"
+    },
     "sanitary": {
       "label": "Baños",
       "short": "Baños"
@@ -111,6 +123,12 @@
     "textile": {
       "label": "Costura y confección",
       "short": "Costura"
+    },
+    "traffic-signs": {
+      "label": "Señalización vial",
+      "short": "Señales viales",
+      "description": "Señales preventivas, reglamentarias, informativas y transitorias. Referencia esquemática; no sustituye el manual oficial de señalización vial.",
+      "color": "#b91c1c"
     },
     "vehicles": {
       "label": "Vehículos y maquinaria",
@@ -213,6 +231,86 @@
       "reference": "CAD",
       "color": "#334155",
       "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"10\" y=\"34\" width=\"80\" height=\"28\" rx=\"3\" fill=\"currentColor\" fill-opacity=\".09\"/><line x1=\"35\" y1=\"34\" x2=\"35\" y2=\"62\" fill=\"none\"/><line x1=\"65\" y1=\"34\" x2=\"65\" y2=\"62\" fill=\"none\"/><line x1=\"18\" y1=\"62\" x2=\"18\" y2=\"82\" fill=\"none\"/><line x1=\"82\" y1=\"62\" x2=\"82\" y2=\"82\" fill=\"none\"/></svg>"
+    },
+    "cad_bk_cargo": {
+      "category": "bikes",
+      "name": "Bicicleta de carga",
+      "description": "Bicicleta de carga con caja delantera. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#15803d",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"24\" cy=\"70\" r=\"15\"/><circle cx=\"76\" cy=\"70\" r=\"15\"/><path d=\"M24 70 44 48h18l14 22M44 48l-6 22h28\"/><path d=\"M62 48l-4-8h10\"/><rect x=\"10\" y=\"42\" width=\"28\" height=\"20\" rx=\"3\"/><path d=\"M14 46h20M14 58h20\"/></svg>"
+    },
+    "cad_bk_electric": {
+      "category": "bikes",
+      "name": "Bicicleta eléctrica plegable",
+      "description": "Bicicleta eléctrica con batería. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#15803d",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"24\" cy=\"70\" r=\"15\"/><circle cx=\"76\" cy=\"70\" r=\"15\"/><path d=\"M24 70 44 48h18l14 22M44 48l-6 22h28\"/><path d=\"M62 48l-4-8h10\"/><rect x=\"46\" y=\"54\" width=\"18\" height=\"8\" rx=\"2\" fill=\"currentColor\" fill-opacity=\".22\"/><path d=\"M54 50h6l-4 5h5l-6 7\"/></svg>"
+    },
+    "cad_bk_helmet": {
+      "category": "bikes",
+      "name": "Casco de ciclista",
+      "description": "Casco de protección para ciclista. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#15803d",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M20 62q0-30 30-30t30 30Z\" fill=\"currentColor\" fill-opacity=\".14\"/><path d=\"M30 62V50M42 62V44M54 62V42M66 62V46\"/><path d=\"M18 62h64\"/></svg>"
+    },
+    "cad_bk_kids": {
+      "category": "bikes",
+      "name": "Bicicleta infantil",
+      "description": "Bicicleta infantil con ruedas de apoyo. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#15803d",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"24\" cy=\"70\" r=\"15\"/><circle cx=\"76\" cy=\"70\" r=\"15\"/><path d=\"M24 70 44 48h18l14 22M44 48l-6 22h28\"/><path d=\"M62 48l-4-8h10\"/><circle cx=\"14\" cy=\"84\" r=\"5\"/><circle cx=\"86\" cy=\"84\" r=\"5\"/></svg>"
+    },
+    "cad_bk_mountain": {
+      "category": "bikes",
+      "name": "Bicicleta de montaña",
+      "description": "Bicicleta de montaña con suspensión. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#15803d",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"24\" cy=\"70\" r=\"15\"/><circle cx=\"76\" cy=\"70\" r=\"15\"/><path d=\"M24 70 44 48h18l14 22M44 48l-6 22h28\"/><path d=\"M62 48l-4-8h10\"/><path d=\"M76 70 68 50M68 50l-4-8h10\" stroke-width=\"3\"/></svg>"
+    },
+    "cad_bk_repair": {
+      "category": "bikes",
+      "name": "Estación de reparación",
+      "description": "Estación de reparación de bicicletas con herramientas. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#15803d",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"26\" y=\"20\" width=\"48\" height=\"18\" rx=\"4\"/><path d=\"M50 38v22\"/><path d=\"M36 74h28l-4 14H40Z\" fill=\"currentColor\" fill-opacity=\".12\"/><path d=\"M20 60h16M64 60h16\" stroke-dasharray=\"4 3\"/></svg>"
+    },
+    "cad_bk_road": {
+      "category": "bikes",
+      "name": "Bicicleta de ruta",
+      "description": "Bicicleta de ruta con manubrio curvo. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#15803d",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"24\" cy=\"70\" r=\"15\"/><circle cx=\"76\" cy=\"70\" r=\"15\"/><path d=\"M24 70 44 48h18l14 22M44 48l-6 22h28\"/><path d=\"M62 48l-4-8h10\"/><path d=\"M64 44q10 0 12 8\"/><circle cx=\"24\" cy=\"70\" r=\"15\"/><circle cx=\"76\" cy=\"70\" r=\"15\"/></svg>"
+    },
+    "cad_bk_scooter": {
+      "category": "bikes",
+      "name": "Patineta eléctrica",
+      "description": "Patineta eléctrica de pie. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#15803d",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"24\" cy=\"76\" r=\"12\"/><circle cx=\"76\" cy=\"76\" r=\"12\"/><rect x=\"30\" y=\"66\" width=\"42\" height=\"7\" rx=\"3\" fill=\"currentColor\" fill-opacity=\".18\"/><path d=\"M72 66V30h10\"/><path d=\"M58 66v10\"/></svg>"
+    },
+    "cad_bk_skateboard": {
+      "category": "bikes",
+      "name": "Monopatín",
+      "description": "Monopatín con tabla y ejes. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#15803d",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"18\" y=\"44\" width=\"64\" height=\"12\" rx=\"6\" fill=\"currentColor\" fill-opacity=\".16\"/><path d=\"M18 50q-6 0-6 6t6 6M82 50q6 0 6 6t-6 6\"/><circle cx=\"32\" cy=\"70\" r=\"6\"/><circle cx=\"68\" cy=\"70\" r=\"6\"/></svg>"
+    },
+    "cad_bk_urban": {
+      "category": "bikes",
+      "name": "Bicicleta plegable",
+      "description": "Bicicleta urbana con canasto. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#15803d",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"24\" cy=\"70\" r=\"15\"/><circle cx=\"76\" cy=\"70\" r=\"15\"/><path d=\"M24 70 44 48h18l14 22M44 48l-6 22h28\"/><path d=\"M62 48l-4-8h10\"/><path d=\"M24 70 34 46h10\"/><rect x=\"28\" y=\"34\" width=\"16\" height=\"10\" rx=\"2\"/></svg>"
     },
     "cad_bulldozer": {
       "category": "vehicles",
@@ -2082,6 +2180,158 @@
       "color": "#334155",
       "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"12\" y=\"24\" width=\"76\" height=\"52\" rx=\"1\" fill=\"currentColor\" fill-opacity=\".09\"/><line x1=\"20\" y1=\"24\" x2=\"20\" y2=\"76\" fill=\"none\"/><line x1=\"80\" y1=\"24\" x2=\"80\" y2=\"76\" fill=\"none\"/><line x1=\"25\" y1=\"65\" x2=\"72\" y2=\"36\" fill=\"none\"/><polygon points=\"61,36,75,33,70,46\" fill=\"none\"/><line x1=\"25\" y1=\"70\" x2=\"75\" y2=\"70\" fill=\"none\" stroke-dasharray=\"5 4\"/></svg>"
     },
+    "cad_rd_bike_station": {
+      "category": "road",
+      "name": "Estación de bicicletas",
+      "description": "Estación pública de bicicletas con varias unidades. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"22\" cy=\"66\" r=\"10\"/><circle cx=\"42\" cy=\"66\" r=\"10\"/><path d=\"M22 66 32 50h10l10 16M32 50l-6 16h26\"/><circle cx=\"64\" cy=\"66\" r=\"10\"/><circle cx=\"84\" cy=\"66\" r=\"10\"/><path d=\"M64 66 74 50h10l10 16M74 50l-6 16h26\"/><path d=\"M10 84h80\"/></svg>"
+    },
+    "cad_rd_bollard": {
+      "category": "road",
+      "name": "Bolardo flexible",
+      "description": "Bolardo flexible de separación de carriles. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"42\" y=\"20\" width=\"16\" height=\"56\" rx=\"7\" fill=\"currentColor\" fill-opacity=\".14\"/><path d=\"M42 38h16M42 52h16\" stroke-width=\"3\"/><circle cx=\"50\" cy=\"84\" r=\"9\"/></svg>"
+    },
+    "cad_rd_bus_stop": {
+      "category": "road",
+      "name": "Paradero de bus",
+      "description": "Cubierta de paradero con banca y señal. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"10\" y=\"26\" width=\"80\" height=\"8\" rx=\"3\"/><path d=\"M14 34v44M86 34v44\"/><path d=\"M26 62h48\"/><path d=\"M30 62v10M70 62v10\"/><circle cx=\"50\" cy=\"12\" r=\"7\"/></svg>"
+    },
+    "cad_rd_cone": {
+      "category": "road",
+      "name": "Cono de señalización",
+      "description": "Cono vial con banda reflectiva. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M50 10 70 78H30Z\" fill=\"currentColor\" fill-opacity=\".12\"/><path d=\"M38 54h24l4 14H34Z\" fill=\"currentColor\" fill-opacity=\".3\"/><rect x=\"18\" y=\"78\" width=\"64\" height=\"12\" rx=\"4\"/></svg>"
+    },
+    "cad_rd_curb_ramp": {
+      "category": "road",
+      "name": "Rampa de andén",
+      "description": "Rampa de accesibilidad con franja táctil. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M6 78h60q16 0 16-16V48h12v14q0 28-28 28H6Z\" fill=\"currentColor\" fill-opacity=\".12\"/><circle cx=\"26\" cy=\"62\" r=\"2.4\"/><circle cx=\"38\" cy=\"62\" r=\"2.4\"/><circle cx=\"50\" cy=\"62\" r=\"2.4\"/><circle cx=\"62\" cy=\"62\" r=\"2.4\"/><circle cx=\"26\" cy=\"72\" r=\"2.4\"/><circle cx=\"38\" cy=\"72\" r=\"2.4\"/><circle cx=\"50\" cy=\"72\" r=\"2.4\"/><circle cx=\"62\" cy=\"72\" r=\"2.4\"/></svg>"
+    },
+    "cad_rd_delineator": {
+      "category": "road",
+      "name": "Delineador de vía",
+      "description": "Poste delineador con franjas reflectivas. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"42\" y=\"14\" width=\"16\" height=\"62\" rx=\"4\"/><path d=\"M42 30h16M42 46h16M42 62h16\"/><rect x=\"30\" y=\"76\" width=\"40\" height=\"10\" rx=\"3\"/></svg>"
+    },
+    "cad_rd_guardrail": {
+      "category": "road",
+      "name": "Barrera metálica",
+      "description": "Barrera de contención tipo guardavías. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M6 44h88M6 56h88\"/><path d=\"M20 40v34M44 40v34M68 40v34M92 40v34\" opacity=\".8\"/><path d=\"M6 34h88\" opacity=\".45\"/></svg>"
+    },
+    "cad_rd_island": {
+      "category": "road",
+      "name": "Isla de tránsito",
+      "description": "Isla canalizadora de tránsito. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M50 10q22 26 22 44T50 90Q28 72 28 54T50 10Z\" fill=\"currentColor\" fill-opacity=\".12\"/><path d=\"M50 26v48M40 50h20\"/></svg>"
+    },
+    "cad_rd_km_marker": {
+      "category": "road",
+      "name": "Mojón kilométrico",
+      "description": "Mojón de abscisa con franja. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M50 8 78 84H22Z\" fill=\"currentColor\" fill-opacity=\".1\"/><path d=\"M34 56h32l6 14H28Z\" fill=\"currentColor\" fill-opacity=\".28\"/><path d=\"M16 84h68\"/></svg>"
+    },
+    "cad_rd_manhole": {
+      "category": "road",
+      "name": "Tapa de inspección",
+      "description": "Tapa circular de inspección sanitaria. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"50\" cy=\"50\" r=\"30\"/><circle cx=\"50\" cy=\"50\" r=\"20\" opacity=\".6\"/><path d=\"M30 50h40M50 30v40M36 36l28 28M64 36 36 64\" opacity=\".5\"/></svg>"
+    },
+    "cad_rd_median": {
+      "category": "road",
+      "name": "Separador de calzadas",
+      "description": "Separador central con trama de achurado. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"12\" y=\"38\" width=\"76\" height=\"24\" rx=\"8\" fill=\"currentColor\" fill-opacity=\".1\"/><path d=\"M18 60 34 40M28 60 44 40M38 60 54 40M48 60 64 40M58 60 74 40M68 60 84 40\"/></svg>"
+    },
+    "cad_rd_parking_meter": {
+      "category": "road",
+      "name": "Parquímetro",
+      "description": "Parquímetro individual de parqueo. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"36\" y=\"14\" width=\"28\" height=\"40\" rx=\"5\"/><rect x=\"42\" y=\"22\" width=\"16\" height=\"12\" rx=\"2\"/><path d=\"M50 54v26M40 86h20\"/><path d=\"M50 70h12q4 0 4 5v8\"/></svg>"
+    },
+    "cad_rd_ped_light": {
+      "category": "road",
+      "name": "Semáforo peatonal",
+      "description": "Semáforo peatonal de dos luces. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"36\" y=\"16\" width=\"28\" height=\"48\" rx=\"6\"/><circle cx=\"50\" cy=\"30\" r=\"6\"/><circle cx=\"50\" cy=\"50\" r=\"6\" fill=\"currentColor\" fill-opacity=\".18\"/><path d=\"M50 64v20M38 88h24\"/><path d=\"M44 28h12M44 48h12\"/></svg>"
+    },
+    "cad_rd_road_arrow": {
+      "category": "road",
+      "name": "Flecha de carril",
+      "description": "Flecha pintada de sentido de carril. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M50 6 74 40H60v54H40V40H26Z\" fill=\"currentColor\" fill-opacity=\".18\"/></svg>"
+    },
+    "cad_rd_speed_bump": {
+      "category": "road",
+      "name": "Resalto o reductor de velocidad",
+      "description": "Resalto tipo lomo de burro visto en perfil. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M8 74h84\"/><path d=\"M18 74q32-46 64 0Z\" fill=\"currentColor\" fill-opacity=\".16\"/><path d=\"M30 74q20-30 40 0M40 74q10-16 20 0\"/><path d=\"M8 84h84\"/></svg>"
+    },
+    "cad_rd_storm_drain": {
+      "category": "road",
+      "name": "Sumidero",
+      "description": "Sumidero de aguas lluvias con rejilla. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"18\" y=\"28\" width=\"64\" height=\"44\" rx=\"4\"/><path d=\"M28 28v44M38 28v44M48 28v44M58 28v44M68 28v44M72 28v44\"/><path d=\"M12 80h76\"/></svg>"
+    },
+    "cad_rd_street_lamp": {
+      "category": "road",
+      "name": "Poste de alumbrado",
+      "description": "Poste de alumbrado con brazo y luminaria. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M30 90V26q0-8 8-8h20\"/><rect x=\"54\" y=\"10\" width=\"24\" height=\"14\" rx=\"4\" fill=\"currentColor\" fill-opacity=\".2\"/><path d=\"M60 30q10 6 18 0\"/><rect x=\"20\" y=\"84\" width=\"20\" height=\"8\" rx=\"3\"/></svg>"
+    },
+    "cad_rd_traffic_light": {
+      "category": "road",
+      "name": "Semáforo vehicular",
+      "description": "Semáforo de tres luces montado en poste. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"34\" y=\"12\" width=\"32\" height=\"66\" rx=\"7\"/><circle cx=\"50\" cy=\"27\" r=\"7\" fill=\"currentColor\" fill-opacity=\".3\"/><circle cx=\"50\" cy=\"45\" r=\"7\" fill=\"currentColor\" fill-opacity=\".15\"/><circle cx=\"50\" cy=\"63\" r=\"7\" fill=\"currentColor\" fill-opacity=\".15\"/><path d=\"M50 78v14M36 92h28\"/></svg>"
+    },
+    "cad_rd_work_barrier": {
+      "category": "road",
+      "name": "Barrera de obra",
+      "description": "Barrera de obra con franjas de advertencia. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"8\" y=\"30\" width=\"84\" height=\"24\" rx=\"4\" fill=\"currentColor\" fill-opacity=\".12\"/><path d=\"M18 30 8 54M34 30 24 54M50 30 40 54M66 30 56 54M82 30 72 54\"/><path d=\"M20 54v30M80 54v30M10 84h80\"/></svg>"
+    },
     "cad_refrigerator": {
       "category": "kitchen",
       "name": "Refrigerador",
@@ -2802,6 +3052,206 @@
       "color": "#334155",
       "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"34\" y=\"5\" width=\"32\" height=\"26\" rx=\"4\" fill=\"currentColor\" fill-opacity=\".09\"/><rect x=\"14\" y=\"31\" width=\"72\" height=\"61\" rx=\"2\" fill=\"currentColor\" fill-opacity=\".09\"/><line x1=\"37\" y1=\"20\" x2=\"63\" y2=\"20\" fill=\"none\"/><line x1=\"14\" y1=\"40\" x2=\"86\" y2=\"40\" fill=\"none\"/><line x1=\"50\" y1=\"40\" x2=\"50\" y2=\"92\" fill=\"none\" stroke-dasharray=\"5 4\"/><rect x=\"24\" y=\"11\" width=\"7\" height=\"15\" rx=\"2\" fill=\"none\"/><rect x=\"69\" y=\"11\" width=\"7\" height=\"15\" rx=\"2\" fill=\"none\"/><rect x=\"8\" y=\"48\" width=\"7\" height=\"18\" rx=\"2\" fill=\"none\"/><rect x=\"85\" y=\"48\" width=\"7\" height=\"18\" rx=\"2\" fill=\"none\"/><rect x=\"8\" y=\"72\" width=\"7\" height=\"16\" rx=\"2\" fill=\"none\"/><rect x=\"85\" y=\"72\" width=\"7\" height=\"16\" rx=\"2\" fill=\"none\"/></svg>"
     },
+    "cad_ts_bus_stop": {
+      "category": "traffic-signs",
+      "name": "Señal: paradero de bus",
+      "description": "Señal informativa de paradero. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#b91c1c",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"12\" y=\"18\" width=\"76\" height=\"64\" rx=\"6\" fill=\"currentColor\" fill-opacity=\".1\"/><rect x=\"18\" y=\"24\" width=\"64\" height=\"52\" rx=\"3\"/><rect x=\"28\" y=\"38\" width=\"44\" height=\"26\" rx=\"4\"/><path d=\"M34 64v6M66 64v6M34 48h32M34 56h32\"/></svg>"
+    },
+    "cad_ts_crossroad": {
+      "category": "traffic-signs",
+      "name": "Señal: cruce de vías",
+      "description": "Señal preventiva de intersección en cruz. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#b91c1c",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M50 8 92 84H8Z\" fill=\"currentColor\" fill-opacity=\".1\"/><path d=\"M50 24 79 76H21Z\" stroke-width=\"2.2\"/><path d=\"M50 86V44M26 62h48\" stroke-width=\"4\"/></svg>"
+    },
+    "cad_ts_curve_left": {
+      "category": "traffic-signs",
+      "name": "Señal: curva peligrosa",
+      "description": "Señal preventiva de curva a la izquierda. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#b91c1c",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M50 8 92 84H8Z\" fill=\"currentColor\" fill-opacity=\".1\"/><path d=\"M50 24 79 76H21Z\" stroke-width=\"2.2\"/><path d=\"M58 78V56q0-8-8-8h-6M44 40l-8 8 8 8\" stroke-width=\"2.6\"/></svg>"
+    },
+    "cad_ts_curve_right": {
+      "category": "traffic-signs",
+      "name": "Señal: curva a la derecha",
+      "description": "Señal preventiva de curva a la derecha. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#b91c1c",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M50 8 92 84H8Z\" fill=\"currentColor\" fill-opacity=\".1\"/><path d=\"M50 24 79 76H21Z\" stroke-width=\"2.2\"/><path d=\"M42 78V56q0-8 8-8h6M56 40l8 8-8 8\" stroke-width=\"2.6\"/></svg>"
+    },
+    "cad_ts_cyclists": {
+      "category": "traffic-signs",
+      "name": "Señal: ciclistas",
+      "description": "Señal preventiva de ciclistas en la vía. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#b91c1c",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M50 8 92 84H8Z\" fill=\"currentColor\" fill-opacity=\".1\"/><path d=\"M50 24 79 76H21Z\" stroke-width=\"2.2\"/><circle cx=\"40\" cy=\"62\" r=\"8\"/><circle cx=\"62\" cy=\"62\" r=\"8\"/><path d=\"M40 62 50 48h8l8 14M50 48l-4 14h20\" stroke-width=\"2\"/></svg>"
+    },
+    "cad_ts_detour": {
+      "category": "traffic-signs",
+      "name": "Señal: desvío",
+      "description": "Señal transitoria de desvío. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#b91c1c",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"14\" y=\"26\" width=\"72\" height=\"48\" rx=\"5\" fill=\"currentColor\" fill-opacity=\".14\"/><path d=\"M26 50h34M54 40l12 10-12 10\" stroke-width=\"3\"/><path d=\"M26 62h26\" stroke-dasharray=\"5 4\"/></svg>"
+    },
+    "cad_ts_double_curve": {
+      "category": "traffic-signs",
+      "name": "Señal: curva doble",
+      "description": "Señal preventiva de curva y contracurva. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#b91c1c",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M50 8 92 84H8Z\" fill=\"currentColor\" fill-opacity=\".1\"/><path d=\"M50 24 79 76H21Z\" stroke-width=\"2.2\"/><path d=\"M40 78V66q0-8 10-8t10-8V38\" stroke-width=\"2.6\"/><path d=\"M54 46l6-8 6 8\" stroke-width=\"2.6\"/></svg>"
+    },
+    "cad_ts_hospital": {
+      "category": "traffic-signs",
+      "name": "Señal: hospital",
+      "description": "Señal informativa de hospital. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#b91c1c",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"12\" y=\"18\" width=\"76\" height=\"64\" rx=\"6\" fill=\"currentColor\" fill-opacity=\".1\"/><rect x=\"18\" y=\"24\" width=\"64\" height=\"52\" rx=\"3\"/><rect x=\"44\" y=\"36\" width=\"12\" height=\"32\" rx=\"2\"/><rect x=\"34\" y=\"46\" width=\"32\" height=\"12\" rx=\"2\"/></svg>"
+    },
+    "cad_ts_no_entry": {
+      "category": "traffic-signs",
+      "name": "Señal: prohibido el paso",
+      "description": "Señal reglamentaria de prohibido el paso. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#b91c1c",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"50\" cy=\"50\" r=\"34\" fill=\"currentColor\" fill-opacity=\".08\"/><circle cx=\"50\" cy=\"50\" r=\"30\"/><rect x=\"26\" y=\"44\" width=\"48\" height=\"12\" rx=\"2\" fill=\"currentColor\" stroke=\"none\"/></svg>"
+    },
+    "cad_ts_no_left": {
+      "category": "traffic-signs",
+      "name": "Señal: prohibido girar a la izquierda",
+      "description": "Señal reglamentaria de giro a la izquierda prohibido. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#b91c1c",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"50\" cy=\"50\" r=\"34\" fill=\"currentColor\" fill-opacity=\".08\"/><circle cx=\"50\" cy=\"50\" r=\"28\"/><path d=\"M62 74V50q0-8-8-8h-8M44 34l-8 8 8 8\" stroke-width=\"2.8\"/><path d=\"M28 24 72 76\" stroke-width=\"3\"/></svg>"
+    },
+    "cad_ts_no_parking": {
+      "category": "traffic-signs",
+      "name": "Señal: prohibido parquear",
+      "description": "Señal reglamentaria de estacionamiento prohibido. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#b91c1c",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"50\" cy=\"50\" r=\"34\" fill=\"currentColor\" fill-opacity=\".08\"/><circle cx=\"50\" cy=\"50\" r=\"28\"/><text x=\"50\" y=\"60\" text-anchor=\"middle\" font-size=\"22\" font-family=\"Helvetica, Arial, sans-serif\" font-weight=\"700\" fill=\"currentColor\" stroke=\"none\">E</text><path d=\"M30 30 70 70\" stroke-width=\"3\"/></svg>"
+    },
+    "cad_ts_no_u_turn": {
+      "category": "traffic-signs",
+      "name": "Señal: prohibido retornar",
+      "description": "Señal reglamentaria de retorno prohibido. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#b91c1c",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"50\" cy=\"50\" r=\"34\" fill=\"currentColor\" fill-opacity=\".08\"/><circle cx=\"50\" cy=\"50\" r=\"28\"/><path d=\"M38 74V48q0-14 12-14t12 14v10M54 58l8-8 8 8\" stroke-width=\"2.8\"/><path d=\"M28 24 72 76\" stroke-width=\"3\"/></svg>"
+    },
+    "cad_ts_one_way": {
+      "category": "traffic-signs",
+      "name": "Señal: sentido único",
+      "description": "Señal informativa de vía de un solo sentido. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#b91c1c",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"20\" y=\"34\" width=\"60\" height=\"32\" rx=\"4\" fill=\"currentColor\" fill-opacity=\".12\"/><path d=\"M32 50h30M54 40l12 10-12 10\" stroke-width=\"3\"/></svg>"
+    },
+    "cad_ts_parking": {
+      "category": "traffic-signs",
+      "name": "Señal: estacionamiento",
+      "description": "Señal informativa de parqueadero. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#b91c1c",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"12\" y=\"18\" width=\"76\" height=\"64\" rx=\"6\" fill=\"currentColor\" fill-opacity=\".1\"/><rect x=\"18\" y=\"24\" width=\"64\" height=\"52\" rx=\"3\"/><text x=\"50\" y=\"64\" text-anchor=\"middle\" font-size=\"30\" font-family=\"Helvetica, Arial, sans-serif\" font-weight=\"700\" fill=\"currentColor\" stroke=\"none\">P</text></svg>"
+    },
+    "cad_ts_pedestrian": {
+      "category": "traffic-signs",
+      "name": "Señal: peatones",
+      "description": "Señal preventiva de cruce de peatones. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#b91c1c",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M50 8 92 84H8Z\" fill=\"currentColor\" fill-opacity=\".1\"/><path d=\"M50 24 79 76H21Z\" stroke-width=\"2.2\"/><circle cx=\"50\" cy=\"46\" r=\"5\"/><path d=\"M50 51v12M50 55l-8 5M50 55l8 5M50 63l-6 10M50 63l6 10\" stroke-width=\"2.2\"/></svg>"
+    },
+    "cad_ts_roadwork": {
+      "category": "traffic-signs",
+      "name": "Señal: obras",
+      "description": "Señal transitoria de trabajos en la vía. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#b91c1c",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M50 10 92 82H8Z\" fill=\"currentColor\" fill-opacity=\".14\"/><path d=\"M50 26 79 74H21Z\"/><path d=\"M50 42v16M50 64v2\" stroke-width=\"3.2\"/></svg>"
+    },
+    "cad_ts_roundabout": {
+      "category": "traffic-signs",
+      "name": "Señal: glorieta",
+      "description": "Señal preventiva de glorieta con flechas de giro. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#b91c1c",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"50\" cy=\"50\" r=\"34\" fill=\"currentColor\" fill-opacity=\".08\"/><circle cx=\"50\" cy=\"50\" r=\"22\"/><path d=\"M50 28v10M58 32l-8-4-8 4M72 50h-10M68 58l4-8-4-8M50 72v-10M42 68l8 4 8-4M28 50h10M32 42l-4 8 4 8\" stroke-width=\"2.4\"/></svg>"
+    },
+    "cad_ts_school": {
+      "category": "traffic-signs",
+      "name": "Señal: zona escolar",
+      "description": "Señal preventiva de proximidad a colegio. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#b91c1c",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M50 8 92 84H8Z\" fill=\"currentColor\" fill-opacity=\".1\"/><path d=\"M50 24 79 76H21Z\" stroke-width=\"2.2\"/><circle cx=\"43\" cy=\"48\" r=\"4.5\"/><circle cx=\"60\" cy=\"52\" r=\"4.5\"/><path d=\"M43 52v10M60 56v8M36 62h14M53 64h14\" stroke-width=\"2.2\"/></svg>"
+    },
+    "cad_ts_services": {
+      "category": "traffic-signs",
+      "name": "Señal: servicios",
+      "description": "Señal informativa de servicios al viajero. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#b91c1c",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"12\" y=\"18\" width=\"76\" height=\"64\" rx=\"6\" fill=\"currentColor\" fill-opacity=\".1\"/><rect x=\"18\" y=\"24\" width=\"64\" height=\"52\" rx=\"3\"/><path d=\"M34 62V40h12a8 8 0 0 1 0 16H34M34 56h12\" stroke-width=\"2.4\"/><path d=\"M58 40h10v22\" stroke-width=\"2.4\"/></svg>"
+    },
+    "cad_ts_speed_30": {
+      "category": "traffic-signs",
+      "name": "Señal: velocidad 30",
+      "description": "Señal reglamentaria de 30 km/h. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#b91c1c",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"50\" cy=\"50\" r=\"34\" fill=\"currentColor\" fill-opacity=\".08\"/><circle cx=\"50\" cy=\"50\" r=\"28\"/><text x=\"50\" y=\"59\" text-anchor=\"middle\" font-size=\"24\" font-family=\"Helvetica, Arial, sans-serif\" font-weight=\"700\" fill=\"currentColor\" stroke=\"none\">30</text></svg>"
+    },
+    "cad_ts_speed_bump": {
+      "category": "traffic-signs",
+      "name": "Señal: resalto",
+      "description": "Señal preventiva de resalto o reductor. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#b91c1c",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M50 8 92 84H8Z\" fill=\"currentColor\" fill-opacity=\".1\"/><path d=\"M50 24 79 76H21Z\" stroke-width=\"2.2\"/><path d=\"M26 72q24-32 48 0\" stroke-width=\"2.6\"/><path d=\"M26 78h48\"/></svg>"
+    },
+    "cad_ts_stop": {
+      "category": "traffic-signs",
+      "name": "Señal: pare",
+      "description": "Señal reglamentaria de detención total. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#b91c1c",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M32 8h36l24 24v36L68 92H32L8 68V32Z\" fill=\"currentColor\" fill-opacity=\".12\"/><path d=\"M38 30h24l8 8v24l-8 8H38l-8-8V38Z\"/><path d=\"M36 50h28\"/></svg>"
+    },
+    "cad_ts_t_junction": {
+      "category": "traffic-signs",
+      "name": "Señal: intersección en T",
+      "description": "Señal preventiva de intersección en T. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#b91c1c",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M50 8 92 84H8Z\" fill=\"currentColor\" fill-opacity=\".1\"/><path d=\"M50 24 79 76H21Z\" stroke-width=\"2.2\"/><path d=\"M50 86V44M24 44h52\" stroke-width=\"4\"/></svg>"
+    },
+    "cad_ts_workers": {
+      "category": "traffic-signs",
+      "name": "Señal: trabajos en la vía",
+      "description": "Señal preventiva de obras y trabajadores. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#b91c1c",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M50 8 92 84H8Z\" fill=\"currentColor\" fill-opacity=\".1\"/><path d=\"M50 24 79 76H21Z\" stroke-width=\"2.2\"/><circle cx=\"50\" cy=\"44\" r=\"5\"/><path d=\"M50 49v14M50 54l-10 6M50 54l10 6M50 63l-7 12M50 63l7 12\" stroke-width=\"2.2\"/></svg>"
+    },
+    "cad_ts_yield": {
+      "category": "traffic-signs",
+      "name": "Señal: ceda el paso",
+      "description": "Señal reglamentaria de ceda el paso. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#b91c1c",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M50 92 6 14h88Z\" fill=\"currentColor\" fill-opacity=\".12\"/><path d=\"M50 74 20 26h60Z\"/></svg>"
+    },
     "cad_txt_cutting": {
       "category": "textile",
       "name": "Mesa de corte",
@@ -2857,6 +3307,134 @@
       "reference": "CAD",
       "color": "#334155",
       "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M25 14H75V58Q73 84 50 89Q27 84 25 58Z\" fill=\"currentColor\" fill-opacity=\".09\"/><path d=\"M35 30V57Q37 72 50 76Q63 72 65 57V30\" fill=\"none\"/><circle cx=\"50\" cy=\"20\" r=\"3\" fill=\"none\"/><line x1=\"40\" y1=\"14\" x2=\"40\" y2=\"6\" fill=\"none\"/><line x1=\"60\" y1=\"14\" x2=\"60\" y2=\"6\" fill=\"none\"/></svg>"
+    },
+    "cad_vh_ambulance": {
+      "category": "vehicles",
+      "name": "Ambulancia",
+      "description": "Ambulancia de traslado con cruz de sanidad. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M28 8h44q14 12 16 42-2 30-16 42H28Q14 80 12 50 14 20 28 8Z\" fill=\"currentColor\" fill-opacity=\".09\"/><path d=\"M14 30h72l-4 14H18Z\"/><rect x=\"38\" y=\"52\" width=\"24\" height=\"24\" rx=\"4\"/><path d=\"M50 57v14M43 64h14\"/><rect x=\"8\" y=\"22\" width=\"7\" height=\"20\" rx=\"2.5\"/><rect x=\"85\" y=\"22\" width=\"7\" height=\"20\" rx=\"2.5\"/><rect x=\"8\" y=\"58\" width=\"7\" height=\"20\" rx=\"2.5\"/><rect x=\"85\" y=\"58\" width=\"7\" height=\"20\" rx=\"2.5\"/></svg>"
+    },
+    "cad_vh_bicycle": {
+      "category": "vehicles",
+      "name": "Bicicleta",
+      "description": "Bicicleta urbana vista desde arriba, con cuadro y manubrio. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"24\" cy=\"70\" r=\"17\"/><circle cx=\"76\" cy=\"70\" r=\"17\"/><path d=\"M24 70 43 46h20l13 24M43 46 62 70H24M62 70 70 44h10\"/><path d=\"M70 44h12M24 70 34 42h12\"/></svg>"
+    },
+    "cad_vh_bicycle_electric": {
+      "category": "vehicles",
+      "name": "Bicicleta eléctrica",
+      "description": "Bicicleta con batería y motor en el cuadro. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"24\" cy=\"70\" r=\"17\"/><circle cx=\"76\" cy=\"70\" r=\"17\"/><path d=\"M24 70 43 46h20l13 24M43 46 62 70H24M62 70 70 44h10\"/><rect x=\"45\" y=\"56\" width=\"20\" height=\"9\" rx=\"2.5\" fill=\"currentColor\" fill-opacity=\".2\"/><path d=\"M53 51h6l-4 6h6\"/></svg>"
+    },
+    "cad_vh_box_truck": {
+      "category": "vehicles",
+      "name": "Camión de furgón",
+      "description": "Camión rígido con caja cerrada. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 8h52q8 6 8 18v48q0 12-8 18H12Z\" fill=\"currentColor\" fill-opacity=\".09\"/><path d=\"M72 8h16q8 10 8 42t-8 42H72Z\"/><path d=\"M12 22h52M12 78h52M24 30v40M40 30v40M56 30v40\"/><path d=\"M80 26h10M80 74h10\"/><rect x=\"8\" y=\"16\" width=\"7\" height=\"20\" rx=\"2.5\"/><rect x=\"85\" y=\"16\" width=\"7\" height=\"20\" rx=\"2.5\"/><rect x=\"8\" y=\"64\" width=\"7\" height=\"20\" rx=\"2.5\"/><rect x=\"85\" y=\"64\" width=\"7\" height=\"20\" rx=\"2.5\"/></svg>"
+    },
+    "cad_vh_bus": {
+      "category": "vehicles",
+      "name": "Bus",
+      "description": "Bus urbano de 12 m en planta, con puertas a ambos lados. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M18 6h64q10 8 10 26v36q0 18-10 26H18Q8 86 8 68V32Q8 14 18 6Z\" fill=\"currentColor\" fill-opacity=\".09\"/><path d=\"M8 24h84M8 76h84\"/><path d=\"M16 34h10M30 34h10M44 34h12M60 34h10M74 34h10M16 62h10M30 62h10M44 62h12M60 62h10M74 62h10\"/><path d=\"M8 30v40M92 30v40\"/><rect x=\"8\" y=\"24\" width=\"7\" height=\"20\" rx=\"2.5\"/><rect x=\"85\" y=\"24\" width=\"7\" height=\"20\" rx=\"2.5\"/><rect x=\"8\" y=\"56\" width=\"7\" height=\"20\" rx=\"2.5\"/><rect x=\"85\" y=\"56\" width=\"7\" height=\"20\" rx=\"2.5\"/></svg>"
+    },
+    "cad_vh_cyclist": {
+      "category": "vehicles",
+      "name": "Ciclista",
+      "description": "Ciclista de perfil sobre bicicleta. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"26\" cy=\"70\" r=\"15\"/><circle cx=\"74\" cy=\"70\" r=\"15\"/><path d=\"M26 70 46 48h16l12 22M46 48l-6 22h34\"/><circle cx=\"56\" cy=\"22\" r=\"8\"/><path d=\"M56 30 50 46M56 34l12 8M52 40l-12 6\"/></svg>"
+    },
+    "cad_vh_dump_truck": {
+      "category": "vehicles",
+      "name": "Volqueta",
+      "description": "Camión volqueta con caja basculante. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M10 12h54l10 14v42l-10 12H10Z\" fill=\"currentColor\" fill-opacity=\".09\"/><path d=\"M70 8h20q6 10 6 42t-6 42H70Z\"/><path d=\"M18 24h38l7 10H18ZM18 56h38l7 10H18Z\"/><path d=\"M76 30h12M76 70h12\"/><rect x=\"8\" y=\"18\" width=\"7\" height=\"20\" rx=\"2.5\"/><rect x=\"85\" y=\"18\" width=\"7\" height=\"20\" rx=\"2.5\"/><rect x=\"8\" y=\"62\" width=\"7\" height=\"20\" rx=\"2.5\"/><rect x=\"85\" y=\"62\" width=\"7\" height=\"20\" rx=\"2.5\"/></svg>"
+    },
+    "cad_vh_fire_truck": {
+      "category": "vehicles",
+      "name": "Camión de bomberos",
+      "description": "Camión de bomberos con escalera y bomba. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M16 6h68q10 8 10 22v44q0 14-10 22H16Q6 86 6 72V28Q6 14 16 6Z\" fill=\"currentColor\" fill-opacity=\".09\"/><path d=\"M6 34h88M6 66h88\"/><path d=\"M22 44h56M22 56h56M30 34v32M42 34v32M54 34v32M66 34v32\"/><circle cx=\"76\" cy=\"50\" r=\"8\"/><path d=\"M76 46v8\"/><rect x=\"8\" y=\"20\" width=\"7\" height=\"20\" rx=\"2.5\"/><rect x=\"85\" y=\"20\" width=\"7\" height=\"20\" rx=\"2.5\"/><rect x=\"8\" y=\"60\" width=\"7\" height=\"20\" rx=\"2.5\"/><rect x=\"85\" y=\"60\" width=\"7\" height=\"20\" rx=\"2.5\"/></svg>"
+    },
+    "cad_vh_minibus": {
+      "category": "vehicles",
+      "name": "Buseta",
+      "description": "Buseta de 8 m con puerta central. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M22 8h56q12 10 12 26v24q0 16-12 26H22Q10 74 10 58V34Q10 18 22 8Z\" fill=\"currentColor\" fill-opacity=\".09\"/><path d=\"M10 30h80M10 70h80\"/><path d=\"M20 38h12M36 38h12M52 38h12M68 38h10\"/><path d=\"M20 56h12M52 56h12M68 56h10\"/><rect x=\"8\" y=\"22\" width=\"7\" height=\"20\" rx=\"2.5\"/><rect x=\"85\" y=\"22\" width=\"7\" height=\"20\" rx=\"2.5\"/><rect x=\"8\" y=\"58\" width=\"7\" height=\"20\" rx=\"2.5\"/><rect x=\"85\" y=\"58\" width=\"7\" height=\"20\" rx=\"2.5\"/></svg>"
+    },
+    "cad_vh_motorcycle": {
+      "category": "vehicles",
+      "name": "Motocicleta",
+      "description": "Motocicleta en planta con manubrio y asiento. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M28 12q22 0 30 16 10 18 14 40 2 12-8 16H36q-10-4-8-16 4-22 14-40 8-16 30-16Z\" fill=\"currentColor\" fill-opacity=\".09\"/><circle cx=\"50\" cy=\"18\" r=\"7\"/><path d=\"M28 30h44M26 42h48M30 58h40\"/><rect x=\"12\" y=\"52\" width=\"6\" height=\"16\" rx=\"2\"/><rect x=\"82\" y=\"52\" width=\"6\" height=\"16\" rx=\"2\"/></svg>"
+    },
+    "cad_vh_pedestrian": {
+      "category": "vehicles",
+      "name": "Peatón",
+      "description": "Persona de pie para referencias de aforo y recorridos. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"50\" cy=\"20\" r=\"10\"/><path d=\"M50 30v26\"/><path d=\"M50 36 30 50M50 36l20 14\"/><path d=\"M50 56 36 84M50 56l14 28\"/></svg>"
+    },
+    "cad_vh_police": {
+      "category": "vehicles",
+      "name": "Patrulla de policía",
+      "description": "Vehículo de patrulla con barra de emergencia. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M30 6h40q16 14 18 44-2 30-18 44H30Q14 80 12 50 14 20 30 6Z\" fill=\"currentColor\" fill-opacity=\".09\"/><path d=\"M27 26h46l7 15H20Z\"/><rect x=\"30\" y=\"43\" width=\"40\" height=\"9\" rx=\"2\" fill=\"currentColor\" fill-opacity=\".22\"/><path d=\"M36 47h10M54 47h10\"/><path d=\"M22 63h56l-7 16H29Z\"/><rect x=\"8\" y=\"20\" width=\"7\" height=\"20\" rx=\"2.5\"/><rect x=\"85\" y=\"20\" width=\"7\" height=\"20\" rx=\"2.5\"/><rect x=\"8\" y=\"60\" width=\"7\" height=\"20\" rx=\"2.5\"/><rect x=\"85\" y=\"60\" width=\"7\" height=\"20\" rx=\"2.5\"/></svg>"
+    },
+    "cad_vh_tanker": {
+      "category": "vehicles",
+      "name": "Camión cisterna",
+      "description": "Camión tanque para agua o combustible. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M8 14h40v72H8Z\" fill=\"currentColor\" fill-opacity=\".09\"/><rect x=\"48\" y=\"18\" width=\"34\" height=\"64\" rx=\"17\"/><path d=\"M48 30h34M48 50h34M48 70h34\"/><path d=\"M82 20h8q6 10 6 30t-6 30h-8Z\"/><rect x=\"8\" y=\"16\" width=\"7\" height=\"20\" rx=\"2.5\"/><rect x=\"85\" y=\"16\" width=\"7\" height=\"20\" rx=\"2.5\"/><rect x=\"8\" y=\"64\" width=\"7\" height=\"20\" rx=\"2.5\"/><rect x=\"85\" y=\"64\" width=\"7\" height=\"20\" rx=\"2.5\"/></svg>"
+    },
+    "cad_vh_taxi": {
+      "category": "vehicles",
+      "name": "Taxi",
+      "description": "Automóvil de servicio público con aviso luminoso en el techo. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M30 6h40q16 14 18 44-2 30-18 44H30Q14 80 12 50 14 20 30 6Z\" fill=\"currentColor\" fill-opacity=\".09\"/><path d=\"M27 26h46l7 15H20Z\"/><path d=\"M22 63h56l-7 16H29Z\"/><rect x=\"38\" y=\"41\" width=\"24\" height=\"12\" rx=\"2\" fill=\"currentColor\" fill-opacity=\".25\"/><path d=\"M44 47h12\"/><rect x=\"8\" y=\"20\" width=\"7\" height=\"20\" rx=\"2.5\"/><rect x=\"85\" y=\"20\" width=\"7\" height=\"20\" rx=\"2.5\"/><rect x=\"8\" y=\"60\" width=\"7\" height=\"20\" rx=\"2.5\"/><rect x=\"85\" y=\"60\" width=\"7\" height=\"20\" rx=\"2.5\"/></svg>"
+    },
+    "cad_vh_van": {
+      "category": "vehicles",
+      "name": "Camioneta",
+      "description": "Camioneta de carga liviana en vista superior. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M28 8h44q14 12 16 42-2 30-16 42H28Q14 80 12 50 14 20 28 8Z\" fill=\"currentColor\" fill-opacity=\".09\"/><path d=\"M14 30h72l-4 14H18Z\"/><path d=\"M18 64h64l-4 16H22Z\"/><rect x=\"34\" y=\"46\" width=\"32\" height=\"18\" rx=\"3\" fill=\"currentColor\" fill-opacity=\".16\"/><rect x=\"8\" y=\"22\" width=\"7\" height=\"20\" rx=\"2.5\"/><rect x=\"85\" y=\"22\" width=\"7\" height=\"20\" rx=\"2.5\"/><rect x=\"8\" y=\"58\" width=\"7\" height=\"20\" rx=\"2.5\"/><rect x=\"85\" y=\"58\" width=\"7\" height=\"20\" rx=\"2.5\"/></svg>"
+    },
+    "cad_vh_wheelchair": {
+      "category": "vehicles",
+      "name": "Silla de ruedas",
+      "description": "Silla de ruedas en planta para rutas accesibles. Representación CAD esquemática; verifica dimensiones y escala en sitio.",
+      "reference": "CAD",
+      "color": "#334155",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"46\" cy=\"46\" r=\"18\"/><circle cx=\"46\" cy=\"46\" r=\"10\"/><path d=\"M46 28v18h16\"/><circle cx=\"70\" cy=\"58\" r=\"8\"/><circle cx=\"80\" cy=\"76\" r=\"8\"/><circle cx=\"20\" cy=\"58\" r=\"8\"/><path d=\"M20 50v-8M14 42h12\"/></svg>"
     },
     "cad_washbasin": {
       "category": "sanitary",

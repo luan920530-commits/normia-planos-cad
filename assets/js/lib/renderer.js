@@ -373,6 +373,330 @@
      * vial ni sustituyen los planos de urbanismo. Las vías no bloquean el
      * tránsito; solo ordenan la lectura del plano.
      */
+    /** Punto y tangente a una fracción del recorrido de una polilínea. */
+    sampleAlong(points, ratio) {
+      if (!Array.isArray(points) || points.length < 2) return null;
+      const spans = [];
+      let total = 0;
+      for (let index = 1; index < points.length; index += 1) {
+        const length = Math.hypot(points[index].x - points[index - 1].x, points[index].y - points[index - 1].y);
+        spans.push(length);
+        total += length;
+      }
+      if (total <= 0) return null;
+      let target = total * G.clamp(ratio, 0, 1);
+      for (let index = 1; index < points.length; index += 1) {
+        const length = spans[index - 1];
+        const last = index === points.length - 1;
+        if (target <= length || last) {
+          const r = length > 0 ? target / length : 0;
+          const a = points[index - 1];
+          const b = points[index];
+          return {
+            x: a.x + (b.x - a.x) * r,
+            y: a.y + (b.y - a.y) * r,
+            tx: length > 0 ? (b.x - a.x) / length : 1,
+            ty: length > 0 ? (b.y - a.y) / length : 0,
+          };
+        }
+        target -= length;
+      }
+      return null;
+    }
+
+    /** Copia de la polilínea desplazada `distance` a un lado (normal media). */
+    offsetPath(points, distance) {
+      if (!distance) return points.map((point) => ({ x: point.x, y: point.y }));
+      const normalOf = (a, b) => {
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const length = Math.hypot(dx, dy);
+        return length > 0 ? { x: -dy / length, y: dx / length } : { x: 0, y: 0 };
+      };
+      return points.map((point, index) => {
+        const normals = [];
+        if (index > 0) normals.push(normalOf(points[index - 1], point));
+        if (index < points.length - 1) normals.push(normalOf(point, points[index + 1]));
+        const nx = normals.reduce((sum, item) => sum + item.x, 0);
+        const ny = normals.reduce((sum, item) => sum + item.y, 0);
+        const length = Math.hypot(nx, ny) || 1;
+        return { x: point.x + (nx / length) * distance, y: point.y + (ny / length) * distance };
+      });
+    }
+
+    /**
+     * Vía con sección tipo: calzada a escala con carriles marcados, separador,
+     * berma, ciclorruta y andenes. Es esquemático: sirve para leer el plano y
+     * acotar el corredor, no sustituye un diseño geométrico vial.
+     */
+    roadNode(element, canvas, parts) {
+      if (element.junction) return this.roadJunctionNode(element, canvas, parts);
+      const { color, stroke, zoom, cm, group, font } = parts;
+      const section = element.section;
+      const perMeter = 100 / cm;
+      const median = (Number(section.medianM) || 0);
+      const shoulder = (Number(section.shoulderM) || 0);
+      const bike = (Number(section.bikeM) || 0);
+      const walk = (Number(section.sidewalkM) || 0);
+      const lanes = Math.max(1, Math.round(Number(section.lanes) || 1));
+      const laneM = Number(section.laneM) || 3;
+      const halfPavement = (median / 2 + (lanes / 2) * laneM + shoulder) * perMeter;
+      const polyline = (points, attributes) => group.appendChild(node('polyline', {
+        points: points.map((point) => `${G.round(point.x, 2)} ${G.round(point.y, 2)}`).join(' '),
+        fill: 'none',
+        'stroke-linecap': 'butt',
+        'stroke-linejoin': 'round',
+        ...attributes,
+      }));
+      const line = (distance, attributes) => polyline(this.offsetPath(parts.flat, distance), attributes);
+
+      // 1. Andenes a cada lado, fuera de la calzada.
+      if (walk > 0) {
+        for (const side of [-1, 1]) {
+          polyline(this.offsetPath(parts.flat, side * (halfPavement + (bike + walk / 2) * perMeter)), {
+            stroke: '#e6eaf1', 'stroke-width': walk * perMeter, 'stroke-opacity': 1,
+          });
+          polyline(this.offsetPath(parts.flat, side * (halfPavement + bike * perMeter)), {
+            stroke: color, 'stroke-width': Math.max(0.8, stroke * 0.9), opacity: 0.85,
+          });
+        }
+      }
+      // 2. Ciclorrutas adosadas al bordillo.
+      if (bike > 0) {
+        for (const side of [-1, 1]) {
+          polyline(this.offsetPath(parts.flat, side * (halfPavement + (bike / 2) * perMeter)), {
+            stroke: '#e7f5ea', 'stroke-width': bike * perMeter,
+          });
+          polyline(this.offsetPath(parts.flat, side * (halfPavement + bike * perMeter)), {
+            stroke: '#15803d', 'stroke-width': Math.max(0.7, stroke * 0.6),
+            'stroke-dasharray': `${Math.max(6, 120 / cm)} ${Math.max(4, 80 / cm)}`, opacity: 0.8,
+          });
+        }
+      }
+      // 3. Calzada.
+      polyline(parts.flat, { stroke: '#ffffff', 'stroke-width': Math.max(2, halfPavement * 2) });
+      for (const side of [-1, 1]) {
+        line(side * halfPavement, { stroke: color, 'stroke-width': Math.max(1, stroke) });
+        if (shoulder > 0) {
+          line(side * (halfPavement - shoulder * perMeter), {
+            stroke: color, 'stroke-width': Math.max(0.6, stroke * 0.5), opacity: 0.6,
+          });
+        }
+      }
+      // 4. Separador central o eje discontinuo.
+      if (median > 0) {
+        polyline(parts.flat, { stroke: '#eef2f7', 'stroke-width': median * perMeter });
+        for (const side of [-1, 1]) {
+          line(side * (median / 2) * perMeter, { stroke: color, 'stroke-width': Math.max(1, stroke * 0.9) });
+        }
+      } else {
+        line(0, {
+          stroke: color, 'stroke-width': Math.max(0.8, stroke * 0.8),
+          'stroke-dasharray': `${Math.max(8, 300 / cm)} ${Math.max(6, 200 / cm)}`, opacity: 0.85,
+        });
+      }
+      // 5. Separación entre carriles: discontinua y a escala del carril.
+      const dash = `${Math.max(7, 250 / cm)} ${Math.max(5, 150 / cm)}`;
+      const rightLanes = Math.ceil(lanes / 2);
+      const leftLanes = lanes - rightLanes;
+      for (let index = 1; index < rightLanes; index += 1) {
+        line((median / 2 + index * laneM) * perMeter, {
+          stroke: color, 'stroke-width': Math.max(0.6, stroke * 0.6), 'stroke-dasharray': dash, opacity: 0.75,
+        });
+      }
+      for (let index = 1; index < leftLanes; index += 1) {
+        line(-(median / 2 + index * laneM) * perMeter, {
+          stroke: color, 'stroke-width': Math.max(0.6, stroke * 0.6), 'stroke-dasharray': dash, opacity: 0.75,
+        });
+      }
+      // 6. Flechas de sentido: cada calzada avanza en un sentido.
+      const arrowLength = 2.8 * perMeter;
+      const arrowWidth = 1.1 * perMeter;
+      const drawArrows = (offset, direction) => {
+        const shifted = this.offsetPath(parts.flat, offset);
+        for (const ratio of [0.32, 0.68]) {
+          const at = this.sampleAlong(shifted, ratio);
+          if (!at) continue;
+          const tx = at.tx * direction;
+          const ty = at.ty * direction;
+          const tip = { x: at.x + tx * arrowLength * 0.5, y: at.y + ty * arrowLength * 0.5 };
+          const tail = { x: at.x - tx * arrowLength * 0.5, y: at.y - ty * arrowLength * 0.5 };
+          const nx = -ty * arrowWidth * 0.5;
+          const ny = tx * arrowWidth * 0.5;
+          group.appendChild(node('polygon', {
+            points: [
+              `${G.round(tip.x, 2)} ${G.round(tip.y, 2)}`,
+              `${G.round(tail.x + nx, 2)} ${G.round(tail.y + ny, 2)}`,
+              `${G.round(tail.x - nx, 2)} ${G.round(tail.y - ny, 2)}`,
+            ].join(' '),
+            fill: color, 'fill-opacity': 0.45, 'stroke': color, 'stroke-width': Math.max(0.4, stroke * 0.4),
+          }));
+        }
+      };
+      for (let index = 0; index < rightLanes; index += 1) drawArrows((median / 2 + (index + 0.5) * laneM) * perMeter, 1);
+      for (let index = 0; index < leftLanes; index += 1) drawArrows(-(median / 2 + (index + 0.5) * laneM) * perMeter, -1);
+
+      // 7. Zona sensible y rótulo.
+      polyline(parts.flat, {
+        stroke: 'transparent', 'stroke-width': Math.max(18 / zoom, halfPavement * 2 + 14 / zoom),
+        'stroke-linecap': 'round', class: 'hit-area',
+      });
+      const middle = this.sampleAlong(parts.flat, 0.5) || { x: element.x, y: element.y };
+      const meters = G.round(Number(element.widthM) || 0, 1).toString().replace('.', ',');
+      const caption = `${lanes} ${lanes === 1 ? 'carril' : 'carriles'} · ${meters} m`;
+      group.appendChild(node('text', {
+        x: middle.x + 6 / zoom, y: middle.y - 8 / zoom,
+        'font-size': 9.5 / zoom, fill: '#334155', 'font-family': font, class: 'element-label',
+        'paint-order': 'stroke', stroke: '#ffffff', 'stroke-width': 3 / zoom, 'stroke-linejoin': 'round',
+      }, clean(parts.label ? `${parts.label} · ${caption}` : caption)));
+      return group;
+    }
+
+    /**
+     * Glorieta o intersección de la vía. El anillo y los brazos toman el ancho
+     * de la sección tipo; la caja del elemento fija el tamaño del cruce. Se
+     * dibuja en coordenadas absolutas, igual que el resto de la vía.
+     */
+    roadJunctionNode(element, canvas, parts) {
+      const { color, stroke, zoom, group, font } = parts;
+      const cm = G.cmPerUnit(canvas?.unit || 'cm');
+      const perMeter = 100 / cm;
+      const section = element.section || {};
+      const lanes = Math.max(1, Math.round(Number(section.lanes) || 1));
+      const laneM = Number(section.laneM) || 3;
+      const median = Number(section.medianM) || 0;
+      const shoulder = Number(section.shoulderM) || 0;
+      const bike = Number(section.bikeM) || 0;
+      const walk = Number(section.sidewalkM) || 0;
+      const pavement = lanes * laneM + 2 * shoulder;
+      const band = pavement * perMeter;
+      const junction = element.junction;
+      const cx = element.x + element.w / 2;
+      const cy = element.y + element.h / 2;
+      const edge = Math.max(1, stroke);
+      const dash = `${Math.max(6, 250 / cm)} ${Math.max(4, 150 / cm)}`;
+      const label = (text, at) => group.appendChild(node('text', {
+        x: at.x, y: at.y, 'text-anchor': 'middle',
+        'font-size': 9.5 / zoom, fill: '#334155', 'font-family': font, class: 'element-label',
+        'paint-order': 'stroke', stroke: '#ffffff', 'stroke-width': 3 / zoom, 'stroke-linejoin': 'round',
+      }, clean(text)));
+      const circle = (r, attributes) => group.appendChild(node('circle', { cx, cy, r, ...attributes }));
+
+      if (junction.kind === 'roundabout') {
+        // El anillo deja sitio para la ciclorruta y el andén exteriores.
+        const outerWalk = (bike + walk) * perMeter;
+        const radius = Math.max(band * 0.8, Math.min(element.w, element.h) / 2 - outerWalk);
+        const islandR = Math.max(2, radius - band);
+        if (walk > 0) circle(radius + outerWalk, { fill: '#e6eaf1', stroke: '#94a3b8', 'stroke-width': Math.max(0.5, edge * 0.5) });
+        if (bike > 0) circle(radius + bike * perMeter, { fill: '#e7f5ea', stroke: '#15803d', 'stroke-width': Math.max(0.5, edge * 0.6) });
+        circle(radius, { fill: '#ffffff', stroke: color, 'stroke-width': edge });
+        circle(islandR, { fill: '#eef2f7', stroke: color, 'stroke-width': edge });
+        for (let index = 1; index < lanes; index += 1) {
+          circle(islandR + index * laneM * perMeter, {
+            fill: 'none', stroke: color, 'stroke-width': Math.max(0.6, stroke * 0.6), 'stroke-dasharray': dash, opacity: 0.75,
+          });
+        }
+        // Brazos: se recortan en el borde de la caja para no salirse del plano.
+        const reach = (angle) => {
+          const dx = Math.cos(angle);
+          const dy = Math.sin(angle);
+          const limits = [];
+          if (dx > 0.001) limits.push((element.x + element.w - cx) / dx);
+          if (dx < -0.001) limits.push((element.x - cx) / dx);
+          if (dy > 0.001) limits.push((element.y + element.h - cy) / dy);
+          if (dy < -0.001) limits.push((element.y - cy) / dy);
+          return Math.max(islandR, Math.min(...limits.filter((value) => Number.isFinite(value) && value > 0)));
+        };
+        for (let index = 0; index < junction.legs; index += 1) {
+          const angle = -Math.PI / 2 + (index * Math.PI * 2) / junction.legs;
+          const dx = Math.cos(angle);
+          const dy = Math.sin(angle);
+          const end = reach(angle);
+          const start = { x: cx + dx * islandR, y: cy + dy * islandR };
+          const stop = { x: cx + dx * end, y: cy + dy * end };
+          group.appendChild(node('line', {
+            x1: start.x, y1: start.y, x2: stop.x, y2: stop.y,
+            stroke: '#ffffff', 'stroke-width': band, 'stroke-linecap': 'butt',
+          }));
+          const nx = -dy * (band / 2);
+          const ny = dx * (band / 2);
+          for (const side of [-1, 1]) {
+            group.appendChild(node('line', {
+              x1: start.x + nx * side, y1: start.y + ny * side, x2: stop.x + nx * side, y2: stop.y + ny * side,
+              stroke: color, 'stroke-width': Math.max(0.6, stroke * 0.7),
+            }));
+          }
+          if (lanes > 1) {
+            const inner = islandR + band / 2;
+            group.appendChild(node('line', {
+              x1: cx + dx * inner, y1: cy + dy * inner, x2: stop.x, y2: stop.y,
+              stroke: color, 'stroke-width': Math.max(0.5, stroke * 0.5), 'stroke-dasharray': dash, opacity: 0.7,
+            }));
+          }
+        }
+        circle(radius, { fill: 'transparent', stroke: 'transparent', 'stroke-width': Math.max(18 / zoom, band), class: 'hit-area' });
+        const island = G.round(junction.islandM, 1).toString().replace('.', ',');
+        label(`${junction.legs} accesos · isla ${island} m`, { x: cx, y: cy - islandR - band / 2 - 6 / zoom });
+      } else {
+        // Cruce de calzadas: unión de dos bandas, líneas de carril y cebras.
+        const half = band / 2;
+        const points = junction.kind === 'tee'
+          ? [
+            { x: cx - half, y: element.y }, { x: cx + half, y: element.y }, { x: cx + half, y: cy - half },
+            { x: element.x + element.w, y: cy - half }, { x: element.x + element.w, y: cy + half },
+            { x: element.x, y: cy + half }, { x: element.x, y: cy - half }, { x: cx - half, y: cy - half },
+          ]
+          : [
+            { x: cx - half, y: element.y }, { x: cx + half, y: element.y }, { x: cx + half, y: cy - half },
+            { x: element.x + element.w, y: cy - half }, { x: element.x + element.w, y: cy + half },
+            { x: cx + half, y: cy + half }, { x: cx + half, y: element.y + element.h },
+            { x: cx - half, y: element.y + element.h }, { x: cx - half, y: cy + half },
+            { x: element.x, y: cy + half }, { x: element.x, y: cy - half }, { x: cx - half, y: cy - half },
+          ];
+        const path = points.map((point) => `${G.round(point.x, 2)} ${G.round(point.y, 2)}`).join(' ');
+        group.appendChild(node('polygon', { points: path, fill: '#ffffff', stroke: color, 'stroke-width': edge }));
+        if (median > 0) {
+          group.appendChild(node('line', {
+            x1: element.x, y1: cy, x2: element.x + element.w, y2: cy,
+            stroke: '#eef2f7', 'stroke-width': median * perMeter,
+          }));
+        }
+        const line = (x1, y1, x2, y2, attributes) => group.appendChild(node('line', { x1, y1, x2, y2, ...attributes }));
+        const laneLine = { stroke: color, 'stroke-width': Math.max(0.6, stroke * 0.6), 'stroke-dasharray': dash, opacity: 0.75 };
+        for (let index = 1; index < lanes; index += 1) {
+          const offset = (median / 2 + (index - (lanes - 1) / 2) * laneM) * perMeter;
+          line(element.x, cy + offset, element.x + element.w, cy + offset, laneLine);
+          if (junction.kind === 'cross') line(cx + offset, element.y, cx + offset, element.y + element.h, laneLine);
+          else line(cx + offset, element.y, cx + offset, cy - half, laneLine);
+        }
+        // Cebras de 50 cm a la entrada de cada brazo.
+        const stripe = Math.max(2, 50 * perMeter);
+        const bars = 6;
+        const zebra = { fill: color, 'fill-opacity': 0.5, stroke: 'none' };
+        for (let index = 0; index < bars; index += 1) {
+          const offset = -half + (index + 0.5) * (band / bars);
+          const depth = stripe * 1.6;
+          group.appendChild(node('rect', {
+            x: cx + offset - stripe * 0.35, y: element.y + depth * 0.35, width: stripe * 0.7, height: depth, ...zebra,
+          }));
+          group.appendChild(node('rect', {
+            x: cx + offset - stripe * 0.35, y: element.y + element.h - depth * 1.35, width: stripe * 0.7, height: depth, ...zebra,
+          }));
+          if (junction.kind === 'cross') {
+            group.appendChild(node('rect', {
+              x: element.x + depth * 0.35, y: cy + offset - stripe * 0.35, width: depth, height: stripe * 0.7, ...zebra,
+            }));
+          }
+          group.appendChild(node('rect', {
+            x: element.x + element.w - depth * 1.35, y: cy + offset - stripe * 0.35, width: depth, height: stripe * 0.7, ...zebra,
+          }));
+        }
+        group.appendChild(node('polygon', { points: path, fill: 'transparent', stroke: 'transparent', class: 'hit-area' }));
+        label(junction.kind === 'tee' ? 'Intersección en T · 3 accesos' : 'Intersección en cruz · 4 accesos', { x: cx, y: cy - half - 6 / zoom });
+      }
+      return group;
+    }
+
     outdoorNode(element, canvas) {
       const zoom = this.view.zoom || 1;
       const type = element.type;
@@ -446,8 +770,11 @@
 
       // Bandas y linderos: el trazo manda. Con curvas se dibujan arcos exactos;
       // sin curvas, la polilínea de siempre.
-      const bandWidth = type === 'property' ? 0 : Math.max(2, (Number(element.widthM) || 2) * 100 / cm);
       const flat = this.flatElementPoints(element);
+      if (type === 'road' && element.section) {
+        return this.roadNode(element, canvas, { color, stroke, zoom, cm, group, flat, label, font });
+      }
+      const bandWidth = type === 'property' ? 0 : Math.max(2, (Number(element.widthM) || 2) * 100 / cm);
       const exact = this.elementPathData(element);
       const flatData = G.pathData(flat, null);
       const strokePath = (attributes) => {

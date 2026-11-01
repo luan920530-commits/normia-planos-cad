@@ -12,6 +12,18 @@
     .replace(/\s+/g, ' ')
     .trim();
 
+  /*
+   * Sinónimos de búsqueda por familia CAD: la gente escribe «carro», «bici» o
+   * «semáforo» y espera encontrar el objeto aunque el nombre del catálogo diga
+   * otra cosa. Se buscan sin tildes y en minúsculas.
+   */
+  const CAD_SYNONYMS = {
+    vehicles: 'carro carros auto autos automovil vehiculo vehiculos moto motos bicicleta bicicletas bus buses camion camiones camioneta camionetas ambulancia bomberos policia patrulla volqueta tractomula cisterna grua maquinaria peaton silla de ruedas ciclista',
+    road: 'semaforo semaforos senal senales pare ceda cebra resalto reductor glorieta rotonda cono conos barrera sumidero ciclorruta ciclovia alumbrado parquimetro transito via calle carrera avenida anden rampa bolardo valla',
+    'traffic-signs': 'senal senales semaforo pare ceda prohibido preventiva reglamentaria informativa transitoria obra desvio velocidad escolar curva cruce peaton ciclista estacionamiento parqueadero',
+    bikes: 'bici bicis bicicleta bicicletas ciclorruta ciclovia patineta patineta electrica monopatin skate casco micromovilidad taller reparacion',
+  };
+
   class Library {
     constructor(app) {
       this.app = app;
@@ -204,7 +216,10 @@
           familyName: this.families[object.category]?.label || this.families[object.category]?.name || object.category,
           color: object.color || '#334155',
           description: object.description || '',
-          search: normalize([key, object.name, object.description, object.category, this.families[object.category]?.label].join(' ')),
+          search: normalize([
+            key, object.name, object.description, object.category,
+            this.families[object.category]?.label, CAD_SYNONYMS[object.category] || '',
+          ].join(' ')),
         })).sort((a, b) => a.name.localeCompare(b.name, 'es'));
       }
     }

@@ -286,8 +286,8 @@ try {
     Object.keys(catalog.categories || {}).join(','));
   report.check('Alias heredados disponibles', catalog.legacyTools?.extinguisher === 'F001' && catalog.legacyTools?.exit === 'E002');
   ({ response: catalogResponse, body: catalog } = await json('catalogs/cad'));
-  report.check('Catálogo CAD con 350 objetos', catalogResponse.status === 200 && catalog.count === 350 && Object.keys(catalog.objects || {}).length === 350);
-  report.check('Catálogo CAD con 28 familias sectoriales', Object.keys(catalog.categories || {}).length === 28
+  report.check('Catálogo CAD con 420 objetos', catalogResponse.status === 200 && catalog.count === 420 && Object.keys(catalog.objects || {}).length === 420);
+  report.check('Catálogo CAD con 31 familias sectoriales', Object.keys(catalog.categories || {}).length === 31
     && ['restaurant', 'warehouse', 'retail', 'hospital', 'textile', 'grill', 'supermarket', 'residential', 'sports', 'outdoor', 'electrico', 'hidraulico', 'eds', 'drogueria', 'gimnasio', 'colegio', 'cafeteria'].every((key) => catalog.categories?.[key]?.label),
     Object.keys(catalog.categories || {}).join(','));
   report.check('Cada familia CAD tiene objetos', Object.keys(catalog.categories || {}).every((key) => Object.values(catalog.objects || {}).some((object) => object.category === key)));
@@ -1028,8 +1028,73 @@ try {
   doorCurve.elements.find((element) => element.id === 'salida_curva').curves = [{ kind: 'arc', through: { x: 1, y: 1 } }];
   res = await client.postJson(`api/floors/${curveFloorId}/save`, { design: doorCurve, expected_version: (await json(`api/floors/${curveFloorId}`)).body.floor.version });
   report.check('Una puerta no admite curvas', res.status === 422, String(res.status));
-  res = await client.postJson(`api/floors/${curveFloorId}/save`, { design: { ...straightRoom, format: 4 }, expected_version: (await json(`api/floors/${curveFloorId}`)).body.floor.version });
+  res = await client.postJson(`api/floors/${curveFloorId}/save`, { design: { ...straightRoom, format: 5 }, expected_version: (await json(`api/floors/${curveFloorId}`)).body.floor.version });
   report.check('Un formato de plano desconocido se rechaza', res.status === 422, String(res.status));
+
+  /* ------------------ sección tipo y glorieta (formato 4) ------------------ */
+  const avenueSection = { lanes: 2, laneM: 3, medianM: 2, shoulderM: 0.5, bikeM: 1.8, sidewalkM: 1 };
+  const ringSection = { lanes: 2, laneM: 3, medianM: 0, shoulderM: 0.5, bikeM: 1.8, sidewalkM: 2 };
+  const sectionRoom = {
+    ...curveBase,
+    elements: [
+      ...roomWalls(),
+      curveWall('muro_der', 700, 100, 2, 400, [{ x: 0, y: 0 }, { x: 0, y: 400 }]),
+      curveDoor,
+      {
+        id: 'avenida_tipo', type: 'road', layerId: curveLayer, x: 100, y: 300, w: 600, h: 2,
+        rotation: 0, color: '#0f766e', stroke: 1.5, opacity: 1, label: 'Avenida 4', locked: false,
+        widthM: 2, lanes: 2, section: avenueSection, points: [{ x: 0, y: 1 }, { x: 600, y: 1 }],
+      },
+      {
+        id: 'glorieta_tipo', type: 'road', layerId: curveLayer, x: 100, y: 60, w: 600, h: 500,
+        rotation: 0, color: '#0f766e', stroke: 1.5, opacity: 1, label: '', locked: false,
+        widthM: 2, lanes: 2, section: ringSection,
+        junction: { kind: 'roundabout', legs: 4, islandM: 6 },
+        points: [{ x: 0, y: 1 }, { x: 600, y: 1 }],
+      },
+    ],
+  };
+  res = await client.postJson(`api/floors/${curveFloorId}/save`, { design: sectionRoom, expected_version: (await json(`api/floors/${curveFloorId}`)).body.floor.version, note: 'Sección tipo' });
+  const sectionSaved = (await json(`api/floors/${curveFloorId}`)).body.design || {};
+  const avenueSaved = (sectionSaved.elements || []).find((element) => element.id === 'avenida_tipo');
+  const ringSaved = (sectionSaved.elements || []).find((element) => element.id === 'glorieta_tipo');
+  report.check('El servidor guarda la sección tipo en formato 4 y deriva el ancho',
+    res.status === 200 && sectionSaved.format === 4 && avenueSaved?.widthM === 14.6 && avenueSaved?.section?.lanes === 2,
+    `${res.status} · formato ${sectionSaved.format} · ${avenueSaved?.widthM} m`);
+  report.check('La glorieta se guarda con sus accesos e isla',
+    ringSaved?.junction?.kind === 'roundabout' && ringSaved?.junction?.legs === 4 && ringSaved?.junction?.islandM === 6,
+    `${ringSaved?.junction?.kind} · ${ringSaved?.junction?.legs} accesos · isla ${ringSaved?.junction?.islandM} m`);
+  const sectionSvg = (await client.get(`projects/${curveProjectId}/floors/${curveFloorId}/export/svg`)).text;
+  const avenueGroup = (/<g data-element="avenida_tipo"[\s\S]*?<\/g>/.exec(sectionSvg) || [''])[0];
+  const ringGroup = (/<g data-element="glorieta_tipo"[\s\S]*?<\/g>/.exec(sectionSvg) || [''])[0];
+  report.check('El SVG exporta la calzada con carriles, andenes y su rótulo',
+    /2 carriles · 14,6 m/.test(avenueGroup) && /stroke-width="900"/.test(avenueGroup) && /#e6eaf1/.test(avenueGroup),
+    avenueGroup.slice(0, 160));
+  report.check('El SVG exporta el perfil transversal acotado de la vía',
+    /data-road-profile="1"/.test(sectionSvg) && /Perfil transversal/.test(sectionSvg)
+    && /Ancho total 14,6 m/.test(sectionSvg),
+    (/data-road-profile[\s\S]{0,240}/.exec(sectionSvg) || [''])[0].slice(0, 160));
+  report.check('El SVG exporta la glorieta como anillo con accesos e isla',
+    /<circle [^>]*class="hit-area"/.test(ringGroup) && /4 accesos · isla 6 m/.test(ringGroup) && /#eef2f7/.test(ringGroup),
+    ringGroup.slice(0, 160));
+
+  // Validación de la sección y de la glorieta.
+  const wrongSection = JSON.parse(JSON.stringify(sectionRoom));
+  wrongSection.elements.find((element) => element.id === 'avenida_tipo').section.laneM = 9;
+  res = await client.postJson(`api/floors/${curveFloorId}/save`, { design: wrongSection, expected_version: (await json(`api/floors/${curveFloorId}`)).body.floor.version });
+  report.check('Un ancho de carril fuera de rango se rechaza', res.status === 422, String(res.status));
+  const extraSection = JSON.parse(JSON.stringify(sectionRoom));
+  extraSection.elements.find((element) => element.id === 'avenida_tipo').section.trenM = 1;
+  res = await client.postJson(`api/floors/${curveFloorId}/save`, { design: extraSection, expected_version: (await json(`api/floors/${curveFloorId}`)).body.floor.version });
+  report.check('Una propiedad desconocida en la sección se rechaza', res.status === 422, String(res.status));
+  const noSection = JSON.parse(JSON.stringify(sectionRoom));
+  delete noSection.elements.find((element) => element.id === 'glorieta_tipo').section;
+  res = await client.postJson(`api/floors/${curveFloorId}/save`, { design: noSection, expected_version: (await json(`api/floors/${curveFloorId}`)).body.floor.version });
+  report.check('Una glorieta sin sección tipo se rechaza', res.status === 422, String(res.status));
+  const badJunction = JSON.parse(JSON.stringify(sectionRoom));
+  badJunction.elements.find((element) => element.id === 'glorieta_tipo').junction.kind = 'puente';
+  res = await client.postJson(`api/floors/${curveFloorId}/save`, { design: badJunction, expected_version: (await json(`api/floors/${curveFloorId}`)).body.floor.version });
+  report.check('Un tipo de cruce desconocido se rechaza', res.status === 422, String(res.status));
 
   /* ---------------------------- aislamiento entre cuentas ---------------------------- */
   const createUser = await app.run(`

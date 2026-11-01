@@ -24,7 +24,9 @@ final class SvgExporter
         $bandHeight = $withFrame ? PlanFooter::bandHeight($width) : 0.0;
         $dataHeight = $withFrame ? PlanFooter::dataHeight($width, (array) $footer) : 0.0;
         $mepHeight = $withFrame && $mepRows !== [] ? 10.0 + 15.0 * count($mepRows) : 0.0;
-        $frameHeight = $withFrame ? 2.0 + $bandHeight + $dataHeight + $mepHeight + 8.0 : 0.0;
+        $profileRoads = $withFrame ? self::profileRoads($design) : [];
+        $profileHeight = $profileRoads === [] ? 0.0 : 8.0 + 42.0 * count($profileRoads);
+        $frameHeight = $withFrame ? 2.0 + $bandHeight + $dataHeight + $mepHeight + $profileHeight + 8.0 : 0.0;
         $totalHeight = $height + $frameHeight;
         $title = trim((string) ($meta['floor_name'] ?? 'Plano de emergencia'));
         $project = trim((string) ($meta['project_name'] ?? ''));
@@ -81,10 +83,112 @@ final class SvgExporter
                 }
             }
             $svg .= '</g>' . "\n";
+            if ($profileRoads !== []) {
+                $svg .= self::roadProfiles($profileRoads, $width, $mepTop + $mepHeight + 4);
+            }
         }
 
         $svg .= '</svg>' . "\n";
         return $svg;
+    }
+
+    /**
+     * Vías con sección tipo que llevan perfil transversal en la exportación
+     * (como máximo tres, para no comerse el plano).
+     *
+     * @return list<array<string,mixed>>
+     */
+    private static function profileRoads(array $design): array
+    {
+        $roads = [];
+        foreach ($design['elements'] as $element) {
+            if (($element['type'] ?? '') === 'road' && is_array($element['section'] ?? null)) {
+                $roads[] = $element;
+                if (count($roads) >= 3) {
+                    break;
+                }
+            }
+        }
+        return $roads;
+    }
+
+    /**
+     * Perfil transversal acotado de cada vía con sección: el mismo reparto del
+     * inspector (andén, ciclorruta, berma, carriles, separador), a escala del
+     * ancho del papel y con el total en metros. Es esquemático.
+     *
+     * @param list<array<string,mixed>> $roads
+     */
+    private static function roadProfiles(array $roads, float $width, float $top): string
+    {
+        $pad = PlanFooter::PAD;
+        $available = max(80.0, $width - $pad * 2);
+        $out = '<g data-road-profile="1" font-family="Helvetica, Arial, sans-serif">' . "\n";
+        foreach ($roads as $index => $road) {
+            $section = $road['section'];
+            $lanes = max(1, (int) ($section['lanes'] ?? 2));
+            $laneM = (float) ($section['laneM'] ?? 3);
+            $median = (float) ($section['medianM'] ?? 0);
+            $shoulder = (float) ($section['shoulderM'] ?? 0);
+            $bike = (float) ($section['bikeM'] ?? 0);
+            $walk = (float) ($section['sidewalkM'] ?? 0);
+            $total = $lanes * $laneM + $median + 2 * $shoulder + 2 * $bike + 2 * $walk;
+            $scale = $total > 0 ? $available / $total : 0.0;
+            $rowTop = $top + 42.0 * $index;
+            $bandTop = $rowTop + 12;
+            $bandHeight = 14.0;
+            $label = trim((string) ($road['label'] ?? ''));
+            $caption = ($label !== '' ? $label . ' · ' : '')
+                . $lanes . ' ' . ($lanes === 1 ? 'carril' : 'carriles')
+                . ' · ' . str_replace('.', ',', self::n($total, 2)) . ' m';
+            $out .= '<text x="' . self::n($pad) . '" y="' . self::n($rowTop + 8) . '" font-size="8.5" fill="#334155">'
+                . self::x('Perfil transversal · ' . $caption) . '</text>' . "\n";
+            $x = $pad;
+            $drawn = 0.0;
+            $band = static function (float $meters, string $fill, string $stroke) use (&$x, &$out, $bandTop, $bandHeight, $scale): void {
+                if ($meters <= 0) {
+                    return;
+                }
+                $bandWidth = $meters * $scale;
+                $out .= '<rect x="' . self::n($x) . '" y="' . self::n($bandTop) . '" width="' . self::n($bandWidth) . '" height="' . self::n($bandHeight)
+                    . '" fill="' . $fill . '" stroke="' . $stroke . '" stroke-width="0.6"/>' . "\n";
+                $x += $bandWidth;
+            };
+            $band($walk, '#e6eaf1', '#94a3b8');
+            $band($bike, '#e7f5ea', '#15803d');
+            $band($shoulder, '#f1f5f9', '#94a3b8');
+            $rightLanes = (int) ceil($lanes / 2);
+            $leftLanes = $lanes - $rightLanes;
+            $carriageway = static function (int $count) use (&$x, &$out, $bandTop, $bandHeight, $scale, $laneM): void {
+                if ($count <= 0) {
+                    return;
+                }
+                $bandWidth = $count * $laneM * $scale;
+                $out .= '<rect x="' . self::n($x) . '" y="' . self::n($bandTop) . '" width="' . self::n($bandWidth) . '" height="' . self::n($bandHeight)
+                    . '" fill="#ffffff" stroke="#334155" stroke-width="0.8"/>' . "\n";
+                for ($index = 1; $index < $count; $index += 1) {
+                    $lineX = $x + $index * $laneM * $scale;
+                    $out .= '<line x1="' . self::n($lineX) . '" y1="' . self::n($bandTop) . '" x2="' . self::n($lineX) . '" y2="' . self::n($bandTop + $bandHeight)
+                        . '" stroke="#64748b" stroke-width="0.6" stroke-dasharray="4 3"/>' . "\n";
+                }
+                $x += $bandWidth;
+            };
+            $carriageway($leftLanes);
+            $band($median, '#eef2f7', '#334155');
+            $carriageway($rightLanes);
+            $band($shoulder, '#f1f5f9', '#94a3b8');
+            $band($bike, '#e7f5ea', '#15803d');
+            $band($walk, '#e6eaf1', '#94a3b8');
+            // Cota del ancho total.
+            $dimY = $bandTop + $bandHeight + 7;
+            $out .= '<line x1="' . self::n($pad) . '" y1="' . self::n($dimY) . '" x2="' . self::n($pad + $available) . '" y2="' . self::n($dimY) . '" stroke="#94a3b8" stroke-width="0.6"/>' . "\n";
+            foreach ([$pad, $pad + $available] as $tick) {
+                $out .= '<line x1="' . self::n($tick) . '" y1="' . self::n($dimY - 3) . '" x2="' . self::n($tick) . '" y2="' . self::n($dimY + 3) . '" stroke="#94a3b8" stroke-width="0.6"/>' . "\n";
+            }
+            $out .= '<text x="' . self::n($pad + $available / 2) . '" y="' . self::n($dimY + 9) . '" text-anchor="middle" font-size="7.5" fill="#64748b">'
+                . self::x('Ancho total ' . str_replace('.', ',', self::n($total, 2)) . ' m · perfil esquemático, no sustituye el diseño geométrico vial') . '</text>' . "\n";
+        }
+        return $out . '</g>' . "\n";
     }
 
     private static function element(array $element, array $canvas): string
@@ -333,6 +437,336 @@ final class SvgExporter
      * la versión 2 (mismo orden de atributos y de puntos); con curvas usa un
      * `path` con arcos `A`, que es lo que imprime la curva real.
      */
+    /**
+     * Vía con sección tipo: calzada a escala con carriles marcados, separador,
+     * berma, ciclorruta y andenes. Réplica del dibujo del editor
+     * (`Renderer.roadNode`) para que el SVG y la pantalla coincidan.
+     */
+    private static function roadSectionMarkup(array $element, float $x, float $y, string $color, float $stroke, float $cmPerUnit, array $canvas): string
+    {
+        $section = $element['section'];
+        $perMeter = 100 / $cmPerUnit;
+        $lanes = max(1, (int) ($section['lanes'] ?? 2));
+        $laneM = (float) ($section['laneM'] ?? 3);
+        $median = (float) ($section['medianM'] ?? 0);
+        $shoulder = (float) ($section['shoulderM'] ?? 0);
+        $bike = (float) ($section['bikeM'] ?? 0);
+        $walk = (float) ($section['sidewalkM'] ?? 0);
+        $halfPavement = ($median / 2 + ($lanes / 2) * $laneM + $shoulder) * $perMeter;
+        // El trazo se exporta en coordenadas absolutas del lienzo (el grupo solo
+        // lleva la rotación), así que aquí se suman el origen del elemento.
+        $points = [];
+        foreach (self::flatPointList($element, $canvas) as $point) {
+            $points[] = ['x' => $x + (float) $point['x'], 'y' => $y + (float) $point['y']];
+        }
+        if (count($points) < 2) {
+            return '';
+        }
+        $out = '';
+        $line = static function (array $pts, string $attributes) use ($color): string {
+            return $pts === [] ? '' : '<polyline points="' . self::polylinePoints($pts) . '" fill="none" stroke-linecap="butt" stroke-linejoin="round" ' . $attributes . '/>' . "\n";
+        };
+        $offset = static function (float $distance) use ($points): array {
+            return self::offsetPoints($points, $distance);
+        };
+
+        // 1. Andenes fuera de la calzada.
+        if ($walk > 0) {
+            foreach ([-1, 1] as $side) {
+                $out .= $line($offset($side * ($halfPavement + ($bike + $walk / 2) * $perMeter)), 'stroke="#e6eaf1" stroke-width="' . self::n($walk * $perMeter) . '"');
+                $out .= $line($offset($side * ($halfPavement + $bike * $perMeter)), 'stroke="' . self::x($color) . '" stroke-width="' . self::n(max(0.8, $stroke * 0.9)) . '" opacity="0.85"');
+            }
+        }
+        // 2. Ciclorrutas adosadas al bordillo.
+        if ($bike > 0) {
+            foreach ([-1, 1] as $side) {
+                $out .= $line($offset($side * ($halfPavement + ($bike / 2) * $perMeter)), 'stroke="#e7f5ea" stroke-width="' . self::n($bike * $perMeter) . '"');
+                $out .= $line($offset($side * ($halfPavement + $bike * $perMeter)), 'stroke="#15803d" stroke-width="' . self::n(max(0.7, $stroke * 0.6)) . '" stroke-dasharray="' . self::n(max(6.0, 120 / $cmPerUnit)) . ' ' . self::n(max(4.0, 80 / $cmPerUnit)) . '" opacity="0.8"');
+            }
+        }
+        // 3. Calzada y sus bordes.
+        $out .= $line($points, 'stroke="#ffffff" stroke-width="' . self::n(max(2.0, $halfPavement * 2)) . '"');
+        foreach ([-1, 1] as $side) {
+            $out .= $line($offset($side * $halfPavement), 'stroke="' . self::x($color) . '" stroke-width="' . self::n(max(1.0, $stroke)) . '"');
+            if ($shoulder > 0) {
+                $out .= $line($offset($side * ($halfPavement - $shoulder * $perMeter)), 'stroke="' . self::x($color) . '" stroke-width="' . self::n(max(0.6, $stroke * 0.5)) . '" opacity="0.6"');
+            }
+        }
+        // 4. Separador central o eje discontinuo.
+        if ($median > 0) {
+            $out .= $line($points, 'stroke="#eef2f7" stroke-width="' . self::n($median * $perMeter) . '"');
+            foreach ([-1, 1] as $side) {
+                $out .= $line($offset($side * ($median / 2) * $perMeter), 'stroke="' . self::x($color) . '" stroke-width="' . self::n(max(1.0, $stroke * 0.9)) . '"');
+            }
+        } else {
+            $out .= $line($offset(0), 'stroke="' . self::x($color) . '" stroke-width="' . self::n(max(0.8, $stroke * 0.8)) . '" stroke-dasharray="' . self::n(max(8.0, 300 / $cmPerUnit)) . ' ' . self::n(max(6.0, 200 / $cmPerUnit)) . '" opacity="0.85"');
+        }
+        // 5. Separación entre carriles.
+        $dash = self::n(max(7.0, 250 / $cmPerUnit)) . ' ' . self::n(max(5.0, 150 / $cmPerUnit));
+        $rightLanes = (int) ceil($lanes / 2);
+        $leftLanes = $lanes - $rightLanes;
+        for ($index = 1; $index < $rightLanes; $index += 1) {
+            $out .= $line($offset(($median / 2 + $index * $laneM) * $perMeter), 'stroke="' . self::x($color) . '" stroke-width="' . self::n(max(0.6, $stroke * 0.6)) . '" stroke-dasharray="' . $dash . '" opacity="0.75"');
+        }
+        for ($index = 1; $index < $leftLanes; $index += 1) {
+            $out .= $line($offset(-($median / 2 + $index * $laneM) * $perMeter), 'stroke="' . self::x($color) . '" stroke-width="' . self::n(max(0.6, $stroke * 0.6)) . '" stroke-dasharray="' . $dash . '" opacity="0.75"');
+        }
+        // 6. Flechas de sentido.
+        $arrowLength = 2.8 * $perMeter;
+        $arrowWidth = 1.1 * $perMeter;
+        $arrow = static function (float $distance, int $direction) use ($points, $arrowLength, $arrowWidth, $color, $stroke): string {
+            $out = '';
+            $shifted = self::offsetPoints($points, $distance);
+            foreach ([0.32, 0.68] as $ratio) {
+                $at = self::sampleAlong($shifted, $ratio);
+                if ($at === null) {
+                    continue;
+                }
+                $tx = $at['tx'] * $direction;
+                $ty = $at['ty'] * $direction;
+                $tipX = $at['x'] + $tx * $arrowLength * 0.5;
+                $tipY = $at['y'] + $ty * $arrowLength * 0.5;
+                $tailX = $at['x'] - $tx * $arrowLength * 0.5;
+                $tailY = $at['y'] - $ty * $arrowLength * 0.5;
+                $nx = -$ty * $arrowWidth * 0.5;
+                $ny = $tx * $arrowWidth * 0.5;
+                $out .= '<polygon points="' . self::n($tipX) . ' ' . self::n($tipY) . ' ' . self::n($tailX + $nx) . ' ' . self::n($tailY + $ny) . ' ' . self::n($tailX - $nx) . ' ' . self::n($tailY - $ny) . '" fill="' . self::x($color) . '" fill-opacity="0.45" stroke="' . self::x($color) . '" stroke-width="' . self::n(max(0.4, $stroke * 0.4)) . '"/>' . "\n";
+            }
+            return $out;
+        };
+        for ($index = 0; $index < $rightLanes; $index += 1) {
+            $out .= $arrow(($median / 2 + ($index + 0.5) * $laneM) * $perMeter, 1);
+        }
+        for ($index = 0; $index < $leftLanes; $index += 1) {
+            $out .= $arrow(-($median / 2 + ($index + 0.5) * $laneM) * $perMeter, -1);
+        }
+        // 7. Zona sensible (selección) y rótulo con la sección.
+        $out .= '<polyline points="' . self::polylinePoints($points) . '" fill="none" stroke="transparent" stroke-width="' . self::n(max(18.0, $halfPavement * 2 + 14)) . '" stroke-linecap="round" class="hit-area"/>' . "\n";
+        $label = trim((string) ($element['label'] ?? ''));
+        $meters = self::n((float) ($element['widthM'] ?? 0), 1);
+        $caption = $lanes . ' ' . ($lanes === 1 ? 'carril' : 'carriles') . ' · ' . str_replace('.', ',', $meters) . ' m';
+        $middle = self::sampleAlong($points, 0.5) ?? ['x' => 0.0, 'y' => 0.0];
+        $out .= '<text x="' . self::n($middle['x'] + 6) . '" y="' . self::n($middle['y'] - 8) . '" font-size="9.5" fill="#334155" font-family="system-ui, -apple-system, Segoe UI, sans-serif" class="element-label" paint-order="stroke" stroke="#ffffff" stroke-width="3" stroke-linejoin="round">'
+            . self::x($label !== '' ? $label . ' · ' . $caption : $caption) . '</text>' . "\n";
+        return $out;
+    }
+
+    /**
+     * Glorieta o intersección de la vía, igual que en el editor: el anillo y los
+     * brazos toman el ancho de la sección tipo y la caja del elemento fija el
+     * tamaño del cruce. Se dibuja en coordenadas absolutas del lienzo.
+     */
+    private static function roadJunctionMarkup(array $element, float $x, float $y, string $color, float $stroke, float $cmPerUnit, array $canvas): string
+    {
+        $section = $element['section'];
+        $junction = $element['junction'];
+        $perMeter = 100 / $cmPerUnit;
+        $lanes = max(1, (int) ($section['lanes'] ?? 2));
+        $laneM = (float) ($section['laneM'] ?? 3);
+        $median = (float) ($section['medianM'] ?? 0);
+        $shoulder = (float) ($section['shoulderM'] ?? 0);
+        $bike = (float) ($section['bikeM'] ?? 0);
+        $walk = (float) ($section['sidewalkM'] ?? 0);
+        $pavement = $lanes * $laneM + 2 * $shoulder;
+        $band = $pavement * $perMeter;
+        $w = (float) $element['w'];
+        $h = (float) $element['h'];
+        $cx = $x + $w / 2;
+        $cy = $y + $h / 2;
+        $edge = max(1.0, $stroke);
+        $dash = self::n(max(6.0, 250 / $cmPerUnit)) . ' ' . self::n(max(4.0, 150 / $cmPerUnit));
+        $out = '';
+        $circle = static function (float $radius, string $attributes) use ($cx, $cy): string {
+            return '<circle cx="' . self::n($cx) . '" cy="' . self::n($cy) . '" r="' . self::n($radius) . '" ' . $attributes . '/>' . "\n";
+        };
+        $label = trim((string) ($element['label'] ?? ''));
+        $caption = '';
+        $labelAt = ['x' => $cx, 'y' => $cy];
+
+        if ((string) $junction['kind'] === 'roundabout') {
+            $outerWalk = ($bike + $walk) * $perMeter;
+            $radius = max($band * 0.8, min($w, $h) / 2 - $outerWalk);
+            $islandR = max(2.0, $radius - $band);
+            if ($walk > 0) {
+                $out .= $circle($radius + $outerWalk, 'fill="#e6eaf1" stroke="#94a3b8" stroke-width="' . self::n(max(0.5, $edge * 0.5)) . '"');
+            }
+            if ($bike > 0) {
+                $out .= $circle($radius + $bike * $perMeter, 'fill="#e7f5ea" stroke="#15803d" stroke-width="' . self::n(max(0.5, $edge * 0.6)) . '"');
+            }
+            $out .= $circle($radius, 'fill="#ffffff" stroke="' . self::x($color) . '" stroke-width="' . self::n($edge) . '"');
+            $out .= $circle($islandR, 'fill="#eef2f7" stroke="' . self::x($color) . '" stroke-width="' . self::n($edge) . '"');
+            for ($index = 1; $index < $lanes; $index += 1) {
+                $out .= $circle($islandR + $index * $laneM * $perMeter, 'fill="none" stroke="' . self::x($color) . '" stroke-width="' . self::n(max(0.6, $stroke * 0.6)) . '" stroke-dasharray="' . $dash . '" opacity="0.75"');
+            }
+            $legs = max(3, min(5, (int) ($junction['legs'] ?? 4)));
+            for ($index = 0; $index < $legs; $index += 1) {
+                $angle = -M_PI / 2 + ($index * M_PI * 2) / $legs;
+                $dx = cos($angle);
+                $dy = sin($angle);
+                $limits = [];
+                if ($dx > 0.001) {
+                    $limits[] = ($x + $w - $cx) / $dx;
+                }
+                if ($dx < -0.001) {
+                    $limits[] = ($x - $cx) / $dx;
+                }
+                if ($dy > 0.001) {
+                    $limits[] = ($y + $h - $cy) / $dy;
+                }
+                if ($dy < -0.001) {
+                    $limits[] = ($y - $cy) / $dy;
+                }
+                $positive = array_values(array_filter($limits, static fn (float $value): bool => $value > 0));
+                $end = max($islandR, $positive === [] ? $islandR : min($positive));
+                $start = ['x' => $cx + $dx * $islandR, 'y' => $cy + $dy * $islandR];
+                $stop = ['x' => $cx + $dx * $end, 'y' => $cy + $dy * $end];
+                $out .= '<line x1="' . self::n($start['x']) . '" y1="' . self::n($start['y']) . '" x2="' . self::n($stop['x']) . '" y2="' . self::n($stop['y']) . '" stroke="#ffffff" stroke-width="' . self::n($band) . '" stroke-linecap="butt"/>' . "\n";
+                $nx = -$dy * ($band / 2);
+                $ny = $dx * ($band / 2);
+                foreach ([-1, 1] as $side) {
+                    $out .= '<line x1="' . self::n($start['x'] + $nx * $side) . '" y1="' . self::n($start['y'] + $ny * $side) . '" x2="' . self::n($stop['x'] + $nx * $side) . '" y2="' . self::n($stop['y'] + $ny * $side) . '" stroke="' . self::x($color) . '" stroke-width="' . self::n(max(0.6, $stroke * 0.7)) . '"/>' . "\n";
+                }
+                if ($lanes > 1) {
+                    $inner = $islandR + $band / 2;
+                    $out .= '<line x1="' . self::n($cx + $dx * $inner) . '" y1="' . self::n($cy + $dy * $inner) . '" x2="' . self::n($stop['x']) . '" y2="' . self::n($stop['y']) . '" stroke="' . self::x($color) . '" stroke-width="' . self::n(max(0.5, $stroke * 0.5)) . '" stroke-dasharray="' . $dash . '" opacity="0.7"/>' . "\n";
+                }
+            }
+            $out .= $circle($radius, 'fill="transparent" stroke="transparent" stroke-width="' . self::n(max(18.0, $band)) . '" class="hit-area"');
+            $island = str_replace('.', ',', self::n((float) ($junction['islandM'] ?? 0), 1));
+            $caption = $legs . ' accesos · isla ' . $island . ' m';
+            $labelAt = ['x' => $cx, 'y' => $cy - $islandR - $band / 2 - 6];
+        } else {
+            $half = $band / 2;
+            $points = (string) $junction['kind'] === 'tee'
+                ? [
+                    ['x' => $cx - $half, 'y' => $y], ['x' => $cx + $half, 'y' => $y], ['x' => $cx + $half, 'y' => $cy - $half],
+                    ['x' => $x + $w, 'y' => $cy - $half], ['x' => $x + $w, 'y' => $cy + $half],
+                    ['x' => $x, 'y' => $cy + $half], ['x' => $x, 'y' => $cy - $half], ['x' => $cx - $half, 'y' => $cy - $half],
+                ]
+                : [
+                    ['x' => $cx - $half, 'y' => $y], ['x' => $cx + $half, 'y' => $y], ['x' => $cx + $half, 'y' => $cy - $half],
+                    ['x' => $x + $w, 'y' => $cy - $half], ['x' => $x + $w, 'y' => $cy + $half],
+                    ['x' => $cx + $half, 'y' => $cy + $half], ['x' => $cx + $half, 'y' => $y + $h],
+                    ['x' => $cx - $half, 'y' => $y + $h], ['x' => $cx - $half, 'y' => $cy + $half],
+                    ['x' => $x, 'y' => $cy + $half], ['x' => $x, 'y' => $cy - $half], ['x' => $cx - $half, 'y' => $cy - $half],
+                ];
+            $polygon = self::polylinePoints($points);
+            $out .= '<polygon points="' . $polygon . '" fill="#ffffff" stroke="' . self::x($color) . '" stroke-width="' . self::n($edge) . '"/>' . "\n";
+            if ($median > 0) {
+                $out .= '<line x1="' . self::n($x) . '" y1="' . self::n($cy) . '" x2="' . self::n($x + $w) . '" y2="' . self::n($cy) . '" stroke="#eef2f7" stroke-width="' . self::n($median * $perMeter) . '"/>' . "\n";
+            }
+            $laneLine = ' stroke="' . self::x($color) . '" stroke-width="' . self::n(max(0.6, $stroke * 0.6)) . '" stroke-dasharray="' . $dash . '" opacity="0.75"';
+            for ($index = 1; $index < $lanes; $index += 1) {
+                $offset = ($median / 2 + ($index - ($lanes - 1) / 2) * $laneM) * $perMeter;
+                $out .= '<line x1="' . self::n($x) . '" y1="' . self::n($cy + $offset) . '" x2="' . self::n($x + $w) . '" y2="' . self::n($cy + $offset) . '"' . $laneLine . '/>' . "\n";
+                $vEnd = (string) $junction['kind'] === 'cross' ? $y + $h : $cy - $half;
+                $out .= '<line x1="' . self::n($cx + $offset) . '" y1="' . self::n($y) . '" x2="' . self::n($cx + $offset) . '" y2="' . self::n($vEnd) . '"' . $laneLine . '/>' . "\n";
+            }
+            $stripe = max(2.0, 50 * $perMeter);
+            $bars = 6;
+            $zebra = 'fill="' . self::x($color) . '" fill-opacity="0.5" stroke="none"';
+            for ($index = 0; $index < $bars; $index += 1) {
+                $offset = -$half + ($index + 0.5) * ($band / $bars);
+                $depth = $stripe * 1.6;
+                $out .= '<rect x="' . self::n($cx + $offset - $stripe * 0.35) . '" y="' . self::n($y + $depth * 0.35) . '" width="' . self::n($stripe * 0.7) . '" height="' . self::n($depth) . '" ' . $zebra . '/>' . "\n";
+                $out .= '<rect x="' . self::n($cx + $offset - $stripe * 0.35) . '" y="' . self::n($y + $h - $depth * 1.35) . '" width="' . self::n($stripe * 0.7) . '" height="' . self::n($depth) . '" ' . $zebra . '/>' . "\n";
+                if ((string) $junction['kind'] === 'cross') {
+                    $out .= '<rect x="' . self::n($x + $depth * 0.35) . '" y="' . self::n($cy + $offset - $stripe * 0.35) . '" width="' . self::n($depth) . '" height="' . self::n($stripe * 0.7) . '" ' . $zebra . '/>' . "\n";
+                }
+                $out .= '<rect x="' . self::n($x + $w - $depth * 1.35) . '" y="' . self::n($cy + $offset - $stripe * 0.35) . '" width="' . self::n($depth) . '" height="' . self::n($stripe * 0.7) . '" ' . $zebra . '/>' . "\n";
+            }
+            $out .= '<polygon points="' . $polygon . '" fill="transparent" stroke="transparent" class="hit-area"/>' . "\n";
+            $caption = (string) $junction['kind'] === 'tee' ? 'Intersección en T · 3 accesos' : 'Intersección en cruz · 4 accesos';
+            $labelAt = ['x' => $cx, 'y' => $cy - $half - 6];
+        }
+        $text = $label !== '' ? $label . ' · ' . $caption : $caption;
+        $out .= '<text x="' . self::n($labelAt['x']) . '" y="' . self::n($labelAt['y']) . '" text-anchor="middle" font-size="9.5" fill="#334155" font-family="system-ui, -apple-system, Segoe UI, sans-serif" class="element-label" paint-order="stroke" stroke="#ffffff" stroke-width="3" stroke-linejoin="round">'
+            . self::x($text) . '</text>' . "\n";
+        return $out;
+    }
+
+    /** Punto y tangente a una fracción del recorrido de una polilínea. */
+    private static function sampleAlong(array $points, float $ratio): ?array
+    {
+        $spans = [];
+        $total = 0.0;
+        for ($index = 1, $count = count($points); $index < $count; $index += 1) {
+            $length = hypot((float) $points[$index]['x'] - (float) $points[$index - 1]['x'], (float) $points[$index]['y'] - (float) $points[$index - 1]['y']);
+            $spans[] = $length;
+            $total += $length;
+        }
+        if ($total <= 0) {
+            return null;
+        }
+        $target = $total * max(0.0, min(1.0, $ratio));
+        for ($index = 1, $count = count($points); $index < $count; $index += 1) {
+            $length = $spans[$index - 1];
+            $last = $index === $count - 1;
+            if ($target <= $length || $last) {
+                $r = $length > 0 ? $target / $length : 0.0;
+                $a = $points[$index - 1];
+                $b = $points[$index];
+                return [
+                    'x' => (float) $a['x'] + ((float) $b['x'] - (float) $a['x']) * $r,
+                    'y' => (float) $a['y'] + ((float) $b['y'] - (float) $a['y']) * $r,
+                    'tx' => $length > 0 ? ((float) $b['x'] - (float) $a['x']) / $length : 1.0,
+                    'ty' => $length > 0 ? ((float) $b['y'] - (float) $a['y']) / $length : 0.0,
+                ];
+            }
+            $target -= $length;
+        }
+        return null;
+    }
+
+    /**
+     * Polilínea desplazada a un lado con la normal media de cada vértice.
+     *
+     * @param list<array{x:float,y:float}> $points
+     * @return list<array{x:float,y:float}>
+     */
+    private static function offsetPoints(array $points, float $distance): array
+    {
+        if (abs($distance) < 0.0001) {
+            return $points;
+        }
+        $count = count($points);
+        $out = [];
+        for ($index = 0; $index < $count; $index += 1) {
+            $nx = 0.0;
+            $ny = 0.0;
+            foreach ([[$index - 1, $index], [$index, $index + 1]] as [$from, $to]) {
+                if ($from < 0 || $to >= $count) {
+                    continue;
+                }
+                $dx = (float) $points[$to]['x'] - (float) $points[$from]['x'];
+                $dy = (float) $points[$to]['y'] - (float) $points[$from]['y'];
+                $length = hypot($dx, $dy);
+                if ($length <= 0) {
+                    continue;
+                }
+                $nx += -$dy / $length;
+                $ny += $dx / $length;
+            }
+            $length = hypot($nx, $ny);
+            $length = $length > 0 ? $length : 1.0;
+            $out[] = [
+                'x' => (float) $points[$index]['x'] + ($nx / $length) * $distance,
+                'y' => (float) $points[$index]['y'] + ($ny / $length) * $distance,
+            ];
+        }
+        return $out;
+    }
+
+    /** Puntos de una polilínea como atributo `points`. */
+    private static function polylinePoints(array $points): string
+    {
+        $parts = [];
+        foreach ($points as $point) {
+            $parts[] = self::n((float) $point['x']) . ' ' . self::n((float) $point['y']);
+        }
+        return implode(' ', $parts);
+    }
+
     private static function strokeMarkup(array $element, float $x, float $y, string $attributes): string
     {
         $d = self::pathD($element, $x, $y);
@@ -385,6 +819,15 @@ final class SvgExporter
             ? 0.0
             : max(2.0, (float) ($element['widthM'] ?? 2) * 100 / $cmPerUnit);
         $out = '';
+        if ($type === 'road' && is_array($element['section'] ?? null)) {
+            // Glorieta o intersección: anillo o cruce de calzadas.
+            if (is_array($element['junction'] ?? null)) {
+                return $out . self::roadJunctionMarkup($element, $x, $y, $color, $stroke, $cmPerUnit, $canvas);
+            }
+            // Vía con sección tipo: calzada con carriles, separador, berma,
+            // ciclorruta y andenes. Mismo dibujo que el editor; esquemático.
+            return $out . self::roadSectionMarkup($element, $x, $y, $color, $stroke, $cmPerUnit, $canvas);
+        }
         if ($band > 0) {
             $out .= self::strokeMarkup($element, $x, $y, 'fill="none" stroke="' . self::x($color) . '" stroke-width="' . self::n($band + $stroke * 2) . '" stroke-opacity="0.55" stroke-linecap="butt" stroke-linejoin="round"');
             $out .= self::strokeMarkup($element, $x, $y, 'fill="none" stroke="#f8fafc" stroke-width="' . self::n(max(1.0, $band)) . '" stroke-linecap="butt" stroke-linejoin="round"');

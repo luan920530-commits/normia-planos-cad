@@ -65,6 +65,11 @@ el texto literal. Desde la 1.12.0:
   `I` lindero.
 - **Pista en el lienzo**: las cinco herramientas tienen su propio texto en
   `TYPE_HINTS`; antes mostraban la pista de «Seleccionar».
+- **Corredor de ejemplo** (1.13.0): al final del menú de la baldosa de vías hay
+  una entrada que inserta avenida con sección tipo, andenes, paso cebra,
+  glorieta, dos señales y ruta peatonal en un solo paso. Sirve para ver de
+  golpe cómo se relacionan las herramientas de vías y para ajustarlas después
+  desde el inspector.
 
 ## El buscador
 

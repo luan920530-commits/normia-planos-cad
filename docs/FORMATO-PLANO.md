@@ -1,4 +1,4 @@
-# Formato de plano (esquema v3)
+# Formato de plano (esquema v4)
 
 Normia Planos CAD guarda cada piso como un documento JSON normalizado. El mismo documento se usa en la base de datos (`floors.design_json` y `floor_versions.design_json`), en la API del editor y en las exportaciones.
 
@@ -120,6 +120,44 @@ Los tipos `wall`, `route`, `line`, `pipe`, `conduit`, `road`, `sidewalk` y
 Los detalles de dibujo, límites y degradación están en
 [`docs/MUROS_Y_VIAAS.md`](MUROS_Y_VIAAS.md).
 
+### Sección tipo y cruces de la vía (formato 4)
+
+Una vía puede llevar su **sección tipo** en metros. Con `section` el documento
+pasa a `format: 4`; sin ella sigue siendo v2 o v3 y se dibuja igual que antes.
+
+```json
+{
+  "type": "road",
+  "widthM": 20,
+  "lanes": 4,
+  "section": { "lanes": 4, "laneM": 3.25, "medianM": 2, "shoulderM": 0.5, "bikeM": 0, "sidewalkM": 2 },
+  "junction": { "kind": "roundabout", "legs": 4, "islandM": 6 }
+}
+```
+
+| Campo | Límites | Qué hace |
+| --- | --- | --- |
+| `lanes` | 1–6 | Carriles de la calzada; define las líneas discontinuas y las flechas. |
+| `laneM` | 2,5–4 m | Ancho de cada carril. |
+| `medianM` | 0–4 m | Separador central con doble línea; en 0 el eje va discontinuo. |
+| `shoulderM` | 0–2 m | Berma a cada lado, dibujada como línea interior. |
+| `bikeM` | 0–3 m | Ciclorruta a cada lado, pegada al bordillo. |
+| `sidewalkM` | 0–4 m | Andén a cada lado, fuera de la calzada. |
+| `junction.kind` | `roundabout`, `tee`, `cross` | Glorieta o intersección; exige `section`. |
+| `junction.legs` | 3–5 | Accesos de la glorieta (T = 3, cruz = 4 fijos). |
+| `junction.islandM` | 1–40 m | Radio de la isla de la glorieta. |
+
+| Regla | Detalle |
+| --- | --- |
+| Ancho derivado | `widthM = lanes·laneM + medianM + 2·shoulderM + 2·bikeM + 2·sidewalkM`; el servidor lo recalcula y descarta el ancho enviado. |
+| Límites | `widthM` de una vía con sección llega a **46 m**; un andén suelto sigue en 30 m. |
+| Validación | Clave desconocida en `section` o `junction` → `422`. Medida fuera de rango → `422`. `junction` sin `section` → `422`. `kind` desconocido → `422`. |
+| Dibujo | Calzada blanca con bordes de color, líneas discontinuas entre carriles, separador con doble línea o eje discontinuo, flechas de sentido opuesto por calzada y rótulo «N carriles · X,X m». |
+| Glorieta | Anillo con isla, líneas de carril en arco y brazos recortados al marco; la caja del elemento fija el tamaño (cuadrada). |
+| Intersección | Unión de calzadas con líneas de carril, cebras y rótulo de accesos. |
+| Exportación | `SvgExporter::roadSectionMarkup()` y `roadJunctionMarkup()` reproducen el mismo dibujo, en coordenadas absolutas. |
+| Compatibilidad | Un plano v2/v3 se abre igual; solo al guardar una vía con `section` sube a `format: 4`. |
+
 ### Señales y equipos
 
 - Señales ISO 7010: `iso_<código en minúsculas>`, por ejemplo `iso_e002` (salida de emergencia) o `iso_f001` (extintor). Se validan contra `resources/iso7010-catalog.json`.
@@ -127,7 +165,7 @@ Los detalles de dibujo, límites y degradación están en
 - Equipos: clave del catálogo `cad_*`, por ejemplo `cad_desk` o `cad_stairs_straight`. Se validan contra `resources/cad-objects.json`.
 - Ambos se dibujan insertando el SVG del catálogo como símbolo saneado, con tamaño cuadrado por defecto (la señal mide 64×64 unidades por defecto).
 - Los trazos (`wall`, `route`, `line`, `dimension`) guardan `points` en coordenadas locales. Al editar un vértice el cliente reescribe la caja (`x`, `y`, `w`, `h`) con los límites reales y **disuelve la rotación en los puntos**, de modo que el servidor sigue recibiendo un documento válido sin cambios de esquema.
-- El catálogo de equipos tiene 350 objetos en 28 familias (`furniture`, `sanitary`, `kitchen`, `industrial`, `vehicles`, `vertical`, `restaurant`, `warehouse`, `retail`, `hospital`, `textile`, `grill`, `supermarket`, `residential`, `sports`, `outdoor`, `electrico`, `hidraulico`, `eds`, `drogueria`, `gimnasio`, `colegio`, `cafeteria`, `fire`, `emergency`, `technic`, `access`, `security`). Algunos objetos traen su propio `color` (por ejemplo el agua de piscinas, `#0891b2`); el resto hereda el color del elemento.
+- El catálogo de equipos tiene 420 objetos en 31 familias (`furniture`, `sanitary`, `kitchen`, `industrial`, `vehicles`, `vertical`, `restaurant`, `warehouse`, `retail`, `hospital`, `textile`, `grill`, `supermarket`, `residential`, `sports`, `outdoor`, `electrico`, `hidraulico`, `eds`, `drogueria`, `gimnasio`, `colegio`, `cafeteria`, `fire`, `emergency`, `technic`, `access`, `security`, `road`, `traffic-signs`, `bikes`). Algunos objetos traen su propio `color` (por ejemplo el agua de piscinas, `#0891b2`); el resto hereda el color del elemento.
 - Los objetos de la familia `electrico` admiten además `circuit` y `load` (VA), y el editor los suma al cálculo del circuito.
 
 ### Extintores
@@ -238,8 +276,8 @@ Al exportar, los símbolos se incrustan con identificadores únicos por plano y 
 
 ## Compatibilidad
 
-- El editor normaliza siempre al cargar y elige el formato de salida: `3` si algún trazo conserva curvas y `2` si no. Descarta tipos desconocidos y recorta valores fuera de rango.
+- El editor normaliza siempre al cargar y elige el formato de salida: `4` si alguna vía lleva sección tipo, `3` si algún trazo conserva curvas y `2` si no. Descarta tipos desconocidos y recorta valores fuera de rango.
 - Los planos **v2** se abren sin cambios. Un plano **v3** abierto en la 1.10.0 se ve con los tramos rectos porque esa versión ignora `curves` y normaliza a `format: 2`.
 - Los documentos guardados con el esquema actual no se modifican al exportar; el JSON es una copia íntegra del diseño normalizado.
-- La API acepta `format` 2 y 3; el resto responde `422`. `schema_version: 2` de la envoltura de exportación describe el sobre, no la versión del diseño.
+- La API acepta `format` 2, 3 y 4; el resto responde `422`. `schema_version: 2` de la envoltura de exportación describe el sobre, no la versión del diseño.
 - Si en el futuro cambia el esquema, `schema_version` permitirá migraciones explícitas.

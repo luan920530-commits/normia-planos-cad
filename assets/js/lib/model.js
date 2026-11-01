@@ -27,6 +27,103 @@
     return element;
   };
   const PATH_TYPES = ['wall', 'route', 'line', 'dimension', 'pipe', 'conduit', 'road', 'sidewalk', 'property'];
+  /*
+   * Sección tipo de una vía (formato 4). Las medidas van en metros y reparten el
+   * ancho: carriles, separador central, berma a cada lado, ciclorruta a cada
+   * lado y andén a cada lado. La suma da el ancho total (`widthM`), que es el
+   * que se dibuja. Una vía sin sección (planos anteriores) se sigue dibujando
+   * como banda con línea de eje, sin cambios.
+   */
+  const ROAD_LIMITS = {
+    lanes: [1, 6], laneM: [2.5, 4], medianM: [0, 4], shoulderM: [0, 2], bikeM: [0, 3], sidewalkM: [0, 4],
+  };
+  const DEFAULT_ROAD_SECTION = { lanes: 2, laneM: 3, medianM: 0, shoulderM: 0, bikeM: 0, sidewalkM: 0 };
+  const ROAD_MAX_WIDTH = 46;
+  const round2 = (value) => Math.round(Number(value) * 100) / 100;
+  /** Ancho total en metros que pide una sección tipo. */
+  const roadSectionWidth = (section) => round2(
+    section.lanes * section.laneM + section.medianM
+    + 2 * section.shoulderM + 2 * section.bikeM + 2 * section.sidewalkM,
+  );
+  /** Sección válida a partir de datos externos; `null` si no hay sección. */
+  const sanitizeRoadSection = (input) => {
+    if (!input || typeof input !== 'object' || Array.isArray(input)) return null;
+    const out = {};
+    for (const [key, [min, max]] of Object.entries(ROAD_LIMITS)) {
+      const value = Number(input[key]);
+      const raw = Number.isFinite(value) ? value : DEFAULT_ROAD_SECTION[key];
+      out[key] = key === 'lanes' ? Math.round(G.clamp(raw, min, max)) : round2(G.clamp(raw, min, max));
+    }
+    return out;
+  };
+  /*
+   * Glorietas e intersecciones: la vía puede dibujarse como anillo (glorieta) o
+   * como cruce de calzadas (T o cruz). La sección tipo manda en el ancho de la
+   * calzada; la caja del elemento manda en el tamaño del cruce.
+   */
+  const ROAD_JUNCTION_KINDS = ['roundabout', 'tee', 'cross'];
+  const sanitizeRoadJunction = (input) => {
+    if (!input || typeof input !== 'object' || Array.isArray(input)) return null;
+    if (!ROAD_JUNCTION_KINDS.includes(input.kind)) return null;
+    const roundabout = input.kind === 'roundabout';
+    const legs = roundabout
+      ? G.clamp(Math.round(Number(input.legs) || 4), 3, 5)
+      : input.kind === 'tee' ? 3 : 4;
+    const islandM = roundabout ? round2(G.clamp(Number(input.islandM) || 6, 1, 40)) : 0;
+    return { kind: input.kind, legs, islandM };
+  };
+
+  /**
+   * Secciones de obra listas para usar. Las cinco primeras cambian solo la
+   * sección; las dos últimas convierten la vía en glorieta o intersección.
+   */
+  const ROAD_SECTION_PRESETS = [
+    {
+      key: 'local',
+      label: 'Vía local',
+      hint: '2 carriles · andén 1,5 m',
+      section: { lanes: 2, laneM: 3, medianM: 0, shoulderM: 0, bikeM: 0, sidewalkM: 1.5 },
+    },
+    {
+      key: 'avenue',
+      label: 'Avenida',
+      hint: '4 carriles · separador 2 m',
+      section: { lanes: 4, laneM: 3.25, medianM: 2, shoulderM: 0.5, bikeM: 0, sidewalkM: 2 },
+    },
+    {
+      key: 'corridor',
+      label: 'Corredor con ciclorruta',
+      hint: '4 carriles · ciclorruta 1,8 m',
+      section: { lanes: 4, laneM: 3.2, medianM: 1.5, shoulderM: 0.5, bikeM: 1.8, sidewalkM: 2.5 },
+    },
+    {
+      key: 'rural',
+      label: 'Vía rural',
+      hint: '2 carriles · berma 1,5 m',
+      section: { lanes: 2, laneM: 3.5, medianM: 0, shoulderM: 1.5, bikeM: 0, sidewalkM: 0 },
+    },
+    {
+      key: 'roundabout',
+      label: 'Glorieta',
+      hint: 'anillo de 4 accesos',
+      section: { lanes: 2, laneM: 3.25, medianM: 0, shoulderM: 0.5, bikeM: 0, sidewalkM: 2 },
+      junction: { kind: 'roundabout', legs: 4, islandM: 6 },
+    },
+    {
+      key: 'tee',
+      label: 'Intersección en T',
+      hint: '3 accesos',
+      section: { lanes: 2, laneM: 3.25, medianM: 0, shoulderM: 0.5, bikeM: 0, sidewalkM: 2 },
+      junction: { kind: 'tee', legs: 3, islandM: 0 },
+    },
+    {
+      key: 'cross',
+      label: 'Intersección en cruz',
+      hint: '4 accesos',
+      section: { lanes: 2, laneM: 3.25, medianM: 0, shoulderM: 0.5, bikeM: 0, sidewalkM: 2 },
+      junction: { kind: 'cross', legs: 4, islandM: 0 },
+    },
+  ];
   const MEP_TYPES = ['pipe', 'conduit'];
   // Extintores del catálogo con sus datos de referencia. El servidor vuelve a
   // validarlos contra resources/extinguisher-criteria.json al guardar.
@@ -289,6 +386,7 @@
         case 'road':
           return Object.assign(base, {
             w: 620, h: 360, stroke: 1.5, color: '#64748b', lanes: 2, widthM: 6,
+            section: Object.assign({}, DEFAULT_ROAD_SECTION),
             points: [{ x: 0, y: 348 }, { x: 320, y: 200 }, { x: 618, y: 16 }],
           });
         case 'sidewalk':
@@ -386,9 +484,27 @@
           }
         }
         if (type === 'road' || type === 'sidewalk') {
-          normalized.widthM = G.clamp(Number(element.widthM) || base.widthM, 0.8, 30);
+          const maxWidth = type === 'road' ? ROAD_MAX_WIDTH : 30;
+          normalized.widthM = G.clamp(Number(element.widthM) || base.widthM, 0.8, maxWidth);
         }
-        if (type === 'road') normalized.lanes = G.clamp(Math.round(Number(element.lanes) || base.lanes), 1, 6);
+        if (type === 'road') {
+          normalized.lanes = G.clamp(Math.round(Number(element.lanes) || base.lanes), 1, 6);
+          // La sección tipo manda: si existe, el ancho se deriva de ella para
+          // que nunca haya un ancho que no cuadre con el reparto de carriles.
+          const section = sanitizeRoadSection(element.section);
+          if (section) {
+            normalized.section = section;
+            normalized.lanes = section.lanes;
+            normalized.widthM = roadSectionWidth(section);
+          } else {
+            delete normalized.section;
+          }
+          // La glorieta o el cruce solo tiene sentido con sección tipo: la
+          // calzada del anillo o de los brazos sale de ella.
+          const junction = normalized.section ? sanitizeRoadJunction(element.junction) : null;
+          if (junction) normalized.junction = junction;
+          else delete normalized.junction;
+        }
         return this.clampElement(normalized, canvas);
       });
       const settings = source.extinguishers && typeof source.extinguishers === 'object' ? source.extinguishers : {};
@@ -416,6 +532,7 @@
      * idéntico byte a byte con las polilíneas de siempre.
      */
     documentFormat() {
+      if (this.design.elements.some((element) => element.section)) return 4;
       return this.design.elements.some((element) => G.hasCurves(element.curves)) ? 3 : 2;
     }
 
@@ -1286,6 +1403,216 @@
       });
     }
 
+    /* ---------------------------- sección tipo ---------------------------- */
+
+    /**
+     * Cambia el reparto de la vía seleccionada (carriles, separador, berma,
+     * ciclorruta y andén). Es un solo paso del historial y recalcula el ancho.
+     */
+    setRoadSection(patch) {
+      const roads = this.selectedElements().filter((element) => element.type === 'road');
+      if (!roads.length || !this.canEdit()) return false;
+      let changed = false;
+      this.apply('edit', () => {
+        roads.forEach((element) => {
+          const base = element.section || Object.assign({}, DEFAULT_ROAD_SECTION, { lanes: element.lanes });
+          const next = sanitizeRoadSection({ ...base, ...patch });
+          if (!next) return;
+          element.section = next;
+          element.lanes = next.lanes;
+          element.widthM = roadSectionWidth(next);
+          changed = true;
+        });
+      });
+      return changed;
+    }
+
+    /** Quita la sección tipo y vuelve a la banda simple de los planos anteriores. */
+    clearRoadSection() {
+      const roads = this.selectedElements().filter((element) => element.type === 'road' && element.section);
+      if (!roads.length || !this.canEdit()) return false;
+      this.apply('edit', () => {
+        roads.forEach((element) => {
+          delete element.section;
+          element.widthM = G.clamp(Number(element.widthM) || 6, 0.8, ROAD_MAX_WIDTH);
+        });
+      });
+      return true;
+    }
+
+    /** Sección tipo que se usaría al convertir una vía antigua. */
+    suggestRoadSection(element) {
+      return sanitizeRoadSection(Object.assign({}, DEFAULT_ROAD_SECTION, {
+        lanes: Math.max(1, Math.min(4, Math.round(Number(element?.lanes) || 2))),
+      }));
+    }
+
+    /**
+     * Aplica una sección de obra (o la convierte en glorieta o intersección).
+     * Devuelve `false` si no hay una vía seleccionada o no hay permiso.
+     */
+    applyRoadPreset(key) {
+      const preset = ROAD_SECTION_PRESETS.find((item) => item.key === key);
+      const roads = this.selectedElements().filter((element) => element.type === 'road');
+      if (!preset || !roads.length || !this.canEdit()) return false;
+      this.apply('edit', () => {
+        roads.forEach((element) => {
+          const base = element.section || Object.assign({}, DEFAULT_ROAD_SECTION, { lanes: element.lanes });
+          const section = sanitizeRoadSection({ ...base, ...preset.section });
+          element.section = section;
+          element.lanes = section.lanes;
+          element.widthM = roadSectionWidth(section);
+          if (preset.junction) element.junction = { ...preset.junction };
+          else delete element.junction;
+          this.resizeForJunction(element, preset.junction, section);
+        });
+      });
+      return true;
+    }
+
+    /** Cambia accesos o isla de la glorieta seleccionada. */
+    setRoadJunction(patch) {
+      const roads = this.selectedElements().filter((element) => element.type === 'road' && element.junction);
+      if (!roads.length || !this.canEdit()) return false;
+      let changed = false;
+      this.apply('edit', () => {
+        roads.forEach((element) => {
+          const next = sanitizeRoadJunction({ ...element.junction, ...patch });
+          if (!next) return;
+          element.junction = next;
+          this.resizeForJunction(element, next, element.section);
+          changed = true;
+        });
+      });
+      return changed;
+    }
+
+    /**
+     * Ajusta la caja al tamaño que pide el cruce: un anillo de glorieta no se
+     * lee si el marco es un rectángulo estrecho. Conserva el centro y no baja
+     * del tamaño mínimo del cruce.
+     */
+    resizeForJunction(element, junction, section) {
+      if (!junction || !section) return;
+      const unit = this.design.canvas.unit;
+      const perMeter = 100 / G.cmPerUnit(unit);
+      const pavement = section.lanes * section.laneM + 2 * section.shoulderM;
+      const outer = junction.kind === 'roundabout'
+        ? 2 * (pavement + junction.islandM + section.bikeM + section.sidewalkM)
+        : Math.max(18, 3 * pavement);
+      // Un cruce siempre es cuadrado: si el lienzo es pequeño se ajusta a él.
+      const size = Math.min(outer * perMeter, this.design.canvas.width - 8, this.design.canvas.height - 8);
+      const cx = element.x + element.w / 2;
+      const cy = element.y + element.h / 2;
+      element.w = Math.max(8, size);
+      element.h = Math.max(8, size);
+      element.x = cx - element.w / 2;
+      element.y = cy - element.h / 2;
+      this.clampElement(element);
+    }
+
+    /**
+     * Corredor de ejemplo en una sola acción: avenida con sección tipo, andenes
+     * a los lados, paso cebra, glorieta, dos señales y una ruta peatonal. Se
+     * ajusta al tamaño del lienzo para que quepa en cualquier plano y todo el
+     * conjunto entra en un solo paso del historial.
+     */
+    insertCorridorExample() {
+      if (!this.canEdit()) return 0;
+      const canvas = this.design.canvas;
+      const perMeter = 100 / G.cmPerUnit(canvas.unit);
+      const margin = Math.max(20, Math.round(Math.min(canvas.width, canvas.height) * 0.04));
+      // El anillo necesita alto de papel: todo el corredor se dimensiona con lo
+      // que quepa, para que el dibujo y las medidas nunca se contradigan.
+      const availableM = (canvas.height - margin * 2) / perMeter;
+      const ringLane = G.clamp(round2(availableM / 2 - 1), 2.5, 3.5);
+      const islandM = Math.floor((availableM / 2 - ringLane) * 10) / 10;
+      const withRoundabout = islandM >= 1;
+      const wide = availableM >= 18;
+      const avenueSection = wide
+        ? { lanes: 4, laneM: 3.25, medianM: 2, shoulderM: 0.5, bikeM: 0, sidewalkM: 0 }
+        : { lanes: 2, laneM: ringLane, medianM: 0, shoulderM: 0, bikeM: 0, sidewalkM: 0 };
+      const pavementM = avenueSection.lanes * avenueSection.laneM
+        + avenueSection.medianM + 2 * avenueSection.shoulderM;
+      const walkM = G.clamp(round2((availableM - pavementM) / 2), 0.8, 2.5);
+      const diameter = withRoundabout ? 2 * (islandM + ringLane) * perMeter : 0;
+      const cy = Math.round(canvas.height / 2);
+      const centerX = Math.round(margin + diameter / 2);
+      const startX = Math.round(centerX + diameter / 2);
+      const length = Math.max(perMeter * 3, Math.round(canvas.width - margin - centerX));
+      const crossX = Math.round(startX + (length - diameter / 2) * 0.55);
+      const created = [];
+      this.apply('add', () => {
+        const push = (element) => {
+          this.design.elements.push(element);
+          created.push(element.id);
+        };
+        const flat = () => [{ x: 0, y: 1 }, { x: length, y: 1 }];
+        push(this.createElement('road', {
+          x: centerX, y: cy - 1, w: length, h: 2, points: flat(),
+          lanes: avenueSection.lanes,
+          widthM: roadSectionWidth(avenueSection),
+          section: avenueSection,
+          label: 'Avenida de ejemplo',
+        }));
+        // Andenes aparte: se dibujan a los lados de la calzada y se pueden
+        // pintar o mover por su cuenta.
+        const offset = (pavementM / 2 + walkM / 2) * perMeter;
+        for (const side of [-1, 1]) {
+          push(this.createElement('sidewalk', {
+            x: startX, y: cy + offset * side - 1, w: Math.max(2, length - diameter / 2), h: 2,
+            points: [{ x: 0, y: 1 }, { x: Math.max(2, length - diameter / 2), y: 1 }],
+            widthM: walkM, label: side < 0 ? 'Andén norte' : 'Andén sur',
+          }));
+        }
+        const crossM = 3;
+        push(this.createElement('crosswalk', {
+          x: crossX - (crossM * perMeter) / 2, y: cy - (pavementM * perMeter) / 2,
+          w: crossM * perMeter, h: pavementM * perMeter, label: 'Paso cebra',
+        }));
+        if (withRoundabout) {
+          push(this.createElement('road', {
+            x: centerX - diameter / 2, y: cy - diameter / 2, w: diameter, h: diameter,
+            lanes: 1, widthM: roadSectionWidth({ lanes: 1, laneM: ringLane, medianM: 0, shoulderM: 0, bikeM: 0, sidewalkM: 0 }),
+            section: { lanes: 1, laneM: ringLane, medianM: 0, shoulderM: 0, bikeM: 0, sidewalkM: 0 },
+            junction: { kind: 'roundabout', legs: 4, islandM },
+            label: 'Glorieta de ejemplo',
+          }));
+        }
+        const signal = (key, x, y) => push(this.createElement(key, {
+          x: Math.round(x - 45), y: Math.round(y - 45), w: 90, h: 90,
+        }));
+        signal('cad_rd_traffic_light', crossX - 1.4 * perMeter, cy - (pavementM / 2 + 1.2) * perMeter);
+        signal('cad_rd_ped_light', crossX + 1.4 * perMeter, cy - (pavementM / 2 + 1.2) * perMeter);
+        const routeLength = Math.max(2, Math.round(canvas.width - margin - startX));
+        push(this.createElement('route', {
+          x: startX, y: cy + (pavementM / 2 + walkM / 2) * perMeter - 1, w: routeLength, h: 2,
+          points: [{ x: 0, y: 1 }, { x: routeLength, y: 1 }],
+          label: 'Ruta peatonal de ejemplo',
+        }));
+        this.selection = new Set(created);
+        const first = this.design.elements.find((element) => element.id === created[0]);
+        if (first) this.activeLayerId = first.layerId;
+      });
+      return created.length;
+    }
+
+    /** Secciones de obra disponibles para el inspector. */
+    roadPresets() {
+      return ROAD_SECTION_PRESETS.map((preset) => ({
+        key: preset.key,
+        label: preset.label,
+        hint: preset.hint,
+        junction: preset.junction ? preset.junction.kind : null,
+      }));
+    }
+
+    /** Ancho total de una sección, para el inspector y las pruebas. */
+    roadSectionWidth(section) {
+      const clean = sanitizeRoadSection(section);
+      return clean ? roadSectionWidth(clean) : 0;
+    }
+
     setProps(patch) {
       const elements = this.selectedElements();
       if (!elements.length) return false;
@@ -1323,9 +1650,19 @@
           if (patch.locked !== undefined) element.locked = Boolean(patch.locked);
           if (patch.lanes !== undefined && element.type === 'road') {
             element.lanes = G.clamp(Math.round(Number(patch.lanes) || 1), 1, 6);
+            // Con sección tipo el carril se cambia en el reparto, no por fuera.
+            if (element.section) {
+              element.section = sanitizeRoadSection({ ...element.section, lanes: element.lanes });
+              element.widthM = roadSectionWidth(element.section);
+            }
           }
           if (patch.widthM !== undefined && (element.type === 'road' || element.type === 'sidewalk')) {
-            element.widthM = G.clamp(Number(patch.widthM) || 2, 0.8, 30);
+            // En una vía con sección el ancho es la suma del reparto: se ignora
+            // el valor suelto para que el dibujo y el número no se contradigan.
+            if (!(element.type === 'road' && element.section)) {
+              const maxWidth = element.type === 'road' ? ROAD_MAX_WIDTH : 30;
+              element.widthM = G.clamp(Number(patch.widthM) || 2, 0.8, maxWidth);
+            }
           }
           if (this.isExtinguisherType(element.type)) {
             if (patch.extAgent !== undefined && typeof patch.extAgent === 'string' && patch.extAgent) element.extAgent = patch.extAgent;
