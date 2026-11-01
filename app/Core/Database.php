@@ -44,6 +44,40 @@ final class Database
         return $pdo;
     }
 
+    /**
+     * Migración mínima y repetible: instalaciones anteriores a la 1.14.0 no
+     * tienen la tabla del modo brigadista. Se crea al arrancar y se marca la
+     * versión del esquema para no repetir el trabajo en cada petición.
+     */
+    public static function migrate(): void
+    {
+        static $done = false;
+        if ($done) {
+            return;
+        }
+        $done = true;
+        try {
+            $version = (int) self::value('PRAGMA user_version');
+            if ($version >= 2) {
+                return;
+            }
+            self::pdo()->exec(
+                'CREATE TABLE IF NOT EXISTS brigade_links (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    floor_id INTEGER NOT NULL UNIQUE REFERENCES floors(id) ON DELETE CASCADE,
+                    token TEXT NOT NULL UNIQUE,
+                    enabled INTEGER NOT NULL DEFAULT 1,
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+                CREATE INDEX IF NOT EXISTS idx_brigade_token ON brigade_links(token);
+                PRAGMA user_version = 2;'
+            );
+        } catch (Throwable $exception) {
+            error_log('Normia: no se pudo migrar el esquema: ' . $exception->getMessage());
+        }
+    }
+
     public static function pdo(): PDO
     {
         if (self::$connection instanceof PDO) {

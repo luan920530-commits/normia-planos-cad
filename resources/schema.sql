@@ -51,4 +51,15 @@ CREATE TABLE IF NOT EXISTS floor_versions (
 );
 CREATE INDEX IF NOT EXISTS idx_versions_floor ON floor_versions(floor_id, version DESC);
 
-PRAGMA user_version = 1;
+-- Modo brigadista: enlace público de solo lectura por piso.
+CREATE TABLE IF NOT EXISTS brigade_links (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    floor_id INTEGER NOT NULL UNIQUE REFERENCES floors(id) ON DELETE CASCADE,
+    token TEXT NOT NULL UNIQUE,
+    enabled INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_brigade_token ON brigade_links(token);
+
+PRAGMA user_version = 2;

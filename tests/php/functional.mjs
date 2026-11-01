@@ -7,12 +7,13 @@
  * CSRF, aislamiento entre cuentas y carga de recursos locales.
  */
 import { JSDOM } from 'jsdom';
-import { startApp, extractToken, decodeEntities, makeReporter } from './harness.mjs';
+import { startApp, extractToken, decodeEntities, makeReporter, Client } from './harness.mjs';
 
 const version = process.argv[2] || '8.3';
 const report = makeReporter(version);
 const app = await startApp(version);
 const { client } = app;
+const guest = new Client(app.handler);
 let email = 'admin@normia.local';
 let password = 'ClaveSegura2026';
 
@@ -1095,6 +1096,44 @@ try {
   badJunction.elements.find((element) => element.id === 'glorieta_tipo').junction.kind = 'puente';
   res = await client.postJson(`api/floors/${curveFloorId}/save`, { design: badJunction, expected_version: (await json(`api/floors/${curveFloorId}`)).body.floor.version });
   report.check('Un tipo de cruce desconocido se rechaza', res.status === 422, String(res.status));
+
+  /* ---------------------------- modo brigadista ---------------------------- */
+  res = await client.get(`projects/${projectId}/floors/${floorId}/brigade`);
+  report.check('El panel del modo brigadista abre con enlace desactivado', res.status === 200 && /Modo brigadista/.test(res.text) && /Enlace desactivado/.test(res.text), String(res.status));
+  res = await client.postForm(`projects/${projectId}/floors/${floorId}/brigade`, { _token: homeToken, action: 'enable' });
+  report.check('Activar el enlace redirige al panel', [302, 303].includes(res.status), String(res.status));
+  res = await client.get(`projects/${projectId}/floors/${floorId}/brigade`);
+  const brigadeUrl = /value="(http:\/\/[^"]*r=b%2F[a-f0-9]{32}[^"]*)"/.exec(res.text)
+    || /value="(http:\/\/[^"]*b\/[a-f0-9]{32}[^"]*)"/.exec(res.text);
+  const brigadeToken = /b%2F([a-f0-9]{32})|b\/([a-f0-9]{32})/.exec(res.text || '');
+  const tokenValue = brigadeToken ? (brigadeToken[1] || brigadeToken[2]) : '';
+  report.check('El enlace público tiene un token de 32 caracteres', /^[a-f0-9]{32}$/.test(tokenValue), tokenValue);
+  report.check('El panel muestra la dirección absoluta del enlace', Boolean(brigadeUrl), brigadeUrl ? 'sí' : 'no');
+  res = await guest.get(`b/${tokenValue}`);
+  report.check('La página pública abre sin sesión', res.status === 200 && /Modo brigadista/.test(res.text) && /Llamar emergencias/.test(res.text), String(res.status));
+  report.check('La página pública no muestra el editor ni la cuenta', res.status === 200 && !/Cerrar sesión/.test(res.text) && !/rail/.test(res.text));
+  res = await guest.get(`b/${tokenValue}/plan.json`, { accept: 'application/json' });
+  let planBody = {};
+  try { planBody = JSON.parse(res.text); } catch { planBody = {}; }
+  report.check('La API pública devuelve el plano en JSON', res.status === 200 && planBody.ok === true && planBody.token === undefined && typeof planBody.floor?.name === 'string', String(res.status));
+  report.check('La API pública trae grupos por acción rápida', Boolean(planBody.groups) && ['ruta', 'reunion', 'extintores'].every((key) => Array.isArray(planBody.groups[key])), JSON.stringify(planBody.counts || {}));
+  report.check('La API pública trae la fecha de actualización', typeof planBody.updated_label === 'string' && planBody.updated_label !== '', String(planBody.updated_at || ''));
+  res = await guest.get('b/' + 'f'.repeat(32));
+  report.check('Un token inexistente responde 404', res.status === 404 && /no está disponible/.test(res.text), String(res.status));
+  res = await guest.get(`api/floors/${floorId}`, { accept: 'application/json' });
+  report.check('La API privada sigue exigiendo sesión', res.status === 401, String(res.status));
+  res = await client.postForm(`projects/${projectId}/floors/${floorId}/brigade`, { _token: homeToken, action: 'regenerate' });
+  res = await client.get(`projects/${projectId}/floors/${floorId}/brigade`);
+  const regenerated = /b%2F([a-f0-9]{32})|b\/([a-f0-9]{32})/.exec(res.text || '');
+  const newToken = regenerated ? (regenerated[1] || regenerated[2]) : '';
+  report.check('Regenerar el enlace cambia el token', newToken !== '' && newToken !== tokenValue, newToken.slice(0, 8));
+  res = await guest.get(`b/${tokenValue}`);
+  report.check('El token anterior deja de abrir la página', res.status === 404, String(res.status));
+  await client.postForm(`projects/${projectId}/floors/${floorId}/brigade`, { _token: homeToken, action: 'disable' });
+  res = await guest.get(`b/${newToken}`);
+  report.check('Desactivar el enlace corta el acceso público', res.status === 404, String(res.status));
+  res = await guest.get('b/' + 'x' + 'f'.repeat(31));
+  report.check('Un token con caracteres inválidos no llega al controlador', res.status === 404, String(res.status));
 
   /* ---------------------------- aislamiento entre cuentas ---------------------------- */
   const createUser = await app.run(`

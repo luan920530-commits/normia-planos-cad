@@ -120,3 +120,36 @@ function flash_error(string $message): void
 {
     Session::flash('error', $message);
 }
+
+/**
+ * URL absoluta de una ruta de la aplicación. Sirve para compartir el enlace
+ * del modo brigadista, que se abre desde otro teléfono.
+ */
+function absolute_url(string $route = '', array $params = []): string
+{
+    $path = url($route, $params);
+    if (preg_match('#^https?://#i', $path) === 1) {
+        return $path;
+    }
+    $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || (($_SERVER['SERVER_PORT'] ?? '') === '443')
+        || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
+    $host = (string) ($_SERVER['HTTP_HOST'] ?? 'localhost');
+    return ($https ? 'https://' : 'http://') . $host . '/' . ltrim($path, '/');
+}
+
+/** Fecha corta y legible en español para los avisos de actualización. */
+function short_date(?string $value): string
+{
+    $value = trim((string) $value);
+    if ($value === '') {
+        return '';
+    }
+    $timestamp = strtotime($value . (preg_match('/[zZ]|[+-]\d\d:?\d\d$/', $value) === 1 ? '' : ' UTC'));
+    if ($timestamp === false) {
+        return $value;
+    }
+    $months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+    return date('j', $timestamp) . ' ' . $months[(int) date('n', $timestamp) - 1] . ' ' . date('Y', $timestamp)
+        . ' · ' . date('H:i', $timestamp);
+}

@@ -5,6 +5,7 @@ namespace App\Core;
 
 use App\Controllers\AccountController;
 use App\Controllers\AuthController;
+use App\Controllers\BrigadeController;
 use App\Controllers\DashboardController;
 use App\Controllers\EditorController;
 use App\Controllers\ExportController;
@@ -34,6 +35,9 @@ final class Application
                 return;
             }
 
+            // Esquema al día (tabla del modo brigadista en instalaciones previas).
+            Database::migrate();
+
             if ($route === 'install') {
                 Response::redirect(Auth::check() ? url('') : url('login'));
             }
@@ -46,7 +50,8 @@ final class Application
                 return;
             }
 
-            $public = in_array($route, ['login'], true);
+            $public = in_array($route, ['login'], true)
+                || preg_match('#^b/[^/]+(/plan\.json|/brigade-sw\.js)?$#D', $route) === 1;
             if (!$public && !Auth::check()) {
                 if ($isApi || $request->wantsJson()) {
                     Response::json(['ok' => false, 'message' => 'La sesión expiró. Inicia sesión nuevamente.', 'code' => 'unauthenticated'], 401);
@@ -135,6 +140,13 @@ final class Application
         $router->get('api/floors/{id}/mep', static fn (array $p) => (new FloorApiController())->mep($p['id']));
         $router->get('api/floors/{id}/audit', static fn (array $p) => (new FloorApiController())->audit($p['id']));
         $router->get('projects/{id}/floors/{floorId}/audit', static fn (array $p) => (new ExportController())->audit($p['id'], $p['floorId']));
+
+        // Modo brigadista: enlace público de solo lectura (sin sesión).
+        $router->get('b/{token}', static fn (array $p) => (new BrigadeController())->publicPage($p['token']));
+        $router->get('b/{token}/plan.json', static fn (array $p) => (new BrigadeController())->publicData($p['token']));
+        $router->get('b/{token}/brigade-sw.js', static fn () => (new BrigadeController())->serviceWorker());
+        $router->get('projects/{id}/floors/{floorId}/brigade', static fn (array $p) => (new BrigadeController())->manage($p['id'], $p['floorId']));
+        $router->post('projects/{id}/floors/{floorId}/brigade', static fn (array $p) => (new BrigadeController())->update($p['id'], $p['floorId']));
 
         // Cuenta
         $router->get('account/password', static fn () => (new AccountController())->show());
