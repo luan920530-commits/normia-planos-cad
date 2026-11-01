@@ -51,12 +51,17 @@ export class NormiaApp {
    * @param {object} [options.storage]  `{ restore(php, dir), save(php, dir, filter, files) }`
    * @param {Function} [options.log]    registro de pasos para el diagnóstico
    */
-  constructor({ php, createHandler, files = {}, dataDir = '/www', storage = null, log = () => {} }) {
+  constructor({ php, createHandler, files = {}, dataDir = '/www', storage = null, seed = null, log = () => {} }) {
     this.php = php;
     this.createHandler = createHandler;
     this.files = files;
     this.dataDir = dataDir;
     this.storage = storage;
+    /**
+     * Instalación de fábrica del APK: `{ account, files: { ruta: base64 } }`.
+     * Se escribe solo cuando el teléfono no tiene datos todavía.
+     */
+    this.seed = seed && seed.files ? seed : null;
     this.log = log;
     this.handler = null;
     this.cookies = new Map();
@@ -65,6 +70,8 @@ export class NormiaApp {
     this.lastSaveError = null;
     /** Archivos de la aplicación montados en el intérprete. */
     this.restored = 0;
+    /** Archivos de la instalación de fábrica que se escribieron (0 si no hacía falta). */
+    this.sembrado = 0;
     this.ms = 0;
     /** Última versión de cada archivo que se escribió en el almacenamiento. */
     this.saved = new Map();
@@ -82,10 +89,58 @@ export class NormiaApp {
       this.restored = await this.storage.restore(this.php, this.dataDir);
       this.log('datos recuperados', { files: this.restored, ms: Date.now() - t0 });
     }
+    /*
+     * El APK se entrega con la aplicación **ya instalada** (base de datos,
+     * cuenta y demo). Se escribe solo cuando el teléfono está vacío: si el
+     * usuario ya tiene su base, la suya manda.
+     */
+    if (this.seed && this.restored === 0 && !this.isInstalled()) {
+      this.sembrado = await this.applySeed();
+      this.log('instalación de fábrica aplicada', { files: this.sembrado, ms: Date.now() - t0 });
+      // Y se guarda en el teléfono, para que la segunda apertura ya la tenga.
+      try {
+        await this.flush();
+      } catch (error) {
+        this.lastSaveError = error;
+        this.log('no se pudo guardar la instalación de fábrica', { error: String(error && error.message ? error.message : error) });
+      }
+    }
     this.handler = this.createHandler(this.php, this.dataDir);
     this.started = true;
     this.ms = Date.now() - t0;
     return this;
+  }
+
+  /** ¿El teléfono ya tiene una instalación hecha? */
+  isInstalled() {
+    const config = `${this.dataDir}/config/config.php`;
+    if (!this.php.fileExists(config)) return false;
+    for (const name of this.php.listFiles(`${this.dataDir}/storage`)) {
+      if (name.endsWith('.sqlite')) return true;
+    }
+    return false;
+  }
+
+  /**
+   * Escribe la instalación de fábrica dentro del intérprete.
+   *
+   * @returns {Promise<number>} archivos escritos
+   */
+  async applySeed() {
+    let count = 0;
+    for (const [relative, base64] of Object.entries(this.seed.files || {})) {
+      const parts = `${this.dataDir}/${relative}`.split('/');
+      parts.pop();
+      let directory = '';
+      for (const part of parts) {
+        directory += `/${part}`;
+        if (!this.php.fileExists(directory)) this.php.mkdir(directory);
+      }
+      this.php.writeFile(`${this.dataDir}/${relative}`, decodeBase64(base64));
+      this.saved.delete(relative);
+      count += 1;
+    }
+    return count;
   }
 
   /** Escribe en el intérprete el árbol de archivos de la aplicación. */
@@ -320,6 +375,7 @@ export class NormiaApp {
       files: Object.keys(this.files).length,
       dataFiles: this.started ? this.dataFiles().length : 0,
       restored: this.restored,
+      seeded: this.sembrado,
       ms: this.ms,
       requests: this.requests,
       cookies: this.cookies.size,

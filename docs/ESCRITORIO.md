@@ -39,6 +39,12 @@ instalar PHP, Apache ni nada más.
 
 ### Instalar
 
+> Desde la 1.15.8 el APK **ya viene instalado**: al abrirlo aparece el acceso con
+> la cuenta `admin@normia.local` (la contraseña se muestra en la misma pantalla).
+> No hay que llenar ningún formulario. El instalador de abajo solo se usa en la
+> versión web y de escritorio.
+
+
 1. Descarga `normia-planos-cad-<versión>-windows-x64.exe`.
 2. Ábrelo. Windows SmartScreen mostrará **«Windows protegió su PC»** porque el
    instalador no tiene certificado de firma de código (ver [SmartScreen](#windows-smartscreen)).
@@ -196,6 +202,11 @@ sin conexión y **el APK no pide permiso de red**.
 - **Android 8.0 (API 26) o superior.** El editor necesita un WebView
   actualizado (Chrome); en equipos con WebView muy antiguo la app muestra una
   pantalla de diagnóstico en vez de quedarse en blanco.
+- **Instalado de fábrica.** El APK no pide instalar nada: `build.mjs` crea la
+  base de datos, la cuenta y la demo **al compilar** y los deja en
+  `php/seed.json`. Al primer arranque la aplicación los escribe y los guarda en
+  el teléfono; si el usuario ya tiene su propia base, esa manda. La cuenta es
+  `admin@normia.local` / `ClaveSegura2026` y aparece en la pantalla de acceso.
 - **El guardado no frena la pantalla.** Cada petición solo marca que hay
   cambios; el guardado ocurre aparte, agrupado, y escribe únicamente los
   archivos que cambiaron. Al pasar a segundo plano o cerrar se guarda lo

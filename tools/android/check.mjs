@@ -25,7 +25,7 @@ const bad = (label, detail = '') => {
   console.log(`✗ ${label}${detail ? ' · ' + detail : ''}`);
 };
 
-for (const file of ['index.html', 'shell.js', 'shell.css', 'app-core.js', 'opfs.js', 'bridge.js', 'php/runtime.js', 'php/php_8_3_asyncify.wasm', 'php/php_8_3_jspi.wasm', 'php/app-files.json', 'css/app.css', 'css/editor.css', 'js/app.js', 'img/normia-logo.png']) {
+for (const file of ['index.html', 'shell.js', 'shell.css', 'app-core.js', 'opfs.js', 'bridge.js', 'php/runtime.js', 'php/php_8_3_asyncify.wasm', 'php/php_8_3_jspi.wasm', 'php/app-files.json', 'php/seed.json', 'css/app.css', 'css/editor.css', 'js/app.js', 'img/normia-logo.png']) {
   if (!fs.existsSync(path.join(ASSETS, file))) bad(`Falta ${file}`);
 }
 if (failures.length) {
@@ -171,10 +171,55 @@ if (/watchFrame/.test(shellSource) && /problem\(/.test(shellSource)
   bad('Falta el aviso de pantalla en blanco o el guardado al cerrar');
 }
 
+/*
+ * La pantalla tiene que cargar la semilla y enseñar la cuenta en el acceso: son
+ * credenciales que nadie eligió y que deben estar a la vista en el teléfono.
+ */
+if (/php\/seed\.json/.test(shellSource) && /seed,/i.test(shellSource) && /app\.sembrado/.test(shellSource)) {
+  ok('La pantalla carga la instalación de fábrica y la informa');
+} else {
+  bad('La pantalla no carga la instalación de fábrica');
+}
+if (/withCredentials\(/.test(shellSource) && /seedAccount\.email/.test(shellSource)
+  && /Cuenta de este teléfono/.test(shellSource) && /ensureBridge\(/.test(shellSource)) {
+  ok('El acceso muestra la cuenta del APK y la pantalla espera al puente');
+} else {
+  bad('El acceso no muestra la cuenta del APK o no verifica el puente');
+}
+if (/Preparando…/.test(shellSource) && /normia-cargando/.test(bridgeSource)) {
+  ok('El aviso de la parte de arriba se retira cuando el puente está vivo');
+} else {
+  bad('El aviso de carga puede quedarse pegado');
+}
+
 const runtimeFile = path.join(ASSETS, 'php/runtime.js');
 const sizeMb = fs.statSync(runtimeFile).size / 1048576;
 if (sizeMb < 6) ok('El paquete JavaScript no arrastra datos de internacionalización', `${sizeMb.toFixed(1)} MB`);
 else bad('El paquete JavaScript es demasiado grande', `${sizeMb.toFixed(1)} MB`);
+
+/*
+ * El APK se entrega ya instalado: base de datos, cuenta y demo. Así el teléfono
+ * no tiene que enviar el formulario del instalador (que fue justo lo que dejó la
+ * pantalla sin avanzar) y la aplicación abre directamente en el acceso.
+ */
+let seed = null;
+try {
+  seed = JSON.parse(fs.readFileSync(path.join(ASSETS, 'php/seed.json'), 'utf8'));
+} catch (error) {
+  seed = null;
+}
+const semillaSqlite = seed ? Object.keys(seed.files || {}).find((file) => file.endsWith('.sqlite')) : '';
+if (seed && seed.account && semillaSqlite && seed.files['config/config.php']) {
+  const kb = (Buffer.from(seed.files[semillaSqlite], 'base64').length / 1024).toFixed(0);
+  ok('El APK trae la instalación hecha (configuración y base de datos)', `${semillaSqlite} · ${kb} KB`);
+} else {
+  bad('El APK no trae la instalación de fábrica', 'falta seed.json con config/config.php y la base');
+}
+if (seed && seed.account && seed.account.demo === true && /@/.test(seed.account.email || '')) {
+  ok('La cuenta del APK está creada y con la demo cargada', seed.account.email);
+} else {
+  bad('La semilla no tiene cuenta con demo');
+}
 
 globalThis.require = createRequire(import.meta.url);
 const runtime = await import(runtimeFile);
@@ -194,47 +239,62 @@ const php = new runtime.PHP(await runtime.loadWebRuntime('8.3', { emscriptenOpti
 const app = new NormiaApp({
   php,
   files: info.files,
+  seed,
   storage: memoryStorage(),
   createHandler: (instance, documentRoot) => new runtime.PHPRequestHandler({ php: instance, documentRoot, absoluteUrl: 'http://127.0.0.1' }),
 });
 const started = Date.now();
 await app.start();
 ok('El intérprete del APK arranca y monta la aplicación', `${Date.now() - started} ms`);
-
-const install = await app.request({ url: '/index.php?r=install' });
-if (install.status === 200 && /Normia/.test(install.text) && /name="_token"/.test(install.text)) {
-  ok('La pantalla de instalación se dibuja dentro del teléfono', `${install.text.length} caracteres`);
+if (app.sembrado > 0 && app.isInstalled()) {
+  ok('La instalación de fábrica se escribe en el teléfono', `${app.sembrado} archivos · ${app.dataFiles().length} de datos`);
 } else {
-  bad('La instalación no respondió', `${install.status}`);
+  bad('La instalación de fábrica no se aplicó', `${app.sembrado} sembrados · instalada: ${app.isInstalled()}`);
 }
 
-const token = /name="_token" value="([^"]+)"/.exec(install.text)?.[1] || '';
-const created = await app.request({
-  url: '/index.php?r=install',
-  method: 'POST',
-  headers: [['content-type', 'application/x-www-form-urlencoded']],
-  body: new TextEncoder().encode(new URLSearchParams({
-    _token: token,
-    name: 'Teléfono',
-    email: 'campo@normia.local',
-    password: 'ClaveSegura2026',
-    password_confirm: 'ClaveSegura2026',
-    demo: '1',
-  }).toString()),
-});
-if (created.status === 303 && app.dataFiles().some((file) => file.endsWith('.sqlite'))) {
-  ok('La instalación crea la base de datos en el equipo');
+const raiz = await app.fetchPage('/');
+if (raiz.status === 200 && /id="capturas"/.test(raiz.text)) {
+  ok('El APK abre en la portada pública, sin pedir instalación', raiz.url);
 } else {
-  bad('La instalación no creó la base', `${created.status}`);
+  bad('El APK no abre en la portada', `${raiz.status} ${raiz.url}`);
 }
 
-// Las rutas estáticas de la pantalla de instalación tienen que existir en el APK.
-const installRoutes = assetRoutes(install.text);
-const missingInstall = installRoutes.filter((route) => !fs.existsSync(path.join(ASSETS, route.replace(/^\/assets\//, ''))));
-if (installRoutes.length && missingInstall.length === 0) {
-  ok('Los estilos y scripts de la instalación están en el APK', `${installRoutes.length} rutas`);
+// Con la aplicación ya instalada, el instalador no se ofrece: redirige al acceso.
+const instaladorCerrado = await app.fetchPage('/index.php?r=install');
+if (instaladorCerrado.status === 200 && /name="_token"/.test(instaladorCerrado.text) && /login/.test(instaladorCerrado.url)) {
+  ok('El instalador queda cerrado porque la aplicación ya está instalada', instaladorCerrado.url);
 } else {
-  bad('El APK no tiene los archivos que pide la página', missingInstall.join(', ') || 'sin rutas /assets/');
+  bad('El instalador sigue abierto con la aplicación instalada', `${instaladorCerrado.status} ${instaladorCerrado.url}`);
+}
+
+// Las rutas estáticas de la portada tienen que existir en el APK.
+const portadaRoutes = assetRoutes(raiz.text);
+const missingPortada = portadaRoutes.filter((route) => !fs.existsSync(path.join(ASSETS, route.replace(/^\/assets\//, ''))));
+if (portadaRoutes.length && missingPortada.length === 0) {
+  ok('Los estilos y las capturas de la portada están en el APK', `${portadaRoutes.length} rutas`);
+} else {
+  bad('El APK no tiene los archivos que pide la portada', missingPortada.join(', ') || 'sin rutas /assets/');
+}
+
+if (seed && seed.account) {
+  const login = await app.fetchPage('/index.php?r=login');
+  const tokenAcceso = /name="_token" value="([^"]+)"/.exec(login.text)?.[1] || '';
+  const entrada = await app.request({
+    url: '/index.php?r=login',
+    method: 'POST',
+    headers: [['content-type', 'application/x-www-form-urlencoded']],
+    body: new TextEncoder().encode(new URLSearchParams({
+      _token: tokenAcceso,
+      email: seed.account.email,
+      password: seed.account.password,
+    }).toString()),
+  });
+  const panel = await app.fetchPage('/');
+  if (entrada.status === 303 && panel.status === 200 && /Mis planos/.test(panel.text)) {
+    ok('La cuenta del APK entra y la demo aparece en el panel', seed.account.email);
+  } else {
+    bad('La cuenta del APK no entra', `${entrada.status} · ${panel.status}`);
+  }
 }
 
 const loginPage = await app.request({ url: '/index.php?r=login' });

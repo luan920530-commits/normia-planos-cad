@@ -151,6 +151,13 @@
     return null;
   };
   window.__normiaBridgeListo = true;
-  const aviso = window.document.getElementById('normia-cargando');
-  if (aviso) aviso.remove();
+  // El aviso de «Cargando…» que dibuja `shell.js` se retira en cuanto el puente
+  // está vivo. Puede no existir todavía (este script va en el <head>), así que
+  // también se intenta al terminar de leer el documento.
+  const quitarAviso = () => {
+    const aviso = window.document.getElementById('normia-cargando');
+    if (aviso) aviso.remove();
+  };
+  quitarAviso();
+  window.document.addEventListener('DOMContentLoaded', quitarAviso);
 }());
