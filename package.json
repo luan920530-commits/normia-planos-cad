@@ -1,7 +1,12 @@
 {
   "name": "normia-planos-cad",
-  "version": "1.15.1",
+  "version": "1.15.2",
   "private": true,
+  "author": {
+    "name": "Luis Antonio Aguilar R",
+    "role": "Profesional en Seguridad y Salud en el Trabajo · Universidad Autónoma de Nariño",
+    "url": "https://github.com/luan920530-commits/normia-planos-cad"
+  },
   "description": "Normia Planos CAD · suite de pruebas de desarrollo (no se requiere Node en producción).",
   "type": "module",
   "engines": {

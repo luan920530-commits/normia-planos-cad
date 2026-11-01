@@ -82,7 +82,10 @@ try {
 
   const install = await app.install({ email, password });
   report.check('Instalación válida redirige a login', [302, 303].includes(install.result.status), `${install.result.status} ${install.result.location}`);
-  report.check('Configuración y base creadas', (await client.get('login')).status === 200);
+  const pantallaAcceso = await client.get('login');
+  report.check('Configuración y base creadas', pantallaAcceso.status === 200);
+  report.check('La pantalla de acceso también acredita al autor',
+    /Luis Antonio Aguilar R/.test(pantallaAcceso.text) && /Nariño/.test(pantallaAcceso.text));
 
   /* --------------------------- presentación pública --------------------------- */
   let portada = await guest.get('/index.php');
@@ -122,6 +125,16 @@ try {
     `${accesoFallido.status} ${accesoFallido.location}`);
   portada = await guest.get('inicio');
   report.check('La portada explica el error de acceso', /no coinciden/.test(portada.text || ''));
+  report.check('La portada pública acredita al autor y su trayectoria profesional',
+    /Luis Antonio Aguilar R/.test(portada.text || '')
+    && /Seguridad y Salud en el Trabajo/.test(portada.text || '')
+    && /Universidad Autónoma de Nariño/.test(portada.text || ''));
+  report.check('La portada no publica datos de la tarjeta profesional',
+    !/7128/.test(portada.text || '') && !/tarjeta profesional/i.test(portada.text || '')
+    && !/Villavicencio/.test(portada.text || ''));
+  report.check('La portada reconoce el desarrollo con Arena.ai sin atribuirle la autoría',
+    /Arena\.ai/.test(portada.text || '') && /Agent Mode/.test(portada.text || '')
+    && !/©\s*Arena/i.test(portada.text || ''));
 
   /* ---------------------------- autenticación ---------------------------- */
   res = await client.postForm('login', { _token: extractToken((await client.get('login')).text), email: 'nadie@normia.local', password });
@@ -147,6 +160,9 @@ try {
   report.check('La portada reconoce la sesión y ofrece el panel',
     portadaConSesion.status === 200 && portadaConSesion.text.includes('Ir al panel'));
   report.check('Panel declara idioma español', homeCheck.lang === 'es');
+  report.check('El pie del panel acredita al autor sin datos de la tarjeta profesional',
+    /Luis Antonio Aguilar R/.test(res.text) && /Seguridad y Salud en el Trabajo/.test(res.text)
+    && !/7128/.test(res.text) && !/tarjeta profesional/i.test(res.text));
   report.check('Sprite de iconos completo en el panel', homeCheck.missingIcons.length === 0, homeCheck.missingIcons.join(','));
 
   /* ---------------------------- proyectos y pisos ---------------------------- */

@@ -220,6 +220,15 @@
 .pres-footer-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, .6fr); gap: 24px; align-items: start; }
 .pres-footer-brand { margin: 0 0 8px; color: #e6eefc; }
 .pres-footer-note { margin: 0; max-width: 44rem; }
+.pres-footer-autor {
+  display: flex; align-items: flex-start; gap: 8px; margin: 16px 0 0;
+  padding: 12px 14px; border-radius: 12px; background: rgba(255, 255, 255, .05);
+  border: 1px solid rgba(255, 255, 255, .08); color: #b9c7dc; font-size: .8rem; line-height: 1.55;
+}
+.pres-footer-autor .icon { color: #7fb0ff; margin-top: 2px; }
+.pres-footer-autor strong { color: #e6eefc; }
+.pres-footer-autor-ia { background: none; border: 0; padding: 0; margin-top: 10px; color: #6c7e9c; font-size: .76rem; }
+.pres-footer-autor-ia strong { color: #93a6c4; }
 .pres-footer-links { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 0; padding: 0; list-style: none; justify-content: flex-end; }
 .pres-footer-links a { color: #b9c7dc; text-decoration: none; }
 .pres-footer-links a:hover, .pres-footer-links a:focus-visible { color: #fff; text-decoration: underline; }

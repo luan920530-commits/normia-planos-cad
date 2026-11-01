@@ -134,8 +134,16 @@ a.brand:hover .brand-mark { transform: translateY(-1px) scale(1.04); box-shadow:
   color: var(--muted); font-size: .8rem;
   background: rgba(255, 255, 255, .65);
 }
-.site-footer .footer-meta { display: flex; flex-wrap: wrap; gap: 6px 18px; max-width: 1180px; margin: 0 auto; }
+.site-footer .footer-meta { display: flex; flex-wrap: wrap; gap: 6px 18px; max-width: 1180px; margin: 0 auto; justify-content: space-between; }
 .site-footer strong { color: var(--ink-soft); }
+/* Autoría: nombre y trayectoria del responsable del proyecto. */
+.site-footer .footer-credits { display: inline-flex; align-items: center; gap: 6px; }
+.site-footer .footer-credits .icon { width: 15px; height: 15px; color: var(--blue, #0a6cf5); flex: 0 0 auto; }
+.auth-creditos {
+  margin: 14px 0 0; padding-top: 12px; border-top: 1px solid rgba(15, 23, 42, .1);
+  font-size: .74rem; line-height: 1.5; color: var(--muted, #66748c); text-align: center;
+}
+.auth-creditos strong { color: var(--ink-soft, #33415a); }
 
 .eyebrow { display: block; font-size: .7rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
 
