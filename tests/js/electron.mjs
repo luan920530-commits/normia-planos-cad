@@ -50,8 +50,7 @@ report.check('El flujo compila las tres plataformas y publica lo que produce',
   /macos-latest/.test(workflow) && /windows-latest/.test(workflow) && /ubuntu-latest/.test(workflow)
   && /electron-builder/.test(workflow) && /upload-artifact/.test(workflow));
 report.check('El flujo comprueba el contenido del paquete, no solo que se haya generado',
-  /server\.mjs --check --app="\$APP_DIR"/.test(workflow) && /--runtime="\$RUNTIME_DIR"/.test(workflow)
-  && /cygpath -w/.test(workflow));
+  /verify-package\.mjs "\$RESOURCES" --completo/.test(workflow));
 report.check('Las sumas del flujo evitan opciones de GNU que macOS no tiene',
   !/^\s*find .* -printf/m.test(workflow) && /sha256sum "\$archivo"/.test(workflow) && /shasum -a 256/.test(workflow));
 // Se mira la línea de comando del paso y no el texto: los comentarios explican
@@ -160,6 +159,24 @@ report.check('Los iconos salen en los formatos que espera cada sistema',
 report.check('El instalador es por usuario y sin firma comercial',
   manifest.build.appId === 'co.normia.cad' && manifest.build.nsis.perMachine === false
   && manifest.build.mac.identity === null && manifest.build.mac.category.startsWith('public.app-category'));
+
+// El verificador de paquetes es lo que corre en los flujos: se prueba contra
+// una carpeta con la forma real (`resources/app` + `resources/runtime`).
+const packaged = path.join(out, 'paquete');
+fs.mkdirSync(packaged, { recursive: true });
+fs.cpSync(path.join(stage, 'app'), path.join(packaged, 'app'), { recursive: true });
+fs.cpSync(path.join(stage, 'runtime'), path.join(packaged, 'runtime'), { recursive: true });
+let verifyOk = true;
+let verifyOutput = '';
+try {
+  verifyOutput = execFileSync(process.execPath, [fileURLToPath(new URL('../../tools/electron/verify-package.mjs', import.meta.url)), packaged, '--completo'], { encoding: 'utf8' });
+} catch (error) {
+  verifyOk = false;
+  verifyOutput = String(error.stdout || error.message);
+}
+report.check('El verificador del paquete arranca el intérprete y el servidor desde resources/',
+  verifyOk && /el servidor del paquete responde/.test(verifyOutput),
+  verifyOutput.split('\n').filter((line) => line.includes('✗') || line.includes('::error')).join(' ').slice(0, 160));
 
 fs.rmSync(out, { recursive: true, force: true });
 
