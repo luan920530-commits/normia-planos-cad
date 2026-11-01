@@ -42,28 +42,40 @@ async function loadPhpWasm(runtimeDir) {
   // así Node resuelve los paquetes desde esa carpeta y no desde la del programa.
   const node = runtimeDir ? await import(pathToFileURL(path.join(runtimeDir, 'php-wasm.mjs')).href) : await import('@php-wasm/node');
   const universal = runtimeDir ? node : await import('@php-wasm/universal');
-  return { loadNodeRuntime: node.loadNodeRuntime, useHostFilesystem: node.useHostFilesystem, PHP: universal.PHP, PHPRequestHandler: universal.PHPRequestHandler };
+  return {
+    loadNodeRuntime: node.loadNodeRuntime,
+    createNodeFsMountHandler: node.createNodeFsMountHandler,
+    PHP: universal.PHP,
+    PHPRequestHandler: universal.PHPRequestHandler,
+  };
 }
 
 /** Arranca PHP y devuelve también la versión y las extensiones cargadas. */
+/** Dónde ve PHP la aplicación y sus datos dentro de su propio sistema de archivos. */
+export const VFS = { app: '/normia/app', data: '/normia/datos' };
+
 export async function startPhp({ appDir, dataDir, runtimeDir = '', phpVersion = PHP_VERSION }) {
   ensureDataDir(dataDir);
-  // Paths::fromEnvironment() lee esta variable en la primera petición. Solo se
-  // acepta una ruta absoluta, igual que en el lanzador nativo.
-  process.env.NORMA_DATA_PATH = path.resolve(dataDir);
 
-  const { loadNodeRuntime, useHostFilesystem, PHP, PHPRequestHandler } = await loadPhpWasm(runtimeDir || null);
+  const { loadNodeRuntime, createNodeFsMountHandler, PHP, PHPRequestHandler } = await loadPhpWasm(runtimeDir || null);
   // php-wasm identifica cada intérprete con un número propio (lo usa para sus
   // bloqueos de archivos). Sin él se niega a iniciar fuera de las pruebas.
-  // El entorno del intérprete se fija aquí: Emscripten no hereda `process.env`,
-  // así que la carpeta de datos se pasa explícitamente.
   const php = new PHP(await loadNodeRuntime(phpVersion, {
     emscriptenOptions: {
       processId: process.pid % 100000,
-      ENV: { NORMA_DATA_PATH: path.resolve(dataDir) },
+      // Emscripten no hereda `process.env`: la carpeta de datos se pasa aparte.
+      ENV: { NORMA_DATA_PATH: VFS.data },
     },
   }));
-  useHostFilesystem(php);
+
+  // Se montan **solo** la aplicación y su carpeta de datos, en puntos fijos.
+  // Montar el disco entero (lo que hace `useHostFilesystem`) expone al
+  // intérprete archivos que no necesita y, en Windows, falla al montar las
+  // unidades con nombre `C:`.
+  for (const [hostPath, mountPoint] of [[path.resolve(appDir), VFS.app], [path.resolve(dataDir), VFS.data]]) {
+    if (!php.fileExists(mountPoint)) php.mkdirTree(mountPoint);
+    php.mount(mountPoint, createNodeFsMountHandler(hostPath));
+  }
 
   const report = await php.run({
     code: `<?php echo json_encode([
@@ -71,20 +83,21 @@ export async function startPhp({ appDir, dataDir, runtimeDir = '', phpVersion = 
       'extensions' => array_fill_keys(${JSON.stringify(REQUIRED_EXTENSIONS)}, true),
       'loaded' => array_values(array_filter(${JSON.stringify(REQUIRED_EXTENSIONS)}, 'extension_loaded')),
       'data' => getenv('NORMA_DATA_PATH') ?: '',
+      'app' => is_file('${VFS.app}/index.php'),
     ]);`,
   });
-  let environment = { version: '', loaded: [], data: '' };
+  let environment = { version: '', loaded: [], data: '', app: false };
   try {
     const text = (report.text || '').trim();
     environment = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1));
   } catch {
-    environment = { version: '', loaded: [], data: '' };
+    environment = { version: '', loaded: [], data: '', app: false };
   }
   const missing = REQUIRED_EXTENSIONS.filter((extension) => !environment.loaded.includes(extension));
 
   const handler = new PHPRequestHandler({
     php,
-    documentRoot: appDir,
+    documentRoot: VFS.app,
     absoluteUrl: 'http://127.0.0.1',
     // Las cookies las administra el navegador de Electron, no php-wasm: así la
     // sesión sigue viva después de cerrar y abrir la aplicación.
@@ -195,9 +208,10 @@ export async function startServer(options) {
  */
 export async function checkEnvironment({ appDir, dataDir, runtimeDir = '', out = console.log }) {
   const state = await startPhp({ appDir, dataDir, runtimeDir });
+  const realData = path.resolve(dataDir);
   out(`PHP ${state.environment.version} (WebAssembly)`);
   out(`Carpeta de la aplicación: ${appDir}`);
-  out(`Carpeta de datos: ${state.environment.data || dataDir}`);
+  out(`Carpeta de datos: ${realData}`);
   for (const extension of REQUIRED_EXTENSIONS) {
     const loaded = state.environment.loaded.includes(extension);
     out(`  ${loaded ? '✓' : '✗'} ${extension}`);

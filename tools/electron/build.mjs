@@ -78,7 +78,7 @@ function buildRuntime(destination) {
   fs.writeFileSync(path.join(destination, 'php-wasm.mjs'), [
     '// Punto de entrada del intérprete para la edición instalada.',
     '// Las dependencias viven al lado, en node_modules, fuera del archivo asar.',
-    "export { loadNodeRuntime, useHostFilesystem } from '@php-wasm/node';",
+    "export { loadNodeRuntime, createNodeFsMountHandler } from '@php-wasm/node';",
     "export { PHP, PHPRequestHandler } from '@php-wasm/universal';",
     '',
   ].join('\n'), 'utf8');

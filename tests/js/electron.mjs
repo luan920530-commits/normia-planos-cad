@@ -42,6 +42,12 @@ report.check('Las descargas se guardan con un nombre libre y lo avisan',
   /will-download/.test(main) && /setSavePath/.test(main) && /Mostrar en la carpeta/.test(main));
 report.check('El servidor solo escucha en 127.0.0.1 y no guarda cookies en memoria',
   /host = '127\.0\.0\.1'/.test(server) && /cookieStore: false/.test(server));
+// El comentario del código explica por qué no se usa `useHostFilesystem`: se
+// mira solo el código, sin comentarios, para no confundir la explicación con el uso.
+const serverCode = server.split('\n').filter((line) => !line.trim().startsWith('//') && !line.trim().startsWith('*')).join('\n');
+report.check('PHP solo ve la aplicación y su carpeta de datos, no el disco entero',
+  /php\.mount\(mountPoint, createNodeFsMountHandler\(hostPath\)\)/.test(serverCode)
+  && !/useHostFilesystem/.test(serverCode));
 report.check('El intérprete recibe la carpeta de datos porque Emscripten no hereda el entorno',
   /ENV: \{ NORMA_DATA_PATH/.test(server) && /getenv\('NORMA_DATA_PATH'\)/.test(server));
 
@@ -72,8 +78,9 @@ await started.waitUntilReady();
 report.check('PHP compilado a WebAssembly arranca con las extensiones que usa la aplicación',
   started.environment.version === '8.3.33' || /^8\.3\./.test(started.environment.version),
   started.environment.version || 'sin versión');
-report.check('El intérprete ve la carpeta de datos elegida',
-  path.resolve(started.environment.data) === path.resolve(dataDir), started.environment.data || 'vacía');
+report.check('El intérprete ve la carpeta de datos elegida, montada en un punto fijo',
+  started.environment.data === '/normia/datos' && started.environment.app === true,
+  started.environment.data || 'vacía');
 
 let cookies = '';
 async function request(url, options = {}) {
