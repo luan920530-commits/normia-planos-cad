@@ -11,6 +11,7 @@
  * servicio de impresión de Android (`NormiaHost.printHtml`).
  */
 import { NormiaApp } from './app-core.js';
+import { openOpfsStorage } from './opfs.js';
 
 const ORIGIN = 'https://appassets.androidplatform.net';
 const HOST = window.NormiaHost || {
@@ -69,67 +70,19 @@ function showFrame() {
 /* ----------------------------- almacenamiento ----------------------------- */
 
 /**
- * Guarda config/ y storage/ en el almacenamiento privado del navegador (OPFS).
- * Si el equipo no lo ofrece, la app avisa que los cambios no se conservarán en
- * vez de fingir que guardó.
+ * Guarda `config/` y `storage/` en el almacenamiento privado del navegador
+ * (OPFS, ver `opfs.js`). Si el teléfono no lo ofrece —o falla al abrirlo— se
+ * avisa en la franja superior y la aplicación sigue funcionando **sin**
+ * guardar: perder los cambios es malo, no poder abrir el editor es peor.
  */
 async function openStorage() {
-  if (!navigator.storage || !navigator.storage.getDirectory) {
-    banner.hidden = false;
-    banner.textContent = 'Este navegador del sistema no permite guardar datos. Los cambios se perderán al cerrar.';
-    return null;
-  }
-  const root = await navigator.storage.getDirectory();
-  const folder = await root.getDirectory('normia', { create: true });
-
-  const join = (base, name) => `${base}/${name}`;
-  const walk = async (directory, prefix, visit) => {
-    for await (const [name, handle] of directory.entries()) {
-      const relative = prefix ? join(prefix, name) : name;
-      if (handle.kind === 'directory') await walk(handle, relative, visit);
-      else await visit(relative, handle);
-    }
-  };
-
-  return {
-    async restore(php, dataDir) {
-      let count = 0;
-      await walk(folder, '', async (relative, handle) => {
-        const file = await handle.getFile();
-        const bytes = new Uint8Array(await file.arrayBuffer());
-        const parts = `${dataDir}/${relative}`.split('/');
-        parts.pop();
-        let path = '';
-        for (const part of parts) {
-          path += `/${part}`;
-          if (!php.fileExists(path)) php.mkdir(path);
-        }
-        php.writeFile(`${dataDir}/${relative}`, bytes);
-        count += 1;
-      });
-      return count;
+  return openOpfsStorage({
+    onUnavailable: (error) => {
+      banner.hidden = false;
+      banner.textContent = 'Este teléfono no permite guardar los datos de la aplicación. Los cambios se perderán al cerrar.';
+      HOST.log(`[normia] almacenamiento no disponible: ${error && error.message ? error.message : error}`);
     },
-    async save(php, dataDir, filter = () => true) {
-      let count = 0;
-      for (const relative of app.dataFiles()) {
-        if (!filter(relative)) continue;
-        const parts = relative.split('/');
-        let directory = folder;
-        for (const part of parts.slice(0, -1)) directory = await directory.getDirectory(part, { create: true });
-        const handle = await directory.getFileHandle(parts[parts.length - 1], { create: true });
-        const stream = await handle.createWritable();
-        await stream.write(php.readFileAsBuffer(`${dataDir}/${relative}`));
-        await stream.close();
-        count += 1;
-      }
-      return count;
-    },
-    async clear() {
-      for await (const [name] of folder.entries()) {
-        await folder.removeEntry(name, { recursive: true });
-      }
-    },
-  };
+  });
 }
 
 /* -------------------------------- arranque -------------------------------- */
@@ -483,7 +436,11 @@ window.__normiaPersist = async () => {
   if (!app) return;
   try {
     await app.persist();
+    app.lastSaveError = null;
   } catch (error) {
+    app.lastSaveError = error;
+    banner.hidden = false;
+    banner.textContent = 'No se pudieron guardar los cambios en el teléfono (puede que no quede espacio). Expórtalos antes de cerrar.';
     HOST.log(`[normia] no se pudo guardar: ${error}`);
   }
 };

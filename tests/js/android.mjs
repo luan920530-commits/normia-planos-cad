@@ -166,8 +166,152 @@ report.check('El reinicio de fábrica deja la app como recién instalada',
   `${response.status} · ${reopened.dataFiles().join(',') || 'sin datos'}`);
 reopened.php.exit(0);
 
+/*
+ * Un almacenamiento que falla no puede tumbar el editor: cada respuesta guarda
+ * y, si el teléfono se quedó sin espacio, la página tiene que llegar igual.
+ */
+const roto = { restore: async () => 0, save: async () => { throw new Error('sin espacio'); }, clear: async () => {} };
+const appRota = await boot(roto);
+const respuestaRota = await appRota.request({ url: '/index.php?r=install' });
+report.check('Un fallo al guardar no impide abrir el editor',
+  respuestaRota.status === 200 && appRota.lastSaveError instanceof Error,
+  `${respuestaRota.status} · ${appRota.lastSaveError ? appRota.lastSaveError.message : 'sin error'}`);
+appRota.php.exit(0);
+
 report.check('El ida y vuelta en base64 conserva los bytes',
   Buffer.from(decodeBase64(encodeBase64(new Uint8Array([0, 1, 127, 128, 255])))).equals(Buffer.from([0, 1, 127, 128, 255])));
+
+/*
+ * Almacenamiento del teléfono (OPFS). La 1.15.3 no pasaba de aquí: llamaba a
+ * `root.getDirectory()`, un método que no existe en la API del estándar, y el
+ * teléfono mostraba «root.getDirectory is not a function». Esta prueba ejecuta
+ * la pieza real contra una implementación que solo expone los nombres
+ * correctos (`getDirectoryHandle` / `getFileHandle`), así que un desliz así
+ * aparece en la suite y no en el arranque del APK.
+ */
+const { openOpfsStorage } = await import('../../tools/android/web/opfs.js');
+
+/** OPFS mínimo y fiel al estándar, con los archivos en memoria. */
+function fakeOpfs() {
+  const makeDir = (name, parent = null) => ({
+    kind: 'directory',
+    name,
+    parent,
+    children: new Map(),
+    async getDirectoryHandle(child, { create = false } = {}) {
+      const found = this.children.get(child);
+      if (found && found.kind === 'directory') return found;
+      if (!create) throw new Error(`No existe la carpeta ${child}`);
+      const directory = makeDir(child, this);
+      this.children.set(child, directory);
+      return directory;
+    },
+    async getFileHandle(child, { create = false } = {}) {
+      const found = this.children.get(child);
+      if (found && found.kind === 'file') return found;
+      if (!create) throw new Error(`No existe el archivo ${child}`);
+      const file = makeFile(child, this);
+      this.children.set(child, file);
+      return file;
+    },
+    async removeEntry(child, { recursive = false } = {}) {
+      const found = this.children.get(child);
+      if (!found) throw new Error(`No existe ${child}`);
+      if (found.kind === 'directory' && found.children.size > 0 && !recursive) {
+        throw new Error(`La carpeta ${child} tiene contenido`);
+      }
+      this.children.delete(child);
+    },
+    async *entries() {
+      for (const pair of this.children) yield pair;
+    },
+  });
+  const makeFile = (name, parent) => ({
+    kind: 'file',
+    name,
+    parent,
+    bytes: new Uint8Array(0),
+    async getFile() {
+      return { arrayBuffer: async () => this.bytes.slice().buffer };
+    },
+    async createWritable() {
+      const self = this;
+      const chunks = [];
+      return {
+        async write(chunk) { chunks.push(new Uint8Array(chunk)); },
+        async close() {
+          const total = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+          const merged = new Uint8Array(total);
+          let at = 0;
+          for (const chunk of chunks) { merged.set(chunk, at); at += chunk.length; }
+          self.bytes = merged;
+        },
+        async abort() { chunks.length = 0; },
+      };
+    },
+  });
+  const root = makeDir('');
+  const folder = () => {
+    const normia = root.children.get('normia');
+    return normia && normia.kind === 'directory' ? normia : null;
+  };
+  const read = (relative) => {
+    let node = folder();
+    const parts = relative.split('/');
+    for (const part of parts.slice(0, -1)) node = node && node.children.get(part);
+    const file = node && node.children.get(parts[parts.length - 1]);
+    return file && file.kind === 'file' ? file.bytes : null;
+  };
+  const list = () => {
+    const found = [];
+    const walk = (node, prefix) => {
+      for (const [name, child] of node.children) {
+        const relative = prefix ? `${prefix}/${name}` : name;
+        if (child.kind === 'directory') walk(child, relative);
+        else found.push(relative);
+      }
+    };
+    if (folder()) walk(folder(), '');
+    return found.sort();
+  };
+  return { storage: { getDirectory: async () => root }, root, read, list };
+}
+
+const opfs = fakeOpfs();
+const opfsStorage = await openOpfsStorage({ storage: opfs.storage });
+report.check('El almacenamiento del teléfono expone la API que usa el editor',
+  opfsStorage !== null
+  && typeof opfsStorage.restore === 'function'
+  && typeof opfsStorage.save === 'function'
+  && typeof opfsStorage.clear === 'function');
+
+const text = (value) => new TextEncoder().encode(value);
+const opfsApp = await boot(opfsStorage);
+opfsApp.php.writeFile('/www/config/nota.txt', text('hola teléfono'));
+opfsApp.php.mkdir('/www/storage/logs');
+opfsApp.php.writeFile('/www/storage/logs/arranque.log', text('no se guarda'));
+const opfsSaved = await opfsApp.persist();
+report.check('El guardado escribe los datos en el almacenamiento del teléfono con la API real',
+  opfsSaved > 0
+  && Buffer.from(opfs.read('config/nota.txt') || []).toString() === 'hola teléfono',
+  `${opfsSaved} archivos · ${opfs.list().join(', ') || 'ninguno'}`);
+report.check('Los registros de depuración no se guardan en el teléfono',
+  opfs.read('storage/logs/arranque.log') === null);
+opfsApp.php.exit(0);
+
+const opfsReopened = await boot(opfsStorage);
+report.check('Al reabrir, los datos vuelven del almacenamiento del teléfono',
+  opfsReopened.php.fileExists('/www/config/nota.txt')
+  && Buffer.from(opfsReopened.php.readFileAsBuffer('/www/config/nota.txt')).toString() === 'hola teléfono');
+opfsReopened.php.exit(0);
+
+await opfsStorage.clear();
+report.check('El reinicio borra la carpeta del teléfono', opfs.list().length === 0);
+
+let aviso = '';
+const sinOpfs = await openOpfsStorage({ storage: {}, onUnavailable: (error) => { aviso = String(error && error.message); } });
+report.check('Si el teléfono no ofrece almacenamiento, la app abre sin guardar y lo avisa',
+  sinOpfs === null && aviso !== '', aviso);
 
 /* ------------------------- archivos del contenedor ------------------------- */
 
@@ -253,17 +397,29 @@ report.check('Si una compilación no arranca, la pantalla prueba la otra antes d
   /const alternativa = modo === 'jspi' \? 'asyncify' : 'jspi';/.test(androidShell)
   && /cargado = await cargar\(alternativa\);/.test(androidShell)
   && /Import #0 "env" "invoke_ii"/.test(androidShell));
-report.check('El intérprete que viaja en el APK es un módulo WebAssembly de verdad',
-  ['asyncify', 'jspi'].every((modo) => {
-    const file = path.join(repoRoot, 'tools/android/app/src/main/assets/php', `php_8_3_${modo}.wasm`);
-    if (!fs.existsSync(file)) return false;
-    const fd = fs.openSync(file, 'r');
-    const head = Buffer.alloc(4);
-    fs.readSync(fd, head, 0, 4, 0);
-    fs.closeSync(fd);
-    return head.equals(Buffer.from([0x00, 0x61, 0x73, 0x6d]));
-  }),
-  'magia \0asm');
+/*
+ * El armado copia los wasm desde `node_modules`; se revisa ahí y, si el APK ya
+ * se compiló en este equipo, también en sus propios activos. Así la suite no
+ * depende de haber ejecutado `tools/android/build.mjs` antes.
+ */
+const esWasm = (file) => {
+  if (!fs.existsSync(file)) return false;
+  const fd = fs.openSync(file, 'r');
+  const head = Buffer.alloc(4);
+  fs.readSync(fd, head, 0, 4, 0);
+  fs.closeSync(fd);
+  return head.equals(Buffer.from([0x00, 0x61, 0x73, 0x6d]));
+};
+const variantesWasm = ['asyncify', 'jspi'].map((modo) => {
+  const origen = path.join(repoRoot, 'node_modules/@php-wasm/web-8-3', modo);
+  const versiones = fs.existsSync(origen) ? fs.readdirSync(origen) : [];
+  const fuente = versiones.map((v) => path.join(origen, v, 'php_8_3.wasm')).find((file) => fs.existsSync(file)) || '';
+  const enApk = path.join(repoRoot, 'tools/android/app/src/main/assets/php', `php_8_3_${modo}.wasm`);
+  return { modo, fuente: esWasm(fuente), apk: fs.existsSync(enApk) ? esWasm(enApk) : null };
+});
+report.check('Las dos compilaciones del intérprete son módulos WebAssembly de verdad',
+  variantesWasm.every((variante) => variante.fuente && variante.apk !== false),
+  variantesWasm.map((v) => `${v.modo} ${v.fuente ? 'fuente ✓' : 'fuente ✗'}${v.apk === null ? '' : v.apk ? ' · APK ✓' : ' · APK ✗'}`).join(' · '));
 
 report.check('El flujo compila el APK y lo adjunta a la release',
   /assembleRelease/.test(androidWorkflow) && /apksigner/.test(androidWorkflow)

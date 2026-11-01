@@ -48,7 +48,7 @@ export class NormiaApp {
    * @param {Function} options.createHandler (php, documentRoot) => manejador de peticiones
    * @param {object} options.files      mapa «ruta relativa → base64» con la aplicación
    * @param {string} [options.dataDir]  carpeta donde vive la aplicación dentro del intérprete
-   * @param {object} [options.storage]  `{ restore(php, dir), save(php, dir) }`
+   * @param {object} [options.storage]  `{ restore(php, dir), save(php, dir, filter, files) }`
    * @param {Function} [options.log]    registro de pasos para el diagnóstico
    */
   constructor({ php, createHandler, files = {}, dataDir = '/www', storage = null, log = () => {} }) {
@@ -62,6 +62,7 @@ export class NormiaApp {
     this.cookies = new Map();
     this.requests = 0;
     this.started = false;
+    this.lastSaveError = null;
   }
 
   /** Monta la aplicación, recupera los datos y deja el servidor listo. */
@@ -121,7 +122,12 @@ export class NormiaApp {
   async persist() {
     if (!this.storage) return 0;
     const t0 = Date.now();
-    const saved = await this.storage.save(this.php, this.dataDir, (relative) => !SKIP_SAVE.some((skip) => skip.test(relative)));
+    const saved = await this.storage.save(
+      this.php,
+      this.dataDir,
+      (relative) => !SKIP_SAVE.some((skip) => skip.test(relative)),
+      this.dataFiles(),
+    );
     this.log('datos guardados', { files: saved, ms: Date.now() - t0 });
     return saved;
   }
@@ -182,8 +188,15 @@ export class NormiaApp {
       ms: Date.now() - started,
     };
     // Cada respuesta deja los datos en el almacenamiento: cerrar la app sin
-    // guardar no debe perder el plano.
-    await this.persist();
+    // guardar no debe perder el plano. Si el almacenamiento falla (por ejemplo,
+    // sin cuota), la página se entrega igual: el editor tiene que seguir
+    // funcionando aunque no pueda guardar, y el motivo queda en el registro.
+    try {
+      await this.persist();
+    } catch (error) {
+      this.lastSaveError = error;
+      this.log('no se pudieron guardar los datos', { error: String(error && error.message ? error.message : error) });
+    }
     return result;
   }
 

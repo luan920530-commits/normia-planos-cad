@@ -196,6 +196,14 @@ sin conexión y **el APK no pide permiso de red**.
 - **Android 8.0 (API 26) o superior.** El editor necesita un WebView
   actualizado (Chrome); en equipos con WebView muy antiguo la app muestra una
   pantalla de diagnóstico en vez de quedarse en blanco.
+- **Los datos se guardan en el teléfono.** `config/` y `storage/` viven en el
+  sistema de archivos privado del navegador (OPFS,
+  `navigator.storage.getDirectory()`), con la API del estándar:
+  `getDirectoryHandle()` y `getFileHandle()`. Esa pieza está en
+  `tools/android/web/opfs.js` y las pruebas la ejecutan contra una
+  implementación que solo expone esos nombres. Si el teléfono no ofrece
+  almacenamiento —o se queda sin espacio— la app **abre igual**, avisa en la
+  franja superior y deja el motivo en el registro, en vez de no arrancar.
 - **Dos compilaciones del intérprete.** El paquete PHP trae el motor en
   `asyncify` y en `jspi`; el APK lleva **las dos** y la pantalla pide la que
   admite el navegador, consultando la misma detección que usa el cargador
@@ -308,6 +316,7 @@ node tools/android/build.mjs --apk
 | «Ya había una instancia abierta» | El lanzador reutiliza la ventana existente. Detén la anterior con «Detener Normia». |
 | El instalador no arranca en Windows | SmartScreen: «Más información → Ejecutar de todas formas». |
 | macOS dice que la app está dañada | Suele ser la cuarentena de un archivo descargado: clic derecho → Abrir. Si persiste, `xattr -dr com.apple.quarantine "/Applications/Normia Planos CAD.app"`. |
+| Android muestra `TypeError: root.getDirectory is not a function` | APK de la **1.15.3**: llamaba a `getDirectory()`, que no existe en el sistema de archivos del navegador (es `getDirectoryHandle()`). Instala la 1.15.4 o posterior. |
 | Android muestra un `LinkError` con `Import #0 "env" "invoke_ii"` | APK anterior a la **1.15.3**: llevaba solo el intérprete `asyncify` y el WebView de Android 15 pedía el cargador `jspi`. Instala la 1.15.3 o posterior. |
 | La app de Android se queda en la pantalla de arranque | Pulsa **Reintentar**; si vuelve a fallar, abre **Cómo reportar el problema** y envía el texto con el modelo del equipo y la versión de Android. |
 | Android muestra «la página web no está disponible · `net::ERR_INVALID_RESPONSE`» | Es un APK anterior a la **1.15.1**: buscaba la pantalla en `…/index.html` o dejaba los estáticos fuera de sitio. Instala el APK de la 1.15.1 o posterior. Desde la 1.15.1, si algo no carga, la app muestra un aviso propio con el código y un botón **Reintentar**. |
