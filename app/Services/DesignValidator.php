@@ -26,7 +26,14 @@ final class DesignValidator
 
     public const DOOR_TYPES = ['door', 'door_double', 'door_garage'];
 
-    private const BASE_TYPES = ['wall', 'door', 'door_double', 'door_garage', 'route', 'text', 'dimension', 'line', 'rect', 'ellipse', 'pipe', 'conduit'];
+    private const BASE_TYPES = [
+        'wall', 'door', 'door_double', 'door_garage', 'route', 'text', 'dimension', 'line', 'rect', 'ellipse', 'pipe', 'conduit',
+        // Entorno esquemático: vías, andenes, cebras, parqueaderos y linderos.
+        // No son muros: no bloquean el tránsito y se cuentan como exterior.
+        'road', 'sidewalk', 'crosswalk', 'parking', 'property',
+    ];
+    /** Tipos de trazo que admiten curvas (arco de tres puntos). */
+    private const CURVE_TYPES = ['wall', 'route', 'line', 'pipe', 'conduit', 'road', 'sidewalk', 'property'];
     private const MEP_TYPES = ['pipe', 'conduit'];
     public const MAX_POINTS = 40;
     private const UNITS = ['cm', 'm', 'mm'];
@@ -55,7 +62,10 @@ final class DesignValidator
                 throw new DomainException('El diseño contiene una propiedad no permitida: ' . (string) $key . '.');
             }
         }
-        if (($design['format'] ?? null) !== 2) {
+        // Formato 2: plano sin curvas (idéntico a la 1.10.0). Formato 3: añade
+        // `curves` alineado con `points`. Un plano v2 se sigue abriendo igual.
+        $format = $design['format'] ?? null;
+        if (!in_array($format, [2, 3], true)) {
             throw new DomainException('La versión del formato del diseño no es compatible.');
         }
         $canvas = self::normalizeCanvas($design['canvas'] ?? null);
@@ -65,8 +75,16 @@ final class DesignValidator
         $groups = self::normalizeGroups($design['groups'] ?? null, $elements);
         $extinguishers = self::normalizeExtinguisherSettings($design['extinguishers'] ?? null);
 
+        $hasCurves = false;
+        foreach ($elements as $element) {
+            if (isset($element['curves']) && is_array($element['curves']) && $element['curves'] !== []) {
+                $hasCurves = true;
+                break;
+            }
+        }
+
         return [
-            'format' => 2,
+            'format' => $hasCurves ? 3 : 2,
             'canvas' => $canvas,
             'layers' => $layers,
             'elements' => $elements,
@@ -202,6 +220,11 @@ final class DesignValidator
             'ellipse' => array_merge($base, ['w' => 140, 'h' => 100, 'stroke' => 2, 'color' => '#334155']),
             'pipe' => self::defaultPipe(),
             'conduit' => self::defaultConduit(),
+            'road' => array_merge($base, ['w' => 620, 'h' => 360, 'stroke' => 1.5, 'color' => '#64748b', 'lanes' => 2, 'widthM' => 6]),
+            'sidewalk' => array_merge($base, ['w' => 620, 'h' => 300, 'stroke' => 1.2, 'color' => '#94a3b8', 'widthM' => 2]),
+            'crosswalk' => array_merge($base, ['w' => 240, 'h' => 120, 'stroke' => 1.2, 'color' => '#e2e8f0']),
+            'parking' => array_merge($base, ['w' => 760, 'h' => 520, 'stroke' => 1.5, 'color' => '#475569']),
+            'property' => array_merge($base, ['w' => 520, 'h' => 380, 'stroke' => 2, 'color' => '#b45309']),
             default => $base,
         };
     }
@@ -326,7 +349,9 @@ final class DesignValidator
         $ids = [];
         $baseKeys = [
             'id', 'type', 'layerId', 'x', 'y', 'w', 'h', 'rotation', 'color', 'stroke', 'opacity',
-            'label', 'fontSize', 'points', 'flipX', 'flipY', 'isExit', 'locked',
+            'label', 'fontSize', 'points', 'curves', 'flipX', 'flipY', 'isExit', 'locked',
+            // Ancho de banda de vías y andenes, y carriles de la vía.
+            'widthM', 'lanes',
         ];
         foreach ($elements as $element) {
             if (!is_array($element)) {
@@ -400,8 +425,20 @@ final class DesignValidator
             }
             $isExit = in_array($type, self::DOOR_TYPES, true) ? $isExit : false;
             $points = null;
-            if (in_array($type, ['wall', 'route', 'dimension', 'line', 'pipe', 'conduit'], true)) {
+            if (in_array($type, ['wall', 'route', 'dimension', 'line', 'pipe', 'conduit', 'road', 'sidewalk', 'property'], true)) {
                 $points = self::normalizePoints($element['points'] ?? null, $w, $h, $type);
+            }
+            if (array_key_exists('curves', $element) && !in_array($type, self::CURVE_TYPES, true)) {
+                throw new DomainException('Este tipo de elemento no admite curvas.');
+            }
+            $curves = $points === null ? null : self::normalizeCurves($element['curves'] ?? null, $points, $type);
+            $lanes = null;
+            $widthM = null;
+            if ($type === 'road' || $type === 'sidewalk') {
+                $widthM = round(self::number($element['widthM'] ?? 2, 0.8, 30, 'ancho de la vía'), 2);
+            }
+            if ($type === 'road') {
+                $lanes = self::integer($element['lanes'] ?? 2, 1, 6, 'número de carriles');
             }
             $code = self::signCodeForType($type);
             if ($code !== null) {
@@ -487,6 +524,15 @@ final class DesignValidator
             }
             if ($points !== null) {
                 $normalized['points'] = $points;
+            }
+            if ($curves !== null) {
+                $normalized['curves'] = $curves;
+            }
+            if ($widthM !== null) {
+                $normalized['widthM'] = $widthM;
+            }
+            if ($lanes !== null) {
+                $normalized['lanes'] = $lanes;
             }
             if (in_array($type, self::DOOR_TYPES, true)) {
                 $normalized['flipX'] = $flipX;
@@ -592,6 +638,61 @@ final class DesignValidator
             $result[] = ['x' => round($px, 2), 'y' => round($py, 2)];
         }
         return $result;
+    }
+
+    /**
+     * Curvas alineadas con los vértices: `curves[i]` describe el tramo que va
+     * de `points[i]` a `points[i+1]`, con `{kind:'arc', through:{x,y}}` o
+     * `null` cuando el tramo es recto. Sin curvas se devuelve `null` y el
+     * documento sigue siendo formato 2.
+     */
+    private static function normalizeCurves(mixed $curves, array $points, string $type): ?array
+    {
+        if ($curves === null) {
+            return null;
+        }
+        if (!is_array($curves) || !array_is_list($curves)) {
+            throw new DomainException('Las curvas del trazo no tienen un formato válido.');
+        }
+        if (!in_array($type, self::CURVE_TYPES, true)) {
+            throw new DomainException('Este tipo de elemento no admite curvas.');
+        }
+        if (count($curves) !== count($points)) {
+            throw new DomainException('Las curvas deben estar alineadas con los vértices del trazo.');
+        }
+        $result = [];
+        $any = false;
+        foreach ($curves as $index => $curve) {
+            if ($curve === null) {
+                $result[] = null;
+                continue;
+            }
+            if (!is_array($curve)) {
+                throw new DomainException('Una de las curvas del trazo no es válida.');
+            }
+            foreach (array_keys($curve) as $key) {
+                if (!in_array($key, ['kind', 'through'], true)) {
+                    throw new DomainException('Una curva contiene propiedades no permitidas.');
+                }
+            }
+            if (($curve['kind'] ?? null) !== 'arc' || !is_array($curve['through'] ?? null)) {
+                throw new DomainException('Solo se admiten arcos de tres puntos.');
+            }
+            if ($index >= count($points) - 1) {
+                throw new DomainException('El último vértice del trazo no puede abrir un arco.');
+            }
+            $through = $curve['through'];
+            foreach (array_keys($through) as $key) {
+                if (!in_array($key, ['x', 'y'], true)) {
+                    throw new DomainException('El punto de paso de un arco contiene propiedades no permitidas.');
+                }
+            }
+            $x = self::number($through['x'] ?? null, -10_000, 10_000, 'punto de paso X');
+            $y = self::number($through['y'] ?? null, -10_000, 10_000, 'punto de paso Y');
+            $result[] = ['kind' => 'arc', 'through' => ['x' => round($x, 2), 'y' => round($y, 2)]];
+            $any = true;
+        }
+        return $any ? $result : null;
     }
 
     private static function normalizeGroups(mixed $groups, array $elements): array

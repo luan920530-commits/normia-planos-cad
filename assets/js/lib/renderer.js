@@ -6,7 +6,8 @@
   const NS = 'http://www.w3.org/2000/svg';
   const XLINK_NS = 'http://www.w3.org/1999/xlink';
   const DOOR_TYPES = ['door', 'door_double', 'door_garage'];
-  const PATH_TYPES = ['wall', 'route', 'line', 'dimension', 'pipe', 'conduit'];
+  const PATH_TYPES = ['wall', 'route', 'line', 'dimension', 'pipe', 'conduit', 'road', 'sidewalk', 'property'];
+  const OUTDOOR_TYPES = ['road', 'sidewalk', 'crosswalk', 'parking', 'property'];
 
   const node = (name, attrs = {}, text = null) => {
     const element = document.createElementNS(NS, name);
@@ -204,6 +205,54 @@
       }));
     }
 
+    /** Puntos del trazo con las curvas resueltas (aplanado compartido). */
+    flatElementPoints(element) {
+      const local = Array.isArray(element.points) && element.points.length >= 2
+        ? element.points
+        : [{ x: 0, y: 0 }, { x: element.w, y: element.h }];
+      const flat = G.flattenPath(local, element.curves, {
+        tolerance: G.flattenTolerance(this.design?.canvas?.unit || 'cm'),
+      });
+      return flat.map((point) => ({ x: element.x + point.x, y: element.y + point.y }));
+    }
+
+    /**
+     * Curvas del elemento llevadas al marco del lienzo: `points` va local al
+     * elemento, pero el trazo se pinta sumando x/y, así que el `through` del
+     * arco tiene que desplazarse igual o el radio sale enorme.
+     */
+    elementCurves(element) {
+      if (!Array.isArray(element.curves) || !element.curves.some(Boolean)) return null;
+      return element.curves.map((curve) => (curve && curve.kind === 'arc' && curve.through
+        ? {
+          kind: 'arc',
+          through: {
+            x: element.x + (Number(curve.through.x) || 0),
+            y: element.y + (Number(curve.through.y) || 0),
+          },
+        }
+        : null));
+    }
+
+    /** `d` del trazo con arcos, o `null` cuando todos los tramos son rectos. */
+    elementPathData(element) {
+      return G.pathData(this.elementPoints(element), this.elementCurves(element));
+    }
+
+    /**
+     * Trazo de muro, ruta, línea o red: polilínea cuando no hay curvas (mismo
+     * SVG que la 1.10.0) y `path` con arcos cuando el usuario combó algún tramo.
+     */
+    pathStroke(element, attributes = {}) {
+      const d = this.elementPathData(element);
+      if (d) return node('path', { ...attributes, d });
+      const points = this.elementPoints(element);
+      return node('polyline', {
+        ...attributes,
+        points: points.map((point) => `${G.round(point.x, 2)} ${G.round(point.y, 2)}`).join(' '),
+      });
+    }
+
     /**
      * Marco visible de la selección: crece hasta un mínimo en píxeles para que
      * los tiradores no tapen los trazos finos (muros y líneas de 2 unidades).
@@ -317,6 +366,165 @@
       return group;
     }
 
+    /**
+     * Vías, andenes, pasos cebra, parqueaderos y linderos.
+     *
+     * Son referencia esquemática de planta: no reproducen perfiles de diseño
+     * vial ni sustituyen los planos de urbanismo. Las vías no bloquean el
+     * tránsito; solo ordenan la lectura del plano.
+     */
+    outdoorNode(element, canvas) {
+      const zoom = this.view.zoom || 1;
+      const type = element.type;
+      const color = element.color || '#64748b';
+      const stroke = Math.max(0.8, Number(element.stroke) || 1.5);
+      const unit = canvas?.unit || 'cm';
+      const cm = G.cmPerUnit(unit);
+      const font = "'system-ui', '-apple-system', 'Segoe UI', sans-serif";
+      const label = String(element.label || '').split('\n')[0];
+      const group = node('g', { class: `outdoor outdoor-${type}` });
+
+      if (type === 'crosswalk' || type === 'parking') {
+        group.appendChild(node('rect', {
+          x: element.x, y: element.y, width: element.w, height: element.h, rx: 2 / zoom,
+          fill: '#f8fafc', stroke: color, 'stroke-width': stroke,
+        }));
+        if (type === 'crosswalk') {
+          // Franjas de 50 cm con junta de 50 cm, como un paso peatonal cebra.
+          const step = Math.max(6, 100 / cm);
+          const bar = step / 2;
+          const horizontal = element.w >= element.h;
+          const span = horizontal ? element.w : element.h;
+          const count = Math.max(2, Math.min(40, Math.floor(span / step)));
+          const gap = span / count;
+          for (let index = 0; index < count; index += 1) {
+            group.appendChild(node('rect', horizontal ? {
+              x: element.x + index * gap + (gap - bar) / 2, y: element.y + 1.5,
+              width: Math.max(1, bar), height: Math.max(1, element.h - 3),
+              fill: color, 'fill-opacity': 0.55,
+            } : {
+              x: element.x + 1.5, y: element.y + index * gap + (gap - bar) / 2,
+              width: Math.max(1, element.w - 3), height: Math.max(1, bar),
+              fill: color, 'fill-opacity': 0.55,
+            }));
+          }
+        } else {
+          // Parqueadero: puestos de 2,50 × 5,00 m agrupados en filas.
+          const bayWidth = Math.max(4, 250 / cm);
+          const bayDepth = Math.max(4, 500 / cm);
+          const columns = Math.max(1, Math.round(element.w / bayWidth));
+          const rows = Math.max(1, Math.round(element.h / bayDepth));
+          const cellW = element.w / columns;
+          const cellH = element.h / rows;
+          for (let column = 1; column < columns; column += 1) {
+            group.appendChild(node('line', {
+              x1: element.x + column * cellW, y1: element.y + 1.5,
+              x2: element.x + column * cellW, y2: element.y + element.h - 1.5,
+              stroke: color, 'stroke-width': Math.max(0.7, stroke * 0.6), opacity: 0.75,
+            }));
+          }
+          for (let row = 1; row < rows; row += 1) {
+            group.appendChild(node('line', {
+              x1: element.x + 1.5, y1: element.y + row * cellH,
+              x2: element.x + element.w - 1.5, y2: element.y + row * cellH,
+              stroke: color, 'stroke-width': Math.max(0.9, stroke * 0.8), opacity: 0.8,
+            }));
+          }
+          group.appendChild(node('text', {
+            x: element.x + element.w / 2, y: element.y + element.h / 2 + 4 / zoom, 'text-anchor': 'middle',
+            'font-size': 12 / zoom, 'font-weight': 600, fill: color, 'font-family': font, class: 'element-label',
+          }, clean(label ? `${label} · ${columns * rows} puestos` : `P · ${columns * rows} puestos`)));
+        }
+        if (label && type === 'crosswalk') {
+          group.appendChild(node('text', {
+            x: element.x + element.w / 2, y: element.y + element.h + 11 / zoom, 'text-anchor': 'middle',
+            'font-size': 9.5 / zoom, fill: '#334155', 'font-family': font, class: 'element-label',
+          }, clean(label)));
+        }
+        return group;
+      }
+
+      // Bandas y linderos: el trazo manda. Con curvas se dibujan arcos exactos;
+      // sin curvas, la polilínea de siempre.
+      const bandWidth = type === 'property' ? 0 : Math.max(2, (Number(element.widthM) || 2) * 100 / cm);
+      const flat = this.flatElementPoints(element);
+      const exact = this.elementPathData(element);
+      const flatData = G.pathData(flat, null);
+      const strokePath = (attributes) => {
+        if (exact) return node('path', { d: exact, fill: 'none', ...attributes });
+        if (flatData) return node('path', { d: flatData, fill: 'none', ...attributes });
+        return node('polyline', {
+          points: flat.map((point) => `${G.round(point.x, 2)} ${G.round(point.y, 2)}`).join(' '),
+          fill: 'none',
+          ...attributes,
+        });
+      };
+
+      if (bandWidth > 0) {
+        group.appendChild(strokePath({
+          stroke: color, 'stroke-width': bandWidth + stroke * 2,
+          'stroke-opacity': 0.55, 'stroke-linecap': 'butt', 'stroke-linejoin': 'round',
+        }));
+        group.appendChild(strokePath({
+          stroke: '#f8fafc', 'stroke-width': Math.max(1, bandWidth),
+          'stroke-linecap': 'butt', 'stroke-linejoin': 'round',
+        }));
+        if (type === 'road') {
+          group.appendChild(strokePath({
+            stroke: '#ffffff', 'stroke-width': Math.max(0.9, stroke * 0.8),
+            'stroke-dasharray': `${Math.max(8, 300 / cm)} ${Math.max(6, 200 / cm)}`,
+            'stroke-linecap': 'butt', opacity: 0.9,
+          }));
+        }
+        if (type === 'sidewalk') {
+          // Trama de losas: marcas perpendiculares cada 60 cm.
+          const step = Math.max(6, 60 / cm);
+          let travelled = 0;
+          for (let index = 1; index < flat.length; index += 1) {
+            const a = flat[index - 1];
+            const b = flat[index];
+            const span = Math.hypot(b.x - a.x, b.y - a.y);
+            if (span <= 0) continue;
+            let cursor = step - (travelled % step);
+            while (cursor <= span) {
+              const t = cursor / span;
+              const px = a.x + (b.x - a.x) * t;
+              const py = a.y + (b.y - a.y) * t;
+              const nx = -(b.y - a.y) / span;
+              const ny = (b.x - a.x) / span;
+              group.appendChild(node('line', {
+                x1: px - nx * bandWidth * 0.5, y1: py - ny * bandWidth * 0.5,
+                x2: px + nx * bandWidth * 0.5, y2: py + ny * bandWidth * 0.5,
+                stroke: color, 'stroke-width': Math.max(0.5, stroke * 0.5), opacity: 0.5,
+              }));
+              cursor += step;
+            }
+            travelled += span;
+          }
+        }
+      } else {
+        group.appendChild(strokePath({
+          stroke: color, 'stroke-width': Math.max(1, stroke),
+          'stroke-dasharray': `${18 / cm} ${6 / cm} ${3 / cm} ${6 / cm}`,
+          'stroke-linejoin': 'round',
+        }));
+      }
+      group.appendChild(strokePath({
+        stroke: 'transparent',
+        'stroke-width': Math.max(16 / zoom, (bandWidth || stroke) + 12 / zoom),
+        'stroke-linecap': 'round', 'stroke-linejoin': 'round', class: 'hit-area',
+      }));
+      if (label) {
+        const middle = flat[Math.floor(flat.length / 2)] || { x: element.x, y: element.y };
+        group.appendChild(node('text', {
+          x: middle.x + 6 / zoom, y: middle.y - 8 / zoom,
+          'font-size': 9.5 / zoom, fill: '#334155', 'font-family': font, class: 'element-label',
+          'paint-order': 'stroke', stroke: '#ffffff', 'stroke-width': 3 / zoom, 'stroke-linejoin': 'round',
+        }, clean(label)));
+      }
+      return group;
+    }
+
     elementNode(element, canvas, options = {}) {
       const zoom = this.view.zoom || 1;
       const cx = element.x + element.w / 2;
@@ -358,13 +566,11 @@
         const mep = this.catalogs.mep;
         const networkInfo = type === 'pipe' && mep && mep.hydraulic ? mep.hydraulic[element.network] || null : null;
         const points = this.elementPoints(element);
-        const pointText = points.map((point) => `${G.round(point.x, 2)} ${G.round(point.y, 2)}`).join(' ');
         const width = Math.max(1.5, Number(stroke) || (type === 'pipe' ? 3.5 : 2.5));
         const dash = type === 'pipe' && Array.isArray(networkInfo?.dash) && networkInfo.dash.length
           ? networkInfo.dash.map((value) => Math.max(1, Number(value) || 1)).join(' ')
           : null;
-        group.appendChild(node('polyline', {
-          points: pointText,
+        group.appendChild(this.pathStroke(element, {
           fill: 'none',
           stroke: color,
           'stroke-width': width,
@@ -381,8 +587,7 @@
             fill: '#ffffff', stroke: color, 'stroke-width': Math.max(1, width * 0.45),
           }));
         }
-        group.appendChild(node('polyline', {
-          points: pointText,
+        group.appendChild(this.pathStroke(element, {
           fill: 'none',
           stroke: 'transparent',
           'stroke-width': Math.max(16 / zoom, width + 12 / zoom),
@@ -409,9 +614,7 @@
       }
       if (type === 'wall' || type === 'route' || type === 'line') {
         const points = this.elementPoints(element);
-        const pointText = points.map((point) => `${G.round(point.x, 2)} ${G.round(point.y, 2)}`).join(' ');
-        group.appendChild(node('polyline', {
-          points: pointText,
+        group.appendChild(this.pathStroke(element, {
           fill: 'none',
           stroke: color,
           'stroke-width': type === 'wall' ? Math.max(1, stroke) : Math.max(1.5, stroke),
@@ -419,8 +622,7 @@
           'stroke-linejoin': 'round',
           ...(type === 'route' ? { 'stroke-dasharray': `${Math.max(2, stroke * 2)} ${Math.max(1.5, stroke * 1.5)}` } : {}),
         }));
-        group.appendChild(node('polyline', {
-          points: pointText,
+        group.appendChild(this.pathStroke(element, {
           fill: 'none',
           stroke: 'transparent',
           'stroke-width': Math.max(16 / zoom, (Number(stroke) || 2) + 12 / zoom),
@@ -447,6 +649,10 @@
             'font-size': 10 / zoom, fill: color, class: 'element-label',
           }, clean(element.label.split('\n')[0])));
         }
+        return group;
+      }
+      if (OUTDOOR_TYPES.includes(type)) {
+        group.appendChild(this.outdoorNode(element, canvas));
         return group;
       }
       if (DOOR_TYPES.includes(type)) {
@@ -534,6 +740,47 @@
             ? 'Vértice inicial · arrastra para moverlo · Alt+clic para quitarlo'
             : 'Vértice · arrastra para moverlo · Alt+clic para quitarlo'));
           group.appendChild(handle);
+        }
+        // Tirador de comba por tramo: al arrastrarlo el tramo se convierte en
+        // un arco que pasa por el puntero. El rombo queda hueco mientras el
+        // tramo es recto y se rellena cuando ya está curvado.
+        for (let index = 0; index < points.length - 1; index += 1) {
+          const a = points[index];
+          const b = points[index + 1];
+          const curve = Array.isArray(single.curves) ? single.curves[index] : null;
+          const through = curve && curve.kind === 'arc' && curve.through
+            ? { x: single.x + Number(curve.through.x || 0), y: single.y + Number(curve.through.y || 0) }
+            : null;
+          const arc = through ? G.arcGeometry(a, through, b) : null;
+          const middle = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+          const center = arc ? G.arcPointAt(arc, 0.5) : middle;
+          if (!arc) {
+            // El tirador de un tramo recto se separa del trazo para que
+            // arrastrar la línea siga moviendo el elemento, no combándolo.
+            const chord = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+            const offset = 15 / zoom;
+            center.x += (-(b.y - a.y) / chord) * offset;
+            center.y += ((b.x - a.x) / chord) * offset;
+            group.appendChild(node('line', {
+              x1: middle.x, y1: middle.y, x2: center.x, y2: center.y,
+              stroke: '#cbd5e1', 'stroke-width': 1 / zoom, 'stroke-dasharray': `${3 / zoom} ${3 / zoom}`,
+              'pointer-events': 'none',
+            }));
+          }
+          const size = 4.2 / zoom;
+          const diamond = node('path', {
+            d: `M ${center.x} ${center.y - size} L ${center.x + size} ${center.y} L ${center.x} ${center.y + size} L ${center.x - size} ${center.y} Z`,
+            fill: arc ? '#f59e0b' : '#ffffff',
+            stroke: arc ? '#b45309' : '#94a3b8',
+            'stroke-width': 1.2 / zoom,
+            'data-curve': String(index),
+            class: `curve-handle${arc ? ' is-curved' : ''}`,
+            'pointer-events': 'all',
+          });
+          diamond.appendChild(node('title', {}, arc
+            ? `Tramo ${index + 1} combado · arrastra para ajustar el arco`
+            : `Arrastra para combar el tramo ${index + 1}`));
+          group.appendChild(diamond);
         }
       }
       if (editable && ui.activeTool === 'select') {

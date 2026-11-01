@@ -26,6 +26,7 @@
     wall: 'Muro', door: 'Puerta sencilla', door_double: 'Puerta doble', door_garage: 'Portón de garaje', route: 'Ruta de evacuación', text: 'Texto', dimension: 'Medida',
     line: 'Línea', rect: 'Rectángulo', ellipse: 'Elipse',
     pipe: 'Tubería', conduit: 'Tubería eléctrica',
+    road: 'Vía vehicular', sidewalk: 'Andén', crosswalk: 'Paso cebra', parking: 'Parqueadero', property: 'Límite de predio',
   };
   /* Icono, etiqueta y atajo de cada herramienta para la paleta y la barra. */
   const TOOL_META = {
@@ -43,6 +44,11 @@
     line: { label: 'Línea', icon: 'i-line', key: 'L' },
     rect: { label: 'Rectángulo', icon: 'i-rect', key: 'B' },
     ellipse: { label: 'Elipse', icon: 'i-ellipse', key: 'O' },
+    road: { label: 'Vía vehicular', icon: 'i-road', key: 'A' },
+    sidewalk: { label: 'Andén', icon: 'i-sidewalk', key: 'S' },
+    crosswalk: { label: 'Paso cebra', icon: 'i-crosswalk', key: 'C' },
+    parking: { label: 'Parqueadero', icon: 'i-parking', key: 'Q' },
+    property: { label: 'Límite de predio', icon: 'i-property', key: 'I' },
     place: { label: 'Colocando', icon: 'i-sign', key: '' },
   };
   const q = (selector, context = document) => context.querySelector(selector);
@@ -807,18 +813,28 @@
         const element = this.model.selectedElements()[0];
         if (!element || !this.model.canEdit()) return;
         const index = Number(pointNode.dataset.point);
-        if (event.altKey) {
-          // Alt+clic quita el vértice sin abrir un arrastre.
-          if (this.model.removePathPoint(element.id, index)) {
-            this.toast('Vértice eliminado.', 'info', { duration: 1800 });
-            this.scheduleRender();
-          }
-          return;
-        }
+        // Alt se decide al soltar: un clic quita el vértice y un arrastre lo
+        // mueve llevándose el punto de paso de los tramos contiguos.
         this.pending = {
           mode: 'vertex',
           elementId: element.id,
           index,
+          altKey: Boolean(event.altKey),
+          start: this.toCanvas(event),
+          startClient: { x: event.clientX, y: event.clientY },
+          pointerId: event.pointerId,
+        };
+        this.svg.setPointerCapture?.(event.pointerId);
+        return;
+      }
+      const curveNode = event.target.closest?.('.selection-frame .curve-handle');
+      if (curveNode && this.tool === 'select') {
+        const element = this.model.selectedElements()[0];
+        if (!element || !this.model.canEdit()) return;
+        this.pending = {
+          mode: 'curve',
+          elementId: element.id,
+          index: Number(curveNode.dataset.curve),
           start: this.toCanvas(event),
           startClient: { x: event.clientX, y: event.clientY },
           pointerId: event.pointerId,
@@ -975,6 +991,7 @@
         mode: 'vertex',
         elementId: element.id,
         index: pending.index,
+        altKey: Boolean(pending.altKey),
         startClient: { x: pending.startClient.x, y: pending.startClient.y },
         pointerId: pending.pointerId,
       };
@@ -999,7 +1016,43 @@
           else target = { x: anchor.x, y: target.y };
         }
       }
-      this.model.setPathPoint(drag.elementId, drag.index, target);
+      // Alt conserva la comba junto al vértice: sus puntos de paso lo acompañan.
+      this.model.setPathPoint(drag.elementId, drag.index, target, { moveCurves: Boolean(event.altKey || drag.altKey) });
+      this.scheduleRender();
+    }
+
+    /**
+     * Arrastre del tirador de comba: el tramo se convierte en un arco que pasa
+     * por el puntero. El gesto completo es un solo paso de deshacer.
+     */
+    startCurve(pending) {
+      const element = this.model.element(pending.elementId);
+      if (!element) return;
+      this.model.begin();
+      this.drag = {
+        mode: 'curve',
+        elementId: element.id,
+        index: pending.index,
+        startClient: { x: pending.startClient.x, y: pending.startClient.y },
+        pointerId: pending.pointerId,
+      };
+      this.svg.setPointerCapture?.(pending.pointerId);
+      this.updateCurve(this.clampPoint(this.toCanvas({ clientX: pending.startClient.x, clientY: pending.startClient.y })), {});
+    }
+
+    /** Aplica el puntero al arco activo. Esc o Alt+arrastrar lo devuelve a recto. */
+    updateCurve(point, event = {}) {
+      const drag = this.drag;
+      if (!drag || drag.mode !== 'curve') return;
+      const element = this.model.element(drag.elementId);
+      if (!element) return;
+      const target = this.snapPoint(point, event);
+      if (event.altKey) {
+        this.model.straightenCurve(drag.elementId, drag.index);
+        this.scheduleRender();
+        return;
+      }
+      this.model.setCurveThrough(drag.elementId, drag.index, target);
       this.scheduleRender();
     }
 
@@ -1022,6 +1075,7 @@
         this.pending = null;
         if (pending.mode === 'transform') this.startTransform(pending);
         else if (pending.mode === 'vertex') this.startVertex(pending);
+        else if (pending.mode === 'curve') this.startCurve(pending);
         else this.startMove(pending);
       }
       if (this.pan) {
@@ -1076,6 +1130,10 @@
         this.updateVertex(point, event);
         return;
       }
+      if (this.drag?.mode === 'curve') {
+        this.updateCurve(point, event);
+        return;
+      }
       if (this.drag?.mode === 'draw') {
         const snapped = this.snapPoint(point, event);
         let end = snapped;
@@ -1108,7 +1166,15 @@
 
     onPointerUp(event, cancelled = false) {
       if (this.pending) {
+        const pending = this.pending;
         this.pending = null;
+        // Alt sin arrastre: el vértice señalado se elimina.
+        if (pending.mode === 'vertex' && pending.altKey) {
+          const element = this.model.element(pending.elementId);
+          if (element && this.model.removePathPoint(element.id, pending.index)) {
+            this.toast('Vértice eliminado.', 'info', { duration: 1800 });
+          }
+        }
         this.scheduleRender();
         return;
       }
@@ -1144,6 +1210,12 @@
         this.scheduleRender();
         return;
       }
+      if (this.drag?.mode === 'curve') {
+        this.drag = null;
+        this.model.end('curve');
+        this.scheduleRender();
+        return;
+      }
       if (this.drag?.mode === 'draw') {
         const drag = this.drag;
         this.drag = null;
@@ -1173,17 +1245,17 @@
       if (!element) return;
       // Doble clic sobre un muro o una ruta añade un vértice en el segmento
       // más cercano: es la forma de crear esquinas nuevas sin salir del plano.
-      if ((element.type === 'wall' || element.type === 'route') && this.model.canEdit()) {
+      if (['wall', 'route', 'road', 'sidewalk', 'property'].includes(element.type) && this.model.canEdit()) {
         const snapped = this.snapPoint(point, event);
-        const points = this.model.visualPoints(element);
-        let target = { index: 0, distance: Infinity };
-        for (let index = 0; index < points.length - 1; index += 1) {
-          const gap = G.distanceToSegment(snapped, points[index], points[index + 1]);
-          if (gap < target.distance) target = { index, distance: gap };
-        }
-        if (points.length < 40 && target.distance <= 24 / (this.view.zoom || 1)) {
+        const vertices = this.model.visualPoints(element);
+        // El tramo se busca sobre el trazo real (arco incluido) para que el
+        // vértice nuevo caiga sobre la curva y la parta en dos arcos.
+        const near = this.model.nearestOnPath(element, snapped);
+        const target = near || { segment: 0, distance: Infinity };
+        if (vertices.length < 40 && target.distance <= 24 / (this.view.zoom || 1)) {
           this.model.select([element.id]);
-          if (this.model.insertPathPoint(element.id, target.index, snapped)) {
+          const anchor = near ? { x: near.x, y: near.y } : snapped;
+          if (this.model.insertPathPoint(element.id, target.segment, anchor)) {
             this.toast('Vértice añadido. Arrástralo para ajustar el trazo.', 'info', { duration: 2400 });
             this.scheduleRender();
             return;
@@ -1285,14 +1357,14 @@
       const height = Math.abs(end.y - start.y);
       const tool = this.tool;
       try {
-        if (tool === 'wall' || tool === 'line' || tool === 'dimension') {
+        if (['wall', 'line', 'dimension', 'road', 'sidewalk', 'property'].includes(tool)) {
           const length = Math.hypot(end.x - start.x, end.y - start.y);
           if (length < MIN_SIZE) {
             this.toast('Arrastra para trazar el elemento. Pulsa Esc para volver a seleccionar.', 'info');
             return;
           }
           this.model.addPath(tool, [start, end], {});
-        } else if (tool === 'rect' || tool === 'ellipse') {
+        } else if (['rect', 'ellipse', 'crosswalk', 'parking'].includes(tool)) {
           if (width < MIN_SIZE || height < MIN_SIZE) {
             this.toast('Arrastra para definir el tamaño de la forma.', 'info');
             return;
@@ -1378,14 +1450,37 @@
       hint.textContent = `Ruta de evacuación · ${count} punto${count === 1 ? '' : 's'} · clic en el primer punto para cerrar el circuito · Enter o doble clic termina · Retroceso quita el último · Esc cancela`;
     }
 
+    /**
+     * Punto del muro más cercano al puntero. Se mide sobre el trazo real, así
+     * que una puerta soltada junto a un muro curvo se ubica por longitud de
+     * arco y no sobre la cuerda del tramo.
+     */
+    nearestWallPoint(point) {
+      let best = null;
+      for (const wall of this.model.design.elements) {
+        if (wall.type !== 'wall') continue;
+        if (!this.model.layer(wall.layerId)?.visible) continue;
+        const hit = this.model.nearestOnPath(wall, point);
+        if (hit && (!best || hit.distance < best.distance)) best = hit;
+      }
+      return best;
+    }
+
     insertAtPoint(tool, point) {
       const base = this.model.defaultFor(tool);
       const isDoor = (root.DOOR_TYPES || []).includes(tool);
+      let anchor = point;
+      if (isDoor) {
+        const near = this.nearestWallPoint(point);
+        if (near && near.distance <= Math.max(14, base.w / 4) / (this.view.zoom || 1)) {
+          anchor = { x: near.x, y: near.y };
+        }
+      }
       try {
         this.model.addElement(tool, {
-          x: point.x - base.w / 2,
+          x: anchor.x - base.w / 2,
           // El clic marca la línea del muro: las puertas abren hacia arriba.
-          y: isDoor ? point.y - base.h : point.y - base.h / 2,
+          y: isDoor ? anchor.y - base.h : anchor.y - base.h / 2,
           ...(tool === 'text' ? { label: 'Texto', fontSize: 18 } : {}),
         });
         this.applyTool('select');
@@ -1681,7 +1776,7 @@
         this.applyTool('door_double');
         return;
       }
-      const shortcuts = { v: 'select', h: 'hand', m: 'wall', u: 'door', r: 'door_garage', e: 'route', t: 'text', d: 'dimension', l: 'line', b: 'rect', o: 'ellipse', p: 'pipe' };
+      const shortcuts = { v: 'select', h: 'hand', m: 'wall', u: 'door', r: 'door_garage', e: 'route', t: 'text', d: 'dimension', l: 'line', b: 'rect', o: 'ellipse', p: 'pipe', a: 'road', s: 'sidewalk', c: 'crosswalk', q: 'parking', i: 'property' };
       const tool = shortcuts[event.key.toLowerCase()];
       if (tool) {
         event.preventDefault();

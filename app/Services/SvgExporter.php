@@ -129,13 +129,13 @@ final class SvgExporter
 
         switch ($type) {
             case 'wall':
-                $out .= '<polyline fill="none" stroke="' . self::x($color) . '" stroke-width="' . self::n($stroke) . '" stroke-linecap="round" stroke-linejoin="round" points="'
-                    . self::points($element, $x, $y) . '"/>' . "\n";
+                $out .= self::strokeMarkup($element, $x, $y, 'fill="none" stroke="' . self::x($color) . '" stroke-width="' . self::n($stroke) . '" stroke-linecap="round" stroke-linejoin="round"');
                 break;
             case 'route':
-                $points = self::pointList($element);
-                $out .= '<polyline fill="none" stroke="' . self::x($color) . '" stroke-width="' . self::n(max(1.5, $stroke)) . '" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="' . self::n(max(4, $stroke * 2)) . ' ' . self::n(max(3, $stroke * 1.5)) . '" points="'
-                    . self::points($element, $x, $y) . '"/>' . "\n";
+                // La flecha sigue la tangente final: en un tramo curvo se apoya
+                // en el último par de puntos aplanados.
+                $points = self::flatPointList($element, $canvas);
+                $out .= self::strokeMarkup($element, $x, $y, 'fill="none" stroke="' . self::x($color) . '" stroke-width="' . self::n(max(1.5, $stroke)) . '" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="' . self::n(max(4, $stroke * 2)) . ' ' . self::n(max(3, $stroke * 1.5)) . '"');
                 $out .= self::arrow($points, $x, $y, $color, max(8, $stroke * 3));
                 if ($label !== '') {
                     $mid = $points[(int) floor((count($points) - 1) / 2)];
@@ -181,8 +181,7 @@ final class SvgExporter
                 $dash = $isPipe && is_array($definition['dash'] ?? null) && $definition['dash'] !== []
                     ? ' stroke-dasharray="' . implode(' ', array_map(static fn ($value): string => self::n((float) $value), $definition['dash'])) . '"'
                     : '';
-                $out .= '<polyline fill="none" stroke="' . self::x($color) . '" stroke-width="' . self::n($width) . '" stroke-linecap="round" stroke-linejoin="round" opacity="0.92"' . $dash . ' points="'
-                    . self::points($element, $x, $y) . '"/>' . "\n";
+                $out .= self::strokeMarkup($element, $x, $y, 'fill="none" stroke="' . self::x($color) . '" stroke-width="' . self::n($width) . '" stroke-linecap="round" stroke-linejoin="round" opacity="0.92"' . $dash);
                 $joint = max(2.0, min(5.0, $width * 0.95));
                 foreach ($points as $point) {
                     $out .= '<circle cx="' . self::n($x + (float) $point['x']) . '" cy="' . self::n($y + (float) $point['y']) . '" r="' . self::n($joint) . '" fill="#ffffff" stroke="' . self::x($color) . '" stroke-width="' . self::n(max(1, $width * 0.45)) . '"/>' . "\n";
@@ -202,6 +201,15 @@ final class SvgExporter
                 $out .= '<line x1="' . self::n($x + (float) $start['x']) . '" y1="' . self::n($y + (float) $start['y'])
                     . '" x2="' . self::n($x + (float) $end['x']) . '" y2="' . self::n($y + (float) $end['y'])
                     . '" stroke="' . self::x($color) . '" stroke-width="' . self::n(max(1, $stroke)) . '" stroke-linecap="round"/>' . "\n";
+                break;
+            case 'road':
+            case 'sidewalk':
+            case 'property':
+                $out .= self::outdoorBand($element, $x, $y, $w, $h, $color, $stroke, $canvas);
+                break;
+            case 'crosswalk':
+            case 'parking':
+                $out .= self::outdoorArea($element, $x, $y, $w, $h, $color, $stroke, $canvas);
                 break;
             case 'rect':
                 $out .= '<rect x="' . self::n($x) . '" y="' . self::n($y) . '" width="' . self::n($w) . '" height="' . self::n($h) . '" rx="2" fill="' . self::x($color) . '" fill-opacity=".08" stroke="' . self::x($color) . '" stroke-width="' . self::n(max(1, $stroke)) . '"/>' . "\n";
@@ -317,6 +325,158 @@ final class SvgExporter
             $out .= '<path d="M ' . self::n($hingeX) . ' ' . self::n($edge - $leaf) . ' A ' . self::n($leaf) . ' ' . self::n($leaf) . ' 0 0 ' . $sweep . ' ' . self::n($reachX) . ' ' . self::n($edge) . '" fill="none" stroke="' . self::x($color) . '" stroke-width="' . self::n(max(1, $stroke * 0.6)) . '" opacity=".55"/>' . "\n";
         }
         $out .= '</g>' . "\n";
+        return $out;
+    }
+
+    /**
+     * Trazo con o sin curvas. Sin curvas devuelve exactamente la polilínea de
+     * la versión 2 (mismo orden de atributos y de puntos); con curvas usa un
+     * `path` con arcos `A`, que es lo que imprime la curva real.
+     */
+    private static function strokeMarkup(array $element, float $x, float $y, string $attributes): string
+    {
+        $d = self::pathD($element, $x, $y);
+        if ($d !== null) {
+            return '<path ' . $attributes . ' d="' . $d . '"/>' . "\n";
+        }
+        return '<polyline ' . $attributes . ' points="' . self::points($element, $x, $y) . '"/>' . "\n";
+    }
+
+    private static function pathD(array $element, float $x, float $y): ?string
+    {
+        $curves = is_array($element['curves'] ?? null) ? $element['curves'] : null;
+        if (!PathGeometry::hasCurves($curves)) {
+            return null;
+        }
+        $points = [];
+        foreach (self::pointList($element) as $point) {
+            $points[] = ['x' => $x + (float) $point['x'], 'y' => $y + (float) $point['y']];
+        }
+        return PathGeometry::pathData($points, $curves);
+    }
+
+    /**
+     * Puntos absolutos del trazo con las curvas resueltas.
+     *
+     * @return list<array{x:float,y:float}>
+     */
+    private static function flatPointList(array $element, array $canvas): array
+    {
+        $unit = (string) ($canvas['unit'] ?? 'cm');
+        $x = (float) $element['x'];
+        $y = (float) $element['y'];
+        $points = [];
+        foreach (PlanGrid::visualPoints($element, $unit) as $point) {
+            $points[] = ['x' => (float) $point['x'] - $x, 'y' => (float) $point['y'] - $y];
+        }
+        return $points;
+    }
+
+    /**
+     * Vía, andén o lindero: banda que sigue el trazo. En un trazo curvo la
+     * banda se dibuja con arcos exactos; sin curvas, con la polilínea de
+     * siempre. Es esquemático: no reproduce perfiles viales.
+     */
+    private static function outdoorBand(array $element, float $x, float $y, float $w, float $h, string $color, float $stroke, array $canvas): string
+    {
+        $type = (string) $element['type'];
+        $cmPerUnit = PlanGrid::cmPerUnit((string) ($canvas['unit'] ?? 'cm'));
+        $band = $type === 'property'
+            ? 0.0
+            : max(2.0, (float) ($element['widthM'] ?? 2) * 100 / $cmPerUnit);
+        $out = '';
+        if ($band > 0) {
+            $out .= self::strokeMarkup($element, $x, $y, 'fill="none" stroke="' . self::x($color) . '" stroke-width="' . self::n($band + $stroke * 2) . '" stroke-opacity="0.55" stroke-linecap="butt" stroke-linejoin="round"');
+            $out .= self::strokeMarkup($element, $x, $y, 'fill="none" stroke="#f8fafc" stroke-width="' . self::n(max(1.0, $band)) . '" stroke-linecap="butt" stroke-linejoin="round"');
+            if ($type === 'road') {
+                $out .= self::strokeMarkup($element, $x, $y, 'fill="none" stroke="#ffffff" stroke-width="' . self::n(max(0.9, $stroke * 0.8)) . '" stroke-dasharray="' . self::n(max(8.0, 300 / $cmPerUnit)) . ' ' . self::n(max(6.0, 200 / $cmPerUnit)) . '" stroke-linecap="butt" opacity="0.9"');
+            }
+            if ($type === 'sidewalk') {
+                $out .= self::sidewalkHatch($element, $x, $y, $color, $stroke, $band, $cmPerUnit, $canvas, $w, $h);
+            }
+        } else {
+            $out .= self::strokeMarkup($element, $x, $y, 'fill="none" stroke="' . self::x($color) . '" stroke-width="' . self::n(max(1.0, $stroke)) . '" stroke-dasharray="' . self::n(18 / $cmPerUnit) . ' ' . self::n(6 / $cmPerUnit) . ' ' . self::n(3 / $cmPerUnit) . ' ' . self::n(6 / $cmPerUnit) . '" stroke-linejoin="round"');
+        }
+        $label = (string) ($element['label'] ?? '');
+        if ($label !== '') {
+            $points = PlanGrid::visualPoints($element, (string) ($canvas['unit'] ?? 'cm'));
+            $middle = $points[(int) floor(count($points) / 2)] ?? ['x' => $x + $w / 2, 'y' => $y + $h / 2];
+            $out .= '<text x="' . self::n((float) $middle['x'] + 6) . '" y="' . self::n((float) $middle['y'] - 8) . '" font-size="9.5" font-family="Helvetica, Arial, sans-serif" fill="#334155" stroke="#ffffff" stroke-width="3" stroke-linejoin="round" paint-order="stroke">' . self::x(self::firstLine($label)) . '</text>' . "\n";
+        }
+        return $out;
+    }
+
+    /** Trama de losas del andén: marcas perpendiculares cada 60 cm. */
+    private static function sidewalkHatch(array $element, float $x, float $y, string $color, float $stroke, float $band, float $cmPerUnit, array $canvas, float $w, float $h): string
+    {
+        $points = PlanGrid::visualPoints($element, (string) ($canvas['unit'] ?? 'cm'));
+        if (count($points) < 2) {
+            return '';
+        }
+        $step = max(6.0, 60 / $cmPerUnit);
+        $out = '';
+        $travelled = 0.0;
+        for ($index = 1; $index < count($points); $index += 1) {
+            $a = $points[$index - 1];
+            $b = $points[$index];
+            $span = hypot((float) $b['x'] - (float) $a['x'], (float) $b['y'] - (float) $a['y']);
+            if ($span <= 0) {
+                continue;
+            }
+            $cursor = $step - fmod($travelled, $step);
+            while ($cursor <= $span) {
+                $t = $cursor / $span;
+                $px = (float) $a['x'] + ((float) $b['x'] - (float) $a['x']) * $t;
+                $py = (float) $a['y'] + ((float) $b['y'] - (float) $a['y']) * $t;
+                $nx = -((float) $b['y'] - (float) $a['y']) / $span;
+                $ny = ((float) $b['x'] - (float) $a['x']) / $span;
+                $out .= '<line x1="' . self::n($px - $nx * $band * 0.5) . '" y1="' . self::n($py - $ny * $band * 0.5)
+                    . '" x2="' . self::n($px + $nx * $band * 0.5) . '" y2="' . self::n($py + $ny * $band * 0.5)
+                    . '" stroke="' . self::x($color) . '" stroke-width="' . self::n(max(0.5, $stroke * 0.5)) . '" opacity="0.5"/>' . "\n";
+                $cursor += $step;
+            }
+            $travelled += $span;
+        }
+        return $out;
+    }
+
+    /** Paso cebra y parqueadero: cajas con trama propia. */
+    private static function outdoorArea(array $element, float $x, float $y, float $w, float $h, string $color, float $stroke, array $canvas): string
+    {
+        $type = (string) $element['type'];
+        $cmPerUnit = PlanGrid::cmPerUnit((string) ($canvas['unit'] ?? 'cm'));
+        $out = '<rect x="' . self::n($x) . '" y="' . self::n($y) . '" width="' . self::n($w) . '" height="' . self::n($h) . '" rx="2" fill="#f8fafc" stroke="' . self::x($color) . '" stroke-width="' . self::n($stroke) . '"/>' . "\n";
+        if ($type === 'crosswalk') {
+            $step = max(6.0, 100 / $cmPerUnit);
+            $bar = $step / 2;
+            $horizontal = $w >= $h;
+            $span = $horizontal ? $w : $h;
+            $count = max(2, min(40, (int) floor($span / $step)));
+            $gap = $span / $count;
+            for ($index = 0; $index < $count; $index += 1) {
+                if ($horizontal) {
+                    $out .= '<rect x="' . self::n($x + $index * $gap + ($gap - $bar) / 2) . '" y="' . self::n($y + 1.5) . '" width="' . self::n(max(1.0, $bar)) . '" height="' . self::n(max(1.0, $h - 3)) . '" fill="' . self::x($color) . '" fill-opacity="0.55"/>' . "\n";
+                } else {
+                    $out .= '<rect x="' . self::n($x + 1.5) . '" y="' . self::n($y + $index * $gap + ($gap - $bar) / 2) . '" width="' . self::n(max(1.0, $w - 3)) . '" height="' . self::n(max(1.0, $bar)) . '" fill="' . self::x($color) . '" fill-opacity="0.55"/>' . "\n";
+                }
+            }
+            return $out;
+        }
+        $bayWidth = max(4.0, 250 / $cmPerUnit);
+        $bayDepth = max(4.0, 500 / $cmPerUnit);
+        $columns = max(1, (int) round($w / $bayWidth));
+        $rows = max(1, (int) round($h / $bayDepth));
+        for ($column = 1; $column < $columns; $column += 1) {
+            $lineX = $x + ($w * $column) / $columns;
+            $out .= '<line x1="' . self::n($lineX) . '" y1="' . self::n($y + 1.5) . '" x2="' . self::n($lineX) . '" y2="' . self::n($y + $h - 1.5) . '" stroke="' . self::x($color) . '" stroke-width="' . self::n(max(0.7, $stroke * 0.6)) . '" opacity="0.75"/>' . "\n";
+        }
+        for ($row = 1; $row < $rows; $row += 1) {
+            $lineY = $y + ($h * $row) / $rows;
+            $out .= '<line x1="' . self::n($x + 1.5) . '" y1="' . self::n($lineY) . '" x2="' . self::n($x + $w - 1.5) . '" y2="' . self::n($lineY) . '" stroke="' . self::x($color) . '" stroke-width="' . self::n(max(0.9, $stroke * 0.8)) . '" opacity="0.8"/>' . "\n";
+        }
+        $label = (string) ($element['label'] ?? '');
+        $caption = $label !== '' ? self::firstLine($label) . ' · ' : 'P · ';
+        $out .= '<text x="' . self::n($x + $w / 2) . '" y="' . self::n($y + $h / 2 + 4) . '" text-anchor="middle" font-size="12" font-weight="600" font-family="Helvetica, Arial, sans-serif" fill="' . self::x($color) . '">' . self::x($caption . ($columns * $rows) . ' puestos') . '</text>' . "\n";
         return $out;
     }
 

@@ -197,6 +197,10 @@ body.editor-body { overflow: hidden; background: #eef2f8; }
 .rail-flyout button:hover { background: rgba(255, 255, 255, .1); color: #fff; }
 .rail-flyout button:focus-visible { outline: 2px solid #7db3ff; outline-offset: -2px; }
 .rail-flyout .icon { width: 17px; height: 17px; flex: 0 0 auto; }
+.rail-flyout-title {
+  margin: 6px 4px 2px; padding-top: 8px; border-top: 1px solid rgba(255, 255, 255, .1);
+  font-size: .66rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #93a4bd;
+}
 
 /* Chevrón dentro de la baldosa: misma posición en las herramientas con
    opciones y en los menús (Análisis y Vista). */
@@ -1299,4 +1303,25 @@ body.is-presenting .ruler { display: none; }
   .ext-settings { grid-template-columns: 1fr; }
   .ext-rec { grid-template-columns: auto 1fr; }
   .ext-rec .button { grid-column: 1 / -1; }
+}
+
+/* ---------------------------- curvas y trazos ---------------------------- */
+/* Tirador de comba: rombo hueco en tramos rectos y relleno en los curvos. */
+.selection-frame .curve-handle { cursor: grab; }
+.selection-frame .curve-handle.is-curved { cursor: move; }
+.plan-element .outdoor-band, .plan-element .outdoor-line { pointer-events: none; }
+
+.curve-list { display: flex; flex-direction: column; gap: 10px; }
+.curve-row {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 10px; border: 1px solid var(--line); border-radius: 12px;
+  background: var(--surface-soft);
+}
+.curve-row-head { display: flex; flex-direction: column; gap: 2px; margin: 0; }
+.curve-row-head strong { font-size: .82rem; font-weight: 700; color: var(--ink); }
+.curve-row-head small { font-size: .72rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.curve-flatten { align-self: flex-start; }
+
+@media (prefers-reduced-motion: reduce) {
+  .curve-row, .curve-row-head small { transition: none; }
 }

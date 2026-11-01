@@ -6,6 +6,7 @@
   const TYPE_NAMES = {
     wall: 'Muro', door: 'Puerta sencilla', door_double: 'Puerta doble', door_garage: 'Portón de garaje', route: 'Ruta de evacuación', text: 'Texto', dimension: 'Medida',
     line: 'Línea', rect: 'Rectángulo', ellipse: 'Elipse', sign: 'Señal ISO 7010', cad: 'Equipo CAD', pipe: 'Tubería', conduit: 'Tubería eléctrica',
+    road: 'Vía vehicular', sidewalk: 'Andén', crosswalk: 'Paso cebra', parking: 'Parqueadero', property: 'Límite de predio',
   };
   const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
   const num = (value, decimals = 1) => (Number.isFinite(Number(value))
@@ -38,6 +39,24 @@
       if (this.bound) return;
       this.bound = true;
       this.panel.addEventListener('change', (event) => {
+        const curveField = event.target.closest('[data-curve-prop]');
+        if (curveField) {
+          const element = this.model.selectedElements()[0];
+          if (!element) return;
+          const index = Number(curveField.dataset.curve);
+          const value = Number(curveField.value);
+          try {
+            if (!Number.isFinite(value)) throw new Error('Introduce un número válido.');
+            const changed = curveField.dataset.curveProp === 'radius'
+              ? this.model.setCurveRadius(element.id, index, value)
+              : this.model.setCurveSagitta(element.id, index, value);
+            if (changed) this.app.afterEdit('Curva ajustada');
+          } catch (error) {
+            this.app.toast(error.message || 'El valor no es válido.', 'error');
+          }
+          this.render(true);
+          return;
+        }
         const field = event.target.closest('[data-prop]');
         if (!field) return;
         const prop = field.dataset.prop;
@@ -57,6 +76,8 @@
           } else if (prop === 'extAgent' || prop === 'extRating' || prop === 'extHazard') {
             this.model.setProps({ [prop]: field.value });
           } else if (prop === 'extCapacityLb' || prop === 'extMountCm') {
+            this.model.setProps({ [prop]: Number(field.value) });
+          } else if (prop === 'lanes' || prop === 'widthM') {
             this.model.setProps({ [prop]: Number(field.value) });
           } else if (prop === 'layerId') {
             this.model.setProps({ layerId: field.value });
@@ -158,6 +179,16 @@
         case 'color':
           changed = model.setColor(button.dataset.value);
           break;
+        case 'straighten': {
+          const element = model.selectedElements()[0];
+          changed = element ? model.straightenCurve(element.id, Number(button.dataset.value)) : false;
+          break;
+        }
+        case 'straighten-all': {
+          const element = model.selectedElements()[0];
+          changed = element ? model.straightenPath(element.id) : false;
+          break;
+        }
         default: break;
       }
       if (changed) this.app.afterEdit('Cambio aplicado');
@@ -199,7 +230,11 @@
     heroMeta(element) {
       if (!element) return 'Edición conjunta';
       const unit = this.model.design.canvas.unit;
-      if (Array.isArray(element.points)) return `Trazo de ${element.points.length} vértices`;
+      if (Array.isArray(element.points)) {
+        const curved = this.model.curvedSegments(element.id).length;
+        const base = `Trazo de ${element.points.length} vértices`;
+        return curved ? `${base} · ${curved} ${curved === 1 ? 'arco' : 'arcos'}` : base;
+      }
       if (element.type === 'ellipse') return `Elipse · ${G.formatNumber(element.w, 0)} × ${G.formatNumber(element.h, 0)} ${unit}`;
       return `${G.formatNumber(element.w, 0)} × ${G.formatNumber(element.h, 0)} ${unit}`;
     }
@@ -227,6 +262,41 @@
       const step = options.step !== undefined ? options.step : 1;
       const disabled = options.disabled ? ' disabled' : '';
       return `<label class="num-field"><span class="num-label">${esc(label)}</span><span class="num-control"><input type="number" step="${step}" data-prop="${prop}" value="${value}"${min}${max}${disabled}>${unit}</span></label>`;
+    }
+
+    /**
+     * Sección de curvas: radio y flecha editables por tramo, más el botón para
+     * enderezar. El arco de tres puntos se define por el tirador del lienzo;
+     * aquí se ajusta con medidas, que es lo que se anota en obra.
+     */
+    curveSection(element, unit) {
+      if (!element || !Array.isArray(element.points) || element.points.length < 2) return '';
+      const curved = this.model.curvedSegments(element.id);
+      if (!curved.length) {
+        return this.section('curves', 'Curvas del trazo', 'curve',
+          `<p class="help-text">El trazo es recto. Arrastra el <strong>rombo</strong> que aparece en el centro de un tramo del lienzo para combarlo, o haz doble clic sobre la curva para añadir un vértice y partirla en dos arcos.</p>
+           <p class="help-text">Un tramo es un arco de tres puntos: inicio, paso y fin. El radio mínimo es la mitad de la cuerda, que corresponde a una semicircunferencia.</p>`);
+      }
+      const rows = curved.map((row) => {
+        const label = `Tramo ${row.index + 1}`;
+        const chord = G.formatNumber(row.chord, 1);
+        const length = G.formatNumber(row.length, 1);
+        return `<div class="curve-row" data-curve-row="${row.index}">
+          <p class="curve-row-head"><strong>${label}</strong><small>Cuerda ${chord} ${esc(unit)} · arco ${length} ${esc(unit)}</small></p>
+          <div class="metric-grid">
+            <label class="num-field"><span class="num-label">Radio</span><span class="num-control"><input type="number" step="1" data-curve-prop="radius" data-curve="${row.index}" value="${G.round(row.radius, 1)}" min="${G.round(row.chord / 2, 1)}" max="100000"><span class="num-unit">${esc(unit)}</span></span></label>
+            <label class="num-field"><span class="num-label">Flecha</span><span class="num-control"><input type="number" step="1" data-curve-prop="sagitta" data-curve="${row.index}" value="${G.round(row.sagitta, 1)}" min="0.5" max="20000"><span class="num-unit">${esc(unit)}</span></span></label>
+          </div>
+          <button class="button button-small button-ghost curve-flatten" type="button" data-action="straighten" data-value="${row.index}">
+            <svg class="icon"><use href="#i-curve"></use></svg>Enderezar tramo
+          </button>
+        </div>`;
+      }).join('');
+      const footer = `<p class="help-text">La <strong>flecha</strong> es la distancia entre la cuerda y el punto más alto del arco; el radio se deduce de ella. El radio mínimo es la mitad de la cuerda (semicircunferencia).</p>
+        ${curved.length > 1 ? '<button class="button button-small button-soft" type="button" data-action="straighten-all"><svg class="icon"><use href="#i-curve"></use></svg>Enderezar todo el trazo</button>' : ''}`;
+      return this.section('curves', 'Curvas del trazo', 'curve',
+        `<div class="curve-list">${rows}</div>${footer}`,
+        { badge: String(curved.length) });
     }
 
     colorOf(elements) {
@@ -402,7 +472,7 @@
           ${this.numberField('Rotación', 'rotation', rotation, { disabled: !canEdit, unit: '°', min: 0, max: 359 })}
           <button class="step-button" type="button" data-action="rotate" data-value="90" data-tooltip="Girar +90°" aria-label="Girar más 90 grados"${disabled}><svg class="icon"><use href="#i-rotate-right"></use></svg></button>
         </div>
-        ${hasPath ? `<p class="help-text">Trazo editable: arrastra los <strong>vértices</strong> del plano, haz <strong>doble clic</strong> sobre el trazo para añadir uno y <strong>Alt + clic</strong> para quitarlo. Ajustar la caja reescala el trazado completo.</p>` : ''}`;
+        ${hasPath ? `<p class="help-text">Trazo editable: arrastra los <strong>vértices</strong> del plano, haz <strong>doble clic</strong> sobre el trazo para añadir uno, arrástralo con <strong>Alt</strong> para conservar la comba y <strong>Alt + clic</strong> para quitarlo. Arrastra el <strong>rombo</strong> de un tramo para combarlo en arco. Ajustar la caja reescala el trazado completo.</p>` : ''}`;
 
       /* --------------------------- apariencia --------------------------- */
       const swapBlock = allSigns ? `<div class="sign-swap">
@@ -448,6 +518,18 @@
           <label class="switch-row compact"><span><strong>Abrir al otro lado</strong><small>Invierte el sentido de abatimiento respecto al muro.</small></span><input type="checkbox" data-prop="flipY" ${single?.flipY ? 'checked' : ''}${disabled}></label>
           <label class="switch-row compact"><span><strong>Salida de emergencia</strong><small>El auditor mide el recorrido de evacuación desde esta puerta y la cuenta como salida.</small></span><input type="checkbox" data-prop="isExit" ${single?.isExit ? 'checked' : ''}${disabled}></label>
         </div>` : ''}`;
+
+      /* --------------------------- vía y andén --------------------------- */
+      const outdoorTitle = { road: 'Vía y carriles', sidewalk: 'Andén', crosswalk: 'Paso cebra', parking: 'Parqueadero', property: 'Límite de predio' };
+      const outdoor = single && outdoorTitle[single.type] ? single : null;
+      const outdoorSection = outdoor ? this.section('outdoor', outdoorTitle[outdoor.type], 'road',
+        `<label class="field compact"><span>Nombre en el plano</span><input type="text" data-prop="label" maxlength="120" value="${esc(outdoor.label || '')}" placeholder="${outdoor.type === 'road' ? 'Carrera 7 · calzada norte' : outdoor.type === 'parking' ? 'Parqueadero visitantes' : 'Rótulo opcional'}"${disabled}></label>
+        ${outdoor.type === 'road' || outdoor.type === 'sidewalk' ? `<div class="metric-grid">
+          ${this.numberField('Ancho', 'widthM', Number(outdoor.widthM) || (outdoor.type === 'road' ? 6 : 2), { disabled: !canEdit, min: 0.8, max: 30, step: 0.1, unit: 'm' })}
+          ${outdoor.type === 'road' ? this.numberField('Carriles', 'lanes', Number(outdoor.lanes) || 2, { disabled: !canEdit, min: 1, max: 6, step: 1 }) : '<span></span>'}
+        </div>` : ''}
+        <p class="help-text">${outdoor.type === 'parking' ? 'Los puestos se dibujan a 2,50 × 5,00 m y la etiqueta indica cuántos caben en la caja.' : outdoor.type === 'property' ? 'Línea de punto y raya: marca el lindero del predio. No es un muro y no bloquea el paso.' : 'La vía es esquemática: ordena la lectura del plano, no sustituye perfiles viales ni el POT.'} Cuenta como exterior en el auditor y no bloquea el tránsito.</p>`,
+        { badge: outdoor.type === 'parking' ? '2,5 × 5 m' : '' }) : '';
 
       /* ------------------------------ MEP ------------------------------ */
       const mepSection = (hasPipe || hasConduit || hasDevice) && Mep ? this.section(
@@ -575,6 +657,8 @@
         ${!canEdit ? '<div class="notice notice-warning compact-notice"><svg class="icon"><use href="#i-lock"></use></svg><p>La selección está bloqueada o pertenece a una capa bloqueada. Desbloquea para editar.</p></div>' : ''}
         ${this.section('geometry', 'Geometría', 'move', geometry)}
         ${this.section('appearance', 'Apariencia', 'palette', appearance)}
+        ${this.curveSection(single, unit)}
+        ${outdoorSection}
         ${mepSection}
         ${extinguisherSection}
         ${this.stackMarkup(elements)}

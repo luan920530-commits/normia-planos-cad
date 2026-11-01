@@ -168,8 +168,21 @@ final class PlanGrid
             $exterior = array_fill(0, $nx * $ny, false);
             $exteriorCells = 0;
         }
-        $exteriorAreaM2 = $exteriorCells * $cellAreaM2;
-        $freeAreaM2 = ($freeCells - $exteriorCells) * $cellAreaM2;
+
+        // Vías, andenes, pasos cebra, parqueaderos y linderos: son referencia
+        // del entorno, no superficie útil. No bloquean el tránsito (no son
+        // muros) y se contabilizan como exterior para que el auditor y la
+        // cobertura midan sobre el área realmente ocupada por el piso.
+        self::markOutdoorAreas($exterior, $blocked, $design, (string) $canvas['unit'], $cell, $nx, $ny, $width, $height);
+
+        $exteriorFree = 0;
+        foreach ($exterior as $index => $isOutside) {
+            if ($isOutside && !$blocked[$index]) {
+                $exteriorFree += 1;
+            }
+        }
+        $exteriorAreaM2 = $exteriorFree * $cellAreaM2;
+        $freeAreaM2 = max(0.0, $freeCells - $exteriorFree) * $cellAreaM2;
 
         return [
             'width' => $width,
@@ -185,6 +198,95 @@ final class PlanGrid
             'freeAreaM2' => $freeAreaM2,
             'exteriorAreaM2' => $exteriorAreaM2,
         ];
+    }
+
+    /**
+     * Marca como exterior las celdas que ocupan vías y elementos del entorno.
+     * Un andén o una vía no cierran recintos: solo se descuentan del área útil.
+     *
+     * @param array<int,bool> $exterior
+     * @param array<int,bool> $blocked
+     */
+    private static function markOutdoorAreas(
+        array &$exterior,
+        array $blocked,
+        array $design,
+        string $unit,
+        float $cell,
+        int $nx,
+        int $ny,
+        float $width,
+        float $height,
+    ): void {
+        $types = ['road', 'sidewalk', 'crosswalk', 'parking', 'property'];
+        $cmPerUnit = self::cmPerUnit($unit);
+        $index = static fn (int $ix, int $iy): int => $iy * $nx + $ix;
+        foreach ($design['elements'] ?? [] as $element) {
+            $type = (string) ($element['type'] ?? '');
+            if (!in_array($type, $types, true)) {
+                continue;
+            }
+            $x = (float) $element['x'];
+            $y = (float) $element['y'];
+            $w = (float) $element['w'];
+            $h = (float) $element['h'];
+            $rotation = (float) ($element['rotation'] ?? 0);
+            $isArea = $type === 'crosswalk' || $type === 'parking';
+            $band = $isArea ? 0.0 : (($type === 'property' ? 0.0 : max(0.8, (float) ($element['widthM'] ?? 2)) * 100 / $cmPerUnit));
+            $reach = $isArea ? 0.0 : (($band > 0 ? $band / 2 : max(2.0, $cell * 0.5)) + $cell * 0.25);
+            $points = $isArea ? [] : self::visualPoints($element, $unit);
+            $margin = $isArea ? 0.0 : $reach + $cell;
+            $x0 = max(0, (int) floor(($x - $margin) / $cell));
+            $x1 = min($nx - 1, (int) ceil(($x + $w + $margin) / $cell));
+            $y0 = max(0, (int) floor(($y - $margin) / $cell));
+            $y1 = min($ny - 1, (int) ceil(($y + $h + $margin) / $cell));
+            $cx = $x + $w / 2;
+            $cy = $y + $h / 2;
+            $angle = deg2rad(-$rotation);
+            $cos = cos($angle);
+            $sin = sin($angle);
+            for ($iy = $y0; $iy <= $y1; $iy += 1) {
+                for ($ix = $x0; $ix <= $x1; $ix += 1) {
+                    $cellIndex = $index($ix, $iy);
+                    if ($blocked[$cellIndex]) {
+                        continue;
+                    }
+                    $center = self::cellCenter($ix, $iy, $cell, $width, $height);
+                    $inside = false;
+                    if ($isArea) {
+                        // Se deshace la rotación para probar contra la caja.
+                        $dx = $center['x'] - $cx;
+                        $dy = $center['y'] - $cy;
+                        $localX = $cx + $dx * $cos - $dy * $sin;
+                        $localY = $cy + $dx * $sin + $dy * $cos;
+                        $inside = $localX >= $x && $localX <= $x + $w && $localY >= $y && $localY <= $y + $h;
+                    } else {
+                        $inside = self::distanceToPath($center, $points) <= $reach;
+                    }
+                    if ($inside) {
+                        $exterior[$cellIndex] = true;
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Distancia de un punto a una polilínea (mínima entre sus segmentos).
+     *
+     * @param list<array{x:float,y:float}> $points
+     * @param array{x:float,y:float} $point
+     */
+    private static function distanceToPath(array $point, array $points): float
+    {
+        if (count($points) < 2) {
+            return INF;
+        }
+        $best = INF;
+        for ($index = 1; $index < count($points); $index += 1) {
+            $best = min($best, self::distanceToSegment($point, $points[$index - 1], $points[$index]));
+        }
+        return $best;
     }
 
     /**
@@ -204,8 +306,13 @@ final class PlanGrid
         ];
     }
 
-    /** Puntos absolutos de un trazo, aplicando su rotación como el renderizador. */
-    public static function visualPoints(array $element): array
+    /**
+     * Puntos absolutos de un trazo con las curvas resueltas, aplicando su
+     * rotación como el renderizador. El aplanado usa la misma tolerancia que
+     * el lienzo, así que el muro curvo ocupa el mismo espacio en los dos
+     * lados y el auditor separa los recintos correctos.
+     */
+    public static function visualPoints(array $element, string $unit = 'cm'): array
     {
         $points = $element['points'] ?? null;
         if (!is_array($points) || count($points) < 2) {
@@ -214,6 +321,10 @@ final class PlanGrid
                 ['x' => (float) $element['w'], 'y' => 0],
             ];
         }
+        $curves = is_array($element['curves'] ?? null) ? $element['curves'] : null;
+        $points = PathGeometry::hasCurves($curves)
+            ? PathGeometry::flatten($points, $curves, $unit)
+            : $points;
         $x = (float) $element['x'];
         $y = (float) $element['y'];
         $cx = $x + (float) $element['w'] / 2;

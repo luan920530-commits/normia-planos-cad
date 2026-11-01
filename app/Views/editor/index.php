@@ -147,13 +147,19 @@
           <button class="rail-button" type="button" data-tool="line" aria-pressed="false" data-tooltip="Línea · L" data-tooltip-side="right" aria-label="Dibujar línea">
             <svg class="icon"><use href="#i-line"></use></svg>
           </button>
-          <button class="rail-caret" type="button" data-shape-menu aria-expanded="false" aria-haspopup="menu" aria-label="Rectángulo y elipse" data-tooltip="Rectángulo y elipse" data-tooltip-side="right">
+          <button class="rail-caret" type="button" data-shape-menu aria-expanded="false" aria-haspopup="menu" aria-label="Línea, formas y entorno" data-tooltip="Línea, formas, vías y andenes" data-tooltip-side="right">
             <svg class="icon"><use href="#i-chevron-down"></use></svg>
           </button>
           <div class="rail-flyout" data-shape-flyout role="menu" hidden>
             <button type="button" role="menuitem" data-tool="line"><svg class="icon"><use href="#i-line"></use></svg>Línea · L</button>
             <button type="button" role="menuitem" data-tool="rect"><svg class="icon"><use href="#i-rect"></use></svg>Rectángulo · B</button>
             <button type="button" role="menuitem" data-tool="ellipse"><svg class="icon"><use href="#i-ellipse"></use></svg>Elipse · O</button>
+            <p class="rail-flyout-title">Vías y entorno</p>
+            <button type="button" role="menuitem" data-tool="road"><svg class="icon"><use href="#i-road"></use></svg>Vía vehicular · A</button>
+            <button type="button" role="menuitem" data-tool="sidewalk"><svg class="icon"><use href="#i-sidewalk"></use></svg>Andén · S</button>
+            <button type="button" role="menuitem" data-tool="crosswalk"><svg class="icon"><use href="#i-crosswalk"></use></svg>Paso cebra · C</button>
+            <button type="button" role="menuitem" data-tool="parking"><svg class="icon"><use href="#i-parking"></use></svg>Parqueadero · Q</button>
+            <button type="button" role="menuitem" data-tool="property"><svg class="icon"><use href="#i-property"></use></svg>Límite de predio · I</button>
           </div>
         </div>
         <span class="rail-separator" role="separator"></span>
@@ -234,6 +240,16 @@
                 <button class="tool-choice" type="button" role="menuitem" data-tool="line" data-tool-choice="line"><span class="tool-choice-icon"><svg class="icon"><use href="#i-line"></use></svg></span><span class="tool-choice-name">Línea</span><kbd>L</kbd></button>
                 <button class="tool-choice" type="button" role="menuitem" data-tool="rect" data-tool-choice="rect"><span class="tool-choice-icon"><svg class="icon"><use href="#i-rect"></use></svg></span><span class="tool-choice-name">Rectángulo</span><kbd>B</kbd></button>
                 <button class="tool-choice" type="button" role="menuitem" data-tool="ellipse" data-tool-choice="ellipse"><span class="tool-choice-icon"><svg class="icon"><use href="#i-ellipse"></use></svg></span><span class="tool-choice-name">Elipse</span><kbd>O</kbd></button>
+              </div>
+            </div>
+            <div class="tool-group">
+              <p class="tool-group-title">Vías y entorno</p>
+              <div class="tool-group-grid">
+                <button class="tool-choice" type="button" role="menuitem" data-tool="road" data-tool-choice="road"><span class="tool-choice-icon"><svg class="icon"><use href="#i-road"></use></svg></span><span class="tool-choice-name">Vía vehicular</span><kbd>A</kbd></button>
+                <button class="tool-choice" type="button" role="menuitem" data-tool="sidewalk" data-tool-choice="sidewalk"><span class="tool-choice-icon"><svg class="icon"><use href="#i-sidewalk"></use></svg></span><span class="tool-choice-name">Andén</span><kbd>S</kbd></button>
+                <button class="tool-choice" type="button" role="menuitem" data-tool="crosswalk" data-tool-choice="crosswalk"><span class="tool-choice-icon"><svg class="icon"><use href="#i-crosswalk"></use></svg></span><span class="tool-choice-name">Paso cebra</span><kbd>C</kbd></button>
+                <button class="tool-choice" type="button" role="menuitem" data-tool="parking" data-tool-choice="parking"><span class="tool-choice-icon"><svg class="icon"><use href="#i-parking"></use></svg></span><span class="tool-choice-name">Parqueadero</span><kbd>Q</kbd></button>
+                <button class="tool-choice" type="button" role="menuitem" data-tool="property" data-tool-choice="property"><span class="tool-choice-icon"><svg class="icon"><use href="#i-property"></use></svg></span><span class="tool-choice-name">Límite de predio</span><kbd>I</kbd></button>
               </div>
             </div>
             <div class="tool-group">
@@ -568,6 +584,10 @@
     <div><kbd>T</kbd><span>Texto</span></div><div><kbd>D</kbd><span>Medida</span></div>
     <div><kbd>L</kbd><span>Línea</span></div><div><kbd>B</kbd><span>Rectángulo</span></div>
     <div><kbd>O</kbd><span>Elipse</span></div><div><kbd>Ctrl + Z</kbd><span>Deshacer</span></div>
+    <div><kbd>A</kbd><span>Vía vehicular</span></div><div><kbd>S</kbd><span>Andén</span></div>
+    <div><kbd>C</kbd><span>Paso cebra</span></div><div><kbd>Q</kbd><span>Parqueadero</span></div>
+    <div><kbd>I</kbd><span>Límite de predio</span></div><div><kbd>Doble clic en un muro</kbd><span>Añadir vértice (parte el arco)</span></div>
+    <div><kbd>Rombo del tramo</kbd><span>Combar el muro en arco</span></div><div><kbd>Alt + vértice</kbd><span>Conserva la comba al moverlo (clic seco lo borra)</span></div>
     <div><kbd>Ctrl + Shift + Z</kbd><span>Rehacer</span></div><div><kbd>Ctrl + C / V</kbd><span>Copiar / pegar</span></div>
     <div><kbd>Ctrl + D</kbd><span>Duplicar</span></div><div><kbd>Supr</kbd><span>Eliminar selección</span></div>
     <div><kbd>Ctrl + G</kbd><span>Agrupar</span></div><div><kbd>Ctrl + Shift + G</kbd><span>Desagrupar</span></div>
@@ -578,7 +598,7 @@
     <div><kbd>+ / −</kbd><span>Acercar / alejar</span></div><div><kbd>0</kbd><span>Ajustar a pantalla</span></div>
     <div><kbd>Esc</kbd><span>Cancelar o cerrar</span></div><div><kbd>Enter</kbd><span>Terminar ruta</span></div><div><kbd>Retroceso</kbd><span>Quitar el último punto de la ruta</span></div><div><kbd>Clic inicial</kbd><span>Cerrar el circuito de la ruta</span></div>
   </div>
-  <footer class="drawer-foot"><p>Los atajos se desactivan mientras escribes en un campo de formulario. Los dibujos son esquemáticos.</p></footer>
+  <footer class="drawer-foot"><p>Los atajos se desactivan mientras escribes en un campo de formulario. Los muros curvos se trazan con arcos de tres puntos: cada trazo admite hasta 40 vértices y el radio mínimo es la mitad de la cuerda. Los dibujos son esquemáticos.</p></footer>
 </section>
 
 <textarea id="editor-design" hidden><?= e($designJson) ?></textarea>

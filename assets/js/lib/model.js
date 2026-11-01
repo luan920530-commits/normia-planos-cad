@@ -4,8 +4,16 @@
   const root = (window.Normia = window.Normia || {});
   const G = root.Geometry;
   const COLORS = ['#0f172a', '#1e293b', '#334155', '#475569', '#64748b', '#94a3b8', '#ffffff', '#f8fafc', '#2563eb', '#1d4ed8', '#005387', '#0f766e', '#15803d', '#16a34a', '#237f52', '#65a30d', '#b71f2e', '#dc2626', '#991b1b', '#ea580c', '#f97316', '#f59e0b', '#f9a800', '#eab308', '#facc15', '#7c3aed', '#be185d', '#0891b2', '#ca8a04', '#0e7490', '#b45309', '#0369a1', '#c2410c', '#b91c1c'];
-  const BASIC = ['wall', 'door', 'door_double', 'door_garage', 'route', 'text', 'dimension', 'line', 'rect', 'ellipse', 'pipe', 'conduit'];
+  const BASIC = ['wall', 'door', 'door_double', 'door_garage', 'route', 'text', 'dimension', 'line', 'rect', 'ellipse', 'pipe', 'conduit', 'road', 'sidewalk', 'crosswalk', 'parking', 'property'];
   const DOOR_TYPES = ['door', 'door_double', 'door_garage'];
+  /**
+   * Vías, andenes y límites: se dibujan en planta como referencia esquemática.
+   * No son muros: no bloquean el tránsito ni cierran recintos. El servidor las
+   * cuenta como exterior en la rejilla de cálculo.
+   */
+  const OUTDOOR_TYPES = ['road', 'sidewalk', 'crosswalk', 'parking', 'property'];
+  /** Ancho de banda por defecto de vías y andenes, en metros reales. */
+  const BAND_WIDTH_M = { road: 6, sidewalk: 2 };
   /**
    * Las puertas antiguas medían 80 × 16 (solo el hueco del muro) y el símbolo
    * necesita la profundidad de abatimiento. Se conserva la línea del muro
@@ -18,7 +26,7 @@
     element.y = G.clamp(edge - element.h, 0, canvas.height - element.h);
     return element;
   };
-  const PATH_TYPES = ['wall', 'route', 'line', 'dimension', 'pipe', 'conduit'];
+  const PATH_TYPES = ['wall', 'route', 'line', 'dimension', 'pipe', 'conduit', 'road', 'sidewalk', 'property'];
   const MEP_TYPES = ['pipe', 'conduit'];
   // Extintores del catálogo con sus datos de referencia. El servidor vuelve a
   // validarlos contra resources/extinguisher-criteria.json al guardar.
@@ -277,6 +285,26 @@
             points: [{ x: 0, y: 5 }, { x: 240, y: 5 }],
           });
         }
+        // Vías, andenes y límites de predio: bandas esquemáticas, no muros.
+        case 'road':
+          return Object.assign(base, {
+            w: 620, h: 360, stroke: 1.5, color: '#64748b', lanes: 2, widthM: 6,
+            points: [{ x: 0, y: 348 }, { x: 320, y: 200 }, { x: 618, y: 16 }],
+          });
+        case 'sidewalk':
+          return Object.assign(base, {
+            w: 620, h: 300, stroke: 1.2, color: '#94a3b8', widthM: 2, label: '',
+            points: [{ x: 0, y: 288 }, { x: 310, y: 150 }, { x: 618, y: 14 }],
+          });
+        case 'crosswalk':
+          return Object.assign(base, { w: 240, h: 120, stroke: 1.2, color: '#e2e8f0' });
+        case 'parking':
+          return Object.assign(base, { w: 760, h: 520, stroke: 1.5, color: '#475569' });
+        case 'property':
+          return Object.assign(base, {
+            w: 520, h: 380, stroke: 2, color: '#b45309', label: 'Límite de predio',
+            points: [{ x: 0, y: 378 }, { x: 520, y: 2 }],
+          });
         default:
           return base;
       }
@@ -349,7 +377,18 @@
             x: G.clamp(Number(point.x) || 0, 0, normalized.w),
             y: G.clamp(Number(point.y) || 0, 0, normalized.h),
           }));
+          // Las curvas son opcionales: sin ellas el plano sigue siendo v2 y se
+          // dibuja exactamente igual que antes.
+          const curves = this.sanitizeCurves(element.curves, normalized.points);
+          if (curves) {
+            normalized.curves = curves;
+            this.rebasePath(normalized, canvas);
+          }
         }
+        if (type === 'road' || type === 'sidewalk') {
+          normalized.widthM = G.clamp(Number(element.widthM) || base.widthM, 0.8, 30);
+        }
+        if (type === 'road') normalized.lanes = G.clamp(Math.round(Number(element.lanes) || base.lanes), 1, 6);
         return this.clampElement(normalized, canvas);
       });
       const settings = source.extinguishers && typeof source.extinguishers === 'object' ? source.extinguishers : {};
@@ -367,7 +406,63 @@
         name: String(group.name || `Grupo ${index + 1}`).slice(0, 60),
         members: [...new Set(group.members.filter((id) => ids.has(id)))],
       }));
-      return { format: 2, canvas, layers, elements, groups, extinguishers };
+      const hasAnyCurve = elements.some((element) => G.hasCurves(element.curves));
+      return { format: hasAnyCurve ? 3 : 2, canvas, layers, elements, groups, extinguishers };
+    }
+
+    /**
+     * Versión del documento: 3 cuando algún trazo tiene curvas y 2 cuando no.
+     * Un plano sin curvas se guarda igual que en la 1.10.0 y su SVG sale
+     * idéntico byte a byte con las polilíneas de siempre.
+     */
+    documentFormat() {
+      return this.design.elements.some((element) => G.hasCurves(element.curves)) ? 3 : 2;
+    }
+
+    /** Curvas válidas alineadas con los vértices; `null` si no hay ninguna. */
+    sanitizeCurves(raw, points) {
+      if (!Array.isArray(raw) || raw.length === 0 || !Array.isArray(points)) return null;
+      const list = points.map((point, index) => {
+        const curve = raw[index];
+        if (!curve || typeof curve !== 'object' || curve.kind !== 'arc' || !curve.through) return null;
+        const x = Number(curve.through.x);
+        const y = Number(curve.through.y);
+        if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+        return { kind: 'arc', through: { x: G.round(x, 2), y: G.round(y, 2) } };
+      });
+      return list.some(Boolean) ? list : null;
+    }
+
+    /**
+     * Recalcula la caja de un trazo curvo a partir de su geometría aplanada.
+     * La caja de selección es analítica: incluye el punto más alto del arco,
+     * no solo los vértices. Desplaza puntos y curvas a la nueva caja sin
+     * cambiar la posición absoluta de nada.
+     */
+    rebasePath(element, canvas = this.design.canvas) {
+      if (!Array.isArray(element.points) || element.points.length < 2) return element;
+      const flat = G.flattenPath(element.points, element.curves, { tolerance: 0.05 });
+      const bounds = G.boundsOfPoints(flat.concat(element.points));
+      const x = G.clamp(element.x + bounds.x, 0, Math.max(0, canvas.width - 2));
+      const y = G.clamp(element.y + bounds.y, 0, Math.max(0, canvas.height - 2));
+      const w = G.clamp(Math.max(2, bounds.w), 2, Math.max(2, Math.min(canvas.width - x, canvas.width)));
+      const h = G.clamp(Math.max(2, bounds.h), 2, Math.max(2, Math.min(canvas.height - y, canvas.height)));
+      const dx = x - element.x;
+      const dy = y - element.y;
+      element.x = x;
+      element.y = y;
+      element.w = w;
+      element.h = h;
+      element.points = element.points.map((point) => ({
+        x: G.clamp(Number(point.x) - dx, 0, w),
+        y: G.clamp(Number(point.y) - dy, 0, h),
+      }));
+      if (Array.isArray(element.curves)) {
+        element.curves = element.curves.map((curve) => (curve && curve.through
+          ? { kind: 'arc', through: { x: G.round(Number(curve.through.x) - dx, 2), y: G.round(Number(curve.through.y) - dy, 2) } }
+          : null));
+      }
+      return element;
     }
 
     clampElement(element, canvas = this.design.canvas) {
@@ -380,6 +475,12 @@
           x: G.clamp(point.x, 0, element.w),
           y: G.clamp(point.y, 0, element.h),
         }));
+      }
+      if (Array.isArray(element.curves)) {
+        element.curves = element.curves.map((curve) => (curve && curve.through
+          ? { kind: 'arc', through: { x: G.clamp(Number(curve.through.x) || 0, 0, element.w), y: G.clamp(Number(curve.through.y) || 0, 0, element.h) } }
+          : null));
+        if (!element.curves.some(Boolean)) delete element.curves;
       }
       return element;
     }
@@ -398,7 +499,9 @@
     }
 
     serialize() {
-      return clone(this.design);
+      const copy = clone(this.design);
+      copy.format = this.documentFormat();
+      return copy;
     }
 
     isDirty() {
@@ -723,39 +826,83 @@
 
     /** Puntos absolutos (ya rotados) del trazo tal como se ven en el lienzo. */
     visualPoints(element) {
-      if (!PATH_TYPES.includes(element.type)) return [];
+      const points = this.absolutePoints(element);
+      if (!points.length) return points;
       const center = { x: element.x + element.w / 2, y: element.y + element.h / 2 };
+      if (!element.rotation) return points;
+      return points.map((point) => G.rotatePoint(point, center, element.rotation));
+    }
+
+    /**
+     * Polilínea aplanada del trazo (con curvas resueltas) en coordenadas del
+     * lienzo. Es la que usan la prueba de impacto, la medición y el auditor:
+     * un muro curvo ocupa el mismo espacio que la curva dibujada.
+     */
+    flatPoints(element) {
+      if (!element || !PATH_TYPES.includes(element.type)) return [];
+      const center = { x: element.x + element.w / 2, y: element.y + element.h / 2 };
+      const points = this.absolutePoints(element);
+      if (!points.length) return [];
+      const unit = this.design.canvas.unit;
+      const flat = G.flattenPath(points, this.absoluteCurves(element), { tolerance: G.flattenTolerance(unit) });
+      if (!element.rotation) return flat;
+      return flat.map((point) => G.rotatePoint(point, center, element.rotation));
+    }
+
+    /** Vértices absolutos del trazo, sin rotación (la caja los contiene). */
+    absolutePoints(element) {
+      if (!element || !PATH_TYPES.includes(element.type)) return [];
       const points = Array.isArray(element.points) && element.points.length >= 2
         ? element.points
         : [{ x: 0, y: 0 }, { x: element.w, y: element.h }];
-      return points.map((point) => G.rotatePoint(
-        { x: element.x + (Number(point.x) || 0), y: element.y + (Number(point.y) || 0) },
-        center,
-        element.rotation || 0,
-      ));
+      return points.map((point) => ({
+        x: element.x + (Number(point.x) || 0),
+        y: element.y + (Number(point.y) || 0),
+      }));
+    }
+
+    /** Curvas absolutas (sin rotación) alineadas con los vértices. */
+    absoluteCurves(element) {
+      if (!element || !Array.isArray(element.curves)) return null;
+      if (!element.curves.some(Boolean)) return null;
+      return element.curves.map((curve) => (curve && curve.kind === 'arc' && curve.through
+        ? {
+          kind: 'arc',
+          through: { x: element.x + Number(curve.through.x || 0), y: element.y + Number(curve.through.y || 0) },
+        }
+        : null));
+    }
+
+    /** ¿El trazo tiene al menos un tramo curvo? */
+    hasCurves(element) {
+      return Boolean(element && G.hasCurves(element.curves));
     }
 
     /**
      * Reescribe la geometría de un trazo a partir de puntos absolutos. La caja
-     * se recalcula con los límites reales y la rotación se disuelve en los
-     * puntos para que mover un vértice no desplace el resto del trazo.
+     * se recalcula con los límites reales (incluido el bombeo de los arcos) y
+     * la rotación se disuelve en los puntos para que mover un vértice no
+     * desplace el resto del trazo.
      */
-    setPathPoints(id, points) {
+    setPathPoints(id, points, curves = null) {
       const element = this.element(id);
       if (!element || !PATH_TYPES.includes(element.type)) return false;
       if (!Array.isArray(points) || points.length < 2 || points.length > 40) return false;
       if (!this.canEdit()) return false;
+      const canvas = this.design.canvas;
       const list = points.map((point) => ({
-        x: G.clamp(Number(point.x) || 0, 0, this.design.canvas.width),
-        y: G.clamp(Number(point.y) || 0, 0, this.design.canvas.height),
+        x: G.clamp(Number(point.x) || 0, 0, canvas.width),
+        y: G.clamp(Number(point.y) || 0, 0, canvas.height),
       }));
+      const nextCurves = this.sanitizeCurves(curves, list);
       return this.apply('points', () => {
         element.rotation = 0;
-        const bounds = G.boundsOfPoints(list);
-        const w = G.clamp(Math.max(2, bounds.w), 2, this.design.canvas.width);
-        const h = G.clamp(Math.max(2, bounds.h), 2, this.design.canvas.height);
-        const x = G.clamp(bounds.x, 0, this.design.canvas.width - w);
-        const y = G.clamp(bounds.y, 0, this.design.canvas.height - h);
+        const flat = G.flattenPath(list, nextCurves, { tolerance: 0.05 });
+        const bounds = G.boundsOfPoints(flat.concat(list));
+        const w = G.clamp(Math.max(2, bounds.w), 2, canvas.width);
+        const h = G.clamp(Math.max(2, bounds.h), 2, canvas.height);
+        const x = G.clamp(bounds.x, 0, canvas.width - w);
+        const y = G.clamp(bounds.y, 0, canvas.height - h);
         element.x = x;
         element.y = y;
         element.w = w;
@@ -764,28 +911,93 @@
           x: G.clamp(point.x - x, 0, w),
           y: G.clamp(point.y - y, 0, h),
         }));
+        if (nextCurves) {
+          element.curves = nextCurves.map((curve) => (curve
+            ? {
+              kind: 'arc',
+              through: {
+                x: G.clamp(curve.through.x - x, 0, w),
+                y: G.clamp(curve.through.y - y, 0, h),
+              },
+            }
+            : null));
+        } else {
+          delete element.curves;
+        }
       }), true;
     }
 
-    /** Mueve un vértice concreto conservando el resto del trazo. */
-    setPathPoint(id, index, point) {
+    /** Curvas en coordenadas del lienzo, con la rotación del elemento aplicada. */
+    visualCurves(element) {
+      const raw = this.absoluteCurves(element);
+      if (!raw || !element.rotation) return raw;
+      const center = { x: element.x + element.w / 2, y: element.y + element.h / 2 };
+      return raw.map((curve) => (curve
+        ? { kind: 'arc', through: G.rotatePoint(curve.through, center, element.rotation) }
+        : null));
+    }
+
+    /** Mueve un vértice concreto conservando el resto del trazo y sus curvas. */
+    setPathPoint(id, index, point, options = {}) {
       const element = this.element(id);
       if (!element) return false;
       const points = this.visualPoints(element);
       if (index < 0 || index >= points.length) return false;
-      points[index] = { x: Number(point.x) || 0, y: Number(point.y) || 0 };
-      return this.setPathPoints(id, points);
+      const target = { x: Number(point.x) || 0, y: Number(point.y) || 0 };
+      const previous = points[index];
+      points[index] = target;
+      let curves = this.visualCurves(element);
+      // Con Alt el punto de paso de los tramos contiguos viaja con el vértice:
+      // la comba se conserva pegada al vértice que se arrastra en vez de
+      // recomponerse contra un punto de paso que se queda atrás.
+      if (curves && options.moveCurves) {
+        const dx = target.x - previous.x;
+        const dy = target.y - previous.y;
+        curves = curves.slice();
+        [index - 1, index].forEach((slot) => {
+          const curve = curves[slot];
+          if (curve && curve.through) {
+            curves[slot] = {
+              kind: 'arc',
+              through: { x: curve.through.x + dx, y: curve.through.y + dy },
+            };
+          }
+        });
+      }
+      return this.setPathPoints(id, points, curves);
     }
 
-    /** Inserta un vértice; `after` es el índice tras el que se añade. */
+    /**
+     * Inserta un vértice; `after` es el índice del tramo sobre el que se hace
+     * clic. Si el tramo es un arco, se parte en dos arcos que conservan la
+     * curva (el nuevo vértice cae sobre la circunferencia).
+     */
     insertPathPoint(id, after, point) {
       const element = this.element(id);
       if (!element) return false;
       const points = this.visualPoints(element);
       if (points.length >= 40) return false;
       const index = G.clamp(Number(after) + 1, 1, points.length);
+      const segment = index - 1;
+      const source = this.visualCurves(element);
+      const arc = source && source[segment] && source[segment].kind === 'arc'
+        ? G.arcGeometry(points[segment], source[segment].through, points[segment + 1])
+        : null;
+      if (arc) {
+        const t = G.arcProjectT(arc, point);
+        const split = G.arcPointAt(arc, t);
+        const first = G.arcPointAt(arc, t / 2);
+        const second = G.arcPointAt(arc, (1 + t) / 2);
+        points.splice(index, 0, split);
+        const next = source.slice();
+        next[segment] = { kind: 'arc', through: first };
+        next.splice(index, 0, { kind: 'arc', through: second });
+        return this.setPathPoints(id, points, next);
+      }
       points.splice(index, 0, { x: Number(point.x) || 0, y: Number(point.y) || 0 });
-      return this.setPathPoints(id, points);
+      const next = source ? source.slice() : null;
+      if (next) next.splice(index, 0, null);
+      return this.setPathPoints(id, points, next);
     }
 
     /** Elimina un vértice manteniendo al menos dos (un trazo visible). */
@@ -795,13 +1007,123 @@
       const points = this.visualPoints(element);
       if (points.length <= 2 || index < 0 || index >= points.length) return false;
       points.splice(index, 1);
-      return this.setPathPoints(id, points);
+      let next = null;
+      const source = this.absoluteCurves(element);
+      if (source) {
+        next = source.slice();
+        next.splice(index, 1);
+        // Los dos tramos que se unen pierden su curva: quedan rectos y el
+        // usuario puede volver a combarlos con el tirador.
+        if (index - 1 >= 0) next[index - 1] = null;
+      }
+      return this.setPathPoints(id, points, next);
+    }
+
+    /* ------------------------------- curvas ------------------------------- */
+
+    /** Tramo curvo con sus medidas, en coordenadas absolutas. */
+    curveMetrics(id, index) {
+      const element = this.element(id);
+      if (!element) return null;
+      const points = this.visualPoints(element);
+      if (index < 0 || index > points.length - 2) return null;
+      const curves = this.visualCurves(element);
+      const curve = curves ? curves[index] : null;
+      const metrics = G.curveMetrics(points[index], curve, points[index + 1]);
+      return { ...metrics, index, a: points[index], b: points[index + 1] };
+    }
+
+    /** Lista de tramos curvos con su índice y sus medidas. */
+    curvedSegments(id) {
+      const element = this.element(id);
+      if (!element || !Array.isArray(element.curves)) return [];
+      const points = this.visualPoints(element);
+      const result = [];
+      for (let index = 0; index < points.length - 1; index += 1) {
+        const metrics = this.curveMetrics(id, index);
+        if (metrics && metrics.curved) result.push(metrics);
+      }
+      return result;
+    }
+
+    /** Convierte el tramo en un arco que pasa por el punto indicado. */
+    setCurveThrough(id, index, through) {
+      const element = this.element(id);
+      if (!element) return false;
+      const points = this.visualPoints(element);
+      if (index < 0 || index > points.length - 2) return false;
+      const a = points[index];
+      const b = points[index + 1];
+      const target = { x: Number(through.x) || 0, y: Number(through.y) || 0 };
+      const arc = G.arcGeometry(a, target, b);
+      const curves = this.visualCurves(element) || points.map(() => null);
+      curves[index] = arc ? { kind: 'arc', through: target } : null;
+      return this.setPathPoints(id, points, curves);
+    }
+
+    /** Ajusta el radio del arco conservando su lado respecto a la cuerda. */
+    setCurveRadius(id, index, radius) {
+      const metrics = this.curveMetrics(id, index);
+      if (!metrics) return false;
+      const side = metrics.curved ? metrics.side : 1;
+      const chord = G.distance(metrics.a, metrics.b);
+      const sagitta = G.sagittaFromRadius(chord, Math.max(Number(radius) || 0, chord / 2));
+      const through = G.throughFromSagitta(metrics.a, metrics.b, sagitta, side);
+      return this.setCurveThrough(id, index, through);
+    }
+
+    /** Ajusta la flecha (bombeo) del arco conservando su lado. */
+    setCurveSagitta(id, index, sagitta) {
+      const metrics = this.curveMetrics(id, index);
+      if (!metrics) return false;
+      const side = metrics.curved ? metrics.side : 1;
+      const through = G.throughFromSagitta(metrics.a, metrics.b, Math.max(0.05, Number(sagitta) || 0), side);
+      return this.setCurveThrough(id, index, through);
+    }
+
+    /** Endereza un tramo. */
+    straightenCurve(id, index) {
+      const element = this.element(id);
+      if (!element) return false;
+      const points = this.visualPoints(element);
+      if (index < 0 || index > points.length - 2) return false;
+      const curves = this.visualCurves(element);
+      if (!curves || !curves[index]) return false;
+      curves[index] = null;
+      return this.setPathPoints(id, points, curves);
+    }
+
+    /** Endereza todos los tramos del trazo. */
+    straightenPath(id) {
+      const element = this.element(id);
+      if (!element || !G.hasCurves(element.curves)) return false;
+      const points = this.visualPoints(element);
+      return this.setPathPoints(id, points, null);
+    }
+
+    /** Longitud real del trazo (arcos incluidos), en unidades del lienzo. */
+    pathLength(element) {
+      // Puntos y curvas deben estar en el mismo marco: los vértices van en
+      // coordenadas del lienzo y el `through` se guarda local al elemento.
+      const points = this.absolutePoints(element);
+      return G.pathLength(points, this.absoluteCurves(element));
+    }
+
+    /** Punto del trazo más cercano a `point`, con su longitud desde el inicio. */
+    nearestOnPath(element, point) {
+      const points = this.absolutePoints(element);
+      const hit = G.nearestOnPath(points, this.absoluteCurves(element), point, { tolerance: G.flattenTolerance(this.design.canvas.unit) });
+      if (!hit || !element.rotation) return hit;
+      const center = { x: element.x + element.w / 2, y: element.y + element.h / 2 };
+      return { ...hit, ...G.rotatePoint(hit, center, element.rotation) };
     }
 
     addPath(type, points, overrides = {}) {
       if (!PATH_TYPES.includes(type)) throw new Error('La herramienta no admite trazos.');
       if (!Array.isArray(points) || points.length < 2) throw new Error('El trazo debe tener al menos dos puntos.');
-      const bounds = G.boundsOfPoints(points);
+      const curves = this.sanitizeCurves(overrides.curves, points);
+      const flat = G.flattenPath(points, curves, { tolerance: 0.05 });
+      const bounds = G.boundsOfPoints(flat.concat(points));
       const width = Math.max(2, bounds.w);
       const height = Math.max(2, bounds.h);
       const x = G.clamp(bounds.x, 0, this.design.canvas.width - width);
@@ -810,7 +1132,15 @@
         x: G.clamp(point.x - x, 0, width),
         y: G.clamp(point.y - y, 0, height),
       }));
-      return this.addElement(type, Object.assign({}, overrides, { x, y, w: width, h: height, points: local }));
+      const localCurves = curves
+        ? curves.map((curve) => (curve
+          ? { kind: 'arc', through: { x: G.clamp(curve.through.x - x, 0, width), y: G.clamp(curve.through.y - y, 0, height) } }
+          : null))
+        : null;
+      const patch = Object.assign({}, overrides, { x, y, w: width, h: height, points: local });
+      delete patch.curves;
+      if (localCurves) patch.curves = localCurves;
+      return this.addElement(type, patch);
     }
 
     addBox(type, x, y, w, h, overrides = {}) {
@@ -881,6 +1211,8 @@
             element.w = scaled.w;
             element.h = scaled.h;
             if (scaled.points) element.points = scaled.points;
+            if (scaled.curves) element.curves = scaled.curves;
+            else delete element.curves;
             this.clampElement(element);
           });
         }
@@ -961,6 +1293,7 @@
         'color', 'stroke', 'opacity', 'label', 'fontSize', 'flipX', 'flipY', 'isExit', 'layerId', 'locked',
         'network', 'diameter', 'material', 'slope', 'pressure', 'circuit', 'voltage', 'gauge', 'phases', 'load',
         'extAgent', 'extCapacityLb', 'extRating', 'extHazard', 'extMountCm',
+        'lanes', 'widthM',
       ];
       const keys = Object.keys(patch);
       if (!keys.every((key) => allowed.includes(key))) return false;
@@ -988,6 +1321,12 @@
           if (patch.isExit !== undefined) element.isExit = DOOR_TYPES.includes(element.type) ? Boolean(patch.isExit) : false;
           if (patch.layerId !== undefined && this.layer(patch.layerId)) element.layerId = patch.layerId;
           if (patch.locked !== undefined) element.locked = Boolean(patch.locked);
+          if (patch.lanes !== undefined && element.type === 'road') {
+            element.lanes = G.clamp(Math.round(Number(patch.lanes) || 1), 1, 6);
+          }
+          if (patch.widthM !== undefined && (element.type === 'road' || element.type === 'sidewalk')) {
+            element.widthM = G.clamp(Number(patch.widthM) || 2, 0.8, 30);
+          }
           if (this.isExtinguisherType(element.type)) {
             if (patch.extAgent !== undefined && typeof patch.extAgent === 'string' && patch.extAgent) element.extAgent = patch.extAgent;
             if (patch.extCapacityLb !== undefined) element.extCapacityLb = G.clamp(Number(patch.extCapacityLb) || 0, 1, 400);
@@ -1112,12 +1451,23 @@
             element.load = G.clamp(Number(this.cadForType(type)?.load) || 0, 0, 100000);
           }
           if (PATH_TYPES.includes(type)) {
-            const isDiagonal = type === 'line' || type === 'route' || MEP_TYPES.includes(type);
+            const isDiagonal = type === 'line' || type === 'route' || MEP_TYPES.includes(type) || OUTDOOR_TYPES.includes(type);
             element.points = isDiagonal
               ? [{ x: 0, y: element.h }, { x: element.w, y: 0 }]
               : [{ x: 0, y: element.h / 2 }, { x: element.w, y: element.h / 2 }];
           } else {
             delete element.points;
+          }
+          // El tipo nuevo empieza sin curvas: la forma anterior no se hereda.
+          delete element.curves;
+          if (type === 'road') {
+            element.lanes = defaultElement.lanes;
+            element.widthM = defaultElement.widthM;
+          } else if (type === 'sidewalk') {
+            element.widthM = defaultElement.widthM;
+          } else {
+            delete element.lanes;
+            delete element.widthM;
           }
           this.clampElement(element);
         });

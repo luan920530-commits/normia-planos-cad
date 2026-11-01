@@ -134,13 +134,13 @@ final class PlanAudit
             if ($type === 'wall') {
                 $walls[] = [
                     'id' => (string) $element['id'],
-                    'points' => PlanGrid::visualPoints($element),
+                    'points' => PlanGrid::visualPoints($element, (string) $design['canvas']['unit']),
                     'stroke' => max(1.0, (float) ($element['stroke'] ?? 2)),
                 ];
                 continue;
             }
             if ($type === 'route') {
-                $routes[] = ['id' => (string) $element['id'], 'element' => $element, 'points' => PlanGrid::visualPoints($element)];
+                $routes[] = ['id' => (string) $element['id'], 'element' => $element, 'points' => PlanGrid::visualPoints($element, (string) $design['canvas']['unit'])];
                 continue;
             }
             $code = LibraryRepository::codeForType($type);
