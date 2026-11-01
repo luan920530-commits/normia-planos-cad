@@ -1,0 +1,260 @@
+/*
+ * Presentación pública (ruta «inicio»).
+ *
+ * Hoja propia para no cargar la del editor: cubre la portada oscura, las
+ * secciones claras, la galería de capturas y el formulario de acceso. Los
+ * colores siguen la paleta de la aplicación (azul 0a6cf5, tinta 0f172a).
+ */
+
+.presentacion-body {
+  margin: 0;
+  background: #f6f8fc;
+  color: #0f172a;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+.presentacion-body .icon { width: 18px; height: 18px; flex: 0 0 auto; }
+
+.pres-wrap { width: min(1120px, 100% - 40px); margin-inline: auto; }
+
+.skip-link { position: absolute; left: -999px; top: 8px; z-index: 20; }
+.skip-link:focus-visible {
+  left: 12px; padding: 10px 16px; border-radius: 10px;
+  background: #fff; color: #0f172a; box-shadow: 0 8px 24px rgba(15, 23, 42, .25);
+}
+
+/* ------------------------------- barra superior ------------------------------ */
+
+.pres-topbar {
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 16px;
+  padding: 14px max(20px, calc((100% - 1120px) / 2));
+  background: #0b1220; color: #dbe3ef;
+  border-bottom: 1px solid rgba(255, 255, 255, .07);
+}
+.pres-brand { display: inline-flex; align-items: center; gap: 10px; color: inherit; text-decoration: none; }
+.pres-brand-mark {
+  display: grid; place-items: center; width: 42px; height: 42px;
+  border-radius: 12px; background: rgba(255, 255, 255, .06);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .1);
+}
+.pres-brand-mark img { width: 34px; height: 34px; }
+.pres-brand-text { display: flex; flex-direction: column; line-height: 1.1; }
+.pres-brand-text strong { font-size: .98rem; letter-spacing: .01em; }
+.pres-brand-text span { font-size: .66rem; letter-spacing: .18em; text-transform: uppercase; color: #93a6c4; }
+.pres-nav { display: flex; gap: 22px; justify-content: center; }
+.pres-nav a {
+  color: #b9c7dc; text-decoration: none; font-size: .85rem; font-weight: 600;
+  padding: 6px 2px; border-bottom: 2px solid transparent;
+}
+.pres-nav a:hover, .pres-nav a:focus-visible { color: #fff; border-color: rgba(125, 179, 255, .8); }
+.pres-topbar-actions { margin: 0; justify-self: end; }
+
+/* ---------------------------------- botones --------------------------------- */
+
+.pres-button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 11px 18px; border: 1px solid transparent; border-radius: 12px;
+  font: inherit; font-size: .92rem; font-weight: 650; line-height: 1.1;
+  text-decoration: none; cursor: pointer;
+  transition: transform .14s ease, box-shadow .18s ease, background .18s ease;
+}
+.pres-button:hover { transform: translateY(-1px); }
+.pres-button:focus-visible { outline: 3px solid rgba(125, 179, 255, .85); outline-offset: 2px; }
+.pres-button-primary { background: #0a6cf5; color: #fff; box-shadow: 0 10px 28px -14px rgba(10, 108, 245, .9); }
+.pres-button-primary:hover { background: #095ed6; }
+.pres-button-secondary { background: rgba(255, 255, 255, .1); color: #eaf1fb; border-color: rgba(255, 255, 255, .18); }
+.pres-button-ghost { background: #fff; color: #1b2942; border-color: rgba(15, 23, 42, .14); }
+.pres-button-ghost:hover { background: #f4f7fd; }
+.pres-button-lg { padding: 14px 22px; font-size: 1rem; border-radius: 14px; }
+.pres-button-block { width: 100%; }
+
+/* ----------------------------------- hero ----------------------------------- */
+
+.pres-hero {
+  position: relative; overflow: hidden;
+  background:
+    radial-gradient(70% 90% at 78% 12%, rgba(10, 108, 245, .28) 0%, rgba(10, 108, 245, 0) 62%),
+    radial-gradient(60% 80% at 8% 88%, rgba(56, 189, 248, .16) 0%, rgba(56, 189, 248, 0) 60%),
+    linear-gradient(170deg, #0b1220 0%, #0d1728 58%, #0a1220 100%);
+  color: #eef4ff;
+  padding: clamp(40px, 7vw, 84px) 0 clamp(46px, 7vw, 90px);
+}
+.pres-hero::after {
+  content: ""; position: absolute; inset: auto 0 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(125, 179, 255, .5), transparent);
+}
+.pres-hero-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr); align-items: center; gap: clamp(24px, 5vw, 56px); }
+.pres-eyebrow {
+  margin: 0 0 12px; font-size: .7rem; font-weight: 800; letter-spacing: .2em;
+  text-transform: uppercase; color: #7fb0ff;
+}
+.pres-hero h1 {
+  margin: 0 0 18px; font-size: clamp(2.1rem, 5.2vw, 3.5rem); line-height: 1.04;
+  letter-spacing: -.02em; font-weight: 800; color: #f7fbff;
+}
+.pres-hero-lead { margin: 0 0 26px; max-width: 34rem; font-size: clamp(1rem, 1.6vw, 1.1rem); color: #b9c9e2; }
+.pres-hero-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.pres-hero .pres-button-ghost { background: rgba(255, 255, 255, .08); color: #eef4ff; border-color: rgba(255, 255, 255, .22); }
+.pres-hero .pres-button-ghost:hover { background: rgba(255, 255, 255, .16); }
+.pres-hero-facts {
+  display: flex; flex-wrap: wrap; gap: 8px 22px; margin: 26px 0 0; padding: 0;
+  list-style: none; font-size: .82rem; color: #93a6c4;
+}
+.pres-hero-facts li { display: inline-flex; align-items: center; gap: 7px; }
+.pres-hero-facts .icon { color: #7fb0ff; }
+
+.pres-hero-art { position: relative; display: grid; justify-items: center; gap: 12px; }
+.pres-hero-glow {
+  position: absolute; width: min(360px, 80%); aspect-ratio: 1; border-radius: 50%;
+  background: radial-gradient(circle, rgba(10, 108, 245, .38) 0%, rgba(10, 108, 245, 0) 68%);
+  filter: blur(6px);
+}
+.pres-hero-logo {
+  position: relative; width: min(340px, 72vw); height: auto;
+  filter: drop-shadow(0 24px 48px rgba(2, 8, 23, .65));
+  animation: pres-float 9s ease-in-out infinite;
+}
+.pres-hero-tag { position: relative; margin: 0; text-align: center; font-size: .78rem; letter-spacing: .04em; color: #93a6c4; }
+.pres-hero-tag strong { color: #dbe7f8; }
+
+@keyframes pres-float {
+  0%, 100% { transform: translateY(-4px); }
+  50% { transform: translateY(6px); }
+}
+
+/* -------------------------------- secciones --------------------------------- */
+
+.pres-section { padding: clamp(44px, 6vw, 78px) 0; }
+.pres-section-alt { background: #eef3fb; }
+.pres-section h2 {
+  margin: 0 0 12px; font-size: clamp(1.5rem, 3vw, 2.1rem);
+  letter-spacing: -.015em; line-height: 1.15;
+}
+.pres-lead { margin: 0 0 30px; max-width: 46rem; color: #51607a; font-size: 1rem; }
+
+.pres-grid-funciones, .pres-grid-distribucion {
+  display: grid; gap: 16px; margin: 0; padding: 0; list-style: none;
+  grid-template-columns: repeat(auto-fit, minmax(248px, 1fr));
+}
+.pres-card {
+  padding: 22px; border-radius: 18px; background: #fff;
+  border: 1px solid rgba(15, 23, 42, .08);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, .04), 0 18px 40px -34px rgba(15, 23, 42, .5);
+}
+.pres-card h3 { margin: 14px 0 8px; font-size: 1.02rem; letter-spacing: -.01em; }
+.pres-card p { margin: 0; font-size: .9rem; color: #51607a; }
+.pres-card-icon {
+  display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px;
+  background: linear-gradient(180deg, #e8f0ff, #dbe8ff); color: #0a5ad6;
+}
+.pres-note {
+  margin: 26px 0 0; padding: 14px 18px; border-radius: 14px;
+  background: #fff8e6; border: 1px solid #f3dfae; color: #6b5217; font-size: .86rem;
+}
+
+/* -------------------------------- galería ----------------------------------- */
+
+.pres-galeria {
+  display: grid; grid-auto-flow: column; grid-auto-columns: min(86%, 900px);
+  gap: 16px; overflow-x: auto; scroll-snap-type: x mandatory;
+  padding: 4px 2px 18px; scrollbar-width: thin;
+}
+.pres-galeria:focus-visible { outline: 3px solid rgba(10, 108, 245, .6); outline-offset: 4px; border-radius: 18px; }
+.pres-galeria-item {
+  margin: 0; scroll-snap-align: center; border-radius: 18px; overflow: hidden;
+  background: #fff; border: 1px solid rgba(15, 23, 42, .1);
+  box-shadow: 0 24px 50px -40px rgba(15, 23, 42, .65);
+}
+.pres-galeria-item img { display: block; width: 100%; height: auto; background: #dfe7f2; }
+.pres-galeria-item figcaption { display: flex; flex-wrap: wrap; gap: 4px 10px; padding: 14px 18px 16px; font-size: .86rem; color: #51607a; }
+.pres-galeria-item figcaption strong { color: #0f172a; font-size: .92rem; }
+.pres-galeria-controles { display: flex; gap: 10px; justify-content: flex-end; margin-top: 4px; }
+
+/* --------------------------------- acceso ----------------------------------- */
+
+.pres-acceso {
+  background: linear-gradient(180deg, #0d1728, #0a1220);
+  color: #eef4ff; padding: clamp(44px, 6vw, 78px) 0;
+}
+.pres-acceso-grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); gap: clamp(24px, 5vw, 56px); align-items: center; }
+.pres-acceso h2 { margin: 0 0 12px; font-size: clamp(1.5rem, 3vw, 2.1rem); letter-spacing: -.015em; }
+.pres-acceso .pres-lead { color: #a9bcd8; }
+.pres-acceso-lista { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; font-size: .88rem; color: #a9bcd8; }
+.pres-acceso-lista li { display: flex; align-items: center; gap: 10px; }
+.pres-acceso-lista .icon { color: #7fb0ff; }
+.pres-acceso-card {
+  padding: 24px; border-radius: 20px; background: #fff; color: #0f172a;
+  box-shadow: 0 30px 70px -40px rgba(2, 8, 23, .9);
+}
+.pres-acceso-card .form-stack { display: grid; gap: 14px; }
+.pres-acceso-card .field { display: grid; gap: 6px; font-size: .82rem; font-weight: 650; color: #33415a; }
+.pres-acceso-card .field input {
+  padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(15, 23, 42, .16);
+  font: inherit; font-size: .95rem; background: #fbfcfe; color: #0f172a; min-height: 46px;
+}
+.pres-acceso-card .field input:focus-visible { outline: 3px solid rgba(10, 108, 245, .45); outline-offset: 1px; border-color: #0a6cf5; }
+.pres-acceso-nota { margin: 16px 0 0; font-size: .78rem; color: #66748c; }
+
+/* ------------------------------- distribución -------------------------------- */
+
+.pres-card-paquete h3 { margin-top: 0; }
+.pres-archivo {
+  display: block; margin: 6px 0 12px; padding: 8px 10px; border-radius: 10px;
+  background: #0f172a; color: #cfe0ff; font-size: .78rem; overflow-wrap: anywhere;
+}
+.pres-paquete-paso { margin-top: 10px !important; font-size: .82rem !important; color: #66748c !important; }
+.pres-aviso {
+  display: flex; gap: 12px; align-items: flex-start; margin-top: 24px;
+  padding: 16px 18px; border-radius: 14px; background: #eef3fb;
+  border: 1px solid rgba(15, 23, 42, .08); font-size: .86rem; color: #3d4c66;
+}
+.pres-aviso .icon { color: #0a6cf5; }
+.pres-aviso p { margin: 0; }
+
+/* --------------------------------- pie -------------------------------------- */
+
+.pres-footer { background: #0b1220; color: #93a6c4; padding: 40px 0 28px; font-size: .84rem; }
+.pres-footer-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, .6fr); gap: 24px; align-items: start; }
+.pres-footer-brand { margin: 0 0 8px; color: #e6eefc; }
+.pres-footer-note { margin: 0; max-width: 44rem; }
+.pres-footer-links { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 0; padding: 0; list-style: none; justify-content: flex-end; }
+.pres-footer-links a { color: #b9c7dc; text-decoration: none; }
+.pres-footer-links a:hover, .pres-footer-links a:focus-visible { color: #fff; text-decoration: underline; }
+.pres-footer-legal { margin: 26px auto 0; width: min(1120px, 100% - 40px); font-size: .74rem; color: #6c7e9c; }
+
+/* ------------------------------- adaptaciones -------------------------------- */
+
+@media (max-width: 960px) {
+  .pres-hero-grid, .pres-acceso-grid { grid-template-columns: minmax(0, 1fr); }
+  .pres-hero-art { order: -1; }
+  .pres-hero-logo { width: min(240px, 58vw); }
+  .pres-galeria { grid-auto-columns: 88%; }
+  .pres-footer-grid { grid-template-columns: minmax(0, 1fr); }
+  .pres-footer-links { justify-content: flex-start; }
+}
+
+@media (max-width: 720px) {
+  .pres-topbar { grid-template-columns: 1fr auto; }
+  .pres-nav { display: none; }
+  .pres-wrap { width: min(1120px, 100% - 28px); }
+  .pres-section h2 { font-size: 1.45rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .presentacion-body *, .presentacion-body *::before, .presentacion-body *::after {
+    animation-duration: .001ms !important; animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important; scroll-behavior: auto !important;
+  }
+  .pres-button:hover { transform: none; }
+  .pres-hero-logo { animation: none; }
+}
+
+@media print {
+  .pres-topbar, .pres-footer, .pres-hero-actions, .pres-galeria-controles, .pres-acceso-card form { display: none !important; }
+  .presentacion-body { background: #fff; color: #000; }
+  .pres-hero { background: #fff; color: #000; }
+  .pres-hero h1, .pres-hero-lead, .pres-hero-facts { color: #000; }
+}

@@ -18,37 +18,39 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 1. [Qué incluye](#qué-incluye)
 2. [Requisitos](#requisitos)
 3. [Instalación](#instalación)
-4. [Primeros pasos](#primeros-pasos)
-5. [El editor](#el-editor)
-6. [Bibliotecas de señalización y CAD](#bibliotecas-de-señalización-y-cad)
-7. [Revisión del plano y evacuación](#revisión-del-plano-y-evacuación)
-8. [Extintores y cobertura](#extintores-y-cobertura)
-9. [Pliego de señalización y rutas internas](#pliego-de-señalización-y-rutas-internas)
-10. [Modo presentación](#modo-presentación)
-11. [Verificación física](#verificación-física)
-12. [Modo brigadista](#modo-brigadista)
-13. [Guardado, versiones y borradores](#guardado-versiones-y-borradores)
-14. [Exportaciones](#exportaciones)
-15. [Formato de datos](#formato-de-datos)
-16. [Arquitectura](#arquitectura)
-17. [Seguridad](#seguridad)
-18. [Pruebas](#pruebas)
-19. [Distribución: escritorio y Android](#distribución-escritorio-y-android)
-20. [Edición Electron](#edición-electron)
-21. [Guía de primeros pasos](#guía-de-primeros-pasos)
-22. [Cambios de la versión 1.14.2](#cambios-de-la-versión-1142)
-23. [Cambios de la versión 1.14.1](#cambios-de-la-versión-1141)
-24. [Cambios de la versión 1.14.0](#cambios-de-la-versión-1140)
-25. [Cambios de la versión 1.13.0](#cambios-de-la-versión-1130)
-26. [Cambios de la versión 1.12.0](#cambios-de-la-versión-1120)
-27. [Cambios de la versión 1.11.1](#cambios-de-la-versión-1111)
-28. [Cambios de la versión 1.11.0](#cambios-de-la-versión-1110)
-29. [Cambios de la versión 1.10.0](#cambios-de-la-versión-1100)
-30. [Cambios de la versión 1.9.0](#cambios-de-la-versión-190)
-31. [Cambios de la versión 1.8.0](#cambios-de-la-versión-180)
-32. [Paquetes y verificación](#paquetes-y-verificación)
-33. [Limitaciones](#limitaciones)
-34. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
+4. [Presentación y acceso](#presentación-y-acceso)
+5. [Primeros pasos](#primeros-pasos)
+6. [El editor](#el-editor)
+7. [Bibliotecas de señalización y CAD](#bibliotecas-de-señalización-y-cad)
+8. [Revisión del plano y evacuación](#revisión-del-plano-y-evacuación)
+9. [Extintores y cobertura](#extintores-y-cobertura)
+10. [Pliego de señalización y rutas internas](#pliego-de-señalización-y-rutas-internas)
+11. [Modo presentación](#modo-presentación)
+12. [Verificación física](#verificación-física)
+13. [Modo brigadista](#modo-brigadista)
+14. [Guardado, versiones y borradores](#guardado-versiones-y-borradores)
+15. [Exportaciones](#exportaciones)
+16. [Formato de datos](#formato-de-datos)
+17. [Arquitectura](#arquitectura)
+18. [Seguridad](#seguridad)
+19. [Pruebas](#pruebas)
+20. [Distribución: escritorio y Android](#distribución-escritorio-y-android)
+21. [Edición Electron](#edición-electron)
+22. [Guía de primeros pasos](#guía-de-primeros-pasos)
+23. [Cambios de la versión 1.15.0](#cambios-de-la-versión-1150)
+24. [Cambios de la versión 1.14.2](#cambios-de-la-versión-1142)
+25. [Cambios de la versión 1.14.1](#cambios-de-la-versión-1141)
+26. [Cambios de la versión 1.14.0](#cambios-de-la-versión-1140)
+27. [Cambios de la versión 1.13.0](#cambios-de-la-versión-1130)
+28. [Cambios de la versión 1.12.0](#cambios-de-la-versión-1120)
+29. [Cambios de la versión 1.11.1](#cambios-de-la-versión-1111)
+30. [Cambios de la versión 1.11.0](#cambios-de-la-versión-1110)
+31. [Cambios de la versión 1.10.0](#cambios-de-la-versión-1100)
+32. [Cambios de la versión 1.9.0](#cambios-de-la-versión-190)
+33. [Cambios de la versión 1.8.0](#cambios-de-la-versión-180)
+34. [Paquetes y verificación](#paquetes-y-verificación)
+35. [Limitaciones](#limitaciones)
+36. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
 
 ---
 
@@ -176,6 +178,40 @@ Luego importa `resources/schema.sql` en el archivo SQLite y crea el usuario admi
 - Respaldo completo: `config/config.php` + el archivo `storage/normia-*.sqlite` (más `-wal`/`-shm` si existen; detén el servidor o usa `sqlite3 .backup` para una copia consistente).
 - Para reinstalar: elimina `config/config.php` y los `*.sqlite` de `storage/`; el instalador volverá a aparecer.
 - No publiques `config/`, `storage/` ni `resources/`. El `.htaccess` incluido devuelve 404 para esas rutas, pero verifica la configuración de tu servidor.
+
+---
+
+## Presentación y acceso
+
+La primera pantalla para quien no ha iniciado sesión es una **presentación
+pública** en la ruta `inicio`; la raíz (`index.php` sin `r`) la muestra también.
+Así el visitante sabe qué hace la aplicación antes de que se le pida una cuenta.
+
+- **Contenido.** Portada con la marca, seis funciones explicadas, **cinco capturas
+  reales** del proyecto de ejemplo, formulario de acceso y una sección de
+  distribución con el nombre de cada paquete y lo que necesita. Las capturas son
+  del proyecto de demostración: no enseñan datos de ningún cliente.
+- **Acceso.** El formulario hace `POST` a `login` con el token CSRF y un campo
+  `desde=inicio`. Si las credenciales fallan se vuelve a la portada con el aviso;
+  si aciertan, se entra al panel. **No hay registro público ni recuperación por
+  correo**: la cuenta se crea en la instalación y la contraseña la restablece el
+  administrador.
+- **Sesión.** Con sesión abierta la raíz sigue siendo el panel, y la portada
+  cambia «Entrar» por «Ir al panel». Un enlace profundo sin sesión
+  (`projects/…`) sigue llevando al formulario de acceso, no a la portada.
+- **Sin recursos externos.** Ni CDN, ni tipografías remotas, ni analítica: la
+  hoja `assets/css/presentacion.css`, el script `assets/js/presentacion.js` y las
+  capturas (`assets/img/presentacion/*.webp`, 32–55 KB cada una) viajan con la
+  aplicación, así que la portada también se ve sin internet dentro del APK y de
+  la edición Electron.
+- **Accesibilidad.** La galería se recorre con el dedo o con la barra de
+  desplazamiento y sus flechas **solo aparecen con JavaScript** (no hay botones
+  muertos), tienen `aria-disabled` en los extremos, responden a las flechas del
+  teclado, cada captura lleva texto alternativo y la animación del emblema se
+  detiene con `prefers-reduced-motion`.
+- **Letra pequeña.** La portada repite el aviso de siempre: el plano es
+  esquemático y no certifica cumplimiento normativo. La sección de distribución
+  explica de dónde sale cada paquete y no ofrece descargas que no existan.
 
 ---
 
@@ -710,9 +746,9 @@ Lo único que no funciona sin red es la **vista previa de desarrollo** (`npm run
 | Bloque | Comprobaciones |
 | --- | --- |
 | `tests/php/lint.mjs` | `php -l` sobre todo `app/`, `bootstrap.php` e `index.php` en 8.1 y 8.3. |
-| `tests/php/functional.mjs` | 263 comprobaciones: instalador, requisitos, contraseñas débiles, CSRF, sesión, autorización entre cuentas, CRUD de proyectos/pisos, duplicados, importación v1/v2, catálogos (395 señales y 420 objetos), catálogo y guardado de redes, señales de baño y de servicios (guardado, color de familia y exportación SVG), **auditor y medición de evacuación** (salidas, recorrido máximo, zonas inalcanzables, rutas que cruzan muros o no llegan a la salida, ocupación declarada y estimada, señalización, validación de `isExit`, informe imprimible y demo coherente), **muros curvos y vías** (guardado en formato 3, auditor con el muro curvo separando recintos, arco `A` en el SVG, vía que no bloquea frente a muro que sí, `422` para curvas desalineadas, `kind` desconocido, curvas en una puerta y formato desconocido), **sección tipo y glorieta** (formato 4 con ancho derivado, SVG con calzada, andenes, anillo e isla, y `422` para una medida fuera de rango, una clave desconocida, una glorieta sin sección y un cruce desconocido), **modo brigadista** (panel, token de 32 caracteres, página pública sin sesión ni scripts inline, API del plan, service worker, regeneración y desactivación del enlace) y **verificación física** (lista sin trazos, tres estados, novedad sin nota rechazada, rondas e historial, cobertura, aviso de días y foto servida solo a la cuenta dueña), puertas y portones (geometría, sentidos de apertura, exportación con trazo), validaciones de la API, guardado/versiones/borradores/conflictos, exportaciones, ciclo de vida y logout. |
+| `tests/php/functional.mjs` | 279 comprobaciones: instalador, requisitos, contraseñas débiles, CSRF, sesión, autorización entre cuentas, CRUD de proyectos/pisos, duplicados, importación v1/v2, catálogos (395 señales y 420 objetos), catálogo y guardado de redes, señales de baño y de servicios (guardado, color de familia y exportación SVG), **auditor y medición de evacuación** (salidas, recorrido máximo, zonas inalcanzables, rutas que cruzan muros o no llegan a la salida, ocupación declarada y estimada, señalización, validación de `isExit`, informe imprimible y demo coherente), **muros curvos y vías** (guardado en formato 3, auditor con el muro curvo separando recintos, arco `A` en el SVG, vía que no bloquea frente a muro que sí, `422` para curvas desalineadas, `kind` desconocido, curvas en una puerta y formato desconocido), **sección tipo y glorieta** (formato 4 con ancho derivado, SVG con calzada, andenes, anillo e isla, y `422` para una medida fuera de rango, una clave desconocida, una glorieta sin sección y un cruce desconocido), **modo brigadista** (panel, token de 32 caracteres, página pública sin sesión ni scripts inline, API del plan, service worker, regeneración y desactivación del enlace) y **verificación física** (lista sin trazos, tres estados, novedad sin nota rechazada, rondas e historial, cobertura, aviso de días y foto servida solo a la cuenta dueña), puertas y portones (geometría, sentidos de apertura, exportación con trazo), validaciones de la API, guardado/versiones/borradores/conflictos, exportaciones, ciclo de vida y logout. |
 | `tests/js/editor.mjs` | 380 comprobaciones de interfaz sobre la app real: arranque, 395 señales y 420 objetos, **muros curvos** (rombo del tramo, arco de tres puntos, radio y flecha en el inspector, enderezar, doble clic que parte el arco, caja analítica, puerta sobre el arco, formato 3 y degradación a v2, marcado idéntico sin curvas), **vías y andenes** (banda de 6 m con carriles, cambio de ancho y carriles, parqueadero contado en la etiqueta, franjas del paso cebra y rótulo del lindero), **sección tipo y cruces** (avenida de 20 m en formato 4, perfil transversal en el inspector, cambio de andén que recalcula el ancho, glorieta de cinco accesos, vuelta a vía normal, corredor de ejemplo en una acción y sinónimos «carro», «bici» y «semáforo»), **trazado de tuberías y circuitos, inspector de red y panel de redes**, **mano y paneo, selección de superpuestos, inspector plegable y paleta de herramientas**, **guía de primeros pasos** (apertura en el primer uso, siete pasos, progreso tomado del plano, salto a la herramienta con la baldosa resaltada, reinicio y desactivación), **buscador con sinónimos y sin tildes** (calle → vía, anden → andén, parqueo → parqueadero), **baldosa propia de vías y andenes**, puertas dobles y portones, **vértices de ruta editables (arrastrar, doble clic, Alt+clic)**, **señal de baño insertada desde la biblioteca**, **posiciones reales del trazo**, **clic sobre muros finos, pictogramas y equipos**, **cambio de señal y de equipo desde el inspector**, **auditor de planos** (interruptor de salida, ocupación declarada, cajón de revisión, contador, filtros, «Ver en el plano», cierre sin dejar el fondo bloqueado), **pliego de señalización** (conteo, tamaño sugerido, CSV, precios y consistencia), **medición de rutas internas** (ruta que rodea muros, tramos, guardado en capa y comparación), **modo presentación** (pantalla limpia, láser, spotlight, rutas animadas, capas, quiz y salida sin perder el estado), **rotación**, **rutas cerradas**, **arrastrar y soltar desde la biblioteca sin que el cajón lo bloquee**, reglas, herramientas, inserción con puntero, selección, mover, escalar, rotar, color, cambio de tipo, deshacer/rehacer, duplicar, agrupar, bloquear, desplazar, texto y saneado, guardar, reabrir, borradores, conflictos, exportación SVG/JSON/PNG, tooltips sin acumulación, capas, versiones y límites. |
-| `tests/js/pages.mjs` | 43 comprobaciones de las páginas fuera del editor: menú de acciones de proyectos y pisos (capa fija, colocación, teclado, un solo menú), confirmación de borrado y borrado real de piso y proyecto, con la protección del último piso, y **la página pública del modo brigadista** ejecutando su JavaScript: acciones rápidas, atenuado del plano, alto contraste recordado, zoom y borrado de la copia local. |
+| `tests/js/pages.mjs` | 50 comprobaciones de las páginas fuera del editor y de la portada pública: menú de acciones de proyectos y pisos (capa fija, colocación, teclado, un solo menú), confirmación de borrado y borrado real de piso y proyecto, con la protección del último piso, la **portada pública** (cinco capturas con texto alternativo, flechas de la galería y token del formulario) y **la página pública del modo brigadista** ejecutando su JavaScript: acciones rápidas, atenuado del plano, alto contraste recordado, zoom y borrado de la copia local. |
 | `tests/php/package.mjs` | 39 comprobaciones: construye ambos ZIP, verifica que no haya bases, sesiones, credenciales, logs ni carpetas de desarrollo, valida los SHA-256 y hace una instalación limpia de la demo comprobando assets, catálogos (395/420), los cuatro pisos del proyecto de ejemplo, señales de servicios y redes en la demo, la señal «Usted está aquí», **el auditor y su informe en la demo empaquetada**, editor, SVG, JSON e impresión. |
 | `tests/php/desktop.mjs` | 37 comprobaciones del escritorio: rutas de datos separadas del código, `NORMA_DATA_PATH` (solo absolutas), lanzador (argumentos, puerto, estado, cierre), enrutador (bloqueos, saltos de directorio, byte nulo) y una instalación completa escribiendo en una carpeta de datos externa. |
 | `tests/js/electron.mjs` | 37 comprobaciones de la edición Electron: ventana sin acceso a Node, puente mínimo, enlaces externos, instancia única, menú en español, descargas, servidor en `127.0.0.1` sin cookies en memoria, entorno de php-wasm, instalación completa con datos fuera del código, `storage/` inaccesible, armado del paquete (aplicación, ventana e intérprete), los ocho paquetes de php-wasm dentro de `runtime/node_modules`, el rechazo de un paquete sin ellos, el mínimo de macOS y la ausencia de ICU y de versiones de PHP que no se usan. |
@@ -888,6 +924,34 @@ encontraban nada. Desde la 1.12.0:
   exacto. Cuando no hay resultados, propone palabras cercanas.
 - El lienzo muestra la **pista de la herramienta** al elegir cualquiera de las
   cinco (antes caía en la pista de «Seleccionar»).
+
+## Cambios de la versión 1.15.0
+
+- **Portada pública (`inicio`).** La aplicación deja de recibir al visitante con
+  un formulario a secas: ahora la raíz sin sesión muestra una presentación con la
+  marca, seis funciones, cinco capturas reales del proyecto de ejemplo, el
+  formulario de acceso y una sección honesta de distribución. Con sesión abierta
+  la raíz sigue siendo el panel de siempre.
+- **Acceso desde la portada.** El formulario usa el mismo `POST login` con CSRF y
+  añade `desde=inicio`, así un fallo de credenciales vuelve a la portada con el
+  aviso en vez de saltar a otra página. Sin registro público ni recuperación por
+  correo: la cuenta se crea en la instalación.
+- **Capturas optimizadas.** Cinco pantallas reales (panel, editor, auditor,
+  extintores y presentación) convertidas a WebP de 32–55 KB y servidas desde
+  `assets/`: la portada no pide nada a internet y se ve igual dentro del APK y de
+  la edición Electron.
+- **Accesibilidad y nada de controles falsos.** Galería con desplazamiento y
+  ajuste; las flechas se añaden con JavaScript y se apagan en los extremos, la
+  animación del emblema respeta `prefers-reduced-motion`, cada imagen lleva texto
+  alternativo y las secciones se enlazan desde la barra superior.
+- **Pruebas.** `tests/php/functional.mjs` pasa a **279** comprobaciones (portada
+  pública sin sesión, sin datos de proyectos, solo recursos locales, ruta propia,
+  enlace profundo, error de acceso que vuelve a la portada, panel intacto con
+  sesión y presentación de nuevo tras cerrar sesión) y `tests/js/pages.mjs` a
+  **50** (las cinco capturas con texto alternativo, flechas de la galería que
+  aparecen y se apagan, token CSRF del formulario y cero errores de JavaScript).
+
+Sin cambios en el formato del plano ni en la base de datos.
 
 ## Cambios de la versión 1.14.2
 

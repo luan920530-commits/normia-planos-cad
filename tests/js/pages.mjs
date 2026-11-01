@@ -349,6 +349,43 @@ async function main() {
       && /al menos un piso/.test(decodeURIComponent(singleAfter.html)),
       refused.status);
 
+    /* ------------------- presentación pública y su galería ------------------- */
+    const invitado = new Client(runtime.handler);
+    const portada = await invitado.get('inicio', { accept: 'text/html' });
+    const portadaDom = new JSDOM(portada.text, {
+      url: 'http://127.0.0.1/index.php?r=inicio',
+      runScripts: 'outside-only',
+      pretendToBeVisual: true,
+    });
+    const portadaWindow = portadaDom.window;
+    portadaWindow.__errors = [];
+    portadaWindow.addEventListener('error', (event) => portadaWindow.__errors.push(String(event.message)));
+    const galeria = portadaWindow.document.querySelector('[data-galeria]');
+    // JSDOM no calcula maquetación: se le da un ancho realista al carrusel.
+    Object.defineProperty(galeria, 'scrollWidth', { value: 3000, configurable: true });
+    Object.defineProperty(galeria, 'clientWidth', { value: 900, configurable: true });
+    portadaWindow.eval(`${fs.readFileSync(path.join(repoRoot, 'assets/js/presentacion.js'), 'utf8')}\n//# sourceURL=js/presentacion.js`);
+    const flechaAnterior = portadaWindow.document.querySelector('[data-galeria-prev]');
+    const flechaSiguiente = portadaWindow.document.querySelector('[data-galeria-next]');
+    report.check('La galería revela sus flechas cuando hay JavaScript',
+      flechaAnterior.hidden === false && flechaSiguiente.hidden === false);
+    report.check('La galería empieza con «anterior» apagada y «siguiente» disponible',
+      flechaAnterior.disabled === true && flechaSiguiente.disabled === false,
+      `${flechaAnterior.disabled}/${flechaSiguiente.disabled}`);
+    flechaSiguiente.click();
+    report.check('Avanzar en la galería no lanza errores', portadaWindow.__errors.length === 0, portadaWindow.__errors.join(' | '));
+    report.check('La galería anuncia su estado a lectores de pantalla',
+      flechaAnterior.getAttribute('aria-disabled') === 'true' && flechaSiguiente.getAttribute('aria-disabled') === 'false',
+      `${flechaAnterior.getAttribute('aria-disabled')}/${flechaSiguiente.getAttribute('aria-disabled')}`);
+    const figuras = [...portadaWindow.document.querySelectorAll('.pres-galeria-item')];
+    report.check('La portada muestra cinco capturas con texto alternativo',
+      figuras.length === 5 && figuras.every((figura) => (figura.querySelector('img')?.getAttribute('alt') || '').length > 30),
+      `${figuras.length} capturas`);
+    report.check('El formulario de la portada lleva token CSRF y vuelve a la portada',
+      Boolean(portadaWindow.document.querySelector('#acceso form input[name="_token"]'))
+      && portadaWindow.document.querySelector('#acceso form input[name="desde"]')?.value === 'inicio');
+    report.check('La portada no registra errores de JavaScript', portadaWindow.__errors.length === 0, portadaWindow.__errors.join(' | '));
+
     report.check('Las páginas no registran errores de JavaScript',
       [dashboard.window, floorWindow, singlePage.window, dashboardAfter.window, singleAfter.window].every((win) => win.__errors.length === 0),
       [dashboard.window, floorWindow, singlePage.window, dashboardAfter.window, singleAfter.window].map((win) => win.__errors.join(' | ')).join(' | ').slice(0, 200));

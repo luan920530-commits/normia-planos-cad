@@ -6,8 +6,10 @@
  * catálogos, versiones, borradores, exportaciones, importación, validación,
  * CSRF, aislamiento entre cuentas y carga de recursos locales.
  */
+import fs from 'node:fs';
+import path from 'node:path';
 import { JSDOM } from 'jsdom';
-import { startApp, extractToken, decodeEntities, makeReporter, Client } from './harness.mjs';
+import { startApp, extractToken, decodeEntities, makeReporter, Client, repoRoot } from './harness.mjs';
 
 const version = process.argv[2] || '8.3';
 const report = makeReporter(version);
@@ -82,6 +84,45 @@ try {
   report.check('Instalación válida redirige a login', [302, 303].includes(install.result.status), `${install.result.status} ${install.result.location}`);
   report.check('Configuración y base creadas', (await client.get('login')).status === 200);
 
+  /* --------------------------- presentación pública --------------------------- */
+  let portada = await guest.get('/index.php');
+  const portadaHtml = portada.text || '';
+  const portadaCheck = localAssets(portadaHtml, '/index.php');
+  report.check('Sin sesión, la raíz es la presentación pública',
+    portada.status === 200 && portadaHtml.includes('id="capturas"') && portadaHtml.includes('name="desde" value="inicio"'),
+    String(portada.status));
+  report.check('La presentación no muestra datos de ningún proyecto', !portadaHtml.includes('Planta de ejemplo'));
+  report.check('La presentación solo usa recursos locales', portadaCheck.external.length === 0, portadaCheck.external.join(', '));
+  report.check('La presentación no lleva scripts inline', portadaCheck.inlineScripts === 0);
+  report.check('La presentación declara idioma español', portadaCheck.lang === 'es');
+  report.check('Sprite de iconos completo en la presentación', portadaCheck.missingIcons.length === 0, portadaCheck.missingIcons.join(','));
+  report.check('La presentación sin avisos PHP', noPhpErrors(portadaHtml));
+  const capturas = (portadaHtml.match(/img\/presentacion\/([a-z]+)\.webp/g) || []).map((ruta) => ruta.split('/').pop());
+  report.check('La presentación muestra las cinco capturas', new Set(capturas).size === 5, capturas.join(','));
+  report.check('Las capturas existen y pesan poco',
+    capturas.every((nombre) => {
+      const file = path.join(repoRoot, 'assets/img/presentacion', nombre);
+      return fs.existsSync(file) && fs.statSync(file).size < 120 * 1024;
+    }),
+    capturas.map((nombre) => `${nombre}`).join(','));
+
+  let inicio = await guest.get('inicio');
+  report.check('La portada tiene dirección propia', inicio.status === 200 && (inicio.text || '').includes('id="capturas"'));
+  let profundo = await guest.get('projects/new');
+  report.check('Un enlace profundo sin sesión sigue llevando al acceso',
+    [302, 303].includes(profundo.status) && profundo.location.includes('login'), `${profundo.status} ${profundo.location}`);
+  let accesoFallido = await guest.postForm('login', {
+    _token: extractToken(portadaHtml),
+    email,
+    password: 'clave-incorrecta',
+    desde: 'inicio',
+  });
+  report.check('Un acceso fallido desde la portada vuelve a la portada',
+    [302, 303].includes(accesoFallido.status) && accesoFallido.location.includes('inicio'),
+    `${accesoFallido.status} ${accesoFallido.location}`);
+  portada = await guest.get('inicio');
+  report.check('La portada explica el error de acceso', /no coinciden/.test(portada.text || ''));
+
   /* ---------------------------- autenticación ---------------------------- */
   res = await client.postForm('login', { _token: extractToken((await client.get('login')).text), email: 'nadie@normia.local', password });
   report.check('Login con correo desconocido no entra', [302, 303].includes(res.status) && res.location.includes('login'));
@@ -92,6 +133,8 @@ try {
   report.check('Login válido redirige al panel', [302, 303].includes(res.status), `${res.status} ${res.location}`);
   res = await client.get('/index.php');
   report.check('Panel responde 200', res.status === 200);
+  report.check('Con sesión, la raíz sigue siendo el panel y no la portada',
+    res.text.includes('Biblioteca') && !res.text.includes('id="capturas"'));
   report.check('Panel sin avisos PHP', noPhpErrors(res.text));
   report.check('Panel muestra proyecto de demostración', res.text.includes('Planta de ejemplo'));
   const homeToken = extractToken(res.text);
@@ -100,6 +143,9 @@ try {
   report.check('Panel solo usa recursos locales', homeCheck.external.length === 0, homeCheck.external.join(', '));
   report.check('Panel sin scripts inline', homeCheck.inlineScripts === 0);
   report.check('Panel con formularios POST protegidos', homeCheck.formsWithoutToken === 0, `${homeCheck.postForms} formularios`);
+  const portadaConSesion = await client.get('inicio');
+  report.check('La portada reconoce la sesión y ofrece el panel',
+    portadaConSesion.status === 200 && portadaConSesion.text.includes('Ir al panel'));
   report.check('Panel declara idioma español', homeCheck.lang === 'es');
   report.check('Sprite de iconos completo en el panel', homeCheck.missingIcons.length === 0, homeCheck.missingIcons.join(','));
 
@@ -1257,7 +1303,11 @@ echo 'USER_ID=' . $id;
   res = await client.postForm('logout', { _token: homeToken });
   report.check('Logout redirige', [302, 303].includes(res.status), String(res.status));
   res = await client.get('/index.php');
-  report.check('Sin sesión no se accede al panel', [302, 303].includes(res.status) && res.location.includes('login'));
+  report.check('Sin sesión, la raíz vuelve a la presentación',
+    res.status === 200 && res.text.includes('id="capturas"') && !res.text.includes('Biblioteca de planos'));
+  res = await client.get('projects/new');
+  report.check('Sin sesión las páginas internas siguen cerradas',
+    [302, 303].includes(res.status) && res.location.includes('login'), `${res.status} ${res.location}`);
   res = await client.get(`api/floors/${floorId}`, { accept: 'application/json' });
   report.check('Sin sesión la API responde 401', res.status === 401 && /unauthenticated/.test(res.text), String(res.status));
 } catch (error) {

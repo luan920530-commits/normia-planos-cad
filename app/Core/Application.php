@@ -8,6 +8,7 @@ use App\Controllers\AuthController;
 use App\Controllers\BrigadeController;
 use App\Controllers\VerificationController;
 use App\Controllers\DashboardController;
+use App\Controllers\HomeController;
 use App\Controllers\EditorController;
 use App\Controllers\ExportController;
 use App\Controllers\FloorApiController;
@@ -51,11 +52,17 @@ final class Application
                 return;
             }
 
-            $public = in_array($route, ['login'], true)
+            $public = in_array($route, ['login', 'inicio'], true)
                 || preg_match('#^b/[^/]+(/plan\.json|/brigade-sw\.js)?$#D', $route) === 1;
             if (!$public && !Auth::check()) {
                 if ($isApi || $request->wantsJson()) {
                     Response::json(['ok' => false, 'message' => 'La sesión expiró. Inicia sesión nuevamente.', 'code' => 'unauthenticated'], 401);
+                }
+                // La raíz sin sesión es la presentación pública. Cualquier otra
+                // dirección sigue llevando al formulario de acceso.
+                if ($route === '') {
+                    (new HomeController())->index();
+                    return;
                 }
                 Response::redirect(url('login'));
             }
@@ -105,6 +112,9 @@ final class Application
         $router->get('login', static fn () => (new AuthController())->showLogin());
         $router->post('login', static fn () => (new AuthController())->login());
         $router->post('logout', static fn () => (new AuthController())->logout());
+
+        // Presentación pública (portada para quien no ha entrado)
+        $router->get('inicio', static fn () => (new HomeController())->index());
 
         // Panel y proyectos
         $router->get('', static fn () => (new DashboardController())->index());

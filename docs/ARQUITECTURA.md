@@ -28,7 +28,7 @@ index.php
        ├─ Router: /index.php?r=<ruta>
        ├─ sin instalación → InstallController (GET/POST install)
        ├─ POST sin CSRF válido → 419
-       ├─ sin sesión → 401 (API) o redirección a login
+       ├─ sin sesión → la raíz muestra la presentación; el resto, 401 (API) o login
        ├─ el controlador valida y llama a modelos/servicios
        └─ View::render(...) o Response::json(...)
 ```
@@ -67,7 +67,8 @@ Los errores se traducen en un único punto:
 | GET/POST | `install` | Instalador. |
 | GET/POST | `login` | Acceso. |
 | POST | `logout` | Cierre de sesión. |
-| GET | `` | Panel. |
+| GET | `inicio` | Presentación pública (portada). |
+| GET | `` | Panel con sesión; presentación sin ella. |
 | GET/POST | `projects/new`, `projects` | Alta de proyecto. |
 | GET/POST | `projects/{id}`, `projects/{id}/edit` | Ficha y edición. |
 | POST | `projects/{id}/duplicate`, `/delete` | Duplicar y eliminar. |
@@ -180,6 +181,8 @@ assets/js/editor/audit.js    Cajón de revisión: pide el informe, pinta métric
 assets/js/editor/schedule.js Cajón del pliego: agrupa señales, tamaños, precios, consistencia y CSV
 assets/js/editor/measure.js  Cajón de rutas internas: retícula, A*, tramos, tiempos y guardado en capa
 assets/js/editor/present.js   Modo presentación: láser, spotlight, rutas animadas, capas y quiz
+assets/css/presentacion.css   Portada pública: portada oscura, tarjetas, galería y formulario
+assets/js/presentacion.js     Galería de capturas: flechas con JavaScript, teclado y estado en los extremos
 assets/js/editor/toolsearch.js Buscador de la paleta: normaliza tildes y amplía con sinónimos de obra
 assets/js/editor/guide.js     Guía de primeros pasos: siete pasos, progreso desde el plano y salto al control real
 assets/js/editor.js          EditorApp: arranque, herramientas, puntero, teclado, guardado, exportación

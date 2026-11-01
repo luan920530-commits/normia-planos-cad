@@ -143,7 +143,8 @@ report.check('Los datos quedan guardados en el almacenamiento del equipo',
 app.php.exit(0);
 const reopened = await boot(storage);
 response = await reopened.request({ url: '/index.php?r=' });
-const pideEntrar = response.status === 303;
+// Sin sesión la raíz es la presentación pública (no una redirección al acceso).
+const muestraPortada = response.status === 200 && /id="capturas"/.test(response.text || '');
 response = await reopened.request({ url: '/index.php?r=login' });
 const reopenToken = /name="_token" value="([^"]+)"/.exec(response.text)?.[1] || '';
 response = await reopened.request({
@@ -154,8 +155,8 @@ response = await reopened.request({
 });
 const afterLogin = await reopened.request({ url: '/index.php?r=' });
 report.check('Al reabrir la app los planos siguen ahí y se vuelve a entrar',
-  pideEntrar && afterLogin.status === 200 && /Mis planos/.test(afterLogin.text),
-  `${pideEntrar ? 'pide sesión' : 'sin sesión previa'} · ${reopened.status().dataFiles} archivos de datos`);
+  muestraPortada && afterLogin.status === 200 && /Mis planos/.test(afterLogin.text),
+  `${muestraPortada ? 'portada pública' : 'sin portada'} · ${reopened.status().dataFiles} archivos de datos`);
 
 await reopened.request({ url: '/index.php?r=logout', method: 'POST', headers: URLENCODED, body: form({ _token: '' }) });
 await reopened.reset();
