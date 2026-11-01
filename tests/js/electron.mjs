@@ -50,7 +50,8 @@ report.check('El flujo compila las tres plataformas y publica lo que produce',
   /macos-latest/.test(workflow) && /windows-latest/.test(workflow) && /ubuntu-latest/.test(workflow)
   && /electron-builder/.test(workflow) && /upload-artifact/.test(workflow));
 report.check('El flujo comprueba el contenido del paquete, no solo que se haya generado',
-  /server\.mjs --check --app="\$RESOURCES\/app"/.test(workflow) && /--runtime="\$RESOURCES\/runtime"/.test(workflow));
+  /server\.mjs --check --app="\$APP_DIR"/.test(workflow) && /--runtime="\$RUNTIME_DIR"/.test(workflow)
+  && /cygpath -w/.test(workflow));
 report.check('Las sumas del flujo evitan opciones de GNU que macOS no tiene',
   !/^\s*find .* -printf/m.test(workflow) && /sha256sum "\$archivo"/.test(workflow) && /shasum -a 256/.test(workflow));
 // Se mira la línea de comando del paso y no el texto: los comentarios explican
