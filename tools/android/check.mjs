@@ -25,7 +25,7 @@ const bad = (label, detail = '') => {
   console.log(`✗ ${label}${detail ? ' · ' + detail : ''}`);
 };
 
-for (const file of ['index.html', 'shell.js', 'shell.css', 'app-core.js', 'php/runtime.js', 'php/php_8_3_asyncify.wasm', 'php/php_8_3_jspi.wasm', 'php/app-files.json', 'css/app.css', 'css/editor.css', 'js/app.js', 'img/normia-logo.png']) {
+for (const file of ['index.html', 'shell.js', 'shell.css', 'app-core.js', 'opfs.js', 'php/runtime.js', 'php/php_8_3_asyncify.wasm', 'php/php_8_3_jspi.wasm', 'php/app-files.json', 'css/app.css', 'css/editor.css', 'js/app.js', 'img/normia-logo.png']) {
   if (!fs.existsSync(path.join(ASSETS, file))) bad(`Falta ${file}`);
 }
 if (failures.length) {
@@ -94,6 +94,30 @@ if (/runtime\.jspi\(\)/.test(shellSource) && /php_8_3_\$\{cual\}\.wasm/.test(she
 } else {
   bad('La pantalla no elige el intérprete según la detección de JSPI');
 }
+/*
+ * El almacenamiento del teléfono usa OPFS. La 1.15.3 arrancaba el intérprete y
+ * moría aquí con «root.getDirectory is not a function»: `getDirectory` no
+ * existe en el estándar, es `getDirectoryHandle`. Se revisan los nombres y que
+ * el arranque no dependa de que el almacenamiento funcione.
+ */
+const opfsSource = fs.readFileSync(path.join(ASSETS, 'opfs.js'), 'utf8');
+// `navigator.storage.getDirectory()` sí existe (es la puerta de entrada a OPFS).
+// Lo que no existe es `getDirectory()` sobre una carpeta ya abierta: ahí el
+// nombre correcto es `getDirectoryHandle()`.
+const llamadaInexistente = /\b(root|folder|directory|nodo|node)\.getDirectory\(/.test(opfsSource);
+if (/getDirectoryHandle\(/.test(opfsSource) && /getFileHandle\(/.test(opfsSource) && !llamadaInexistente) {
+  ok('El almacenamiento del teléfono usa los nombres reales de OPFS');
+} else {
+  bad('El almacenamiento del teléfono llama a un método que no existe en OPFS',
+    llamadaInexistente ? 'getDirectory() sobre una carpeta' : 'faltan getDirectoryHandle/getFileHandle');
+}
+if (/openOpfsStorage\(/.test(shellSource) && /onUnavailable/.test(shellSource)
+  && /no permite guardar los datos/.test(shellSource)) {
+  ok('Sin almacenamiento la app avisa y sigue sin guardar, en vez de no abrir');
+} else {
+  bad('El arranque depende del almacenamiento del teléfono');
+}
+
 const runtimeFile = path.join(ASSETS, 'php/runtime.js');
 const sizeMb = fs.statSync(runtimeFile).size / 1048576;
 if (sizeMb < 6) ok('El paquete JavaScript no arrastra datos de internacionalización', `${sizeMb.toFixed(1)} MB`);
