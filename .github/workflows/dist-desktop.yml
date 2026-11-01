@@ -310,6 +310,7 @@ jobs:
           files: |
             artefactos/*/*.pkg
             artefactos/*/*.exe
+            artefactos/SHA256SUMS.txt
           fail_on_unmatched_files: false
           body: |
             Paquetes de escritorio de Normia Planos CAD generados por el flujo de trabajo.

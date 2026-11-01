@@ -115,6 +115,8 @@ jobs:
             if command -v sha256sum >/dev/null 2>&1; then sha256sum "$archivo"; else shasum -a 256 "$archivo"; fi
           done > SHA256SUMS.txt
           cat SHA256SUMS.txt
+          # Nombre propio por plataforma: los tres trabajos publican a la vez.
+          mv SHA256SUMS.txt "normia-electron-${{ matrix.os }}-${{ matrix.arch }}.SHA256SUMS.txt"
 
       # Comprobación del contenido con el Node del flujo. Se pasa la carpeta
       # como ruta **relativa**: vale igual en el Git Bash de Windows, en macOS y
@@ -178,7 +180,7 @@ jobs:
             dist/electron/installers/*.zip
             dist/electron/installers/*.exe
             dist/electron/installers/*.AppImage
-            dist/electron/installers/SHA256SUMS.txt
+            dist/electron/installers/*.SHA256SUMS.txt
           if-no-files-found: error
 
   adjuntar:
@@ -198,6 +200,7 @@ jobs:
             artifacts/**/*.zip
             artifacts/**/*.exe
             artifacts/**/*.AppImage
+            artifacts/**/*.SHA256SUMS.txt
           fail_on_unmatched_files: false
           body: |
             Edición Electron de Normia Planos CAD: macOS (Intel y Apple Silicon),
