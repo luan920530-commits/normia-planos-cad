@@ -667,7 +667,7 @@ Lo único que no funciona sin red es la **vista previa de desarrollo** (`npm run
 | `tests/js/pages.mjs` | 32 comprobaciones de las páginas fuera del editor: menú de acciones de proyectos y pisos (capa fija, colocación, teclado, un solo menú), confirmación de borrado y borrado real de piso y proyecto, con la protección del último piso. |
 | `tests/php/package.mjs` | 39 comprobaciones: construye ambos ZIP, verifica que no haya bases, sesiones, credenciales, logs ni carpetas de desarrollo, valida los SHA-256 y hace una instalación limpia de la demo comprobando assets, catálogos (395/350), los cuatro pisos del proyecto de ejemplo, señales de servicios y redes en la demo, la señal «Usted está aquí», **el auditor y su informe en la demo empaquetada**, editor, SVG, JSON e impresión. |
 | `tests/php/desktop.mjs` | 37 comprobaciones del escritorio: rutas de datos separadas del código, `NORMA_DATA_PATH` (solo absolutas), lanzador (argumentos, puerto, estado, cierre), enrutador (bloqueos, saltos de directorio, byte nulo) y una instalación completa escribiendo en una carpeta de datos externa. |
-| `tests/js/electron.mjs` | 33 comprobaciones de la edición Electron: ventana sin acceso a Node, puente mínimo, enlaces externos, instancia única, menú en español, descargas, servidor en `127.0.0.1` sin cookies en memoria, entorno de php-wasm, instalación completa con datos fuera del código, `storage/` inaccesible, armado del paquete (aplicación, ventana e intérprete) y ausencia de ICU y de versiones de PHP que no se usan. |
+| `tests/js/electron.mjs` | 34 comprobaciones de la edición Electron: ventana sin acceso a Node, puente mínimo, enlaces externos, instancia única, menú en español, descargas, servidor en `127.0.0.1` sin cookies en memoria, entorno de php-wasm, instalación completa con datos fuera del código, `storage/` inaccesible, armado del paquete (aplicación, ventana e intérprete) y ausencia de ICU y de versiones de PHP que no se usan. |
 | `tests/js/android.mjs` | 18 comprobaciones del APK: arranque de PHP 8.3 sobre WebAssembly, instalación, sesión, panel, editor, auditor, guardado, reapertura y verificación del contenedor nativo (permisos, descargas, impresión, selección de archivos, firma). |
 | `tests/js/offline.mjs` | 0 dependencias de red: revisa las vistas, los estilos, los scripts y los catálogos y falla si aparece un `fetch`, un `WebSocket`, un `src`/`href`/`url()` externo, una llamada de red desde PHP o un dominio no declarado. |
 
@@ -686,7 +686,7 @@ Resultados esperados de la última ejecución completa:
 ✓ Páginas y menús PHP 8.3 · 32/32
 ✓ Escritorio (instaladores) · 37/37
 ✓ Android (APK) · 18/18
-✓ Escritorio (Electron) · 33/33
+✓ Escritorio (Electron) · 34/34
 ✓ Paquetes y demo · 39/39
 14/14 pasos correctos
 ```
@@ -814,9 +814,10 @@ macOS 12 Monterey**.
 - **Ayuda en la guía.** `docs/ELECTRON.md` explica el requisito, qué archivo usar
   según la arquitectura del Mac y una tabla de problemas al abrir (macOS 13,
   desarrollador no verificado, aplicación «dañada»).
-- **Pruebas.** `tests/js/electron.mjs` pasa de 30 a **33** comprobaciones y falla
-  si el flujo deja de compilar con la rama 43, si el paquete no declara el mínimo
-  o si la guía pierde el aviso.
+- **Pruebas.** `tests/js/electron.mjs` pasa de 30 a **34** comprobaciones y falla
+  si el flujo deja de compilar con la rama 43, si el paquete no declara el mínimo,
+  si el flujo no lee `LSMinimumSystemVersion` del artefacto o si la guía pierde
+  el aviso.
 
 La edición nativa (`.pkg`) y el APK no cambian: ya funcionaban en macOS 12.
 
