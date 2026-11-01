@@ -196,6 +196,13 @@ sin conexión y **el APK no pide permiso de red**.
 - **Android 8.0 (API 26) o superior.** El editor necesita un WebView
   actualizado (Chrome); en equipos con WebView muy antiguo la app muestra una
   pantalla de diagnóstico en vez de quedarse en blanco.
+- **Dos compilaciones del intérprete.** El paquete PHP trae el motor en
+  `asyncify` y en `jspi`; el APK lleva **las dos** y la pantalla pide la que
+  admite el navegador, consultando la misma detección que usa el cargador
+  (`jspi()` de `wasm-feature-detect`, reexportada por `php/runtime.js`). Antes
+  solo viajaba `asyncify` y en Android 15 (Chrome 137 o posterior) el arranque
+  moría con `Import #0 "env" "invoke_ii": function import requires a callable`
+  (corregido en la **1.15.3**).
 - **La pantalla viaja dentro del APK.** `tools/android/build.mjs` copia las
   tripas de `assets/` (`css/`, `img/`, `js/`…) a la **raíz** de
   `app/src/main/assets/`, junto a la pantalla contenedora y al intérprete. El
@@ -206,7 +213,7 @@ sin conexión y **el APK no pide permiso de red**.
   cargaba «en crudo», sin estilos ni scripts (corregido en la **1.15.1**).
   `tools/android/check.mjs` pide las páginas al intérprete y comprueba que
   **cada** ruta `/assets/…` exista en el APK antes de compilar.
-- Unos 60 MB de espacio; los planos ocupan pocos cientos de KB más.
+- Unos 80 MB de espacio desde la 1.15.3 (dos compilaciones del intérprete, ~17 MB cada una); los planos ocupan pocos cientos de KB más.
 - Descargas en la carpeta **Descargas** del teléfono.
 - Impresión con el servicio de impresión de Android (y «Guardar como PDF»).
 
@@ -301,6 +308,7 @@ node tools/android/build.mjs --apk
 | «Ya había una instancia abierta» | El lanzador reutiliza la ventana existente. Detén la anterior con «Detener Normia». |
 | El instalador no arranca en Windows | SmartScreen: «Más información → Ejecutar de todas formas». |
 | macOS dice que la app está dañada | Suele ser la cuarentena de un archivo descargado: clic derecho → Abrir. Si persiste, `xattr -dr com.apple.quarantine "/Applications/Normia Planos CAD.app"`. |
+| Android muestra un `LinkError` con `Import #0 "env" "invoke_ii"` | APK anterior a la **1.15.3**: llevaba solo el intérprete `asyncify` y el WebView de Android 15 pedía el cargador `jspi`. Instala la 1.15.3 o posterior. |
 | La app de Android se queda en la pantalla de arranque | Pulsa **Reintentar**; si vuelve a fallar, abre **Cómo reportar el problema** y envía el texto con el modelo del equipo y la versión de Android. |
 | Android muestra «la página web no está disponible · `net::ERR_INVALID_RESPONSE`» | Es un APK anterior a la **1.15.1**: buscaba la pantalla en `…/index.html` o dejaba los estáticos fuera de sitio. Instala el APK de la 1.15.1 o posterior. Desde la 1.15.1, si algo no carga, la app muestra un aviso propio con el código y un botón **Reintentar**. |
 | Android abre el editor «en crudo», sin estilos | APK de la **1.14.2**: la aplicación estaba en `assets/www/` y sus rutas `/assets/…` no encontraban los archivos. Instala la 1.15.1. |

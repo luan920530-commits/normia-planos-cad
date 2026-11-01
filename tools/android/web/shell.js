@@ -137,14 +137,50 @@ async function openStorage() {
 async function boot() {
   step('Cargando el intérprete', `PHP 8.3 · WebAssembly`);
   const runtime = await import('./php/runtime.js');
-  const wasmUrl = new URL('./php/php_8_3.wasm', import.meta.url);
+  /*
+   * El intérprete viene compilado de dos maneras y hay que cargar la que
+   * corresponde al cargador que `loadWebRuntime` va a usar:
+   *
+   *   asyncify  → el motor «clásico», el que también usan las pruebas en Node.
+   *   jspi      → suspensión nativa del navegador (Chrome moderno, Android 15).
+   *
+   * La decisión la toma `wasm-feature-detect`. Se consulta la **misma** función
+   * que usa el cargador para no desalinearse: si se pide el binario de asyncify
+   * con el cargador de JSPI, el arranque muere con «Import #0 "env"
+   * "invoke_ii": function import requires a callable».
+   */
+  let modo = 'asyncify';
+  try {
+    if (typeof runtime.jspi === 'function' && await runtime.jspi()) modo = 'jspi';
+  } catch (error) {
+    HOST.log(`[normia] no se pudo comprobar JSPI: ${error}`);
+  }
+
   // El archivo llega desde los activos del APK; no hay red de por medio.
-  const wasmBinary = new Uint8Array(await (await fetch(wasmUrl.href)).arrayBuffer());
-  step('Intérprete descargado', `${Math.round(wasmBinary.length / 1048576)} MB`);
-  const php = new runtime.PHP(
-    await runtime.loadWebRuntime('8.3', { emscriptenOptions: { wasmBinary } })
-  );
-  step('Intérprete iniciado');
+  const cargar = async (cual) => {
+    const respuesta = await fetch(new URL(`./php/php_8_3_${cual}.wasm`, import.meta.url).href);
+    if (!respuesta.ok) throw new Error(`No se encontró el intérprete «${cual}» (código ${respuesta.status}).`);
+    const wasmBinary = new Uint8Array(await respuesta.arrayBuffer());
+    step('Intérprete descargado', `${Math.round(wasmBinary.length / 1048576)} MB · ${cual}`);
+    const instancia = await runtime.loadWebRuntime('8.3', { emscriptenOptions: { wasmBinary } });
+    return { php: new runtime.PHP(instancia), modo: cual };
+  };
+
+  // Si la detección de la pantalla y la del cargador no coincidieran —no debería,
+  // es la misma función—, el error típico es `Import #0 "env" "invoke_ii":
+  // function import requires a callable`. En vez de dejar al usuario en el
+  // arranque, se prueba la otra compilación una sola vez.
+  let cargado;
+  try {
+    cargado = await cargar(modo);
+  } catch (error) {
+    HOST.log(`[normia] el intérprete ${modo} no arrancó: ${error}`);
+    const alternativa = modo === 'jspi' ? 'asyncify' : 'jspi';
+    step('Reintentando con otro intérprete', alternativa);
+    cargado = await cargar(alternativa);
+  }
+  const php = cargado.php;
+  step('Intérprete iniciado', `modo ${cargado.modo}`);
 
   const info = await (await fetch('./php/app-files.json')).json();
   step('Aplicación empaquetada', `${Object.keys(info.files).length} archivos · versión ${info.version}`);
