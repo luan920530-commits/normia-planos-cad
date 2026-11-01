@@ -22,15 +22,25 @@ final class Url
         return self::$base;
     }
 
+    /**
+     * URL interna. La ruta puede llevar un ancla al final (`plugins#instalar`):
+     * se separa antes de codificar para que el navegador salte al bloque.
+     */
     public static function to(string $route = '', array $params = []): string
     {
         $base = self::basePath();
+        $fragment = '';
+        $anchor = strpos($route, '#');
+        if ($anchor !== false) {
+            $fragment = substr($route, $anchor);
+            $route = substr($route, 0, $anchor);
+        }
         $query = $params;
         if ($route !== '') {
             $query = ['r' => trim($route, '/')] + $query;
         }
         $encoded = http_build_query($query, '', '&', PHP_QUERY_RFC3986);
-        return $base . '/index.php' . ($encoded !== '' ? '?' . $encoded : '');
+        return $base . '/index.php' . ($encoded !== '' ? '?' . $encoded : '') . $fragment;
     }
 
     public static function asset(string $path): string

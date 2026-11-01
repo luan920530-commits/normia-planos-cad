@@ -37,29 +37,31 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 20. [Distribución: escritorio y Android](#distribución-escritorio-y-android)
 21. [Edición Electron](#edición-electron)
 22. [Guía de primeros pasos](#guía-de-primeros-pasos)
-23. [Cambios de la versión 1.15.9](#cambios-de-la-versión-1159)
-24. [Cambios de la versión 1.15.8](#cambios-de-la-versión-1158)
-25. [Cambios de la versión 1.15.7](#cambios-de-la-versión-1157)
-26. [Cambios de la versión 1.15.6](#cambios-de-la-versión-1156)
-27. [Cambios de la versión 1.15.5](#cambios-de-la-versión-1155)
-28. [Cambios de la versión 1.15.4](#cambios-de-la-versión-1154)
-29. [Cambios de la versión 1.15.3](#cambios-de-la-versión-1153)
-30. [Cambios de la versión 1.15.2](#cambios-de-la-versión-1152)
-31. [Cambios de la versión 1.15.1](#cambios-de-la-versión-1151)
-32. [Cambios de la versión 1.15.0](#cambios-de-la-versión-1150)
-33. [Cambios de la versión 1.14.2](#cambios-de-la-versión-1142)
-34. [Cambios de la versión 1.14.1](#cambios-de-la-versión-1141)
-35. [Cambios de la versión 1.14.0](#cambios-de-la-versión-1140)
-36. [Cambios de la versión 1.13.0](#cambios-de-la-versión-1130)
-37. [Cambios de la versión 1.12.0](#cambios-de-la-versión-1120)
-38. [Cambios de la versión 1.11.1](#cambios-de-la-versión-1111)
-39. [Cambios de la versión 1.11.0](#cambios-de-la-versión-1110)
-40. [Cambios de la versión 1.10.0](#cambios-de-la-versión-1100)
-41. [Cambios de la versión 1.9.0](#cambios-de-la-versión-190)
-42. [Cambios de la versión 1.8.0](#cambios-de-la-versión-180)
-36. [Paquetes y verificación](#paquetes-y-verificación)
-37. [Limitaciones](#limitaciones)
-38. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
+23. [Complementos](#complementos)
+24. [Cambios de la versión 1.16.0](#cambios-de-la-versión-1160)
+25. [Cambios de la versión 1.15.9](#cambios-de-la-versión-1159)
+26. [Cambios de la versión 1.15.8](#cambios-de-la-versión-1158)
+27. [Cambios de la versión 1.15.7](#cambios-de-la-versión-1157)
+28. [Cambios de la versión 1.15.6](#cambios-de-la-versión-1156)
+29. [Cambios de la versión 1.15.5](#cambios-de-la-versión-1155)
+30. [Cambios de la versión 1.15.4](#cambios-de-la-versión-1154)
+31. [Cambios de la versión 1.15.3](#cambios-de-la-versión-1153)
+32. [Cambios de la versión 1.15.2](#cambios-de-la-versión-1152)
+33. [Cambios de la versión 1.15.1](#cambios-de-la-versión-1151)
+34. [Cambios de la versión 1.15.0](#cambios-de-la-versión-1150)
+35. [Cambios de la versión 1.14.2](#cambios-de-la-versión-1142)
+36. [Cambios de la versión 1.14.1](#cambios-de-la-versión-1141)
+37. [Cambios de la versión 1.14.0](#cambios-de-la-versión-1140)
+38. [Cambios de la versión 1.13.0](#cambios-de-la-versión-1130)
+39. [Cambios de la versión 1.12.0](#cambios-de-la-versión-1120)
+40. [Cambios de la versión 1.11.1](#cambios-de-la-versión-1111)
+41. [Cambios de la versión 1.11.0](#cambios-de-la-versión-1110)
+42. [Cambios de la versión 1.10.0](#cambios-de-la-versión-1100)
+43. [Cambios de la versión 1.9.0](#cambios-de-la-versión-190)
+44. [Cambios de la versión 1.8.0](#cambios-de-la-versión-180)
+45. [Paquetes y verificación](#paquetes-y-verificación)
+46. [Limitaciones](#limitaciones)
+47. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
 
 ---
 
@@ -74,6 +76,7 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 | Editor | Lienzo SVG con rejilla, reglas, ajuste, zoom, paneo, selección múltiple, marquesina, capas y grupos. |
 | Herramientas | Muro (recto o **curvo**), puerta sencilla, puerta doble, portón o reja, ruta de evacuación, texto, medida, línea, rectángulo, elipse, **tubería**, **tubería eléctrica**, **vía vehicular**, **andén**, **paso cebra**, **parqueadero** y **límite de predio**. |
 | Bibliotecas | 395 señales (332 ISO 7010 + 23 de orientación y servicios + 34 de tránsito + 6 de emergencia y brigada) en 9 familias y 420 objetos CAD en 31 familias, con búsqueda con sinónimos y filtros por familia. |
+| Complementos | Paquetes de datos (`plugin.json` o `.zip`) con señales y equipos CAD propios: se instalan, se activan o desactivan y se borran desde **Complementos**, sin ejecutar código ni reinstalar la aplicación. |
 | Propiedades | Posición, tamaño, rotación, sentido de apertura, color (paleta de 34), grosor, opacidad, texto, capa, bloqueo, cambio de tipo y, en redes, **sistema, diámetro, material, pendiente, presión, circuito, tensión, calibre, fases y carga**. |
 | Historial | Deshacer/rehacer con 120 pasos, duplicar, pegar, agrupar, alinear, distribuir y orden de dibujo. |
 | Redes | Panel **Redes y circuitos** con longitudes por sistema, diámetros usados, pendientes, cargas por circuito, breaker y calibre sugeridos y caída de tensión estimada. |
@@ -721,7 +724,7 @@ La suite usa **php-wasm** (PHP compilado a WebAssembly) y **JSDOM**, de modo que
 
 ```bash
 npm install            # solo desarrollo: @php-wasm/node y jsdom
-npm test               # suite completa (8 pasos)
+npm test               # suite completa (15 pasos)
 npm run test:quick     # sin construir/validar paquetes
 npm run test:php:81    # suite funcional en PHP 8.1
 npm run test:php:83    # suite funcional en PHP 8.3
@@ -755,33 +758,35 @@ Lo único que no funciona sin red es la **vista previa de desarrollo** (`npm run
 | Bloque | Comprobaciones |
 | --- | --- |
 | `tests/php/lint.mjs` | `php -l` sobre todo `app/`, `bootstrap.php` e `index.php` en 8.1 y 8.3. |
-| `tests/php/functional.mjs` | 284 comprobaciones: instalador, requisitos, contraseñas débiles, CSRF, sesión, autorización entre cuentas, CRUD de proyectos/pisos, duplicados, importación v1/v2, catálogos (395 señales y 420 objetos), catálogo y guardado de redes, señales de baño y de servicios (guardado, color de familia y exportación SVG), **auditor y medición de evacuación** (salidas, recorrido máximo, zonas inalcanzables, rutas que cruzan muros o no llegan a la salida, ocupación declarada y estimada, señalización, validación de `isExit`, informe imprimible y demo coherente), **muros curvos y vías** (guardado en formato 3, auditor con el muro curvo separando recintos, arco `A` en el SVG, vía que no bloquea frente a muro que sí, `422` para curvas desalineadas, `kind` desconocido, curvas en una puerta y formato desconocido), **sección tipo y glorieta** (formato 4 con ancho derivado, SVG con calzada, andenes, anillo e isla, y `422` para una medida fuera de rango, una clave desconocida, una glorieta sin sección y un cruce desconocido), **modo brigadista** (panel, token de 32 caracteres, página pública sin sesión ni scripts inline, API del plan, service worker, regeneración y desactivación del enlace) y **verificación física** (lista sin trazos, tres estados, novedad sin nota rechazada, rondas e historial, cobertura, aviso de días y foto servida solo a la cuenta dueña), puertas y portones (geometría, sentidos de apertura, exportación con trazo), validaciones de la API, guardado/versiones/borradores/conflictos, exportaciones, ciclo de vida y logout. |
-| `tests/js/editor.mjs` | 380 comprobaciones de interfaz sobre la app real: arranque, 395 señales y 420 objetos, **muros curvos** (rombo del tramo, arco de tres puntos, radio y flecha en el inspector, enderezar, doble clic que parte el arco, caja analítica, puerta sobre el arco, formato 3 y degradación a v2, marcado idéntico sin curvas), **vías y andenes** (banda de 6 m con carriles, cambio de ancho y carriles, parqueadero contado en la etiqueta, franjas del paso cebra y rótulo del lindero), **sección tipo y cruces** (avenida de 20 m en formato 4, perfil transversal en el inspector, cambio de andén que recalcula el ancho, glorieta de cinco accesos, vuelta a vía normal, corredor de ejemplo en una acción y sinónimos «carro», «bici» y «semáforo»), **trazado de tuberías y circuitos, inspector de red y panel de redes**, **mano y paneo, selección de superpuestos, inspector plegable y paleta de herramientas**, **guía de primeros pasos** (apertura en el primer uso, siete pasos, progreso tomado del plano, salto a la herramienta con la baldosa resaltada, reinicio y desactivación), **buscador con sinónimos y sin tildes** (calle → vía, anden → andén, parqueo → parqueadero), **baldosa propia de vías y andenes**, puertas dobles y portones, **vértices de ruta editables (arrastrar, doble clic, Alt+clic)**, **señal de baño insertada desde la biblioteca**, **posiciones reales del trazo**, **clic sobre muros finos, pictogramas y equipos**, **cambio de señal y de equipo desde el inspector**, **auditor de planos** (interruptor de salida, ocupación declarada, cajón de revisión, contador, filtros, «Ver en el plano», cierre sin dejar el fondo bloqueado), **pliego de señalización** (conteo, tamaño sugerido, CSV, precios y consistencia), **medición de rutas internas** (ruta que rodea muros, tramos, guardado en capa y comparación), **modo presentación** (pantalla limpia, láser, spotlight, rutas animadas, capas, quiz y salida sin perder el estado), **rotación**, **rutas cerradas**, **arrastrar y soltar desde la biblioteca sin que el cajón lo bloquee**, reglas, herramientas, inserción con puntero, selección, mover, escalar, rotar, color, cambio de tipo, deshacer/rehacer, duplicar, agrupar, bloquear, desplazar, texto y saneado, guardar, reabrir, borradores, conflictos, exportación SVG/JSON/PNG, tooltips sin acumulación, capas, versiones y límites. |
+| `tests/php/functional.mjs` | 310 comprobaciones: instalador, requisitos, contraseñas débiles, CSRF, sesión, autorización entre cuentas, CRUD de proyectos/pisos, duplicados, importación v1/v2, catálogos (395 señales y 420 objetos), catálogo y guardado de redes, señales de baño y de servicios (guardado, color de familia y exportación SVG), **auditor y medición de evacuación** (salidas, recorrido máximo, zonas inalcanzables, rutas que cruzan muros o no llegan a la salida, ocupación declarada y estimada, señalización, validación de `isExit`, informe imprimible y demo coherente), **muros curvos y vías** (guardado en formato 3, auditor con el muro curvo separando recintos, arco `A` en el SVG, vía que no bloquea frente a muro que sí, `422` para curvas desalineadas, `kind` desconocido, curvas en una puerta y formato desconocido), **sección tipo y glorieta** (formato 4 con ancho derivado, SVG con calzada, andenes, anillo e isla, y `422` para una medida fuera de rango, una clave desconocida, una glorieta sin sección y un cruce desconocido), **modo brigadista** (panel, token de 32 caracteres, página pública sin sesión ni scripts inline, API del plan, service worker, regeneración y desactivación del enlace), **complementos** (pantalla, manual, descarga de las dos plantillas, instalación desde `plugin.json` y desde `.zip` con SVG al lado, familia y color propios en el catálogo, sinónimos en el buscador, activar/desactivar, borrado, rechazo de un manifiesto inválido y de un `.zip` sin su SVG) y **verificación física** (lista sin trazos, tres estados, novedad sin nota rechazada, rondas e historial, cobertura, aviso de días y foto servida solo a la cuenta dueña), puertas y portones (geometría, sentidos de apertura, exportación con trazo), validaciones de la API, guardado/versiones/borradores/conflictos, exportaciones, ciclo de vida y logout. |
+| `tests/js/plugins.mjs` | 20 comprobaciones de los complementos en el editor: traducción `plg_…` ↔ `PLG_…`, color y tamaño de la familia propia, búsqueda por sinónimos, filtro por familia, inserción, guardado y reapertura del elemento. |
+| `tests/js/editor.mjs` | 383 comprobaciones de interfaz sobre la app real: arranque, 395 señales y 420 objetos, **muros curvos** (rombo del tramo, arco de tres puntos, radio y flecha en el inspector, enderezar, doble clic que parte el arco, caja analítica, puerta sobre el arco, formato 3 y degradación a v2, marcado idéntico sin curvas), **vías y andenes** (banda de 6 m con carriles, cambio de ancho y carriles, parqueadero contado en la etiqueta, franjas del paso cebra y rótulo del lindero), **sección tipo y cruces** (avenida de 20 m en formato 4, perfil transversal en el inspector, cambio de andén que recalcula el ancho, glorieta de cinco accesos, vuelta a vía normal, corredor de ejemplo en una acción y sinónimos «carro», «bici» y «semáforo»), **trazado de tuberías y circuitos, inspector de red y panel de redes**, **mano y paneo, selección de superpuestos, inspector plegable y paleta de herramientas**, **guía de primeros pasos** (apertura en el primer uso, siete pasos, progreso tomado del plano, salto a la herramienta con la baldosa resaltada, reinicio y desactivación), **buscador con sinónimos y sin tildes** (calle → vía, anden → andén, parqueo → parqueadero), **baldosa propia de vías y andenes**, puertas dobles y portones, **vértices de ruta editables (arrastrar, doble clic, Alt+clic)**, **señal de baño insertada desde la biblioteca**, **posiciones reales del trazo**, **clic sobre muros finos, pictogramas y equipos**, **cambio de señal y de equipo desde el inspector**, **auditor de planos** (interruptor de salida, ocupación declarada, cajón de revisión, contador, filtros, «Ver en el plano», cierre sin dejar el fondo bloqueado), **pliego de señalización** (conteo, tamaño sugerido, CSV, precios y consistencia), **medición de rutas internas** (ruta que rodea muros, tramos, guardado en capa y comparación), **modo presentación** (pantalla limpia, láser, spotlight, rutas animadas, capas, quiz y salida sin perder el estado), **rotación**, **rutas cerradas**, **arrastrar y soltar desde la biblioteca sin que el cajón lo bloquee**, reglas, herramientas, inserción con puntero, selección, mover, escalar, rotar, color, cambio de tipo, deshacer/rehacer, duplicar, agrupar, bloquear, desplazar, texto y saneado, guardar, reabrir, borradores, conflictos, exportación SVG/JSON/PNG, tooltips sin acumulación, capas, versiones y límites. |
 | `tests/js/pages.mjs` | 50 comprobaciones de las páginas fuera del editor y de la portada pública: menú de acciones de proyectos y pisos (capa fija, colocación, teclado, un solo menú), confirmación de borrado y borrado real de piso y proyecto, con la protección del último piso, la **portada pública** (cinco capturas con texto alternativo, flechas de la galería y token del formulario) y **la página pública del modo brigadista** ejecutando su JavaScript: acciones rápidas, atenuado del plano, alto contraste recordado, zoom y borrado de la copia local. |
 | `tests/php/package.mjs` | 39 comprobaciones: construye ambos ZIP, verifica que no haya bases, sesiones, credenciales, logs ni carpetas de desarrollo, valida los SHA-256 y hace una instalación limpia de la demo comprobando assets, catálogos (395/420), los cuatro pisos del proyecto de ejemplo, señales de servicios y redes en la demo, la señal «Usted está aquí», **el auditor y su informe en la demo empaquetada**, editor, SVG, JSON e impresión. |
 | `tests/php/desktop.mjs` | 37 comprobaciones del escritorio: rutas de datos separadas del código, `NORMA_DATA_PATH` (solo absolutas), lanzador (argumentos, puerto, estado, cierre), enrutador (bloqueos, saltos de directorio, byte nulo) y una instalación completa escribiendo en una carpeta de datos externa. |
-| `tests/js/electron.mjs` | 37 comprobaciones de la edición Electron: ventana sin acceso a Node, puente mínimo, enlaces externos, instancia única, menú en español, descargas, servidor en `127.0.0.1` sin cookies en memoria, entorno de php-wasm, instalación completa con datos fuera del código, `storage/` inaccesible, armado del paquete (aplicación, ventana e intérprete), los ocho paquetes de php-wasm dentro de `runtime/node_modules`, el rechazo de un paquete sin ellos, el mínimo de macOS y la ausencia de ICU y de versiones de PHP que no se usan. |
+| `tests/js/electron.mjs` | 40 comprobaciones de la edición Electron: ventana sin acceso a Node, puente mínimo, enlaces externos, instancia única, menú en español, descargas, servidor en `127.0.0.1` sin cookies en memoria, entorno de php-wasm, instalación completa con datos fuera del código, `storage/` inaccesible, armado del paquete (aplicación, ventana e intérprete), los ocho paquetes de php-wasm dentro de `runtime/node_modules`, el rechazo de un paquete sin ellos, el mínimo de macOS y la ausencia de ICU y de versiones de PHP que no se usan. |
 | `tests/js/android.mjs` | 52 comprobaciones del APK: arranque de PHP 8.3 sobre WebAssembly, instalación, sesión, panel, editor, auditor, guardado, reapertura y verificación del contenedor nativo (permisos, descargas, impresión, selección de archivos, firma, prefijo de los activos y aviso de error). |
 | `tests/js/offline.mjs` | 0 dependencias de red: revisa las vistas, los estilos, los scripts y los catálogos y falla si aparece un `fetch`, un `WebSocket`, un `src`/`href`/`url()` externo, una llamada de red desde PHP o un dominio no declarado. |
 
 Resultados esperados de la última ejecución completa:
 
 ```text
-✓ Sintaxis PHP 8.1 · 64 archivos, sin errores
-✓ Sintaxis PHP 8.3 · 64 archivos, sin errores
-✓ Sintaxis JavaScript · 51 archivos, sin errores
-✓ Funcionamiento sin conexión · 97 archivos, sin referencias externas
-✓ Funcional PHP 8.1 · 213/213
-✓ Funcional PHP 8.3 · 213/213
-✓ Interfaz (JSDOM) PHP 8.1 · 363/363
-✓ Interfaz (JSDOM) PHP 8.3 · 363/363
-✓ Páginas y menús PHP 8.1 · 32/32
-✓ Páginas y menús PHP 8.3 · 32/32
+✓ Sintaxis PHP 8.1 · 80 archivos, sin errores
+✓ Sintaxis PHP 8.3 · 80 archivos, sin errores
+✓ Sintaxis JavaScript · 61 archivos, sin errores
+✓ Complementos (JS) · 20/20
+✓ Funcionamiento sin conexión · 124 archivos, sin referencias externas
+✓ Funcional PHP 8.1 · 310/310
+✓ Funcional PHP 8.3 · 310/310
+✓ Interfaz (JSDOM) PHP 8.1 · 383/383
+✓ Interfaz (JSDOM) PHP 8.3 · 383/383
+✓ Páginas y menús PHP 8.1 · 50/50
+✓ Páginas y menús PHP 8.3 · 50/50
 ✓ Escritorio (instaladores) · 37/37
 ✓ Android (APK) · 52/52
-✓ Escritorio (Electron) · 37/37
+✓ Escritorio (Electron) · 40/40
 ✓ Paquetes y demo · 39/39
-14/14 pasos correctos
+15/15 pasos correctos
 ```
 
 Las pruebas trabajan sobre copias temporales: no escriben configuración ni bases en el repositorio. `node_modules` solo contiene dependencias de desarrollo y se excluye de los paquetes.
@@ -933,6 +938,72 @@ encontraban nada. Desde la 1.12.0:
   exacto. Cuando no hay resultados, propone palabras cercanas.
 - El lienzo muestra la **pista de la herramienta** al elegir cualquiera de las
   cinco (antes caía en la pista de «Seleccionar»).
+
+## Complementos
+
+Un **complemento** añade señalización y equipamiento a la biblioteca del editor
+sin tocar el programa: un desarrollador externo —o el propio equipo de SST—
+empaqueta sus pictogramas y sus equipos, los sube y los activa.
+
+- **Entrada propia**: menú **Complementos** (`index.php?r=plugins`), con las
+  cifras del catálogo, el formulario de instalación, la lista de instalados y su
+  estado (activo/desactivado), y los botones de activar, desactivar y eliminar.
+- **Solo datos**: el complemento es un `plugin.json` —solo o dentro de un `.zip`
+  con sus `.svg`— que declara señales (`signs`), equipos (`cad`) y familias
+  nuevas (`categories`). Nunca ejecuta PHP, JavaScript ni plantillas, y no puede
+  leer la base de datos, la sesión ni los planos.
+- **Validado antes de guardar**: identificadores, versiones, colores `#rrggbb`,
+  textos acotados y SVG filtrados (sin `<script>`, manejadores `on*`, enlaces
+  externos ni `data:`). Si algo falla, no se instala nada.
+- **Integrado con el editor**: las señales aparecen en la biblioteca con su
+  familia, su color y sus sinónimos de búsqueda; se insertan, se guardan, se
+  auditan y se exportan igual que las ISO 7010 y las propias.
+- **Con manual**: la aplicación trae el manual del desarrollador
+  (`index.php?r=plugins/manual`), con las plantillas descargables; en el
+  repositorio está en [docs/PLUGINS.md](docs/PLUGINS.md).
+- **Dónde vive**: manifiesto en `storage/plugins/<id>/plugin.json` y estado en la
+  tabla `plugins` (base de datos, `user_version = 5`). En el APK viaja con los
+  datos del teléfono; los paquetes no lo incluyen.
+
+Límites: **4 MB** por archivo, **400 elementos** por complemento, SVG de 40 bytes
+a 400 KB y 12 sinónimos por señal. Un complemento no certifica nada: sus
+elementos son referencias gráficas que se verifican en sitio.
+
+## Cambios de la versión 1.16.0
+
+- **Complementos: la plataforma se amplía sin reinstalar.** Un paquete de datos
+  (`plugin.json`, o un `.zip` con `plugin.json` y sus SVG) añade señales de
+  señalización y equipos CAD a la biblioteca. Se instala desde **Complementos**,
+  se activa o desactiva cuando se quiera y se borra sin tocar los planos
+  guardados.
+- **No ejecuta código.** El complemento solo declara datos y dibujos; la
+  plataforma los valida y los guarda en `storage/plugins/<id>/plugin.json`, con
+  el estado en la tabla `plugins`. Ni PHP, ni JavaScript, ni plantillas, ni acceso
+  a la base, la sesión o los planos.
+- **Validación completa antes de escribir nada.** Identificador, versión, textos
+  sin `<` ni `>`, familias con color `#rrggbb`, SVG filtrados (sin `<script>`,
+  manejadores `on*`, enlaces externos ni `data:`) y códigos con prefijo propio
+  (`PLG_…` para señales y `cad_…` para equipos), que no pueden suplantar un ISO,
+  un `SVC_` ni un objeto del catálogo. La instalación va a una carpeta temporal y
+  solo se renombra si todo el paquete es válido.
+- **Manual del desarrollador dentro de la aplicación**
+  (`Complementos › Cómo crear un complemento`): qué es, cuándo conviene, dónde se
+  guarda, estructura del archivo, reglas del SVG, cómo probarlo, errores
+  frecuentes, licencias y límites, con dos plantillas descargables (señalización
+  y equipos CAD) y la versión en texto en `docs/PLUGINS.md`.
+- **Integración en el editor**: tipos `plg_…` en el modelo, la biblioteca, el
+  inspector («Señal de complemento»), el renderizador, el auditor, las
+  exportaciones y el inventario de verificación; las familias nuevas traen su
+  color y sus sinónimos entran en el buscador.
+- **Detalle de estilo**: las páginas internas recuperan su contenedor
+  (`main.page`), con el mismo ancho y el mismo aire lateral que el resto del
+  panel.
+- **Pruebas**: bloque nuevo en la suite funcional (instalación desde plantilla y
+  desde `.zip`, activar y desactivar, borrado y rechazo de archivos inválidos) y
+  `tests/js/plugins.mjs` para el mapeo de tipos y la biblioteca.
+
+El formato del plano no cambia; la base sube a `user_version = 5` con la tabla
+`plugins`.
 
 ## Cambios de la versión 1.15.9
 

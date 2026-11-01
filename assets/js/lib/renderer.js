@@ -59,7 +59,10 @@
       const iso = /^iso_([efmpw][0-9]{3})$/i.exec(raw);
       if (iso) return iso[1].toUpperCase();
       const own = /^sig_([a-z][a-z0-9_]{1,40})$/i.exec(raw);
-      return own ? `SVC_${own[1].toUpperCase()}` : null;
+      if (own) return `SVC_${own[1].toUpperCase()}`;
+      // Señales que aporta un complemento: PLG_<COMPLEMENTO>_<SEÑAL>.
+      const plugin = /^plg_([a-z][a-z0-9_]{1,58})$/i.exec(raw);
+      return plugin ? `PLG_${plugin[1].toUpperCase()}` : null;
     }
 
     assetNode(type) {

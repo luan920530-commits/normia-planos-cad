@@ -119,6 +119,22 @@ final class Database
                 }
                 self::pdo()->exec('PRAGMA user_version = 4');
             }
+            if ($version < 5) {
+                // Complementos (plugins) instalados: el manifiesto vive en
+                // storage/plugins/<id>/plugin.json y aquí solo va el estado.
+                self::pdo()->exec(
+                    'CREATE TABLE IF NOT EXISTS plugins (
+                        id TEXT PRIMARY KEY,
+                        name TEXT NOT NULL DEFAULT "",
+                        version TEXT NOT NULL DEFAULT "",
+                        author TEXT NOT NULL DEFAULT "",
+                        enabled INTEGER NOT NULL DEFAULT 1,
+                        installed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+                    PRAGMA user_version = 5;'
+                );
+                $version = 5;
+            }
         } catch (Throwable $exception) {
             error_log('Normia: no se pudo migrar el esquema: ' . $exception->getMessage());
         }

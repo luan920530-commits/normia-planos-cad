@@ -1,0 +1,35 @@
+{
+  "api": 1,
+  "id": "acme-senalizacion",
+  "name": "Señalización ACME",
+  "version": "1.0.0",
+  "author": "Tu nombre o empresa",
+  "description": "Ejemplo de complemento de señalización: añade una familia propia y dos señales con su pictograma. Cámbialo, renómbralo y publícalo.",
+  "license": "GPL-3.0",
+  "categories": {
+    "laboratorio": {
+      "label": "Laboratorio y sustancias",
+      "short": "Laboratorio",
+      "description": "Señales propias de un laboratorio o almacén de sustancias químicas.",
+      "color": "#7c3aed"
+    }
+  },
+  "signs": [
+    {
+      "id": "ducha_emergencia",
+      "name": "Ducha de emergencia",
+      "category": "laboratorio",
+      "description": "Ducha y lavaojos para derrames o salpicaduras. Verifica la distancia al puesto de trabajo y el caudal en sitio.",
+      "aliases": ["ducha", "lavaojos", "derrame", "quimico"],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"2\" y=\"2\" width=\"96\" height=\"96\" rx=\"12\" fill=\"#7c3aed\"/><path d=\"M32 30h36v10H32z\" fill=\"#fff\"/><path d=\"M46 40v44\" fill=\"none\" stroke=\"#fff\" stroke-width=\"7\" stroke-linecap=\"round\"/><path d=\"M50 22v8\" fill=\"none\" stroke=\"#fff\" stroke-width=\"7\" stroke-linecap=\"round\"/><circle cx=\"50\" cy=\"18\" r=\"5\" fill=\"#fff\"/><path d=\"M78 44v26\" fill=\"none\" stroke=\"#fff\" stroke-width=\"7\" stroke-linecap=\"round\"/><circle cx=\"78\" cy=\"78\" r=\"6\" fill=\"#fff\"/></svg>"
+    },
+    {
+      "id": "gabinete_quimicos",
+      "name": "Gabinete de sustancias",
+      "category": "laboratorio",
+      "description": "Gabinete ventilado para sustancias corrosivas o inflamables.",
+      "aliases": ["gabinete", "reactivos", "inflamable"],
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect x=\"2\" y=\"2\" width=\"96\" height=\"96\" rx=\"12\" fill=\"#7c3aed\"/><rect x=\"28\" y=\"22\" width=\"44\" height=\"56\" rx=\"4\" fill=\"none\" stroke=\"#fff\" stroke-width=\"6\"/><path d=\"M50 22v56\" fill=\"none\" stroke=\"#fff\" stroke-width=\"4\"/><circle cx=\"41\" cy=\"50\" r=\"3\" fill=\"#fff\"/><circle cx=\"59\" cy=\"50\" r=\"3\" fill=\"#fff\"/><path d=\"M36 84h28\" fill=\"none\" stroke=\"#fff\" stroke-width=\"6\" stroke-linecap=\"round\"/></svg>"
+    }
+  ]
+}

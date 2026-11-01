@@ -612,3 +612,87 @@ kbd { font-family: var(--font-mono); font-size: .74rem; background: var(--surfac
   .project-card, .card, .brand-mark, .button { transition: none; }
   .project-card:hover { transform: none; }
 }
+
+/* =============================== complementos =============================== */
+/* Contenedor de las páginas internas (panel, formularios, complementos). El
+   layout usa <main class="page">; estas reglas le dan el mismo ancho y el mismo
+   aire lateral que el resto del panel. */
+.page {
+  width: 100%; max-width: 1180px; margin: 0 auto;
+  padding: clamp(22px, 4vw, 40px) clamp(16px, 4vw, 44px) 56px;
+}
+
+.plugins-page { display: flex; flex-direction: column; gap: 22px; max-width: 980px; }
+.plugins-page .form-page-head { gap: 8px; }
+.plugins-head h1 { font-size: clamp(1.5rem, 3.4vw, 1.95rem); }
+.plugins-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.plugins-page code {
+  font-family: var(--font-mono); font-size: .82em;
+  background: var(--surface-sunken); border: 1px solid var(--line);
+  border-radius: 6px; padding: 1px 5px;
+}
+
+.plugin-list { display: grid; gap: 14px; }
+.plugins-list-title { font-size: 1.05rem; }
+.plugin-card { display: flex; flex-direction: column; gap: 12px; border-left: 4px solid var(--line-strong); }
+.plugin-card.is-on { border-left-color: var(--green); }
+.plugin-card.is-off { background: var(--surface-soft); border-left-color: var(--muted-light); }
+.plugin-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.plugin-card-head h3 { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.plugin-version {
+  font-size: .72rem; font-weight: 700; color: var(--muted);
+  background: var(--surface-sunken); border-radius: 999px; padding: 2px 8px;
+}
+.plugin-meta { color: var(--muted); font-size: .8rem; margin-top: 4px; }
+.plugin-state {
+  flex: 0 0 auto; font-size: .7rem; font-weight: 700; letter-spacing: .05em;
+  text-transform: uppercase; padding: 4px 10px; border-radius: 999px;
+  background: var(--surface-sunken); color: var(--muted);
+}
+.plugin-card.is-on .plugin-state { background: var(--green-soft); color: var(--green); }
+.plugin-description { color: var(--ink-soft); font-size: .9rem; }
+.plugin-counts {
+  display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0; padding: 0;
+  list-style: none; font-size: .8rem; color: var(--muted);
+}
+.plugin-counts strong { color: var(--ink); }
+.plugin-detail { font-size: .84rem; color: var(--ink-soft); }
+.plugin-detail summary { cursor: pointer; font-weight: 600; color: var(--blue); }
+.plugin-detail ul { margin: 8px 0 0; padding-left: 18px; display: grid; gap: 4px; }
+.plugin-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.plugin-actions form { display: inline-flex; }
+.plugins-rules, .plugins-steps {
+  margin: 0; padding-left: 20px; display: grid; gap: 7px;
+  color: var(--ink-soft); font-size: .9rem;
+}
+.plugins-note { background: var(--surface-soft); }
+
+/* Manual del desarrollador: lectura larga, tablas que no rompen el ancho. */
+.plugins-manual .panel-card { display: flex; flex-direction: column; gap: 10px; }
+.plugins-manual .panel-card h2 { font-size: 1.1rem; }
+.plugins-manual p { color: var(--ink-soft); font-size: .92rem; }
+.plugins-manual .help-text { color: var(--muted); font-size: .82rem; }
+.plugins-manual [id] { scroll-margin-top: 84px; }
+.manual-toc ol {
+  margin: 6px 0 0; padding-left: 20px; display: grid; gap: 5px;
+  columns: 2; column-gap: 26px; font-size: .88rem;
+}
+.manual-table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius-sm); }
+.manual-table { width: 100%; border-collapse: collapse; font-size: .84rem; min-width: 520px; }
+.manual-table th, .manual-table td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.manual-table thead th {
+  background: var(--surface-sunken); font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .06em; color: var(--muted); font-weight: 700;
+}
+.manual-table tbody tr:last-child td { border-bottom: 0; }
+.manual-table td:first-child { white-space: nowrap; }
+.manual-code {
+  margin: 0; padding: 14px 16px; border-radius: var(--radius-sm);
+  background: #0f172a; color: #e2e8f0; font-family: var(--font-mono);
+  font-size: .78rem; line-height: 1.5; overflow-x: auto;
+}
+
+@media (max-width: 680px) {
+  .manual-toc ol { columns: 1; }
+  .plugin-actions .button { flex: 1 1 auto; justify-content: center; }
+}

@@ -11,6 +11,8 @@
 !/storage/logs/.gitkeep
 /storage/cache/*
 !/storage/cache/.gitkeep
+# Complementos instalados por el usuario (datos, no código)
+/storage/plugins/
 /storage/last-error.log
 
 # Marcador que solo se incluye en el paquete de demostración

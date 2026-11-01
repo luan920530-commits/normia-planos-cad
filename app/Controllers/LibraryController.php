@@ -11,28 +11,46 @@ final class LibraryController extends BaseController
     public function signs(): void
     {
         $categories = LibraryRepository::signCategories();
+        $colors = LibraryRepository::SIGN_COLORS;
         foreach ($categories as $key => $category) {
-            $categories[$key]['color'] = LibraryRepository::SIGN_COLORS[$key] ?? '#334155';
+            // Las familias de los complementos traen su propio color: se respeta
+            // en vez de caer al gris de «sin familia».
+            $color = LibraryRepository::colorForCategory((string) $key) ?? '#334155';
+            $categories[$key]['color'] = $color;
+            $colors[$key] = $color;
         }
         $aliases = LibraryRepository::aliases();
         $signs = LibraryRepository::signs();
         $serviceCount = 0;
+        $pluginCount = 0;
+        $isoCount = 0;
         $search = $aliases['search'] ?? [];
         foreach ($signs as $code => $sign) {
-            if (str_starts_with((string) $code, LibraryRepository::SERVICE_PREFIX)) {
+            $code = (string) $code;
+            $own = str_starts_with($code, LibraryRepository::SERVICE_PREFIX)
+                || str_starts_with($code, LibraryRepository::PLUGIN_PREFIX);
+            if (str_starts_with($code, LibraryRepository::SERVICE_PREFIX)) {
                 $serviceCount++;
-                // Los alias propios de cada señal de servicio también alimentan la búsqueda.
-                $search[$code] = array_values(array_unique(array_merge($search[$code] ?? [], $sign['aliases'] ?? [])));
+            } elseif (str_starts_with($code, LibraryRepository::PLUGIN_PREFIX)) {
+                $pluginCount++;
+            } else {
+                $isoCount++;
+            }
+            // Los sinónimos propios de las señales de servicio y de los
+            // complementos también alimentan la búsqueda de la biblioteca.
+            if ($own && ($sign['aliases'] ?? []) !== []) {
+                $search[$code] = array_values(array_unique(array_merge($search[$code] ?? [], $sign['aliases'])));
             }
         }
         Response::json([
             'ok' => true,
             'standard' => 'ISO 7010',
             'count' => count($signs),
-            'isoCount' => count($signs) - $serviceCount,
+            'isoCount' => $isoCount,
             'serviceCount' => $serviceCount,
+            'pluginCount' => $pluginCount,
             'categories' => $categories,
-            'colors' => LibraryRepository::SIGN_COLORS,
+            'colors' => $colors,
             'signs' => $signs,
             'aliases' => $search,
             'legacyTools' => $aliases['legacyTools'] ?? [],

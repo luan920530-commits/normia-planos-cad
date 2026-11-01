@@ -1,0 +1,27 @@
+{
+  "api": 1,
+  "id": "labo-equipos",
+  "name": "Equipos de laboratorio",
+  "version": "0.1.0",
+  "author": "Tu nombre o empresa",
+  "description": "Ejemplo de complemento de equipamiento CAD: dos objetos esquemáticos para ubicar en la planta.",
+  "license": "GPL-3.0",
+  "cad": [
+    {
+      "id": "mesa_trabajo",
+      "name": "Mesa de trabajo",
+      "category": "laboratorio",
+      "description": "Mesa esquemática con dos puestos. Ajusta las medidas en el inspector.",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 120 60\"><rect x=\"2\" y=\"2\" width=\"116\" height=\"56\" rx=\"4\" fill=\"none\" stroke=\"#0f766e\" stroke-width=\"4\"/><path d=\"M40 8v44M80 8v44\" fill=\"none\" stroke=\"#0f766e\" stroke-width=\"2\" stroke-dasharray=\"4 4\"/></svg>"
+    },
+    {
+      "id": "campana_gases",
+      "name": "Campana extractora",
+      "category": "laboratorio",
+      "description": "Campana de extracción de gases vista en planta.",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 60\"><rect x=\"2\" y=\"2\" width=\"96\" height=\"56\" rx=\"6\" fill=\"none\" stroke=\"#0f766e\" stroke-width=\"4\"/><path d=\"M20 42c8-18 52-18 60 0\" fill=\"none\" stroke=\"#0f766e\" stroke-width=\"3\"/><circle cx=\"50\" cy=\"22\" r=\"4\" fill=\"#0f766e\"/></svg>"
+    }
+  ]
+}

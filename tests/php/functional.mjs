@@ -58,6 +58,64 @@ function localAssets(html, pageUrl, baseUrl = 'http://127.0.0.1') {
   return { external, urls, postForms: postForms.length, formsWithoutToken, inlineScripts, missingIcons, lang, dom };
 }
 
+/* ZIP mínimo (método «store») para probar la instalación desde .zip sin
+   depender de ninguna librería: cabecera local + directorio central + EOCD. */
+const CRC_TABLE = (() => {
+  const table = new Int32Array(256);
+  for (let index = 0; index < 256; index += 1) {
+    let value = index;
+    for (let bit = 0; bit < 8; bit += 1) value = value & 1 ? 0xEDB88320 ^ (value >>> 1) : value >>> 1;
+    table[index] = value;
+  }
+  return table;
+})();
+
+function crc32(buffer) {
+  let value = -1;
+  for (const byte of buffer) value = (value >>> 8) ^ CRC_TABLE[(value ^ byte) & 0xff];
+  return (value ^ -1) >>> 0;
+}
+
+function zipStore(entries) {
+  const locals = [];
+  const central = [];
+  let offset = 0;
+  for (const [name, content] of Object.entries(entries)) {
+    const data = Buffer.from(content, 'utf8');
+    const label = Buffer.from(name, 'utf8');
+    const crc = crc32(data);
+    const local = Buffer.alloc(30);
+    local.writeUInt32LE(0x04034b50, 0);
+    local.writeUInt16LE(20, 4);
+    local.writeUInt16LE(0x0800, 6);
+    local.writeUInt32LE(crc, 14);
+    local.writeUInt32LE(data.length, 18);
+    local.writeUInt32LE(data.length, 22);
+    local.writeUInt16LE(label.length, 26);
+    locals.push(local, label, data);
+    const header = Buffer.alloc(46);
+    header.writeUInt32LE(0x02014b50, 0);
+    header.writeUInt16LE(20, 4);
+    header.writeUInt16LE(20, 6);
+    header.writeUInt16LE(0x0800, 8);
+    header.writeUInt32LE(crc, 16);
+    header.writeUInt32LE(data.length, 20);
+    header.writeUInt32LE(data.length, 24);
+    header.writeUInt16LE(label.length, 28);
+    header.writeUInt32LE(offset, 42);
+    central.push(header, label);
+    offset += 30 + label.length + data.length;
+  }
+  const directory = Buffer.concat(central);
+  const end = Buffer.alloc(22);
+  end.writeUInt32LE(0x06054b50, 0);
+  end.writeUInt16LE(Object.keys(entries).length, 8);
+  end.writeUInt16LE(Object.keys(entries).length, 10);
+  end.writeUInt32LE(directory.length, 12);
+  end.writeUInt32LE(offset, 16);
+  return Buffer.concat([...locals, directory, end]);
+}
+
 try {
   /* ---------------------------- instalación ---------------------------- */
   let res = await client.get('/index.php');
@@ -1298,6 +1356,168 @@ try {
     brigadeAssets.dom.window.document.querySelectorAll('[data-brigade-filter], .brigade-action.is-call').length === 4);
   report.check('La página pública trae salida de emergencia y borrado de datos',
     /tel:123/.test(res.text) && /data-brigade-clear/.test(res.text) && /Alto contraste/.test(res.text));
+
+  /* ---------------------------- complementos ---------------------------- */
+  res = await client.get('plugins');
+  report.check('La pantalla de complementos responde 200', res.status === 200 && res.text.includes('Instalar un complemento'), String(res.status));
+  report.check('La pantalla de complementos no tiene avisos PHP', noPhpErrors(res.text));
+  const pluginAssets = localAssets(res.text, '/index.php?r=plugins');
+  report.check('Complementos solo con recursos locales y formularios con token',
+    pluginAssets.external.length === 0 && pluginAssets.formsWithoutToken === 0 && pluginAssets.lang === 'es',
+    `${pluginAssets.external.join(',')} · ${pluginAssets.formsWithoutToken}`);
+  report.check('La pantalla de complementos no tiene iconos rotos', pluginAssets.missingIcons.length === 0, pluginAssets.missingIcons.join(','));
+  const pluginsLinks = decodeEntities(decodeURIComponent(res.text));
+  report.check('Sin complementos se ofrece el manual y las plantillas',
+    /Todavía no hay complementos/.test(res.text) && /Cómo crear un complemento/.test(res.text)
+    && pluginsLinks.includes('plugins/plantilla/senalizacion') && pluginsLinks.includes('plugins/plantilla/cad')
+    && pluginsLinks.includes('plugins/manual') && res.text.includes('395'), String(res.status));
+
+  res = await client.get('plugins/manual');
+  report.check('El manual de complementos responde 200', res.status === 200 && /Cómo crear un complemento/.test(res.text), String(res.status));
+  report.check('El manual no tiene avisos PHP', noPhpErrors(res.text));
+  const manualAssets = localAssets(res.text, '/index.php?r=plugins/manual');
+  report.check('El manual solo usa recursos locales',
+    manualAssets.external.length === 0 && manualAssets.missingIcons.length === 0 && manualAssets.lang === 'es');
+  report.check('El manual explica el formato, el SVG y los límites',
+    /plugin\.json/.test(res.text) && /api/.test(res.text) && /400/.test(res.text)
+    && /viewBox/.test(res.text) && /docs\/PLUGINS\.md|PLUGINS/.test(res.text.replace(/<[^>]+>/g, ' ')),
+    'contenido del manual');
+
+  res = await client.get('plugins/plantilla/senalizacion');
+  const plantilla = (() => {
+    try { return JSON.parse(res.text); } catch { return null; }
+  })();
+  report.check('La plantilla de señalización se descarga como archivo',
+    res.status === 200 && /application\/json/.test(res.type)
+    && /attachment/.test(String(res.headers['content-disposition'] || ''))
+    && plantilla?.api === 1 && Array.isArray(plantilla?.signs) && plantilla.signs.length === 2,
+    `${res.status} ${res.type} ${res.headers['content-disposition'] || ''}`);
+  res = await client.get('plugins/plantilla/cad');
+  report.check('La plantilla de equipos CAD se descarga como archivo',
+    res.status === 200 && /application\/json/.test(res.type)
+    && /equipamiento\.plugin\.json/.test(String(res.headers['content-disposition'] || '')),
+    `${res.status}`);
+
+  const senalizacion = JSON.stringify(plantilla);
+  res = await client.request('/index.php?r=plugins', {
+    method: 'POST',
+    body: { _token: homeToken, plugin_file: new File([senalizacion], 'senalizacion.plugin.json', { type: 'application/json' }) },
+  });
+  report.check('Instalar un complemento desde la plantilla redirige a la lista',
+    [302, 303].includes(res.status) && /r=plugins/.test(decodeURIComponent(res.location)), `${res.status} ${res.location}`);
+  res = await client.get('plugins');
+  report.check('El complemento instalado aparece activo con sus cifras',
+    /Señalización ACME/.test(res.text) && /Activo/.test(res.text) && /2<\/strong> señales/.test(res.text)
+    && /familia laboratorio/.test(res.text) && /v1\.0\.0/.test(res.text), 'ficha del complemento');
+
+  let pluginCatalog = await json('catalogs/signs');
+  const codeDucha = 'PLG_ACME_SENALIZACION_DUCHA_EMERGENCIA';
+  report.check('El catálogo suma las dos señales del complemento',
+    pluginCatalog.body.count === 397 && pluginCatalog.body.isoCount === 332
+    && Boolean(pluginCatalog.body.signs?.[codeDucha]) && /^<svg/.test(pluginCatalog.body.signs[codeDucha].svg),
+    `${pluginCatalog.body.count} · ${pluginCatalog.body.isoCount}`);
+  report.check('La familia del complemento llega con su color propio',
+    pluginCatalog.body.categories?.laboratorio?.color === '#7c3aed' && pluginCatalog.body.colors?.laboratorio === '#7c3aed',
+    `${pluginCatalog.body.categories?.laboratorio?.color} · ${pluginCatalog.body.colors?.laboratorio}`);
+  report.check('Los sinónimos del complemento entran en el buscador',
+    (pluginCatalog.body.aliases?.[codeDucha] || []).includes('lavaojos'),
+    (pluginCatalog.body.aliases?.[codeDucha] || []).join(','));
+
+  // Los nombres de clase se arman con chr(92): así el código PHP embebido no
+  // depende de cómo se escapen las barras invertidas al incrustarlo.
+  const mapping = await app.run(`
+$repo = implode(chr(92), ['App', 'Services', 'LibraryRepository']);
+$code = '${codeDucha}';
+echo 'SIGN=' . ($repo::codeForType('plg_acme_senalizacion_ducha_emergencia') ?? 'NULL');
+echo '|TYPE=' . $repo::typeForCode($code);
+echo '|COLOR=' . ($repo::signColor($code) ?? 'NULL');
+echo '|ALLOWED=' . (in_array('plg_acme_senalizacion_ducha_emergencia', $repo::allowedTypes(), true) ? 'si' : 'no');
+echo '|SVC=' . ($repo::codeForType('sig_wc_men') ?? 'NULL');
+`);
+  report.check('El color de la señal viene de la familia del complemento',
+    /COLOR=#7c3aed/.test(mapping.text), (mapping.text || '').match(/COLOR=\S+/)?.[0] || '');
+
+  res = await client.postForm('plugins/acme-senalizacion/toggle', { _token: homeToken, estado: 'desactivar' });
+  report.check('Desactivar un complemento redirige a la lista', [302, 303].includes(res.status), String(res.status));
+  pluginCatalog = await json('catalogs/signs');
+  res = await client.get('plugins');
+  report.check('Desactivado, la lista lo marca y el catálogo vuelve a 395',
+    pluginCatalog.body.count === 395 && /Desactivado/.test(res.text) && /Activar/.test(res.text),
+    `${pluginCatalog.body.count}`);
+
+  res = await client.get(`projects/${projectId}/floors/${floorId}/editor`);
+  report.check('El editor sigue abriendo con un complemento desactivado', res.status === 200 && noPhpErrors(res.text), String(res.status));
+
+  res = await client.postForm('plugins/acme-senalizacion/toggle', { _token: homeToken, estado: 'activar' });
+  pluginCatalog = await json('catalogs/signs');
+  report.check('Reactivar devuelve las señales al catálogo', pluginCatalog.body.count === 397, `${pluginCatalog.body.count}`);
+
+  const malo = JSON.stringify({ api: 1, id: 'MAL', name: 'Roto', version: '1.0.0', author: 'X', signs: [] });
+  res = await client.request('/index.php?r=plugins', {
+    method: 'POST',
+    body: { _token: homeToken, plugin_file: new File([malo], 'roto.plugin.json', { type: 'application/json' }) },
+  });
+  const trasFallo = await client.get('plugins');
+  pluginCatalog = await json('catalogs/signs');
+  report.check('Un complemento inválido no se instala y se explica por qué',
+    [302, 303].includes(res.status) && /No se instaló el complemento/.test(trasFallo.text)
+    && /no declara nada/.test(trasFallo.text) && !/Roto/.test(trasFallo.text)
+    && pluginCatalog.body.count === 397,
+    String(pluginCatalog.body.count));
+
+  const svgTanque = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="34" fill="#0f766e"/><rect x="42" y="24" width="16" height="52" fill="#fff"/></svg>';
+  const equipos = JSON.stringify({
+    api: 1,
+    id: 'labo-equipos',
+    name: 'Equipos de laboratorio',
+    version: '0.1.0',
+    author: 'Pruebas Normia',
+    description: 'Dos equipos esquemáticos para la suite.',
+    license: 'GPL-3.0',
+    cad: [
+      { id: 'tanque_agua', name: 'Tanque de agua', category: 'laboratorio', description: 'Tanque elevado visto en planta.', color: '#0f766e', svg_file: 'tanque.svg' },
+      { id: 'bomba', name: 'Bomba', category: 'laboratorio', description: 'Bomba centrífuga.', color: '#0f766e', svg: svgTanque },
+    ],
+  });
+  const zip = zipStore({ 'plugin.json': equipos, 'tanque.svg': svgTanque });
+  res = await client.request('/index.php?r=plugins', {
+    method: 'POST',
+    body: { _token: homeToken, plugin_file: new File([zip], 'equipos.zip', { type: 'application/zip' }) },
+  });
+  const cadCatalog = await json('catalogs/cad');
+  report.check('Instalar un .zip con SVG al lado añade los equipos',
+    [302, 303].includes(res.status) && cadCatalog.body.count === 422
+    && Boolean(cadCatalog.body.objects?.cad_labo_equipos_tanque_agua)
+    && /^<svg/.test(cadCatalog.body.objects?.cad_labo_equipos_tanque_agua?.svg || ''),
+    `${cadCatalog.body.count} · ${Object.keys(cadCatalog.body.objects || {}).filter((key) => key.startsWith('cad_labo')).join(',')}`);
+
+  const sinArchivo = JSON.stringify({ ...JSON.parse(equipos), id: 'labo-sin-svg', cad: [{ id: 'pieza', name: 'Pieza', category: 'laboratorio', description: 'Sin dibujo.', svg_file: 'no-existe.svg' }] });
+  res = await client.request('/index.php?r=plugins', {
+    method: 'POST',
+    body: { _token: homeToken, plugin_file: new File([zipStore({ 'plugin.json': sinArchivo })], 'sin.svg.zip', { type: 'application/zip' }) },
+  });
+  const trasZip = await client.get('plugins');
+  report.check('Un .zip al que le falta el SVG no se instala',
+    [302, 303].includes(res.status) && /no está dentro del \.zip/.test(trasZip.text) && !/labo-sin-svg/.test(trasZip.text),
+    'faltaba no-existe.svg');
+
+  res = await client.postForm('plugins/labo-equipos/delete', { _token: homeToken });
+  const cadTrasBorrar = await json('catalogs/cad');
+  const resto = await app.run(`
+$manager = implode(chr(92), ['App', 'Services', 'PluginManager']);
+echo is_dir($manager::directory() . '/labo-equipos') ? 'QUEDA' : 'BORRADO';
+`);
+  report.check('Eliminar un complemento borra su carpeta y sus equipos',
+    [302, 303].includes(res.status) && cadTrasBorrar.body.count === 420 && /BORRADO/.test(resto.text || ''),
+    `${cadTrasBorrar.body.count} · ${(resto.text || '').trim()}`);
+
+  res = await client.postForm('plugins/acme-senalizacion/delete', { _token: homeToken });
+  const catalogFinal = await json('catalogs/signs');
+  res = await client.get('plugins');
+  report.check('Sin complementos el catálogo vuelve a su estado original',
+    catalogFinal.body.count === 395 && Object.keys(catalogFinal.body.categories || {}).length === 9
+    && /Todavía no hay complementos/.test(res.text),
+    `${catalogFinal.body.count} · ${Object.keys(catalogFinal.body.categories || {}).length}`);
 
   /* ---------------------------- aislamiento entre cuentas ---------------------------- */
   const createUser = await app.run(`

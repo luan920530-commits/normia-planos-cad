@@ -108,7 +108,7 @@ element_checks (id, floor_id → floors, round_id → verification_rounds, eleme
                 checked_by, checked_at)
 ```
 
-- **Esquema versionado.** `resources/schema.sql` crea todo en instalaciones nuevas con `PRAGMA user_version = 4`. En instalaciones anteriores, `Database::migrate()` aplica los pasos que falten al arrancar (2 → 3 → 4: enlace brigadista, verificación y `floors.check_days`), comprueba la columna con `PRAGMA table_info` y no vuelve a ejecutarse dentro de la misma petición.
+- **Esquema versionado.** `resources/schema.sql` crea todo en instalaciones nuevas con `PRAGMA user_version = 5`. En instalaciones anteriores, `Database::migrate()` aplica los pasos que falten al arrancar (2 → 3 → 4 → 5: enlace brigadista, verificación, `floors.check_days` y la tabla `plugins` de los complementos), comprueba la columna con `PRAGMA table_info` y no vuelve a ejecutarse dentro de la misma petición.
 - **Fotos de evidencia.** Se guardan en la tabla como base64 (512 KB como máximo) porque algunos controladores SQLite empaquetados truncan los binarios con bytes de control; el tipo se detecta por la firma del archivo, sin depender de GD. Solo se sirven a la cuenta dueña del plano.
 
 - Todas las lecturas de piso incluyen la condición de propiedad (`projects.user_id = :userId`) en la misma consulta; no se confía en el `id` recibido.
@@ -306,6 +306,28 @@ Motivo: las tarjetas de *Mis planos* y de los pisos recortan su contenido (`over
 - El mismo mecanismo sirve al selector **Cambiar piso** del editor, que vive en una barra superior recortada.
 - Las acciones destructivas son formularios POST con `data-confirm`, y `assets/js/app.js` los intercepta para pedir confirmación (`NormiaUI.confirm`) antes de enviarlos.
 
+## Complementos
+
+La plataforma se amplía con **paquetes de datos**, no de código. Un complemento
+es un `plugin.json` —solo o dentro de un `.zip` con sus `.svg`— que declara
+señales (`signs`), equipos (`cad`) y familias propias (`categories`).
+
+- `PluginManager` lee, valida e instala: escribe en
+  `storage/plugins/<id>/plugin.json` y anota el estado en la tabla `plugins`.
+  Nunca ejecuta código del paquete.
+- `LibraryRepository::loadSigns()` y `loadCad()` funden los complementos activos
+  con los catálogos base; los códigos llevan prefijo propio (`PLG_…` y
+  `cad_<complemento>_<objeto>`) para no suplantar un ISO, un `SVC_` ni un objeto
+  del catálogo. `LibraryRepository::forget()` limpia las cachés cuando se
+  instala, se activa o se borra un complemento (importante en el APK, donde el
+  intérprete vive mientras la aplicación está abierta).
+- El resto del código no distingue un complemento de una señal base: auditor,
+  exportaciones, pliego, verificación y biblioteca usan `codeForType()`.
+- El router acepta parámetros con forma: `{id:slug}`, `{tipo:word}` y `{token}`.
+
+La especificación y el manual están en `docs/PLUGINS.md` y dentro de la propia
+aplicación (`plugins/manual`).
+
 ## Seguridad
 
 | Amenaza | Mitigación |
@@ -344,7 +366,7 @@ Cada prueba corre en PHP 8.1 y 8.3 (la de paquetes en 8.3), sin instalar PHP en 
 - Sin DWG/DXF: fuera de alcance; se documenta explícitamente para no prometer compatibilidad inexistente.
 - Sin colaboración en tiempo real: el bloqueo optimista por versión evita pérdidas silenciosas, pero la coordinación es humana.
 - Sin gestor de usuarios en la interfaz: la fase 1 crea la cuenta administradora en el instalador. El esquema y las consultas ya soportan varias cuentas con proyectos aislados, pero las cuentas adicionales se crean por base de datos; un gestor de usuarios queda para una fase posterior.
-- Migraciones automáticas y repetibles por `PRAGMA user_version` (hoy 4). Cada paso crea solo lo que falta; las instalaciones nuevas ya traen el esquema completo en `resources/schema.sql`.
+- Migraciones automáticas y repetibles por `PRAGMA user_version` (hoy 5). Cada paso crea solo lo que falta; las instalaciones nuevas ya traen el esquema completo en `resources/schema.sql`.
 - La escala es una **referencia declarada**: el editor no mide el mundo real ni convierte unidades físicas a píxeles de impresión.
 
 

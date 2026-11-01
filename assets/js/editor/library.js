@@ -152,10 +152,16 @@
       if (this.eyebrow) {
         const total = this.kind === 'sign' ? Object.keys(this.app.catalogs.signs || {}).length : Object.keys(this.app.catalogs.cad || {}).length;
         if (this.kind === 'sign') {
-          const service = Object.keys(this.app.catalogs.signs || {}).filter((code) => code.startsWith('SVC_')).length;
+          const codes = Object.keys(this.app.catalogs.signs || {});
+          const service = codes.filter((code) => code.startsWith('SVC_')).length;
+          const plugins = codes.filter((code) => code.startsWith('PLG_')).length;
+          // Las señales de los complementos no son ISO ni de servicios: se
+          // cuentan aparte para que la cifra siga cuadrando con el catálogo.
+          const extra = service + plugins;
+          const suffix = `propias (servicios y tránsito)${plugins ? ` + ${plugins} de complementos` : ''}`;
           this.eyebrow.textContent = this.mode === 'replace'
-            ? `Sustituir la señal · ${total - service} ISO 7010 + ${service} propias (servicios y tránsito)`
-            : `Biblioteca visual · ${total - service} ISO 7010 + ${service} propias (servicios y tránsito)`;
+            ? `Sustituir la señal · ${total - extra} ISO 7010 + ${service} ${suffix}`
+            : `Biblioteca visual · ${total - extra} ISO 7010 + ${service} ${suffix}`;
         } else {
           this.eyebrow.textContent = this.mode === 'replace' ? `Sustituir el equipo · ${total} equipos` : `Biblioteca visual · ${total} equipos`;
         }
@@ -190,20 +196,37 @@
       this.app.startPlacement(this.kind, key);
     }
 
+    /**
+     * Código del catálogo → tipo del editor. Se apoya en el modelo para no
+     * repetir la regla de ISO 7010, señales propias y complementos.
+     */
+    typeForCode(code) {
+      const value = String(code ?? '');
+      const model = this.app?.model;
+      if (model && typeof model.typeForSignCode === 'function') return model.typeForSignCode(value);
+      if (value.startsWith('PLG_')) return `plg_${value.slice(4).toLowerCase()}`;
+      return value.startsWith('SVC_') ? `sig_${value.slice(4).toLowerCase()}` : `iso_${value.toLowerCase()}`;
+    }
+
     buildItems() {
       const catalogs = this.app.catalogs;
       if (this.kind === 'sign') {
         this.families = catalogs.signCategories || {};
         this.items = Object.entries(catalogs.signs || {}).map(([code, sign]) => ({
           key: code,
-          type: code.startsWith('SVC_') ? `sig_${code.slice(4).toLowerCase()}` : `iso_${code.toLowerCase()}`,
+          type: this.typeForCode(code),
           name: sign.name || code,
           code,
           family: sign.category,
           familyName: this.families[sign.category]?.label || this.families[sign.category]?.name || sign.category,
-          color: catalogs.signColors?.[sign.category] || '#334155',
+          // Las familias que trae un complemento solo existen en el catálogo de
+          // familias: su color no está en `signColors`.
+          color: catalogs.signColors?.[sign.category] || this.families[sign.category]?.color || '#334155',
           description: sign.description || '',
-          search: normalize([code, sign.name, sign.description, sign.category, this.families[sign.category]?.label, ...(catalogs.aliases?.[code] || [])].join(' ')),
+          search: normalize([
+            code, sign.name, sign.description, sign.category, this.families[sign.category]?.label,
+            ...(sign.aliases || []), ...(catalogs.aliases?.[code] || []),
+          ].join(' ')),
         })).sort((a, b) => a.code.localeCompare(b.code));
       } else {
         this.families = catalogs.cadCategories || {};

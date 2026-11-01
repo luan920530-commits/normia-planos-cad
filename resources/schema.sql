@@ -95,4 +95,15 @@ CREATE INDEX IF NOT EXISTS idx_checks_floor ON element_checks(floor_id, element_
 CREATE INDEX IF NOT EXISTS idx_checks_round ON element_checks(round_id);
 CREATE INDEX IF NOT EXISTS idx_rounds_floor ON verification_rounds(floor_id, id);
 
-PRAGMA user_version = 4;
+-- Complementos (plugins) instalados. El manifiesto vive en
+-- storage/plugins/<id>/plugin.json; aquí solo el estado de activación.
+CREATE TABLE IF NOT EXISTS plugins (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL DEFAULT '',
+    version TEXT NOT NULL DEFAULT '',
+    author TEXT NOT NULL DEFAULT '',
+    enabled INTEGER NOT NULL DEFAULT 1,
+    installed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+PRAGMA user_version = 5;
