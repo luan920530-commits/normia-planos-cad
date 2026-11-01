@@ -63,6 +63,14 @@ export class NormiaApp {
     this.requests = 0;
     this.started = false;
     this.lastSaveError = null;
+    /** Archivos de la aplicación montados en el intérprete. */
+    this.restored = 0;
+    this.ms = 0;
+    /** Última versión de cada archivo que se escribió en el almacenamiento. */
+    this.saved = new Map();
+    this.saveTimer = null;
+    this.saving = null;
+    this.pendingSave = false;
   }
 
   /** Monta la aplicación, recupera los datos y deja el servidor listo. */
@@ -71,11 +79,12 @@ export class NormiaApp {
     this.mount();
     this.log('archivos montados', { files: Object.keys(this.files).length, ms: Date.now() - t0 });
     if (this.storage) {
-      const restored = await this.storage.restore(this.php, this.dataDir);
-      this.log('datos recuperados', { files: restored, ms: Date.now() - t0 });
+      this.restored = await this.storage.restore(this.php, this.dataDir);
+      this.log('datos recuperados', { files: this.restored, ms: Date.now() - t0 });
     }
     this.handler = this.createHandler(this.php, this.dataDir);
     this.started = true;
+    this.ms = Date.now() - t0;
     return this;
   }
 
@@ -118,18 +127,88 @@ export class NormiaApp {
     return found;
   }
 
-  /** Guarda los datos en el almacenamiento del equipo. */
+  /** Detiene los guardados pendientes (al cerrar el intérprete). */
+  dispose() {
+    if (this.saveTimer !== null) clearTimeout(this.saveTimer);
+    this.saveTimer = null;
+    this.pendingSave = false;
+  }
+
+  /**
+   * Pide un guardado agrupado. Varias peticiones seguidas producen una sola
+   * escritura, y la respuesta no espera a que termine.
+   */
+  queueSave(delay = 400) {
+    if (!this.storage) return;
+    this.pendingSave = true;
+    if (this.saveTimer !== null) clearTimeout(this.saveTimer);
+    this.saveTimer = setTimeout(() => {
+      this.saveTimer = null;
+      // Si el intérprete ya se cerró (o el almacenamiento falla), el error se
+      // anota y se avisa; no puede convertirse en una excepción suelta.
+      this.flush().catch((error) => {
+        this.lastSaveError = error;
+        this.log('no se pudieron guardar los datos', { error: String(error && error.message ? error.message : error) });
+      });
+    }, delay);
+  }
+
+  /**
+   * Guarda lo que cambió, ahora mismo.
+   *
+   * Si ya hay un guardado en curso no se pisan las escrituras: se espera a que
+   * termine y, si entretanto llegaron más cambios, se repite una vez.
+   *
+   * @returns {Promise<number>} archivos escritos
+   */
+  async flush() {
+    if (!this.storage) return 0;
+    if (this.saveTimer !== null) {
+      clearTimeout(this.saveTimer);
+      this.saveTimer = null;
+    }
+    if (this.saving) {
+      await this.saving;
+      if (!this.pendingSave) return 0;
+    }
+    this.pendingSave = false;
+    this.saving = this.persist();
+    try {
+      return await this.saving;
+    } finally {
+      this.saving = null;
+    }
+  }
+
+  /**
+   * Escribe en el almacenamiento los archivos que cambiaron desde el último
+   * guardado. Devuelve cuántos se escribieron.
+   */
   async persist() {
     if (!this.storage) return 0;
     const t0 = Date.now();
-    const saved = await this.storage.save(
-      this.php,
-      this.dataDir,
-      (relative) => !SKIP_SAVE.some((skip) => skip.test(relative)),
-      this.dataFiles(),
-    );
-    this.log('datos guardados', { files: saved, ms: Date.now() - t0 });
-    return saved;
+    const changed = [];
+    for (const relative of this.dataFiles()) {
+      if (SKIP_SAVE.some((skip) => skip.test(relative))) continue;
+      const bytes = this.php.readFileAsBuffer(`${this.dataDir}/${relative}`);
+      if (sameBytes(this.saved.get(relative), bytes)) continue;
+      changed.push(relative);
+      this.saved.set(relative, bytes);
+    }
+    if (changed.length === 0) return 0;
+    try {
+      const saved = await this.storage.save(this.php, this.dataDir, () => true, changed);
+      this.lastSaveError = null;
+      this.log('datos guardados', { files: saved, ms: Date.now() - t0 });
+      return saved;
+    } catch (error) {
+      // Se olvida la versión marcada como guardada: el próximo intento la
+      // vuelve a escribir en vez de creer que ya estaba.
+      for (const relative of changed) this.saved.delete(relative);
+      this.lastSaveError = error;
+      this.log('no se pudieron guardar los datos', { error: String(error && error.message ? error.message : error) });
+      throw error;
+    }
   }
 
   /** Borra los datos y deja la aplicación como recién instalada. */
@@ -187,16 +266,17 @@ export class NormiaApp {
       url: path,
       ms: Date.now() - started,
     };
-    // Cada respuesta deja los datos en el almacenamiento: cerrar la app sin
-    // guardar no debe perder el plano. Si el almacenamiento falla (por ejemplo,
-    // sin cuota), la página se entrega igual: el editor tiene que seguir
-    // funcionando aunque no pueda guardar, y el motivo queda en el registro.
-    try {
-      await this.persist();
-    } catch (error) {
-      this.lastSaveError = error;
-      this.log('no se pudieron guardar los datos', { error: String(error && error.message ? error.message : error) });
-    }
+    /*
+     * Los datos se guardan aparte, agrupados y sin frenar la respuesta.
+     *
+     * La 1.15.4 guardaba dentro de la propia petición: abrir una pantalla del
+     * editor pide 25 recursos y cada uno escribía la base de datos entera en el
+     * teléfono. En un equipo modesto eso deja la pantalla esperando minutos —y
+     * si se cierra la app a media escritura, la instalación parece perdida—.
+     * Ahora cada petición marca «hay cambios» y el guardado ocurre poco después,
+     * una sola vez y escribiendo solo lo que cambió.
+     */
+    this.queueSave();
     return result;
   }
 
@@ -214,8 +294,12 @@ export class NormiaApp {
       started: this.started,
       files: Object.keys(this.files).length,
       dataFiles: this.started ? this.dataFiles().length : 0,
+      restored: this.restored,
+      ms: this.ms,
       requests: this.requests,
       cookies: this.cookies.size,
+      pendingSave: this.pendingSave,
+      lastSaveError: this.lastSaveError ? String(this.lastSaveError.message || this.lastSaveError) : '',
     };
   }
 }
@@ -250,10 +334,9 @@ export function memoryStorage() {
       }
       return count;
     },
-    async save(php, dataDir, filter = () => true) {
-      files.clear();
+    async save(php, dataDir, filter = () => true, changed = null) {
       let count = 0;
-      for (const relative of listData(php, dataDir)) {
+      for (const relative of Array.isArray(changed) ? changed : listData(php, dataDir)) {
         if (!filter(relative)) continue;
         files.set(relative, php.readFileAsBuffer(`${dataDir}/${relative}`));
         count += 1;
@@ -264,6 +347,16 @@ export function memoryStorage() {
       files.clear();
     },
   };
+}
+
+/** ¿Los dos contenidos son iguales? (evita reescribir lo que no cambió). */
+function sameBytes(a, b) {
+  if (!a || !b) return false;
+  if (a.length !== b.length) return false;
+  for (let index = 0; index < a.length; index += 1) {
+    if (a[index] !== b[index]) return false;
+  }
+  return true;
 }
 
 function listData(php, dataDir) {

@@ -196,6 +196,11 @@ sin conexión y **el APK no pide permiso de red**.
 - **Android 8.0 (API 26) o superior.** El editor necesita un WebView
   actualizado (Chrome); en equipos con WebView muy antiguo la app muestra una
   pantalla de diagnóstico en vez de quedarse en blanco.
+- **El guardado no frena la pantalla.** Cada petición solo marca que hay
+  cambios; el guardado ocurre aparte, agrupado, y escribe únicamente los
+  archivos que cambiaron. Al pasar a segundo plano o cerrar se guarda lo
+  pendiente. Si el editor no dibuja nada en ocho segundos, la pantalla de
+  arranque vuelve con el diagnóstico en vez de quedarse en blanco.
 - **Los datos se guardan en el teléfono.** `config/` y `storage/` viven en el
   sistema de archivos privado del navegador (OPFS,
   `navigator.storage.getDirectory()`), con la API del estándar:
@@ -316,6 +321,7 @@ node tools/android/build.mjs --apk
 | «Ya había una instancia abierta» | El lanzador reutiliza la ventana existente. Detén la anterior con «Detener Normia». |
 | El instalador no arranca en Windows | SmartScreen: «Más información → Ejecutar de todas formas». |
 | macOS dice que la app está dañada | Suele ser la cuarentena de un archivo descargado: clic derecho → Abrir. Si persiste, `xattr -dr com.apple.quarantine "/Applications/Normia Planos CAD.app"`. |
+| Android se queda en blanco y al reabrir vuelve a pedir la instalación | APK de la **1.15.4** o anterior: el guardado bloqueaba cada recurso de la pantalla y, si se cerraba a media escritura, los datos no quedaban. Instala la **1.15.5** o posterior. |
 | Android muestra `TypeError: root.getDirectory is not a function` | APK de la **1.15.3**: llamaba a `getDirectory()`, que no existe en el sistema de archivos del navegador (es `getDirectoryHandle()`). Instala la 1.15.4 o posterior. |
 | Android muestra un `LinkError` con `Import #0 "env" "invoke_ii"` | APK anterior a la **1.15.3**: llevaba solo el intérprete `asyncify` y el WebView de Android 15 pedía el cargador `jspi`. Instala la 1.15.3 o posterior. |
 | La app de Android se queda en la pantalla de arranque | Pulsa **Reintentar**; si vuelve a fallar, abre **Cómo reportar el problema** y envía el texto con el modelo del equipo y la versión de Android. |

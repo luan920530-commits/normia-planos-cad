@@ -118,6 +118,31 @@ if (/openOpfsStorage\(/.test(shellSource) && /onUnavailable/.test(shellSource)
   bad('El arranque depende del almacenamiento del teléfono');
 }
 
+/*
+ * Guardar no puede frenar la pantalla. `request()` solo marca «hay cambios» y
+ * un temporizador escribe después; si guardara dentro de la petición, abrir una
+ * pantalla del editor (25 recursos) escribiría la base de datos 25 veces y el
+ * teléfono se quedaría en blanco esperando.
+ */
+const coreSource = fs.readFileSync(path.join(ASSETS, 'app-core.js'), 'utf8');
+if (/queueSave\(/.test(coreSource) && /async flush\(/.test(coreSource)
+  && /await this\.persist\(\)/.test(coreSource) === false) {
+  ok('El guardado ocurre aparte y no dentro de cada petición');
+} else {
+  bad('El guardado sigue ocurriendo dentro de la petición');
+}
+if (/reducid|incremental|sameBytes\(/.test(coreSource)) {
+  ok('Solo se reescriben los archivos que cambiaron');
+} else {
+  bad('El guardado reescribe todo en cada pasada');
+}
+if (/watchFrame/.test(shellSource) && /problem\(/.test(shellSource)
+  && /visibilitychange/.test(shellSource) && /pagehide/.test(shellSource)) {
+  ok('La pantalla avisa si el editor no se dibuja y guarda al cerrar o cambiar de app');
+} else {
+  bad('Falta el aviso de pantalla en blanco o el guardado al cerrar');
+}
+
 const runtimeFile = path.join(ASSETS, 'php/runtime.js');
 const sizeMb = fs.statSync(runtimeFile).size / 1048576;
 if (sizeMb < 6) ok('El paquete JavaScript no arrastra datos de internacionalización', `${sizeMb.toFixed(1)} MB`);
