@@ -78,6 +78,21 @@ report.check('El flujo lee el mínimo de macOS del paquete compilado y falla si 
 report.check('La guía de Electron explica el requisito de macOS 12 y qué hacer si el DMG pide 13',
   /macOS 12 Monterey/.test(docsElectron) && /Electron 44/.test(docsElectron)
   && /requiere macOS 13/.test(docsElectron));
+/*
+ * Un solo comando para armar el instalador en el Mac del usuario: el .dmg no se
+ * puede compilar fuera de macOS (hdiutil), así que el guion comprueba el
+ * sistema antes de tocar nada, fija Electron 43 y acepta las dos arquitecturas.
+ */
+const macScript = read('tools/electron/build-mac.sh');
+report.check('El guion de macOS compila en el Mac con las dos arquitecturas',
+  /--arch=arm64\|x64/.test(macScript) && /arm64\)/.test(macScript) && /x64\)/.test(macScript)
+  && /npm install --no-save[^\n]*electron@43[^\n]*electron-builder@26/.test(macScript)
+  && /node tools\/electron\/build\.mjs --out=dist\/electron "--arch=\$ARCH"/.test(macScript),
+  macScript.split('\n').find((line) => line.includes('electron@43')) || 'sin instalación fijada');
+report.check('El guion avisa en vez de fallar en silencio fuera de macOS',
+  /uname -s\)" != "Darwin"/.test(macScript) && /solo existe en macOS/.test(macScript));
+report.check('La guía ofrece el comando único además de los pasos manuales',
+  /build-mac\.sh/.test(docsElectron));
 
 /*
  * El intérprete PHP viaja en `runtime/node_modules`. electron-builder descarta

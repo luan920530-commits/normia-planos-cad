@@ -143,8 +143,17 @@ publicar un paquete que no arranca.
 ### Compilar en un Mac, paso a paso
 
 El `.dmg` y el `.zip` de macOS **solo se generan en macOS**: electron-builder
-llama a `hdiutil` y a las herramientas de Apple, que no existen en Linux. En
-macOS 12 Monterey alcanza con Node 20 o superior y unos minutos:
+llama a `hdiutil` y a las herramientas de Apple, que no existen en Linux.
+
+Lo más corto es un solo comando, que detecta la arquitectura del equipo,
+instala lo necesario y deja el `.dmg` en `dist/electron/installers/`:
+
+```sh
+bash tools/electron/build-mac.sh              # arquitectura del equipo
+bash tools/electron/build-mac.sh --arch=x64   # forzar Intel
+```
+
+Los mismos pasos a mano, si se prefiere ver qué ocurre:
 
 ```sh
 npm ci                                                   # dependencias del proyecto
