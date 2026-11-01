@@ -765,6 +765,23 @@ para Linux.
 
 Guía completa: [`docs/ELECTRON.md`](docs/ELECTRON.md).
 
+### Archivos de la entrega 1.10.0
+
+Todos se publican en la [release v1.10.0](https://github.com/luan920530-commits/normia-planos-cad/releases/tag/v1.10.0)
+y llevan su suma SHA-256 junto a ellos.
+
+| Edición | Archivo | Tamaño |
+| --- | --- | --- |
+| Nativa macOS Apple Silicon | `normia-planos-cad-1.10.0-macos-arm64.pkg` | 118 MB |
+| Nativa macOS Intel | `normia-planos-cad-1.10.0-macos-x64.pkg` | 117 MB |
+| Nativa Windows x64 | `normia-planos-cad-1.10.0-windows-x64.exe` | 67 MB |
+| Electron macOS Apple Silicon | `…-macos-arm64.dmg` · `…-macos-arm64.zip` | 118 MB · 114 MB |
+| Electron macOS Intel | `…-macos-x64.dmg` · `…-macos-x64.zip` | 122 MB · 118 MB |
+| Electron Windows x64 | `…-windows-x64-instalador.exe` · `…-windows-x64.zip` | 117 MB · 147 MB |
+| Electron Linux x64 | `…-linux-x86_64.AppImage` | 121 MB |
+| Android | `normia-planos-cad-1.10.0-android.apk` | 11 MB |
+| Web (PHP ≥ 8.1) | `paquetes/v1.10.0/normia-planos-cad-1.10.0.zip` y `…-demo…` | 1,2 MB |
+
 ## Cambios de la versión 1.10.0
 
 Entrega de la **edición Electron**. La edición nativa y el paquete web no
