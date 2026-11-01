@@ -245,18 +245,32 @@ async function navigate(url, options = {}) {
   const target = baseUrlOf(url);
   splash.classList.remove('is-hidden');
   try {
-    const response = await ask({ url: target });
+    /*
+     * Siguiendo las redirecciones. Sin esto, la raíz de una instalación nueva
+     * responde `303 → ?r=install` con el cuerpo vacío: la pantalla lo tomaba por
+     * una descarga, ocultaba el arranque y dejaba el marco en blanco sin aviso.
+     */
+    const response = await app.fetchPage(target);
     if (!isHtml(response)) {
+      if (response.status >= 300) {
+        throw new Error(`La aplicación respondió ${response.status} sin una página que mostrar (${response.url}).`);
+      }
       // Enlaces directos a exportaciones: se guardan como archivo.
       const type = String(header(response, 'content-type') || 'application/octet-stream');
+      if (!response.bytes || response.bytes.length === 0) {
+        throw new Error(`La aplicación respondió ${response.status} sin contenido (${response.url}).`);
+      }
       saveBytes(fileName(response, 'normia'), type, response.bytes);
       splash.classList.add('is-hidden');
       return;
     }
+    if (!String(response.text).trim()) {
+      throw new Error(`La aplicación devolvió una página vacía (${response.url}).`);
+    }
     render(response.text);
     if (!options.replace) history.push(url);
-    currentUrl = url;
-    window.__normiaUrl = url;
+    currentUrl = response.url || url;
+    window.__normiaUrl = currentUrl;
     showFrame();
     watchFrame();
   } catch (error) {
@@ -424,7 +438,7 @@ window.__normiaBridge = {
     return navigate(url);
   },
   async open(url) {
-    const response = await ask({ url });
+    const response = await app.fetchPage(url);
     if (isHtml(response)) {
       const isPrint = /\/print(\?|$)/.test(String(url).replace(/[?#].*$/, '')) || /r=[^&]*%2Fprint(?:&|$)/i.test(String(url)) || /[?&]r=[^&]*\/print(?:&|$)/.test(String(url));
       if (isPrint) {
@@ -445,9 +459,9 @@ window.__normiaBridge = {
     const response = await ask({ url, method: 'POST', headers, body });
     const location = String(header(response, 'location') || '');
     if (response.status >= 300 && response.status < 400 && location) {
-      const next = await ask({ url: new URL(location, url).href });
-      if (isHtml(next)) return { html: next.text, url: new URL(location, url).href };
-      return { url: new URL(location, url).href };
+      const next = await app.fetchPage(new URL(location, url).href);
+      if (isHtml(next)) return { html: next.text, url: next.url };
+      return { url: next.url };
     }
     if (isHtml(response)) return { html: response.text };
     const type = String(header(response, 'content-type') || 'application/octet-stream');

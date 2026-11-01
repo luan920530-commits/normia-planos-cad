@@ -125,6 +125,15 @@ if (/openOpfsStorage\(/.test(shellSource) && /onUnavailable/.test(shellSource)
  * teléfono se quedaría en blanco esperando.
  */
 const coreSource = fs.readFileSync(path.join(ASSETS, 'app-core.js'), 'utf8');
+// La raíz sin base de datos responde 303 al instalador. Si la pantalla no sigue
+// la redirección y la trata como descarga, se queda en blanco sin aviso.
+if (/async fetchPage\(/.test(coreSource) && /app\.fetchPage\(target\)/.test(shellSource)
+  && /sin una página que mostrar/.test(shellSource)) {
+  ok('La pantalla sigue las redirecciones y avisa si no hay página que mostrar');
+} else {
+  bad('La pantalla no sigue las redirecciones de la aplicación');
+}
+
 if (/queueSave\(/.test(coreSource) && /async flush\(/.test(coreSource)
   && /await this\.persist\(\)/.test(coreSource) === false) {
   ok('El guardado ocurre aparte y no dentro de cada petición');

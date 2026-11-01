@@ -135,6 +135,31 @@ export class NormiaApp {
   }
 
   /**
+   * Pide una página **siguiendo las redirecciones**.
+   *
+   * `PHPRequestHandler` no las sigue: devuelve el 303 tal cual, con el cuerpo
+   * vacío. La pantalla trataba ese 303 como si fuera una descarga, ocultaba el
+   * arranque y no dibujaba nada: pantalla en blanco. Con la base de datos aún
+   * sin crear, la raíz responde `303 → /index.php?r=install`, así que el
+   * instalador existía pero nunca se pedía. Esto lo pide.
+   *
+   * @returns {Promise<object>} la respuesta final, con `url` y `hops`
+   */
+  async fetchPage(url, { max = 6 } = {}) {
+    let target = String(url || '/');
+    let response = await this.request({ url: target });
+    let hops = 0;
+    while (response.status >= 300 && response.status < 400 && hops < max) {
+      const location = headerOf(response.headers, 'location');
+      if (!location) break;
+      target = new URL(location, new URL(target, 'http://127.0.0.1')).href;
+      response = await this.request({ url: target });
+      hops += 1;
+    }
+    return { ...response, url: this.relative(target), hops };
+  }
+
+  /**
    * Pide un guardado agrupado. Varias peticiones seguidas producen una sola
    * escritura, y la respuesta no espera a que termine.
    */
@@ -302,6 +327,18 @@ export class NormiaApp {
       lastSaveError: this.lastSaveError ? String(this.lastSaveError.message || this.lastSaveError) : '',
     };
   }
+}
+
+/** Lee una cabecera sin depender de mayúsculas ni de si viene en lista. */
+export function headerOf(headers, name) {
+  const source = headers || {};
+  const wanted = String(name).toLowerCase();
+  for (const [key, value] of Object.entries(source)) {
+    if (String(key).toLowerCase() !== wanted) continue;
+    if (Array.isArray(value)) return String(value[0] ?? '');
+    return value === undefined || value === null ? '' : String(value);
+  }
+  return '';
 }
 
 function normalizeHeaders(headers) {
