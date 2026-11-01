@@ -188,6 +188,37 @@ report.check('El contenedor permite elegir archivos para importar un plano',
   /onShowFileChooser/.test(activity) && /ActivityResultContracts/.test(activity));
 report.check('El APK se firma con una clave propia generada por el flujo',
   /minSdk = 26/.test(gradle) && /signingConfigs/.test(gradle));
+/*
+ * La pantalla tiene que estar debajo del prefijo que el cargador registra.
+ * Con el handler en «/» y la URL /index.html, el cargador buscaba
+ * assets/index.html —que no existe—, devolvía una respuesta inválida y el
+ * WebView mostraba «net::ERR_INVALID_RESPONSE» en lugar del editor.
+ */
+const androidBuild = fs.readFileSync(new URL('../../tools/android/build.mjs', import.meta.url), 'utf8');
+const androidShell = fs.readFileSync(new URL('../../tools/android/web/shell.js', import.meta.url), 'utf8');
+const prefixMatch = /private const val ASSETS_PREFIX = "([^"]+)"/.exec(activity);
+const prefix = prefixMatch ? prefixMatch[1] : '';
+const targetMatch = /const TARGET = path\.join\(HERE, '([^']+)'\)/.exec(androidBuild);
+const assetsFolder = targetMatch ? path.posix.basename(targetMatch[1].replace(/\\/g, '/')) : '';
+const entryLine = activity.split('\n').find((line) => line.includes('private val ENTRY =')) || '';
+const entryTail = '${ASSETS_PREFIX}' + assetsFolder + '/index.html"';
+report.check('El cargador registra el prefijo real de los activos y no la raíz',
+  prefix === '/assets/'
+  && /addPathHandler\(ASSETS_PREFIX, WebViewAssetLoader\.AssetsPathHandler\(this\)\)/.test(activity),
+  prefix || 'sin prefijo');
+report.check('La pantalla de arranque cuelga de la carpeta que arma el APK',
+  assetsFolder === 'www'
+  && /loadUrl\(ENTRY\)/.test(activity)
+  && entryLine.includes(entryTail),
+  entryLine.trim() || 'sin URL de arranque');
+report.check('El origen del puente sigue siendo la raíz del dominio virtual',
+  (androidShell.match(/const ORIGIN = 'https:\/\/appassets\.androidplatform\.net';/g) || []).length === 2,
+  `${(androidShell.match(/const ORIGIN = 'https:\/\/appassets\.androidplatform\.net';/g) || []).length} usos`);
+report.check('Si la pantalla no carga se avisa en español con un enlace para reintentar',
+  /onReceivedError/.test(activity) && /request\.isForMainFrame/.test(activity)
+  && /No se pudo abrir el editor/.test(activity) && /Reintentar/.test(activity)
+  && !/net::ERR_INVALID_RESPONSE/.test(activity.replace(/\/\*[\s\S]*?\*\//g, '')));
+
 report.check('El flujo compila el APK y lo adjunta a la release',
   /assembleRelease/.test(androidWorkflow) && /apksigner/.test(androidWorkflow)
   && /gh release upload/.test(androidWorkflow),
