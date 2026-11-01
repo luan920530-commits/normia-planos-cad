@@ -10,10 +10,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
+import { JSDOM } from 'jsdom';
 import { makeReporter, repoRoot } from '../php/harness.mjs';
 import { NormiaApp, memoryStorage, decodeBase64, encodeBase64 } from '../../tools/android/web/app-core.js';
 
 const report = makeReporter('Android');
+
+/** Puente del editor: se ejecuta en JSDOM más abajo. */
+const androidBridge = fs.readFileSync(new URL('../../tools/android/web/bridge.js', import.meta.url), 'utf8');
 
 globalThis.require = createRequire(import.meta.url);
 const { PHP, PHPRequestHandler } = await import('@php-wasm/universal');
@@ -351,6 +355,80 @@ const sinOpfs = await openOpfsStorage({ storage: {}, onUnavailable: (error) => {
 report.check('Si el teléfono no ofrece almacenamiento, la app abre sin guardar y lo avisa',
   sinOpfs === null && aviso !== '', aviso);
 
+/*
+ * El puente del editor, ejecutado de verdad.
+ *
+ * La 1.15.6 llevaba el puente incrustado en el documento; si no llegaba a
+ * ejecutarse (o el navegador no permitía el script en línea), el botón
+ * «Instalar» no hacía nada: el formulario seguía su envío nativo y el WebView no
+ * tenía a quién pedirle la página. Ahora es un archivo que se carga con
+ * `<script src>` y aquí se ejecuta contra un formulario real.
+ */
+const dom = new JSDOM(`<!doctype html><html><head><base href="https://appassets.androidplatform.net/"></head>
+  <body><p id="normia-cargando">Cargando…</p>
+  <form method="post" action="/index.php?r=install"><input type="hidden" name="_token" value="abc123">
+  <input type="text" name="name" value="Luan"><button type="submit">Instalar Normia Planos CAD</button></form></body></html>`, {
+  url: 'https://appassets.androidplatform.net/assets/index.html',
+  runScripts: 'outside-only',
+});
+/** JSDOM no trae las clases de codificación ni fetch: se las presta Node. */
+const prestar = (win) => {
+  win.TextEncoder = TextEncoder;
+  win.TextDecoder = TextDecoder;
+  win.Response = Response;
+  win.Request = Request;
+  win.Headers = Headers;
+  return win;
+};
+prestar(dom.window);
+
+const llamadas = [];
+dom.window.__normiaBridge = {
+  request: async () => ({ status: 200, headers: {}, bytes: new Uint8Array() }),
+  submit: async (url, headers, body) => {
+    llamadas.push({ url, headers, body: new TextDecoder().decode(body) });
+    return { html: '<!doctype html><html><body><h1>Acceso</h1></body></html>' };
+  },
+  renderHtml: (html) => llamadas.push({ render: html }),
+  save: () => {}, log: () => {}, problem: (text) => llamadas.push({ problem: text }),
+  fail: (text) => llamadas.push({ fail: text }), busy: () => {}, go: () => {}, open: () => {},
+};
+dom.window.eval(androidBridge);
+dom.window.document.querySelector('form').dispatchEvent(new dom.window.Event('submit', { bubbles: true, cancelable: true }));
+await new Promise((resolve) => setTimeout(resolve, 20));
+
+const envio = llamadas.find((item) => item.url);
+report.check('El botón del instalador envía el formulario por el puente',
+  Boolean(envio)
+  && envio.url === 'https://appassets.androidplatform.net/index.php?r=install'
+  && /content-type/.test(JSON.stringify(envio.headers))
+  && /_token=abc123/.test(envio.body)
+  && /name=Luan/.test(envio.body),
+  envio ? `${envio.url} · ${envio.body}` : 'no se envió');
+report.check('La respuesta del formulario se dibuja sin recargar el teléfono',
+  llamadas.some((item) => item.render && /Acceso/.test(item.render)),
+  `${llamadas.filter((item) => item.render).length} respuesta(s) dibujadas`);
+report.check('El puente avisa de que está listo y retira el aviso de «Cargando…»',
+  dom.window.__normiaBridgeListo === true && dom.window.document.getElementById('normia-cargando') === null);
+
+const dom2 = new JSDOM('<!doctype html><html><body><p id="normia-cargando">Cargando…</p><form method="post" action="/x"><input name="a" value="1"></form></body></html>', {
+  url: 'https://appassets.androidplatform.net/assets/index.html',
+  runScripts: 'outside-only',
+});
+const fallos = [];
+dom2.window.__normiaBridge = {
+  request: async () => ({ status: 200, headers: {}, bytes: new Uint8Array() }),
+  submit: async () => { throw new Error('sin espacio'); },
+  renderHtml: () => {}, save: () => {}, log: () => {}, problem: () => {},
+  fail: (text) => fallos.push(String(text)), busy: () => {}, go: () => {}, open: () => {},
+};
+prestar(dom2.window);
+dom2.window.eval(androidBridge);
+dom2.window.document.querySelector('form').dispatchEvent(new dom2.window.Event('submit', { bubbles: true, cancelable: true }));
+await new Promise((resolve) => setTimeout(resolve, 20));
+report.check('Si el envío falla, el motivo se ve en la pantalla',
+  fallos.length > 0 && /sin espacio/.test(fallos.join(' ')), fallos.join(' ') || 'sin aviso');
+
 /* ------------------------- archivos del contenedor ------------------------- */
 
 const manifest = fs.readFileSync(new URL('../../tools/android/app/src/main/AndroidManifest.xml', import.meta.url), 'utf8');
@@ -406,8 +484,9 @@ report.check('Los estáticos del editor se copian a la raíz de los activos del 
   && /fs\.cpSync\(STATIC, TARGET, \{ recursive: true \}\)/.test(androidBuild),
   'copia de assets/ a la raíz del APK');
 report.check('El origen del puente sigue siendo la raíz del dominio virtual',
-  (androidShell.match(/const ORIGIN = 'https:\/\/appassets\.androidplatform\.net';/g) || []).length === 2,
-  `${(androidShell.match(/const ORIGIN = 'https:\/\/appassets\.androidplatform\.net';/g) || []).length} usos`);
+  (androidShell.match(/const ORIGIN = 'https:\/\/appassets\.androidplatform\.net';/g) || []).length === 1
+  && (androidBridge.match(/const ORIGIN = 'https:\/\/appassets\.androidplatform\.net';/g) || []).length === 1,
+  `pantalla ${(androidShell.match(/const ORIGIN = 'https:\/\/appassets\.androidplatform\.net';/g) || []).length} · puente ${(androidBridge.match(/const ORIGIN = 'https:\/\/appassets\.androidplatform\.net';/g) || []).length}`);
 report.check('Si la pantalla no carga se avisa en español con un enlace para reintentar',
   /onReceivedError/.test(activity) && /request\.isForMainFrame/.test(activity)
   && /No se pudo abrir el editor/.test(activity) && /Reintentar/.test(activity)
