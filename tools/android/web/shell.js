@@ -172,7 +172,7 @@ async function boot() {
   step('Datos del equipo listos', `${como} · ${app.status().dataFiles} archivos · ${Date.now() - arranque} ms`);
 
   step('Listo', `Normia ${info.version}`);
-  await navigate('/', { replace: true });
+  await enterEditor();
 }
 
 /* ------------------------------ peticiones ------------------------------- */
@@ -308,6 +308,47 @@ function watchFrame() {
   }, 8000);
 }
 
+/* ---------------------------- entrada al editor --------------------------- */
+
+/**
+ * En el APK no hay pantalla de acceso ni portada de bienvenida: la cuenta la
+ * crea la compilación, así que la sesión se abre sola y la aplicación arranca
+ * **dentro del editor** del último plano que se tocó. Si todavía no hay planos,
+ * se crea uno vacío para no dejar al usuario en una lista.
+ *
+ * Fuera del APK (web, escritorio) nada de esto se ejecuta: la entrada sigue
+ * siendo el acceso y la portada de siempre.
+ */
+let entrando = false;
+
+async function enterEditor() {
+  if (entrando) throw new Error('La aplicación no terminó de abrir el editor.');
+  if (!seedAccount || !seedAccount.email) {
+    // Compilación sin instalación de fábrica: se comporta como la web.
+    return navigate('/', { replace: true });
+  }
+  entrando = true;
+  try {
+    const sesion = await app.signIn(seedAccount.email, seedAccount.password);
+    if (!sesion) throw new Error('La cuenta de este teléfono no pudo iniciar sesión.');
+    step('Sesión abierta', seedAccount.email);
+    let destino = await app.editorUrl();
+    if (!destino) {
+      step('Creando el primer plano', 'Plano 1 · Piso 1');
+      destino = await app.createFirstProject('Plano 1', 'Piso 1');
+    }
+    if (!destino) throw new Error('No se pudo abrir ni crear un plano.');
+    await navigate(destino, { replace: true });
+  } finally {
+    entrando = false;
+  }
+}
+
+/** ¿La página es el acceso o la portada? En el APK no debería verse ninguna. */
+function isAccessPage(response) {
+  return NormiaApp.needsSession(response.text);
+}
+
 async function navigate(url, options = {}) {
   const target = baseUrlOf(url);
   splash.classList.remove('is-hidden');
@@ -333,6 +374,13 @@ async function navigate(url, options = {}) {
     }
     if (!String(response.text).trim()) {
       throw new Error(`La aplicación devolvió una página vacía (${response.url}).`);
+    }
+    if (seedAccount && !entrando && isAccessPage(response)) {
+      // El usuario cerró sesión (o la sesión caducó): en el teléfono no hay
+      // pantalla de acceso, se vuelve a entrar y se sigue en el editor.
+      HOST.log('[normia] la página es el acceso o la portada; se vuelve a entrar');
+      await enterEditor();
+      return;
     }
     render(withCredentials(response.text, response.url));
     await ensureBridge();
@@ -413,6 +461,10 @@ window.__normiaBridge = {
     return { download: { name: fileName(response, 'normia'), mime: type, base64: bytesToBase64(response.bytes) } };
   },
   renderHtml(html) {
+    if (seedAccount && !entrando && NormiaApp.needsSession(html)) {
+      enterEditor().catch((error) => fail(error));
+      return;
+    }
     render(withCredentials(html, currentUrl));
     showFrame();
     watchFrame();

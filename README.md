@@ -37,25 +37,26 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 20. [Distribución: escritorio y Android](#distribución-escritorio-y-android)
 21. [Edición Electron](#edición-electron)
 22. [Guía de primeros pasos](#guía-de-primeros-pasos)
-23. [Cambios de la versión 1.15.8](#cambios-de-la-versión-1158)
-24. [Cambios de la versión 1.15.7](#cambios-de-la-versión-1157)
-25. [Cambios de la versión 1.15.6](#cambios-de-la-versión-1156)
-26. [Cambios de la versión 1.15.5](#cambios-de-la-versión-1155)
-27. [Cambios de la versión 1.15.4](#cambios-de-la-versión-1154)
-28. [Cambios de la versión 1.15.3](#cambios-de-la-versión-1153)
-29. [Cambios de la versión 1.15.2](#cambios-de-la-versión-1152)
-30. [Cambios de la versión 1.15.1](#cambios-de-la-versión-1151)
-31. [Cambios de la versión 1.15.0](#cambios-de-la-versión-1150)
-32. [Cambios de la versión 1.14.2](#cambios-de-la-versión-1142)
-33. [Cambios de la versión 1.14.1](#cambios-de-la-versión-1141)
-34. [Cambios de la versión 1.14.0](#cambios-de-la-versión-1140)
-35. [Cambios de la versión 1.13.0](#cambios-de-la-versión-1130)
-36. [Cambios de la versión 1.12.0](#cambios-de-la-versión-1120)
-37. [Cambios de la versión 1.11.1](#cambios-de-la-versión-1111)
-38. [Cambios de la versión 1.11.0](#cambios-de-la-versión-1110)
-39. [Cambios de la versión 1.10.0](#cambios-de-la-versión-1100)
-40. [Cambios de la versión 1.9.0](#cambios-de-la-versión-190)
-41. [Cambios de la versión 1.8.0](#cambios-de-la-versión-180)
+23. [Cambios de la versión 1.15.9](#cambios-de-la-versión-1159)
+24. [Cambios de la versión 1.15.8](#cambios-de-la-versión-1158)
+25. [Cambios de la versión 1.15.7](#cambios-de-la-versión-1157)
+26. [Cambios de la versión 1.15.6](#cambios-de-la-versión-1156)
+27. [Cambios de la versión 1.15.5](#cambios-de-la-versión-1155)
+28. [Cambios de la versión 1.15.4](#cambios-de-la-versión-1154)
+29. [Cambios de la versión 1.15.3](#cambios-de-la-versión-1153)
+30. [Cambios de la versión 1.15.2](#cambios-de-la-versión-1152)
+31. [Cambios de la versión 1.15.1](#cambios-de-la-versión-1151)
+32. [Cambios de la versión 1.15.0](#cambios-de-la-versión-1150)
+33. [Cambios de la versión 1.14.2](#cambios-de-la-versión-1142)
+34. [Cambios de la versión 1.14.1](#cambios-de-la-versión-1141)
+35. [Cambios de la versión 1.14.0](#cambios-de-la-versión-1140)
+36. [Cambios de la versión 1.13.0](#cambios-de-la-versión-1130)
+37. [Cambios de la versión 1.12.0](#cambios-de-la-versión-1120)
+38. [Cambios de la versión 1.11.1](#cambios-de-la-versión-1111)
+39. [Cambios de la versión 1.11.0](#cambios-de-la-versión-1110)
+40. [Cambios de la versión 1.10.0](#cambios-de-la-versión-1100)
+41. [Cambios de la versión 1.9.0](#cambios-de-la-versión-190)
+42. [Cambios de la versión 1.8.0](#cambios-de-la-versión-180)
 36. [Paquetes y verificación](#paquetes-y-verificación)
 37. [Limitaciones](#limitaciones)
 38. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
@@ -760,7 +761,7 @@ Lo único que no funciona sin red es la **vista previa de desarrollo** (`npm run
 | `tests/php/package.mjs` | 39 comprobaciones: construye ambos ZIP, verifica que no haya bases, sesiones, credenciales, logs ni carpetas de desarrollo, valida los SHA-256 y hace una instalación limpia de la demo comprobando assets, catálogos (395/420), los cuatro pisos del proyecto de ejemplo, señales de servicios y redes en la demo, la señal «Usted está aquí», **el auditor y su informe en la demo empaquetada**, editor, SVG, JSON e impresión. |
 | `tests/php/desktop.mjs` | 37 comprobaciones del escritorio: rutas de datos separadas del código, `NORMA_DATA_PATH` (solo absolutas), lanzador (argumentos, puerto, estado, cierre), enrutador (bloqueos, saltos de directorio, byte nulo) y una instalación completa escribiendo en una carpeta de datos externa. |
 | `tests/js/electron.mjs` | 37 comprobaciones de la edición Electron: ventana sin acceso a Node, puente mínimo, enlaces externos, instancia única, menú en español, descargas, servidor en `127.0.0.1` sin cookies en memoria, entorno de php-wasm, instalación completa con datos fuera del código, `storage/` inaccesible, armado del paquete (aplicación, ventana e intérprete), los ocho paquetes de php-wasm dentro de `runtime/node_modules`, el rechazo de un paquete sin ellos, el mínimo de macOS y la ausencia de ICU y de versiones de PHP que no se usan. |
-| `tests/js/android.mjs` | 47 comprobaciones del APK: arranque de PHP 8.3 sobre WebAssembly, instalación, sesión, panel, editor, auditor, guardado, reapertura y verificación del contenedor nativo (permisos, descargas, impresión, selección de archivos, firma, prefijo de los activos y aviso de error). |
+| `tests/js/android.mjs` | 52 comprobaciones del APK: arranque de PHP 8.3 sobre WebAssembly, instalación, sesión, panel, editor, auditor, guardado, reapertura y verificación del contenedor nativo (permisos, descargas, impresión, selección de archivos, firma, prefijo de los activos y aviso de error). |
 | `tests/js/offline.mjs` | 0 dependencias de red: revisa las vistas, los estilos, los scripts y los catálogos y falla si aparece un `fetch`, un `WebSocket`, un `src`/`href`/`url()` externo, una llamada de red desde PHP o un dominio no declarado. |
 
 Resultados esperados de la última ejecución completa:
@@ -777,7 +778,7 @@ Resultados esperados de la última ejecución completa:
 ✓ Páginas y menús PHP 8.1 · 32/32
 ✓ Páginas y menús PHP 8.3 · 32/32
 ✓ Escritorio (instaladores) · 37/37
-✓ Android (APK) · 47/47
+✓ Android (APK) · 52/52
 ✓ Escritorio (Electron) · 37/37
 ✓ Paquetes y demo · 39/39
 14/14 pasos correctos
@@ -932,6 +933,31 @@ encontraban nada. Desde la 1.12.0:
   exacto. Cuando no hay resultados, propone palabras cercanas.
 - El lienzo muestra la **pista de la herramienta** al elegir cualquiera de las
   cinco (antes caía en la pista de «Seleccionar»).
+
+## Cambios de la versión 1.15.9
+
+- **El APK abre directamente en el editor.** En el teléfono ya no hay pantalla de
+  acceso ni portada de bienvenida: la cuenta la crea la compilación, la sesión se
+  abre sola con ella y la aplicación arranca **dentro del editor del último plano
+  que se tocó**. Si todavía no hay ninguno, se crea «Plano 1» con su «Piso 1» para
+  no dejar al usuario en una lista vacía.
+- **Solo Android.** La web, los paquetes PHP y la edición Electron siguen igual:
+  portada pública, formulario de acceso e instalador intactos. Es la pantalla del
+  contenedor (`tools/android/web/shell.js`) la que decide, y únicamente cuando el
+  APK lleva la instalación de fábrica (`php/seed.json`).
+- **El cierre de sesión no lleva al acceso.** Si en el teléfono se pulsa «Cerrar
+  sesión» —o la sesión caduca— la pantalla lo detecta y vuelve a entrar para
+  seguir en el editor, en vez de mostrar un formulario que allí no sirve de nada.
+- **Aviso honesto.** Al no haber acceso, cualquiera que abra la aplicación en ese
+  teléfono entra al editor: la protección pasa a ser el bloqueo del propio
+  dispositivo. Si el teléfono se comparte, no es la forma de usarlo.
+- **Pruebas.** `tests/js/android.mjs` pasa a **52** (sesión automática, destino del
+  editor, creación del primer plano cuando no hay ninguno, y que la web conserve
+  su entrada) y `tools/android/check.mjs` a **34** (entrada directa de punta a
+  punta con el intérprete del APK).
+
+Sin cambios en el formato del plano ni en el de la base de datos, y nada cambia
+fuera del APK.
 
 ## Cambios de la versión 1.15.8
 
@@ -1414,6 +1440,10 @@ empaquetarla sin servidor.
   una vez por pantalla y solo con los archivos que cambiaron; al salir se fuerza
   lo pendiente. Si el marco no dibuja en ocho segundos, la pantalla de arranque
   vuelve con el diagnóstico.
+- **Entra directo al editor.** En el APK no hay pantalla de acceso ni portada:
+  la sesión se abre sola con la cuenta de fábrica y la aplicación arranca en el
+  editor del último plano (o crea uno si no hay). La web y el escritorio no
+  cambian.
 - **Datos en el teléfono.** `config/` y `storage/` se guardan en el sistema de
   archivos privado del navegador (OPFS) con la API del estándar
   (`getDirectoryHandle` / `getFileHandle`, en `tools/android/web/opfs.js`). Si

@@ -252,6 +252,30 @@ if (app.sembrado > 0 && app.isInstalled()) {
   bad('La instalación de fábrica no se aplicó', `${app.sembrado} sembrados · instalada: ${app.isInstalled()}`);
 }
 
+/*
+ * Entrada directa: en el APK no hay acceso ni portada. Se abre sesión con la
+ * cuenta de fábrica y se va derecho al editor del último plano; si no hay
+ * planos, se crea uno. Fuera del APK nada de esto cambia.
+ */
+if (/async signIn\(/.test(coreSource) && /async editorUrl\(/.test(coreSource)
+  && /async createFirstProject\(/.test(coreSource) && /needsSession/.test(coreSource)) {
+  ok('El paquete sabe abrir sesión, buscar el último plano y crear uno si no hay');
+} else {
+  bad('Falta la entrada directa al editor en el paquete');
+}
+// Al terminar el arranque se entra al editor; `navigate('/')` solo queda como
+// salida para una compilación sin instalación de fábrica.
+if (/step\('Listo'[\s\S]{0,160}await enterEditor\(\);/.test(shellSource)) {
+  ok('La pantalla arranca en el editor y no en la portada');
+} else {
+  bad('La pantalla sigue arrancando en la portada o en el acceso');
+}
+if (/isAccessPage\(response\)/.test(shellSource) && /enterEditor\(\)/.test(shellSource)) {
+  ok('Si aparece el acceso (por ejemplo tras cerrar sesión), se vuelve a entrar');
+} else {
+  bad('El acceso puede aparecer en el teléfono');
+}
+
 const raiz = await app.fetchPage('/');
 if (raiz.status === 200 && /id="capturas"/.test(raiz.text)) {
   ok('El APK abre en la portada pública, sin pedir instalación', raiz.url);
@@ -294,6 +318,18 @@ if (seed && seed.account) {
     ok('La cuenta del APK entra y la demo aparece en el panel', seed.account.email);
   } else {
     bad('La cuenta del APK no entra', `${entrada.status} · ${panel.status}`);
+  }
+}
+
+// Punta a punta de la entrada directa con el intérprete del APK.
+if (seed && seed.account) {
+  const sesion = await app.signIn(seed.account.email, seed.account.password);
+  const destinoEditor = await app.editorUrl();
+  const paginaEditor = await app.fetchPage(destinoEditor || '/');
+  if (sesion && /\/editor$/.test(destinoEditor) && paginaEditor.status === 200 && /id="editor-app"/.test(paginaEditor.text)) {
+    ok('La sesión se abre sola y el editor del último plano queda listo', destinoEditor);
+  } else {
+    bad('La entrada directa no llega al editor', `${sesion} · ${destinoEditor} · ${paginaEditor.status}`);
   }
 }
 
