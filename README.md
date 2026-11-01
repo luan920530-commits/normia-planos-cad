@@ -36,17 +36,18 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 19. [Distribución: escritorio y Android](#distribución-escritorio-y-android)
 20. [Edición Electron](#edición-electron)
 21. [Guía de primeros pasos](#guía-de-primeros-pasos)
-22. [Cambios de la versión 1.14.0](#cambios-de-la-versión-1140)
-23. [Cambios de la versión 1.13.0](#cambios-de-la-versión-1130)
-24. [Cambios de la versión 1.12.0](#cambios-de-la-versión-1120)
-25. [Cambios de la versión 1.11.1](#cambios-de-la-versión-1111)
-26. [Cambios de la versión 1.11.0](#cambios-de-la-versión-1110)
-27. [Cambios de la versión 1.10.0](#cambios-de-la-versión-1100)
-28. [Cambios de la versión 1.9.0](#cambios-de-la-versión-190)
-29. [Cambios de la versión 1.8.0](#cambios-de-la-versión-180)
-30. [Paquetes y verificación](#paquetes-y-verificación)
-31. [Limitaciones](#limitaciones)
-32. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
+22. [Cambios de la versión 1.14.1](#cambios-de-la-versión-1141)
+23. [Cambios de la versión 1.14.0](#cambios-de-la-versión-1140)
+24. [Cambios de la versión 1.13.0](#cambios-de-la-versión-1130)
+25. [Cambios de la versión 1.12.0](#cambios-de-la-versión-1120)
+26. [Cambios de la versión 1.11.1](#cambios-de-la-versión-1111)
+27. [Cambios de la versión 1.11.0](#cambios-de-la-versión-1110)
+28. [Cambios de la versión 1.10.0](#cambios-de-la-versión-1100)
+29. [Cambios de la versión 1.9.0](#cambios-de-la-versión-190)
+30. [Cambios de la versión 1.8.0](#cambios-de-la-versión-180)
+31. [Paquetes y verificación](#paquetes-y-verificación)
+32. [Limitaciones](#limitaciones)
+33. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
 
 ---
 
@@ -882,6 +883,27 @@ encontraban nada. Desde la 1.12.0:
   exacto. Cuando no hay resultados, propone palabras cercanas.
 - El lienzo muestra la **pista de la herramienta** al elegir cualquiera de las
   cinco (antes caía en la pista de «Seleccionar»).
+
+## Cambios de la versión 1.14.1
+
+- **La paleta de herramientas y los menús de la barra lateral se ven por
+  encima del plano.** La causa era el cristal de la barra flotante: el
+  `backdrop-filter` (desenfoque) de `.stage-toolbar` abre un contexto de
+  apilamiento propio, así que el `z-index` de la paleta «Todas las
+  herramientas» quedaba encerrado dentro de la barra y el lienzo, que va
+  después en la página, se pintaba encima. La barra pasa a ser `position:
+  relative; z-index: 40` y el rail sube al mismo nivel, por lo que sus menús
+  dejan de depender del orden del documento. El cambio es solo de CSS: no toca
+  el JavaScript de la paleta ni la posición de los elementos en el plano.
+- **Comprobación nueva.** `tests/js/editor.mjs` lee `assets/css/editor.css` y
+  exige que `.stage-toolbar` y `.rail` estén posicionados y por encima de
+  `.canvas-shell`; si vuelve a aparecer el defecto, la suite lo dice.
+- **Edición de escritorio.** El instalador se arma con Electron 43, la última
+  rama que abre en macOS 12 Monterey; el paquete declara
+  `LSMinimumSystemVersion` 12.0. Sin certificados de firma: macOS pide
+  confirmar la primera apertura (ver [Edición Electron](#edición-electron)).
+
+Sin cambios en el formato del plano ni en la base de datos.
 
 ## Cambios de la versión 1.14.0
 

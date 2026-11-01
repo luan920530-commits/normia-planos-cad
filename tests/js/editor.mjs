@@ -1392,6 +1392,27 @@ async function main() {
       && /min-height:\s*0/.test(cssBlock('.properties-body')),
       cssBlock('.properties-body').replace(/\s+/g, ' ').slice(0, 120));
 
+    /* La barra de herramientas y el rail llevan `backdrop-filter`, que abre un
+       contexto de apilamiento: su `z-index` no compite con el lienzo y los menús
+       quedaban debajo del plano. Se exige que cada uno se posicione y supere al
+       lienzo (`.canvas-shell`, sin `z-index` propio). */
+    const zIndexOf = (block) => {
+      const match = /z-index:\s*(-?\d+)/.exec(block);
+      return match ? Number(match[1]) : 0;
+    };
+    const canvasZ = zIndexOf(cssBlock('.canvas-shell'));
+    for (const selector of ['.stage-toolbar', '.rail']) {
+      const block = cssBlock(selector);
+      report.check(`«${selector}» se dibuja por encima del lienzo`,
+        /position:\s*(relative|fixed|sticky|absolute)/.test(block) && zIndexOf(block) > canvasZ,
+        `${selector} z-index ${zIndexOf(block)} · lienzo ${canvasZ} · ${block.replace(/\s+/g, ' ').slice(0, 90)}`);
+    }
+    report.check('La paleta de herramientas se ancla a la barra y no se queda detrás del lienzo',
+      /position:\s*absolute/.test(cssBlock('.tools-popover'))
+      && zIndexOf(cssBlock('.tools-popover')) >= 1
+      && /position:\s*relative/.test(cssBlock('.stage-toolbar')),
+      cssBlock('.tools-popover').replace(/\s+/g, ' ').slice(0, 90));
+
     const railMenu = q(window, '[data-pipe-menu]');
     railMenu?.click();
     const railFlyout = q(window, '[data-pipe-flyout]');
