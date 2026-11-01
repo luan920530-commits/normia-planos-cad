@@ -44,8 +44,90 @@ export function resize(source, size) {
   return out;
 }
 
+/**
+ * ICO clásico (mapa de bits de 32 bits) con varias medidas.
+ *
+ * No se usa PNG dentro del ICO: aunque Windows lo admite, el instalador de
+ * Inno Setup y algunas herramientas de empaquetado esperan el formato clásico.
+ * Cada entrada es una cabecera BITMAPINFOHEADER con la altura duplicada (imagen
+ * + máscara) y las filas de abajo hacia arriba.
+ */
+export function buildIco(sizes, image) {
+  const entries = [];
+  for (const size of sizes) {
+    const pixels = PNG.sync.write(resize(image, size));
+    const data = PNG.sync.read(pixels);
+    const header = Buffer.alloc(40);
+    header.writeUInt32LE(40, 0);
+    header.writeInt32LE(size, 4);
+    header.writeInt32LE(size * 2, 8);
+    header.writeUInt16LE(1, 12);
+    header.writeUInt16LE(32, 14);
+    header.writeUInt32LE(size * size * 4, 20);
+    const rows = Buffer.alloc(size * size * 4);
+    for (let y = 0; y < size; y += 1) {
+      for (let x = 0; x < size; x += 1) {
+        const from = ((size - 1 - y) * size + x) * 4;
+        const to = (y * size + x) * 4;
+        rows[to] = data.data[from + 2];
+        rows[to + 1] = data.data[from + 1];
+        rows[to + 2] = data.data[from];
+        rows[to + 3] = data.data[from + 3];
+      }
+    }
+    const mask = Buffer.alloc(Math.ceil(size / 32) * 4 * size);
+    entries.push({ size, payload: Buffer.concat([header, rows, mask]) });
+  }
+  const directoryHeader = Buffer.alloc(6);
+  directoryHeader.writeUInt16LE(0, 0);
+  directoryHeader.writeUInt16LE(1, 2);
+  directoryHeader.writeUInt16LE(entries.length, 4);
+  const directory = Buffer.alloc(16 * entries.length);
+  let offset = 6 + 16 * entries.length;
+  entries.forEach((entry, index) => {
+    const base = index * 16;
+    directory.writeUInt8(entry.size >= 256 ? 0 : entry.size, base);
+    directory.writeUInt8(entry.size >= 256 ? 0 : entry.size, base + 1);
+    directory.writeUInt8(0, base + 2);
+    directory.writeUInt8(0, base + 3);
+    directory.writeUInt16LE(1, base + 4);
+    directory.writeUInt16LE(32, base + 6);
+    directory.writeUInt32LE(entry.payload.length, base + 8);
+    directory.writeUInt32LE(offset, base + 12);
+    offset += entry.payload.length;
+  });
+  return Buffer.concat([directoryHeader, directory, ...entries.map((entry) => entry.payload)]);
+}
+
+/** ICNS con las medidas estándar (PNG incrustado, formato de Apple desde 10.7). */
+export function buildIcns(image) {
+  const types = [
+    ['icp4', 16],
+    ['icp5', 32],
+    ['icp6', 64],
+    ['ic07', 128],
+    ['ic08', 256],
+    ['ic09', 512],
+    ['ic10', 512],
+  ];
+  const blocks = types.map(([type, size]) => {
+    const payload = PNG.sync.write(resize(image, size));
+    const header = Buffer.alloc(8);
+    header.write(type, 0, 4, 'ascii');
+    header.writeUInt32BE(payload.length + 8, 4);
+    return Buffer.concat([header, payload]);
+  });
+  const body = Buffer.concat(blocks);
+  const header = Buffer.alloc(8);
+  header.write('icns', 0, 4, 'ascii');
+  header.writeUInt32BE(body.length + 8, 4);
+  return Buffer.concat([header, body]);
+}
+
 const directory = path.resolve(target);
 fs.mkdirSync(directory, { recursive: true });
 fs.writeFileSync(path.join(directory, 'icon.png'), PNG.sync.write(resize(source, 512)));
 fs.writeFileSync(path.join(directory, 'icon-256.png'), PNG.sync.write(resize(source, 256)));
-console.log(`Iconos en ${directory} (512 y 256 px)`);
+fs.writeFileSync(path.join(directory, 'icon.ico'), buildIco([16, 32, 48, 64, 128, 256], source));
+fs.writeFileSync(path.join(directory, 'icon.icns'), buildIcns(source));
+console.log(`Iconos en ${directory} (png 512, png 256, ico y icns)`);

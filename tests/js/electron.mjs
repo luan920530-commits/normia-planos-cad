@@ -134,6 +134,15 @@ report.check('Solo viaja la versión de PHP que usa la aplicación',
   fs.existsSync(path.join(stage, 'runtime/node_modules/@php-wasm/node-8-3'))
   && !fs.existsSync(path.join(stage, 'runtime/node_modules/@php-wasm/node-8-4')));
 const manifest = JSON.parse(fs.readFileSync(path.join(stage, 'package.json'), 'utf8'));
+function manifestIconPatterns(directory) {
+  // electron-builder convierte los PNG por su cuenta en macOS y Windows, y en
+  // los flujos esa conversión falló: se entregan .icns y .ico ya hechos.
+  return manifest.build.mac.icon.endsWith('.icns') && manifest.build.win.icon.endsWith('.ico')
+    && fs.existsSync(path.join(directory, 'build', 'icon.icns'));
+}
+report.check('Los iconos salen en los formatos que espera cada sistema',
+  ['icon.png', 'icon.ico', 'icon.icns'].every((name) => fs.existsSync(path.join(stage, 'build', name)))
+  && manifestIconPatterns(stage));
 report.check('El instalador es por usuario y sin firma comercial',
   manifest.build.appId === 'co.normia.cad' && manifest.build.nsis.perMachine === false
   && manifest.build.mac.identity === null && manifest.build.mac.category.startsWith('public.app-category'));
