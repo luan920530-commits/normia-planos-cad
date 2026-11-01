@@ -37,19 +37,20 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 20. [Distribución: escritorio y Android](#distribución-escritorio-y-android)
 21. [Edición Electron](#edición-electron)
 22. [Guía de primeros pasos](#guía-de-primeros-pasos)
-23. [Cambios de la versión 1.15.2](#cambios-de-la-versión-1152)
-24. [Cambios de la versión 1.15.1](#cambios-de-la-versión-1151)
-25. [Cambios de la versión 1.15.0](#cambios-de-la-versión-1150)
-26. [Cambios de la versión 1.14.2](#cambios-de-la-versión-1142)
-27. [Cambios de la versión 1.14.1](#cambios-de-la-versión-1141)
-28. [Cambios de la versión 1.14.0](#cambios-de-la-versión-1140)
-29. [Cambios de la versión 1.13.0](#cambios-de-la-versión-1130)
-30. [Cambios de la versión 1.12.0](#cambios-de-la-versión-1120)
-31. [Cambios de la versión 1.11.1](#cambios-de-la-versión-1111)
-32. [Cambios de la versión 1.11.0](#cambios-de-la-versión-1110)
-33. [Cambios de la versión 1.10.0](#cambios-de-la-versión-1100)
-34. [Cambios de la versión 1.9.0](#cambios-de-la-versión-190)
-35. [Cambios de la versión 1.8.0](#cambios-de-la-versión-180)
+23. [Cambios de la versión 1.15.3](#cambios-de-la-versión-1153)
+24. [Cambios de la versión 1.15.2](#cambios-de-la-versión-1152)
+25. [Cambios de la versión 1.15.1](#cambios-de-la-versión-1151)
+26. [Cambios de la versión 1.15.0](#cambios-de-la-versión-1150)
+27. [Cambios de la versión 1.14.2](#cambios-de-la-versión-1142)
+28. [Cambios de la versión 1.14.1](#cambios-de-la-versión-1141)
+29. [Cambios de la versión 1.14.0](#cambios-de-la-versión-1140)
+30. [Cambios de la versión 1.13.0](#cambios-de-la-versión-1130)
+31. [Cambios de la versión 1.12.0](#cambios-de-la-versión-1120)
+32. [Cambios de la versión 1.11.1](#cambios-de-la-versión-1111)
+33. [Cambios de la versión 1.11.0](#cambios-de-la-versión-1110)
+34. [Cambios de la versión 1.10.0](#cambios-de-la-versión-1100)
+35. [Cambios de la versión 1.9.0](#cambios-de-la-versión-190)
+36. [Cambios de la versión 1.8.0](#cambios-de-la-versión-180)
 36. [Paquetes y verificación](#paquetes-y-verificación)
 37. [Limitaciones](#limitaciones)
 38. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
@@ -754,7 +755,7 @@ Lo único que no funciona sin red es la **vista previa de desarrollo** (`npm run
 | `tests/php/package.mjs` | 39 comprobaciones: construye ambos ZIP, verifica que no haya bases, sesiones, credenciales, logs ni carpetas de desarrollo, valida los SHA-256 y hace una instalación limpia de la demo comprobando assets, catálogos (395/420), los cuatro pisos del proyecto de ejemplo, señales de servicios y redes en la demo, la señal «Usted está aquí», **el auditor y su informe en la demo empaquetada**, editor, SVG, JSON e impresión. |
 | `tests/php/desktop.mjs` | 37 comprobaciones del escritorio: rutas de datos separadas del código, `NORMA_DATA_PATH` (solo absolutas), lanzador (argumentos, puerto, estado, cierre), enrutador (bloqueos, saltos de directorio, byte nulo) y una instalación completa escribiendo en una carpeta de datos externa. |
 | `tests/js/electron.mjs` | 37 comprobaciones de la edición Electron: ventana sin acceso a Node, puente mínimo, enlaces externos, instancia única, menú en español, descargas, servidor en `127.0.0.1` sin cookies en memoria, entorno de php-wasm, instalación completa con datos fuera del código, `storage/` inaccesible, armado del paquete (aplicación, ventana e intérprete), los ocho paquetes de php-wasm dentro de `runtime/node_modules`, el rechazo de un paquete sin ellos, el mínimo de macOS y la ausencia de ICU y de versiones de PHP que no se usan. |
-| `tests/js/android.mjs` | 23 comprobaciones del APK: arranque de PHP 8.3 sobre WebAssembly, instalación, sesión, panel, editor, auditor, guardado, reapertura y verificación del contenedor nativo (permisos, descargas, impresión, selección de archivos, firma, prefijo de los activos y aviso de error). |
+| `tests/js/android.mjs` | 27 comprobaciones del APK: arranque de PHP 8.3 sobre WebAssembly, instalación, sesión, panel, editor, auditor, guardado, reapertura y verificación del contenedor nativo (permisos, descargas, impresión, selección de archivos, firma, prefijo de los activos y aviso de error). |
 | `tests/js/offline.mjs` | 0 dependencias de red: revisa las vistas, los estilos, los scripts y los catálogos y falla si aparece un `fetch`, un `WebSocket`, un `src`/`href`/`url()` externo, una llamada de red desde PHP o un dominio no declarado. |
 
 Resultados esperados de la última ejecución completa:
@@ -771,7 +772,7 @@ Resultados esperados de la última ejecución completa:
 ✓ Páginas y menús PHP 8.1 · 32/32
 ✓ Páginas y menús PHP 8.3 · 32/32
 ✓ Escritorio (instaladores) · 37/37
-✓ Android (APK) · 23/23
+✓ Android (APK) · 27/27
 ✓ Escritorio (Electron) · 37/37
 ✓ Paquetes y demo · 39/39
 14/14 pasos correctos
@@ -926,6 +927,34 @@ encontraban nada. Desde la 1.12.0:
   exacto. Cuando no hay resultados, propone palabras cercanas.
 - El lienzo muestra la **pista de la herramienta** al elegir cualquiera de las
   cinco (antes caía en la pista de «Seleccionar»).
+
+## Cambios de la versión 1.15.3
+
+- **El editor vuelve a arrancar en Android 15.** En equipos con un WebView
+  moderno (Chrome 137 o posterior, el de Android 15) el intérprete de PHP
+  empezaba a descargarse y el arranque moría con el aviso
+  `LinkError: WebAssembly.instantiate(): Import #0 "env" "invoke_ii": function
+  import requires a callable`. El paquete PHP trae **dos** compilaciones del
+  intérprete —`asyncify` y `jspi`— y `@php-wasm/web` decide cuál cargar
+  preguntando al navegador si admite JSPI. El APK llevaba siempre la de
+  `asyncify`, así que un navegador con JSPI recibía el cargador JSPI y el
+  binario equivocado. Ahora viajan las dos y la pantalla pide la que
+  corresponde consultando **la misma** detección que usa el cargador.
+- **Detección única.** `tools/android/build.mjs` exporta `jspi()` desde
+  `@php-wasm/web-8-3` en el paquete `php/runtime.js`, de modo que la pantalla y
+  el cargador no pueden desalinearse por criterios distintos. Si el APK no
+  trajera la variante JSPI, la pantalla vuelve a `asyncify` y lo avisa en vez de
+  quedarse en negro.
+- **Comprobaciones nuevas.** `tools/android/check.mjs` verifica que las dos
+  compilaciones existen, que son módulos WebAssembly de verdad, que la pantalla
+  elige por JSPI y que el paquete exporta la detección (17 comprobaciones).
+  `tests/js/android.mjs` sube a **27** comprobaciones con las mismas ideas sobre
+  el código fuente, y el armado **se detiene** si falta cualquiera de las dos
+  variantes en lugar de publicar un APK que fallaría en equipos nuevos.
+- **Tamaño.** El APK crece unos 17 MB porque lleva las dos compilaciones del
+  intérprete. Se aceptó el peso a cambio de que abra en todos los teléfonos.
+
+Sin cambios en el formato del plano ni en la base de datos.
 
 ## Cambios de la versión 1.15.2
 
@@ -1245,6 +1274,13 @@ empaquetarla sin servidor.
   aplicación, atiende las peticiones, mantiene la sesión y guarda los datos en el
   almacenamiento del teléfono; la pantalla intercepta enlaces, formularios,
   `fetch`, descargas e impresión. El APK no declara permiso de red.
+- **Dos compilaciones del intérprete.** `@php-wasm/web-8-3` trae el motor en
+  `asyncify` (el clásico) y en `jspi` (la suspensión nativa de Chrome 137 y
+  posteriores). El APK lleva **las dos** y la pantalla pregunta al navegador con
+  la misma función que usa el cargador (`jspi()` de `wasm-feature-detect`,
+  reexportada por `php/runtime.js`) para pedir la que toca. Cuesta unos 17 MB
+  más de APK, pero evita el fallo de arranque en Android 15 («`Import #0 "env"
+  "invoke_ii"`»).
 - **Flujos de trabajo.** `verify.yml` corre la suite en PHP 8.1 y 8.3;
   `dist-desktop.yml` compila en `macos-15` (Apple Silicon), `macos-15-intel` (Intel) y `windows-2022`, instala
   el paquete y lo arranca antes de publicarlo; `dist-android.yml` verifica el

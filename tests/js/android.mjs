@@ -231,6 +231,40 @@ report.check('Si la pantalla no carga se avisa en español con un enlace para re
   && /No se pudo abrir el editor/.test(activity) && /Reintentar/.test(activity)
   && !/net::ERR_INVALID_RESPONSE/.test(activity.replace(/\/\*[\s\S]*?\*\//g, '')));
 
+/*
+ * El fallo de arranque en Android 15: `loadWebRuntime` elige el cargador con
+ * `jspi()` de `wasm-feature-detect`, y el APK solo llevaba el binario de
+ * asyncify. En un WebView con JSPI el cargador JSPI instanciaba el wasm de
+ * asyncify y moría con «Import #0 "env" "invoke_ii": function import requires
+ * a callable». Ahora viajan las dos compilaciones y la pantalla pide la que
+ * corresponde consultando la misma detección que exporta el paquete.
+ */
+report.check('El armado copia las dos compilaciones del intérprete (asyncify y jspi)',
+  /for \(const modo of \['asyncify', 'jspi'\]\)/.test(androidBuild)
+  && /php_8_3_\$\{modo\}\.wasm/.test(androidBuild)
+  && /!copied\.jspi/.test(androidBuild),
+  'asyncify + jspi');
+report.check('La pantalla elige el intérprete con la detección de JSPI del cargador',
+  /runtime\.jspi\(\)/.test(androidShell)
+  && /php_8_3_\$\{cual\}\.wasm/.test(androidShell)
+  && /export \{ jspi \} from '@php-wasm\/web-8-3'/.test(androidBuild),
+  'misma detección en pantalla y cargador');
+report.check('Si una compilación no arranca, la pantalla prueba la otra antes de rendirse',
+  /const alternativa = modo === 'jspi' \? 'asyncify' : 'jspi';/.test(androidShell)
+  && /cargado = await cargar\(alternativa\);/.test(androidShell)
+  && /Import #0 "env" "invoke_ii"/.test(androidShell));
+report.check('El intérprete que viaja en el APK es un módulo WebAssembly de verdad',
+  ['asyncify', 'jspi'].every((modo) => {
+    const file = path.join(repoRoot, 'tools/android/app/src/main/assets/php', `php_8_3_${modo}.wasm`);
+    if (!fs.existsSync(file)) return false;
+    const fd = fs.openSync(file, 'r');
+    const head = Buffer.alloc(4);
+    fs.readSync(fd, head, 0, 4, 0);
+    fs.closeSync(fd);
+    return head.equals(Buffer.from([0x00, 0x61, 0x73, 0x6d]));
+  }),
+  'magia \0asm');
+
 report.check('El flujo compila el APK y lo adjunta a la release',
   /assembleRelease/.test(androidWorkflow) && /apksigner/.test(androidWorkflow)
   && /gh release upload/.test(androidWorkflow),

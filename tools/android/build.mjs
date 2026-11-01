@@ -110,6 +110,10 @@ async function bundleRuntime() {
   fs.writeFileSync(entry, [
     "export { PHP, PHPRequestHandler } from '@php-wasm/universal';",
     "export { loadWebRuntime } from '@php-wasm/web';",
+    // La misma detección que usa `loadWebRuntime` para elegir cargador: la
+    // pantalla la consulta para pedir el binario que corresponde (asyncify o
+    // jspi). Sin esto, un WebView con JSPI recibía el binario de asyncify.
+    "export { jspi } from '@php-wasm/web-8-3';",
     '',
   ].join('\n'), 'utf8');
   // El entorno de desarrollo puede tener varias copias de `@php-wasm/universal`
@@ -176,25 +180,43 @@ async function bundleRuntime() {
   fs.rmSync(entry, { force: true });
 }
 
-/** Copia el binario de PHP compilado a WebAssembly. */
+/**
+ * Copia **las dos** compilaciones del intérprete: `asyncify` y `jspi`.
+ *
+ * `@php-wasm/web` elige entre las dos con `jspi()` de `wasm-feature-detect`, y
+ * esa elección también decide qué cargador de JavaScript usa. Si se copiara una
+ * sola —como se hacía antes, siempre asyncify— en un navegador con JSPI
+ * (Chrome moderno, Android 15) el cargador JSPI instanciaría el binario de
+ * asyncify y fallaría con «Import #0 "env" "invoke_ii": function import
+ * requires a callable». La pantalla (`shell.js`) hace la misma detección y pide
+ * el archivo correspondiente.
+ */
 function copyWasm() {
   const base = path.join(ROOT, 'node_modules/@php-wasm/web-8-3');
   if (!fs.existsSync(base)) {
     throw new Error('Falta @php-wasm/web-8-3. Instálalo con npm install --no-save.');
   }
-  const candidates = [];
-  for (const variant of fs.readdirSync(base)) {
-    const directory = path.join(base, variant);
-    if (!fs.statSync(directory).isDirectory()) continue;
+  const copied = {};
+  for (const modo of ['asyncify', 'jspi']) {
+    const directory = path.join(base, modo);
+    if (!fs.existsSync(directory)) continue;
+    let candidate = null;
     for (const version of fs.readdirSync(directory)) {
-      const candidate = path.join(directory, version, 'php_8_3.wasm');
-      if (fs.existsSync(candidate)) candidates.push(candidate);
+      const file = path.join(directory, version, 'php_8_3.wasm');
+      if (fs.existsSync(file)) candidate = file;
     }
+    if (!candidate) continue;
+    const destination = path.join(TARGET, `php/php_8_3_${modo}.wasm`);
+    fs.copyFileSync(candidate, destination);
+    copied[modo] = { source: candidate, destination, size: fs.statSync(destination).size };
   }
-  if (candidates.length === 0) throw new Error('No se encontró php_8_3.wasm en @php-wasm/web-8-3.');
-  const chosen = candidates.find((file) => file.includes('asyncify')) || candidates[0];
-  fs.copyFileSync(chosen, path.join(TARGET, 'php/php_8_3.wasm'));
-  return chosen;
+  if (!copied.asyncify) throw new Error('No se encontró el intérprete asyncify de PHP 8.3 en @php-wasm/web-8-3.');
+  if (!copied.jspi) {
+    // Sin la variante JSPI, un navegador que la elija no podría arrancar: es
+    // mejor detener el armado que publicar un APK que falla en equipos nuevos.
+    throw new Error('Falta la variante «jspi» de PHP 8.3; el paquete @php-wasm/web-8-3 está incompleto.');
+  }
+  return copied;
 }
 
 /** Copia la pantalla del contenedor (HTML, CSS y JS). */
@@ -224,7 +246,9 @@ async function main() {
   await bundleRuntime();
   console.log(`· ${count} archivos de la aplicación para el intérprete`);
   console.log(`· ${staticCount} activos estáticos para el WebView`);
-  console.log(`· intérprete ${path.relative(ROOT, wasm)}`);
+  for (const [modo, info] of Object.entries(wasm)) {
+    console.log(`· intérprete ${modo}: ${(info.size / 1048576).toFixed(1)} MB`);
+  }
   console.log(`· activos en ${path.relative(ROOT, TARGET)}`);
   if (args.has('--apk')) gradle();
 }

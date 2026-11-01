@@ -25,7 +25,7 @@ const bad = (label, detail = '') => {
   console.log(`✗ ${label}${detail ? ' · ' + detail : ''}`);
 };
 
-for (const file of ['index.html', 'shell.js', 'shell.css', 'app-core.js', 'php/runtime.js', 'php/php_8_3.wasm', 'php/app-files.json', 'css/app.css', 'css/editor.css', 'js/app.js', 'img/normia-logo.png']) {
+for (const file of ['index.html', 'shell.js', 'shell.css', 'app-core.js', 'php/runtime.js', 'php/php_8_3_asyncify.wasm', 'php/php_8_3_jspi.wasm', 'php/app-files.json', 'css/app.css', 'css/editor.css', 'js/app.js', 'img/normia-logo.png']) {
   if (!fs.existsSync(path.join(ASSETS, file))) bad(`Falta ${file}`);
 }
 if (failures.length) {
@@ -68,6 +68,32 @@ else bad('La versión del paquete no coincide', `${info.version} ≠ ${version}`
 if (Object.keys(info.files).length > 100) ok('Los archivos de PHP viajan en el APK', `${Object.keys(info.files).length}`);
 else bad('Faltan archivos de PHP', String(Object.keys(info.files).length));
 
+/*
+ * El cargador de `@php-wasm/web` elige entre dos compilaciones del intérprete
+ * con `jspi()` de `wasm-feature-detect`: `asyncify` (motor clásico) o `jspi`
+ * (suspensión nativa de Chrome moderno y Android 15). El APK tiene que llevar
+ * **las dos** y la pantalla tiene que pedir la que toca; con una sola, un
+ * WebView con JSPI instancia el binario equivocado y el arranque muere con
+ * «Import #0 "env" "invoke_ii": function import requires a callable».
+ */
+const shellSource = fs.readFileSync(path.join(ASSETS, 'shell.js'), 'utf8');
+const variantes = ['asyncify', 'jspi'].map((modo) => {
+  const file = path.join(ASSETS, `php/php_8_3_${modo}.wasm`);
+  const bytes = fs.existsSync(file) ? fs.readFileSync(file).subarray(0, 4) : Buffer.alloc(0);
+  return { modo, existe: fs.existsSync(file), magia: bytes.equals(Buffer.from([0x00, 0x61, 0x73, 0x6d])), peso: fs.existsSync(file) ? fs.statSync(file).size : 0 };
+});
+const faltantesWasm = variantes.filter((v) => !v.existe || !v.magia);
+if (faltantesWasm.length === 0) {
+  ok('El APK lleva las dos compilaciones del intérprete', variantes.map((v) => `${v.modo} ${(v.peso / 1048576).toFixed(1)} MB`).join(' · '));
+} else {
+  bad('Falta alguna compilación del intérprete o no es un módulo WebAssembly', faltantesWasm.map((v) => v.modo).join(', '));
+}
+if (/runtime\.jspi\(\)/.test(shellSource) && /php_8_3_\$\{cual\}\.wasm/.test(shellSource)
+  && /php_8_3_\$\{modo\}\.wasm/.test(shellSource) === false) {
+  ok('La pantalla elige el intérprete con la misma detección que el cargador');
+} else {
+  bad('La pantalla no elige el intérprete según la detección de JSPI');
+}
 const runtimeFile = path.join(ASSETS, 'php/runtime.js');
 const sizeMb = fs.statSync(runtimeFile).size / 1048576;
 if (sizeMb < 6) ok('El paquete JavaScript no arrastra datos de internacionalización', `${sizeMb.toFixed(1)} MB`);
@@ -75,7 +101,18 @@ else bad('El paquete JavaScript es demasiado grande', `${sizeMb.toFixed(1)} MB`)
 
 globalThis.require = createRequire(import.meta.url);
 const runtime = await import(runtimeFile);
-const wasmBinary = fs.readFileSync(path.join(ASSETS, 'php/php_8_3.wasm'));
+const wasmBinary = fs.readFileSync(path.join(ASSETS, 'php/php_8_3_asyncify.wasm'));
+// La pantalla consulta `runtime.jspi()`, así que el paquete tiene que exportarla
+// (es la misma función que usa `loadWebRuntime`; no una copia con otro criterio)
+// y tiene que responder de verdad, no reventar.
+let deteccionJspi = null;
+try {
+  if (typeof runtime.jspi === 'function') deteccionJspi = await runtime.jspi();
+} catch (error) {
+  deteccionJspi = `error: ${error && error.message ? error.message : error}`;
+}
+if (typeof deteccionJspi === 'boolean') ok('El paquete del intérprete responde a la detección de JSPI', `jspi = ${deteccionJspi}`);
+else bad('El paquete del intérprete no expone una detección de JSPI que funcione', String(deteccionJspi));
 const php = new runtime.PHP(await runtime.loadWebRuntime('8.3', { emscriptenOptions: { wasmBinary } }));
 const app = new NormiaApp({
   php,
