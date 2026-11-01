@@ -35,11 +35,13 @@ import java.io.FileOutputStream
  * Ese origen es seguro: permite almacenamiento local y el intérprete de PHP en
  * WebAssembly. Todo el resto lo resuelve JavaScript (`shell.js`).
  *
- * El `build.mjs` deja la aplicación en `assets/www/`, y el cargador solo
+ * El `build.mjs` deja la aplicación en la raíz de `assets/`, y el cargador solo
  * resuelve rutas que estén **debajo** del prefijo registrado: por eso el prefijo
- * es `/assets/` y la pantalla se abre en `/assets/www/index.html`. Con el prefijo
- * en `/` (o pidiendo `/index.html`) la petición no encuentra el archivo y el
- * WebView muestra «net::ERR_INVALID_RESPONSE» en vez del editor.
+ * es `/assets/` y la pantalla se abre en `/assets/index.html`. Con el prefijo en
+ * `/` (o pidiendo `/index.html`) la petición no encuentra el archivo y el WebView
+ * muestra «net::ERR_INVALID_RESPONSE»; y si la aplicación quedara en
+ * `assets/www/`, el HTML cargaría sin estilos ni scripts porque sus rutas
+ * `/assets/…` apuntarían a `assets/assets/…`.
  *
  * El código nativo solo hace tres cosas: elegir un archivo para importar, guardar
  * descargas en la carpeta pública de descargas e imprimir la hoja del plano.
@@ -286,10 +288,11 @@ class MainActivity : ComponentActivity() {
         private const val ASSETS_PREFIX = "/assets/"
 
         /**
-         * Pantalla de arranque. `build.mjs` copia la aplicación a `assets/www/`,
-         * así que la ruta es `/assets/www/index.html`. `ENTRY` se usa también en
-         * el aviso de error para ofrecer «Reintentar».
+         * Pantalla de arranque. `build.mjs` copia la aplicación a la **raíz** de
+         * `assets/`, así que la ruta es `/assets/index.html`, y las páginas PHP
+         * piden sus recursos en `/assets/…`, que es donde están. `ENTRY` se usa
+         * también en el aviso de error para ofrecer «Reintentar».
          */
-        private val ENTRY = "https://$HOST${ASSETS_PREFIX}www/index.html"
+        private val ENTRY = "https://$HOST${ASSETS_PREFIX}index.html"
     }
 }

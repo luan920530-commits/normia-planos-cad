@@ -37,20 +37,21 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 20. [Distribución: escritorio y Android](#distribución-escritorio-y-android)
 21. [Edición Electron](#edición-electron)
 22. [Guía de primeros pasos](#guía-de-primeros-pasos)
-23. [Cambios de la versión 1.15.0](#cambios-de-la-versión-1150)
-24. [Cambios de la versión 1.14.2](#cambios-de-la-versión-1142)
-25. [Cambios de la versión 1.14.1](#cambios-de-la-versión-1141)
-26. [Cambios de la versión 1.14.0](#cambios-de-la-versión-1140)
-27. [Cambios de la versión 1.13.0](#cambios-de-la-versión-1130)
-28. [Cambios de la versión 1.12.0](#cambios-de-la-versión-1120)
-29. [Cambios de la versión 1.11.1](#cambios-de-la-versión-1111)
-30. [Cambios de la versión 1.11.0](#cambios-de-la-versión-1110)
-31. [Cambios de la versión 1.10.0](#cambios-de-la-versión-1100)
-32. [Cambios de la versión 1.9.0](#cambios-de-la-versión-190)
-33. [Cambios de la versión 1.8.0](#cambios-de-la-versión-180)
-34. [Paquetes y verificación](#paquetes-y-verificación)
-35. [Limitaciones](#limitaciones)
-36. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
+23. [Cambios de la versión 1.15.1](#cambios-de-la-versión-1151)
+24. [Cambios de la versión 1.15.0](#cambios-de-la-versión-1150)
+25. [Cambios de la versión 1.14.2](#cambios-de-la-versión-1142)
+26. [Cambios de la versión 1.14.1](#cambios-de-la-versión-1141)
+27. [Cambios de la versión 1.14.0](#cambios-de-la-versión-1140)
+28. [Cambios de la versión 1.13.0](#cambios-de-la-versión-1130)
+29. [Cambios de la versión 1.12.0](#cambios-de-la-versión-1120)
+30. [Cambios de la versión 1.11.1](#cambios-de-la-versión-1111)
+31. [Cambios de la versión 1.11.0](#cambios-de-la-versión-1110)
+32. [Cambios de la versión 1.10.0](#cambios-de-la-versión-1100)
+33. [Cambios de la versión 1.9.0](#cambios-de-la-versión-190)
+34. [Cambios de la versión 1.8.0](#cambios-de-la-versión-180)
+35. [Paquetes y verificación](#paquetes-y-verificación)
+36. [Limitaciones](#limitaciones)
+37. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
 
 ---
 
@@ -752,7 +753,7 @@ Lo único que no funciona sin red es la **vista previa de desarrollo** (`npm run
 | `tests/php/package.mjs` | 39 comprobaciones: construye ambos ZIP, verifica que no haya bases, sesiones, credenciales, logs ni carpetas de desarrollo, valida los SHA-256 y hace una instalación limpia de la demo comprobando assets, catálogos (395/420), los cuatro pisos del proyecto de ejemplo, señales de servicios y redes en la demo, la señal «Usted está aquí», **el auditor y su informe en la demo empaquetada**, editor, SVG, JSON e impresión. |
 | `tests/php/desktop.mjs` | 37 comprobaciones del escritorio: rutas de datos separadas del código, `NORMA_DATA_PATH` (solo absolutas), lanzador (argumentos, puerto, estado, cierre), enrutador (bloqueos, saltos de directorio, byte nulo) y una instalación completa escribiendo en una carpeta de datos externa. |
 | `tests/js/electron.mjs` | 37 comprobaciones de la edición Electron: ventana sin acceso a Node, puente mínimo, enlaces externos, instancia única, menú en español, descargas, servidor en `127.0.0.1` sin cookies en memoria, entorno de php-wasm, instalación completa con datos fuera del código, `storage/` inaccesible, armado del paquete (aplicación, ventana e intérprete), los ocho paquetes de php-wasm dentro de `runtime/node_modules`, el rechazo de un paquete sin ellos, el mínimo de macOS y la ausencia de ICU y de versiones de PHP que no se usan. |
-| `tests/js/android.mjs` | 22 comprobaciones del APK: arranque de PHP 8.3 sobre WebAssembly, instalación, sesión, panel, editor, auditor, guardado, reapertura y verificación del contenedor nativo (permisos, descargas, impresión, selección de archivos, firma, prefijo de los activos y aviso de error). |
+| `tests/js/android.mjs` | 23 comprobaciones del APK: arranque de PHP 8.3 sobre WebAssembly, instalación, sesión, panel, editor, auditor, guardado, reapertura y verificación del contenedor nativo (permisos, descargas, impresión, selección de archivos, firma, prefijo de los activos y aviso de error). |
 | `tests/js/offline.mjs` | 0 dependencias de red: revisa las vistas, los estilos, los scripts y los catálogos y falla si aparece un `fetch`, un `WebSocket`, un `src`/`href`/`url()` externo, una llamada de red desde PHP o un dominio no declarado. |
 
 Resultados esperados de la última ejecución completa:
@@ -769,7 +770,7 @@ Resultados esperados de la última ejecución completa:
 ✓ Páginas y menús PHP 8.1 · 32/32
 ✓ Páginas y menús PHP 8.3 · 32/32
 ✓ Escritorio (instaladores) · 37/37
-✓ Android (APK) · 22/22
+✓ Android (APK) · 23/23
 ✓ Escritorio (Electron) · 37/37
 ✓ Paquetes y demo · 39/39
 14/14 pasos correctos
@@ -797,10 +798,10 @@ más en el equipo.
   usuario, separados del programa: desinstalar no borra los planos.
 - **Android.** El editor completo dentro de un `WebView`, con PHP 8.3 compilado a
   WebAssembly. Funciona sin conexión y el APK no pide permiso de red. La pantalla
-  viaja en `assets/www/` y se sirve con `WebViewAssetLoader` bajo el prefijo
-  `/assets/` (dirección `https://appassets.androidplatform.net/assets/www/index.html`):
-  el archivo tiene que estar **debajo** del prefijo registrado, porque si no el
-  WebView responde `net::ERR_INVALID_RESPONSE`.
+  y los estáticos del editor viven en la **raíz** de `app/src/main/assets/` y se
+  sirven con `WebViewAssetLoader` bajo el prefijo `/assets/`, así que
+  `/assets/index.html` abre la pantalla y `/assets/css/app.css` encuentra el
+  archivo `css/app.css`: el cargador descarta el prefijo antes de buscar.
 - **Sin certificados comerciales.** Los paquetes llevan firma ad-hoc (macOS) y
   clave propia (Android); Windows no está firmado. Los avisos de Gatekeeper y
   SmartScreen se explican, con su solución, en la guía. No se promete un
@@ -924,6 +925,31 @@ encontraban nada. Desde la 1.12.0:
   exacto. Cuando no hay resultados, propone palabras cercanas.
 - El lienzo muestra la **pista de la herramienta** al elegir cualquiera de las
   cinco (antes caía en la pista de «Seleccionar»).
+
+## Cambios de la versión 1.15.1
+
+- **El APK vuelve a abrir el editor, y ya con estilos.** Las dos piezas que
+  fallaban: el contenedor pedía `…/index.html` (versiones anteriores a la 1.14.2)
+  y, aun arreglado ese punto, la aplicación se copiaba a `assets/www/` mientras
+  el HTML del editor pide sus recursos en `/assets/css/…`. El cargador quita el
+  prefijo `/assets/` antes de buscar el archivo, así que la ruta acababa en
+  `assets/assets/…`: el plano cargaba **sin estilos ni scripts**.
+- **Disposición corregida.** El armado copia ahora las **tripas** de `assets/`
+  (`css/`, `img/`, `js/`, `manifest.webmanifest`) a la raíz de
+  `app/src/main/assets/`, junto a la pantalla contenedora y al intérprete. Así
+  `/assets/css/app.css` resuelve al archivo `css/app.css` del APK y
+  `/assets/index.html` a la pantalla. El intérprete sigue recibiendo el árbol
+  completo del repositorio en `/www`, porque `Url::asset()` y el service worker
+  del modo brigadista leen del disco.
+- **Comprobación que faltaba.** `tools/android/check.mjs` abre la aplicación
+  dentro del intérprete, lee **todas** las rutas `/assets/…` que emite el HTML y
+  falla si alguna no existe en el APK. Con este control, el defecto anterior
+  habría aparecido en el propio flujo de trabajo y no en el teléfono.
+- **Pruebas.** `tests/js/android.mjs` pasa a **23** comprobaciones (prefijo real,
+  pantalla en la raíz de los activos, copia de los estáticos y origen del
+  puente).
+
+Sin cambios en el formato del plano ni en la base de datos.
 
 ## Cambios de la versión 1.15.0
 

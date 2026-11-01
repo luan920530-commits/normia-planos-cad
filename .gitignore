@@ -30,7 +30,8 @@ Thumbs.db
 *.zip
 
 # Proyecto de Android: los activos se generan con tools/android/build.mjs
-/tools/android/app/src/main/assets/www/
+# (se copian a la raíz de assets/, así que se ignora su contenido generado)
+/tools/android/app/src/main/assets/
 /tools/android/.gradle/
 /tools/android/build/
 /tools/android/app/build/

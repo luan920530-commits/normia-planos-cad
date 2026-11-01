@@ -196,14 +196,16 @@ sin conexión y **el APK no pide permiso de red**.
 - **Android 8.0 (API 26) o superior.** El editor necesita un WebView
   actualizado (Chrome); en equipos con WebView muy antiguo la app muestra una
   pantalla de diagnóstico en vez de quedarse en blanco.
-- **La pantalla viaja dentro del APK.** `tools/android/build.mjs` la deja en
-  `app/src/main/assets/www/` y el contenedor la sirve con `WebViewAssetLoader`
-  bajo el prefijo `/assets/`, en
-  `https://appassets.androidplatform.net/assets/www/index.html`. El archivo debe
-  estar **debajo** del prefijo registrado: si el prefijo y la carpeta no
-  coinciden, el WebView no encuentra el HTML y muestra
-  `net::ERR_INVALID_RESPONSE` en lugar del editor (defecto corregido en la
-  **1.14.2**). `tools/android/check.mjs` lo verifica antes de compilar.
+- **La pantalla viaja dentro del APK.** `tools/android/build.mjs` copia las
+  tripas de `assets/` (`css/`, `img/`, `js/`…) a la **raíz** de
+  `app/src/main/assets/`, junto a la pantalla contenedora y al intérprete. El
+  contenedor la sirve con `WebViewAssetLoader` bajo el prefijo `/assets/`, así
+  que `https://appassets.androidplatform.net/assets/index.html` abre la pantalla
+  y `/assets/css/app.css` encuentra el archivo `css/app.css`: el cargador
+  descarta el prefijo antes de buscar. Con la aplicación en `assets/www/` el HTML
+  cargaba «en crudo», sin estilos ni scripts (corregido en la **1.15.1**).
+  `tools/android/check.mjs` pide las páginas al intérprete y comprueba que
+  **cada** ruta `/assets/…` exista en el APK antes de compilar.
 - Unos 60 MB de espacio; los planos ocupan pocos cientos de KB más.
 - Descargas en la carpeta **Descargas** del teléfono.
 - Impresión con el servicio de impresión de Android (y «Guardar como PDF»).
@@ -300,7 +302,8 @@ node tools/android/build.mjs --apk
 | El instalador no arranca en Windows | SmartScreen: «Más información → Ejecutar de todas formas». |
 | macOS dice que la app está dañada | Suele ser la cuarentena de un archivo descargado: clic derecho → Abrir. Si persiste, `xattr -dr com.apple.quarantine "/Applications/Normia Planos CAD.app"`. |
 | La app de Android se queda en la pantalla de arranque | Pulsa **Reintentar**; si vuelve a fallar, abre **Cómo reportar el problema** y envía el texto con el modelo del equipo y la versión de Android. |
-| Android muestra «la página web no está disponible · `net::ERR_INVALID_RESPONSE`» | Es un APK anterior a la **1.14.2**, que buscaba la pantalla fuera de la carpeta de activos. Instala el APK de la 1.14.2 o posterior. En la 1.14.2 y siguientes, si algo no carga, la app muestra un aviso propio con el código y un botón **Reintentar**. |
+| Android muestra «la página web no está disponible · `net::ERR_INVALID_RESPONSE`» | Es un APK anterior a la **1.15.1**: buscaba la pantalla en `…/index.html` o dejaba los estáticos fuera de sitio. Instala el APK de la 1.15.1 o posterior. Desde la 1.15.1, si algo no carga, la app muestra un aviso propio con el código y un botón **Reintentar**. |
+| Android abre el editor «en crudo», sin estilos | APK de la **1.14.2**: la aplicación estaba en `assets/www/` y sus rutas `/assets/…` no encontraban los archivos. Instala la 1.15.1. |
 | Android no deja instalar la actualización | El APK nuevo está firmado con otra clave. Desinstala la versión anterior (eso borra los datos de la app: exporta antes los planos) o guarda una clave fija en los secretos del repositorio. |
 | Quiero empezar de cero | Detén la app, borra la carpeta de datos (`%LOCALAPPDATA%\Normia`, `~/Library/Application Support/Normia` o los datos de la app en Android) y vuelve a abrir. |
 

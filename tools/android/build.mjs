@@ -1,9 +1,18 @@
 /*
  * Arma el contenido del APK de Android.
  *
- * Copia la aplicación al proyecto de Gradle (`app/src/main/assets/www`), empaqueta
- * los archivos de PHP que se montan dentro del intérprete de WebAssembly, genera
- * el paquete JavaScript del runtime y copia el binario `php_8_3.wasm`.
+ * Prepara dos cosas distintas que no se pueden confundir:
+ *
+ * - **Los activos del WebView** (`app/src/main/assets/`): lo único que el
+ *   navegador pide por red —CSS, JS, imágenes y el manifiesto del editor— más la
+ *   pantalla contenedora y el intérprete. `WebViewAssetLoader` sirve esa carpeta
+ *   bajo `https://appassets.androidplatform.net/assets/`, de modo que la URL
+ *   `/assets/css/app.css` del HTML es el archivo `css/app.css` del APK. Por eso
+ *   las **tripas** de `assets/` (no la carpeta) se copian a la raíz.
+ * - **El intérprete** (`php/app-files.json`): la aplicación PHP completa, que se
+ *   monta en `/www` dentro de WebAssembly. Ahí sí va el árbol del repositorio con
+ *   su carpeta `assets/` intacta, porque `Url::asset()` y el service worker del
+ *   modo brigadista leen del disco del intérprete.
  *
  * Uso:
  *   npm install --no-save @php-wasm/web@3.1.61 @php-wasm/web-8-3@3.1.61 esbuild
@@ -21,7 +30,11 @@ import { fileURLToPath } from 'node:url';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '../..');
-const TARGET = path.join(HERE, 'app/src/main/assets/www');
+// Raíz de los activos del APK: la URL `/assets/…` se resuelve contra esta
+// carpeta, así que contiene las **tripas** de `assets/` (css, img, js…) y no la
+// carpeta en sí.
+const TARGET = path.join(HERE, 'app/src/main/assets');
+const STATIC = path.join(ROOT, 'assets');
 
 /** Lo que no forma parte de la aplicación: pruebas, paquetes y control de versiones. */
 const EXCLUDED = new Set(['.git', '.github', 'dist', 'node_modules', 'paquetes', 'coverage', 'tests', 'build', 'tools']);
@@ -43,29 +56,29 @@ function version() {
   return String(JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).version);
 }
 
-/** Copia el árbol de la aplicación a `www/`. */
-function copyApp() {
+/**
+ * Copia al APK lo que el WebView carga por red: los archivos estáticos del
+ * editor. Se copian las **tripas** de `assets/` a la raíz del destino porque el
+ * cargador quita el prefijo `/assets/` de la URL antes de buscar el archivo:
+ * `/assets/css/app.css` → `app/src/main/assets/css/app.css`.
+ */
+function copyStatic() {
   fs.rmSync(TARGET, { recursive: true, force: true });
   fs.mkdirSync(TARGET, { recursive: true });
-  // Copia manual: el destino vive dentro del repositorio y `fs.cpSync` se niega
-  // a copiar una carpeta dentro de sí misma aunque el filtro la excluya.
-  const walk = (directory, prefix) => {
-    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
-      const relative = prefix ? `${prefix}/${entry.name}` : entry.name;
-      if (!shouldCopy(relative)) continue;
-      const source = path.join(directory, entry.name);
-      if (entry.isDirectory()) walk(source, relative);
-      else if (entry.isFile()) {
-        const destination = path.join(TARGET, relative);
-        fs.mkdirSync(path.dirname(destination), { recursive: true });
-        fs.copyFileSync(source, destination);
-      }
-    }
-  };
-  walk(ROOT, '');
-  for (const directory of ['config', 'storage', 'storage/sessions', 'storage/logs', 'storage/cache']) {
-    fs.mkdirSync(path.join(TARGET, directory), { recursive: true });
+  fs.cpSync(STATIC, TARGET, { recursive: true });
+  return Object.keys(walkFiles(STATIC)).length;
+}
+
+/** Lista los archivos de una carpeta como `ruta relativa → ruta absoluta`. */
+function walkFiles(directory, prefix = '') {
+  const found = {};
+  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+    const relative = prefix ? `${prefix}/${entry.name}` : entry.name;
+    const absolute = path.join(directory, entry.name);
+    if (entry.isDirectory()) Object.assign(found, walkFiles(absolute, relative));
+    else if (entry.isFile()) found[relative] = absolute;
   }
+  return found;
 }
 
 /** Empaqueta los archivos de la aplicación para el intérprete (mapa ruta → base64). */
@@ -204,12 +217,13 @@ async function main() {
     console.log(`Versión ${version()} · destino ${path.relative(ROOT, TARGET)}`);
     return;
   }
-  copyApp();
+  const staticCount = copyStatic();
   const count = packAppFiles();
   copyShell();
   const wasm = copyWasm();
   await bundleRuntime();
-  console.log(`· ${count} archivos de la aplicación`);
+  console.log(`· ${count} archivos de la aplicación para el intérprete`);
+  console.log(`· ${staticCount} activos estáticos para el WebView`);
   console.log(`· intérprete ${path.relative(ROOT, wasm)}`);
   console.log(`· activos en ${path.relative(ROOT, TARGET)}`);
   if (args.has('--apk')) gradle();

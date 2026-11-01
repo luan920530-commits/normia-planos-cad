@@ -202,16 +202,27 @@ const prefix = prefixMatch ? prefixMatch[1] : '';
 const targetMatch = /const TARGET = path\.join\(HERE, '([^']+)'\)/.exec(androidBuild);
 const assetsFolder = targetMatch ? path.posix.basename(targetMatch[1].replace(/\\/g, '/')) : '';
 const entryLine = activity.split('\n').find((line) => line.includes('private val ENTRY =')) || '';
-const entryTail = '${ASSETS_PREFIX}' + assetsFolder + '/index.html"';
+// La pantalla cuelga directamente de la raíz de los activos: `/assets/index.html`.
+const entryTail = '${ASSETS_PREFIX}index.html"';
 report.check('El cargador registra el prefijo real de los activos y no la raíz',
   prefix === '/assets/'
   && /addPathHandler\(ASSETS_PREFIX, WebViewAssetLoader\.AssetsPathHandler\(this\)\)/.test(activity),
   prefix || 'sin prefijo');
 report.check('La pantalla de arranque cuelga de la carpeta que arma el APK',
-  assetsFolder === 'www'
+  assetsFolder === 'assets'
   && /loadUrl\(ENTRY\)/.test(activity)
   && entryLine.includes(entryTail),
   entryLine.trim() || 'sin URL de arranque');
+/*
+ * El HTML del editor pide sus recursos en `/assets/css/…`, y el cargador quita
+ * ese prefijo antes de buscar: el archivo tiene que ser `css/…` en la raíz de
+ * los activos del APK. Copiar la carpeta `assets/` entera (o dejarla en
+ * `www/`) deja la aplicación sin estilos ni scripts aunque `index.html` cargue.
+ */
+report.check('Los estáticos del editor se copian a la raíz de los activos del APK',
+  /const STATIC = path\.join\(ROOT, 'assets'\)/.test(androidBuild)
+  && /fs\.cpSync\(STATIC, TARGET, \{ recursive: true \}\)/.test(androidBuild),
+  'copia de assets/ a la raíz del APK');
 report.check('El origen del puente sigue siendo la raíz del dominio virtual',
   (androidShell.match(/const ORIGIN = 'https:\/\/appassets\.androidplatform\.net';/g) || []).length === 2,
   `${(androidShell.match(/const ORIGIN = 'https:\/\/appassets\.androidplatform\.net';/g) || []).length} usos`);
