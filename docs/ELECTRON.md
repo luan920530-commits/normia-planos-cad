@@ -24,6 +24,8 @@ Electron
 
 - **El servidor se enlaza solo a `127.0.0.1`** y en un puerto libre que se pide
   al sistema. No se abre nada a la red y no hace falta permiso de cortafuegos.
+- **PHP no ve el disco del equipo**: solo se montan la carpeta de la aplicación
+  (`/normia/app`) y la de datos (`/normia/datos`).
 - **Las cookies las administra Chromium**, no la memoria del proceso: la sesión
   sobrevive a cerrar y abrir la ventana, como en un navegador.
 - **Los datos viven en una carpeta normal del usuario** y se pueden abrir desde
