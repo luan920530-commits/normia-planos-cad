@@ -150,8 +150,9 @@ async function boot() {
       absoluteUrl: 'http://127.0.0.1',
     }),
   });
+  const arranque = Date.now();
   await app.start();
-  step('Datos del equipo listos', `${app.status().dataFiles} archivos`);
+  step('Datos del equipo listos', `${app.restored} recuperados · ${app.status().dataFiles} archivos · ${Date.now() - arranque} ms`);
 
   step('Listo', `Normia ${info.version}`);
   await navigate('/', { replace: true });
@@ -216,6 +217,30 @@ function baseUrlOf(url) {
   return new URL(url, ORIGIN).href;
 }
 
+/* Errores que reporta el editor dentro del marco (ver `guestBootstrap`). */
+const frameProblems = [];
+
+/**
+ * Si el marco no dibuja nada en unos segundos, se muestra el diagnóstico en vez
+ * de dejar una pantalla en blanco sin explicación.
+ */
+let paintTimer = null;
+function watchFrame() {
+  if (paintTimer !== null) clearTimeout(paintTimer);
+  paintTimer = setTimeout(() => {
+    paintTimer = null;
+    try {
+      const document = frame.contentDocument;
+      const text = document && document.body ? document.body.textContent.replace(/\s+/g, ' ').trim() : '';
+      if (text.length > 20) return;
+      const detail = frameProblems.length ? ` Último error: ${frameProblems.slice(-2).join(' · ')}` : '';
+      fail(new Error(`El editor no terminó de dibujarse en la pantalla.${detail}`));
+    } catch (error) {
+      HOST.log(`[normia] no se pudo revisar el marco: ${error}`);
+    }
+  }, 8000);
+}
+
 async function navigate(url, options = {}) {
   const target = baseUrlOf(url);
   splash.classList.remove('is-hidden');
@@ -233,6 +258,7 @@ async function navigate(url, options = {}) {
     currentUrl = url;
     window.__normiaUrl = url;
     showFrame();
+    watchFrame();
   } catch (error) {
     fail(error);
   }
@@ -244,6 +270,21 @@ const guestBootstrap = function guestBootstrap() {
   const nativeFetch = window.fetch ? window.fetch.bind(window) : null;
 
   const toHeaders = (list) => list.map(([name, value]) => [name, value]);
+
+  // Cualquier error de JavaScript del editor se ve en la pantalla de arranque en
+  // vez de quedarse como una página a medio dibujar.
+  const avisar = (texto) => {
+    try {
+      bridge.problem(String(texto || ''));
+    } catch (error) { /* el padre pudo desaparecer */ }
+  };
+  window.addEventListener('error', (event) => {
+    avisar(`${event.message || 'Error'} en ${event.filename || ''}:${event.lineno || 0}`);
+  });
+  window.addEventListener('unhandledrejection', (event) => {
+    const reason = event.reason && event.reason.message ? event.reason.message : event.reason;
+    avisar(`Promesa rechazada: ${reason}`);
+  });
 
   async function send(url, method, headers, body) {
     return bridge.request({ url, method, headers: toHeaders(headers), body });
@@ -415,6 +456,15 @@ window.__normiaBridge = {
   renderHtml(html) {
     render(html);
     showFrame();
+    watchFrame();
+  },
+  /** El editor avisa de un error de JavaScript: se guarda para el diagnóstico. */
+  problem(text) {
+    const message = String(text || '').slice(0, 400);
+    if (!message) return;
+    frameProblems.push(message);
+    if (frameProblems.length > 8) frameProblems.shift();
+    HOST.log(`[normia] error del editor: ${message}`);
   },
   save(name, mime, base64) {
     HOST.saveFile(name, mime, base64);
@@ -435,15 +485,28 @@ window.__normiaBack = () => {
 window.__normiaPersist = async () => {
   if (!app) return;
   try {
-    await app.persist();
-    app.lastSaveError = null;
+    await app.flush();
   } catch (error) {
-    app.lastSaveError = error;
     banner.hidden = false;
     banner.textContent = 'No se pudieron guardar los cambios en el teléfono (puede que no quede espacio). Expórtalos antes de cerrar.';
     HOST.log(`[normia] no se pudo guardar: ${error}`);
   }
 };
+
+/*
+ * El guardado se agrupa y ocurre poco después de cada pantalla. Si el usuario
+ * cierra, cambia de app o el sistema la detiene, se fuerza ahora para no perder
+ * el último cambio.
+ */
+const guardarAhora = () => {
+  if (!app) return;
+  window.__normiaPersist();
+};
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') guardarAhora();
+});
+window.addEventListener('pagehide', guardarAhora);
+window.addEventListener('beforeunload', guardarAhora);
 
 window.__normiaReset = async () => {
   if (!app) return false;

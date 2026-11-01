@@ -173,10 +173,34 @@ reopened.php.exit(0);
 const roto = { restore: async () => 0, save: async () => { throw new Error('sin espacio'); }, clear: async () => {} };
 const appRota = await boot(roto);
 const respuestaRota = await appRota.request({ url: '/index.php?r=install' });
+let errorAlGuardar = null;
+try { await appRota.flush(); } catch (error) { errorAlGuardar = error; }
 report.check('Un fallo al guardar no impide abrir el editor',
-  respuestaRota.status === 200 && appRota.lastSaveError instanceof Error,
+  respuestaRota.status === 200 && appRota.lastSaveError instanceof Error && errorAlGuardar instanceof Error,
   `${respuestaRota.status} · ${appRota.lastSaveError ? appRota.lastSaveError.message : 'sin error'}`);
 appRota.php.exit(0);
+
+/*
+ * Guardar no puede frenar el editor. En la 1.15.4 cada recurso de una pantalla
+ * escribía la base de datos entera y el teléfono se quedaba en blanco esperando.
+ */
+let escrituras = 0;
+const lento = {
+  restore: async () => 0,
+  save: async () => { escrituras += 1; await new Promise((resolve) => setTimeout(resolve, 400)); return 1; },
+  clear: async () => {},
+};
+const appLenta = await boot(lento);
+const antesLento = Date.now();
+const respuestaRapida = await appLenta.request({ url: '/index.php?r=install' });
+const msRespuesta = Date.now() - antesLento;
+report.check('El guardado no frena la respuesta del editor',
+  respuestaRapida.status === 200 && msRespuesta < 300 && escrituras === 0,
+  `${msRespuesta} ms · ${escrituras} escrituras antes de devolver la página`);
+await appLenta.flush();
+report.check('Los cambios pendientes se guardan al terminar la pantalla', escrituras > 0, `${escrituras} escrituras`);
+report.check('Sin cambios nuevos, el guardado no reescribe nada', await appLenta.flush() === 0);
+appLenta.php.exit(0);
 
 report.check('El ida y vuelta en base64 conserva los bytes',
   Buffer.from(decodeBase64(encodeBase64(new Uint8Array([0, 1, 127, 128, 255])))).equals(Buffer.from([0, 1, 127, 128, 255])));

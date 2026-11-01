@@ -55,6 +55,24 @@ export async function openOpfsStorage({ storage, onUnavailable = () => {} } = {}
     return null;
   }
 
+  /*
+   * No basta con que la carpeta se abra: en algunos WebView la escritura falla
+   * después. Se escribe y se lee un archivo diminuto para saberlo **ya**, en la
+   * pantalla de arranque, y no cuando el usuario cierra con un plano abierto.
+   */
+  try {
+    const prueba = await folder.getFileHandle('.escritura', { create: true });
+    const flujo = await prueba.createWritable();
+    await flujo.write(new Uint8Array([110, 111, 114, 109, 105, 97]));
+    await flujo.close();
+    const leido = new Uint8Array(await (await prueba.getFile()).arrayBuffer());
+    await folder.removeEntry('.escritura');
+    if (leido.length !== 6) throw new Error('El archivo de prueba quedó vacío.');
+  } catch (error) {
+    onUnavailable(error);
+    return null;
+  }
+
   const join = (base, name) => `${base}/${name}`;
 
   const walk = async (directory, prefix, visit) => {
