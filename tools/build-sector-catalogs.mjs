@@ -30,15 +30,16 @@ import { COMERCIO } from './sector-data/cad-comercio.mjs';
 import { TRAFICO, TRAFFIC_ALIASES } from './sector-data/traffic-signs.mjs';
 import { EMERGENCIA, SALUD } from './sector-data/cad-emergencia.mjs';
 import { BRIGADA, BRIGADE_ALIASES } from './sector-data/service-signs.mjs';
+import { VEHICULOS, VIAS, SENALES_VIALES, BICIS } from './sector-data/cad-vias.mjs';
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const CAD_PATH = path.join(ROOT, 'resources/cad-objects.json');
 const SIGN_PATH = path.join(ROOT, 'resources/service-signs.json');
 
 /** Familias completas: definen la familia y su lista de objetos. */
-const FAMILIES = { ...EDS, ...DROGUERIA, ...EMERGENCIA };
+const FAMILIES = { ...EDS, ...DROGUERIA, ...EMERGENCIA, ...VIAS, ...SENALES_VIALES, ...BICIS };
 /** Familias ampliadas: la familia ya existe y solo se añaden objetos. */
-const EXTENSIONS = { ...COMERCIO, ...SALUD };
+const EXTENSIONS = { ...COMERCIO, ...SALUD, ...VEHICULOS };
 
 /**
  * Nombres que se repetían entre familias: se desambigua el rótulo sin tocar
@@ -89,6 +90,7 @@ function main() {
         label: family.label,
         short: family.short,
         description: family.description,
+        ...(family.color ? { color: family.color } : {}),
       };
       addedFamilies += 1;
     }

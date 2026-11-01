@@ -38,7 +38,68 @@
     bind() {
       if (this.bound) return;
       this.bound = true;
+      this.panel.addEventListener('click', (event) => {
+        const preset = event.target.closest('[data-road-preset]');
+        if (preset) {
+          try {
+            if (!this.model.applyRoadPreset(preset.dataset.roadPreset)) {
+              throw new Error('Selecciona una vía para aplicar la sección.');
+            }
+            this.app.afterEdit(`Sección «${preset.dataset.roadPresetLabel || ''}» aplicada`.trim());
+          } catch (error) {
+            this.app.toast(error.message || 'No se pudo aplicar la sección.', 'error');
+          }
+          this.render(true);
+          return;
+        }
+        const add = event.target.closest('[data-road-section-add]');
+        const clear = event.target.closest('[data-road-section-clear]');
+        if (!add && !clear) return;
+        try {
+          const element = this.model.selectedElements().find((item) => item.type === 'road');
+          if (!element) return;
+          if (add) {
+            this.model.setRoadSection(this.model.suggestRoadSection(element));
+          } else if (!this.model.clearRoadSection()) {
+            throw new Error('No se pudo quitar la sección tipo.');
+          }
+          this.app.afterEdit(add ? 'Sección tipo aplicada' : 'Sección tipo retirada');
+        } catch (error) {
+          this.app.toast(error.message || 'No se pudo cambiar la sección.', 'error');
+        }
+        this.render(true);
+      });
       this.panel.addEventListener('change', (event) => {
+        const junctionField = event.target.closest('[data-road-junction]');
+        if (junctionField) {
+          const value = Number(junctionField.value);
+          try {
+            if (!Number.isFinite(value)) throw new Error('Introduce un número válido.');
+            if (!this.model.setRoadJunction({ [junctionField.dataset.roadJunction]: value })) {
+              throw new Error('Selecciona una glorieta para ajustarla.');
+            }
+            this.app.afterEdit('Glorieta ajustada');
+          } catch (error) {
+            this.app.toast(error.message || 'El valor no es válido.', 'error');
+          }
+          this.render(true);
+          return;
+        }
+        const sectionField = event.target.closest('[data-road-section]');
+        if (sectionField) {
+          const value = Number(sectionField.value);
+          try {
+            if (!Number.isFinite(value)) throw new Error('Introduce un número válido.');
+            if (!this.model.setRoadSection({ [sectionField.dataset.roadSection]: value })) {
+              throw new Error('Selecciona una vía para editar su sección.');
+            }
+            this.app.afterEdit('Sección de la vía actualizada');
+          } catch (error) {
+            this.app.toast(error.message || 'El valor no es válido.', 'error');
+          }
+          this.render(true);
+          return;
+        }
         const curveField = event.target.closest('[data-curve-prop]');
         if (curveField) {
           const element = this.model.selectedElements()[0];
@@ -253,6 +314,122 @@
         </button>
         <div class="section-body"${collapsed ? ' hidden' : ''}>${body}</div>
       </section>`;
+    }
+
+    /**
+     * Sección tipo de una vía: reparto del ancho en metros y perfil dibujado a
+     * escala. El ancho total no se escribe a mano: es la suma del reparto, así
+     * el número del plano y el dibujo nunca se contradicen.
+     */
+    roadSectionPanel(road, { canEdit = true } = {}) {
+      const section = road.section;
+      const presets = this.model.roadPresets();
+      const chips = `<div class="road-presets" role="group" aria-label="Secciones de obra">
+        ${presets.map((preset) => `<button class="chip chip-road${preset.junction ? ' chip-junction' : ''}" type="button" data-road-preset="${esc(preset.key)}" data-road-preset-label="${esc(preset.label)}" title="${esc(preset.hint)}"${canEdit ? '' : ' disabled'}>
+          <strong>${esc(preset.label)}</strong><span>${esc(preset.hint)}</span>
+        </button>`).join('')}
+      </div>`;
+      if (!section) {
+        return `<div class="road-section road-section-empty">
+          <p class="help-text">Esta vía se dibuja como banda simple. Aplica una <strong>sección tipo</strong> para marcar carriles, separador, berma, ciclorruta y andenes, o conviértela en glorieta o intersección.</p>
+          <button class="button button-soft button-small" type="button" data-road-section-add${canEdit ? '' : ' disabled'}>Diseñar sección tipo</button>
+          ${chips}
+        </div>`;
+      }
+      const field = (label, key, value, min, max, step, unit) => `<label class="num-field"><span class="num-label">${esc(label)}</span><span class="num-control"><input type="number" data-road-section="${key}" value="${value}" min="${min}" max="${max}" step="${step}"${canEdit ? '' : ' disabled'}>${unit ? `<span class="num-unit">${esc(unit)}</span>` : ''}</span></label>`;
+      const total = (Number(section.lanes) * Number(section.laneM) + Number(section.medianM)
+        + 2 * Number(section.shoulderM) + 2 * Number(section.bikeM) + 2 * Number(section.sidewalkM));
+      return `<div class="road-section">
+        <div class="road-section-metrics">
+          ${field('Carriles', 'lanes', section.lanes, 1, 6, 1, '')}
+          ${field('Ancho de carril', 'laneM', section.laneM, 2.5, 4, 0.1, 'm')}
+          ${field('Separador', 'medianM', section.medianM, 0, 4, 0.1, 'm')}
+          ${field('Berma', 'shoulderM', section.shoulderM, 0, 2, 0.1, 'm')}
+          ${field('Ciclorruta', 'bikeM', section.bikeM, 0, 3, 0.1, 'm')}
+          ${field('Andén', 'sidewalkM', section.sidewalkM, 0, 4, 0.1, 'm')}
+        </div>
+        ${road.junction ? this.roadJunctionFields(road.junction, canEdit) : ''}
+        ${this.roadSectionProfile(section)}
+        <p class="road-section-total"><strong>Ancho total ${num(total)} m</strong><span>carriles + separador + bermas + ciclorrutas + andenes</span></p>
+        ${chips}
+        <button class="button button-ghost button-small" type="button" data-road-section-clear${canEdit ? '' : ' disabled'}>Quitar sección tipo</button>
+      </div>`;
+    }
+
+    /** Accesos e isla de la glorieta; en T o cruz solo informa la forma. */
+    roadJunctionFields(junction, canEdit) {
+      if (junction.kind !== 'roundabout') {
+        return `<p class="road-junction-note">${junction.kind === 'tee' ? 'Intersección en T' : 'Intersección en cruz'} · ${junction.legs} accesos. La caja del elemento define el tamaño del cruce.</p>`;
+      }
+      // ¿Cabe el anillo en la caja? Si no, se dice: no se dibuja una glorieta
+      // que no corresponde con sus medidas.
+      const road = this.model.selectedElements()[0];
+      const unit = this.model.design.canvas.unit;
+      const perMeter = 100 / G.cmPerUnit(unit);
+      const radiusM = road ? Math.min(road.w, road.h) / 2 / perMeter : 0;
+      const neededM = junction.islandM + (Number(road?.section?.lanes) || 1) * (Number(road?.section?.laneM) || 3);
+      const fits = radiusM === 0 || radiusM >= neededM;
+      const warning = fits ? ''
+        : `<p class="road-junction-note is-warning">La caja no alcanza para una isla de ${num(junction.islandM)} m y el anillo: agranda el elemento o reduce la isla.</p>`;
+      return `<div class="road-section-metrics road-junction">
+        <label class="num-field"><span class="num-label">Accesos</span><span class="num-control"><input type="number" data-road-junction="legs" value="${junction.legs}" min="3" max="5" step="1"${canEdit ? '' : ' disabled'}></span></label>
+        <label class="num-field"><span class="num-label">Isla (radio)</span><span class="num-control"><input type="number" data-road-junction="islandM" value="${junction.islandM}" min="1" max="40" step="0.5"${canEdit ? '' : ' disabled'}><span class="num-unit">m</span></span></label>
+      </div>${warning}`;
+    }
+
+    /** Perfil transversal a escala: de andén a andén, con sus cotas. */
+    roadSectionProfile(section) {
+      const lanes = Math.max(1, Math.round(Number(section.lanes) || 1));
+      const laneM = Number(section.laneM) || 3;
+      const median = Number(section.medianM) || 0;
+      const shoulder = Number(section.shoulderM) || 0;
+      const bike = Number(section.bikeM) || 0;
+      const walk = Number(section.sidewalkM) || 0;
+      const total = lanes * laneM + median + 2 * shoulder + 2 * bike + 2 * walk;
+      const scale = total > 0 ? 236 / total : 0;
+      let x = 4;
+      const y = 18;
+      const height = 30;
+      let shapes = '';
+      const band = (meters, fill, stroke = 'none') => {
+        if (meters <= 0) return;
+        const width = meters * scale;
+        shapes += `<rect x="${x.toFixed(2)}" y="${y}" width="${width.toFixed(2)}" height="${height}" fill="${fill}" stroke="${stroke}" stroke-width="0.7"/>`;
+        x += width;
+      };
+      band(walk, '#e6eaf1', '#94a3b8');
+      band(bike, '#e7f5ea', '#15803d');
+      band(shoulder, '#f1f5f9', '#94a3b8');
+      // Calzada: izquierda, separador y derecha, con las líneas de carril.
+      const rightLanes = Math.ceil(lanes / 2);
+      const leftLanes = lanes - rightLanes;
+      const carriageway = (count) => {
+        if (count <= 0) return;
+        const width = count * laneM * scale;
+        shapes += `<rect x="${x.toFixed(2)}" y="${y}" width="${width.toFixed(2)}" height="${height}" fill="#ffffff" stroke="#334155" stroke-width="0.9"/>`;
+        for (let index = 1; index < count; index += 1) {
+          const px = x + index * laneM * scale;
+          shapes += `<line x1="${px.toFixed(2)}" y1="${y}" x2="${px.toFixed(2)}" y2="${y + height}" stroke="#64748b" stroke-width="0.7" stroke-dasharray="4 3"/>`;
+        }
+        x += width;
+      };
+      carriageway(leftLanes);
+      if (median > 0) band(median, '#eef2f7', '#334155');
+      carriageway(rightLanes);
+      band(shoulder, '#f1f5f9', '#94a3b8');
+      band(bike, '#e7f5ea', '#15803d');
+      band(walk, '#e6eaf1', '#94a3b8');
+      const label = `${num(total)} m · ${lanes} ${lanes === 1 ? 'carril' : 'carriles'}`;
+      return `<figure class="road-section-figure">
+        <svg viewBox="0 0 244 58" role="img" aria-label="Perfil transversal de la vía: ${esc(label)}">
+          ${shapes}
+          <line x1="4" y1="52" x2="240" y2="52" stroke="#94a3b8" stroke-width="0.7"/>
+          <line x1="4" y1="49" x2="4" y2="55" stroke="#94a3b8" stroke-width="0.7"/>
+          <line x1="240" y1="49" x2="240" y2="55" stroke="#94a3b8" stroke-width="0.7"/>
+          <text x="122" y="14" text-anchor="middle" font-size="7.5" fill="#475569">${esc(label)}</text>
+        </svg>
+        <figcaption>Perfil esquemático, no sustituye el diseño geométrico vial.</figcaption>
+      </figure>`;
     }
 
     numberField(label, prop, value, options = {}) {
@@ -524,9 +701,11 @@
       const outdoor = single && outdoorTitle[single.type] ? single : null;
       const outdoorSection = outdoor ? this.section('outdoor', outdoorTitle[outdoor.type], 'road',
         `<label class="field compact"><span>Nombre en el plano</span><input type="text" data-prop="label" maxlength="120" value="${esc(outdoor.label || '')}" placeholder="${outdoor.type === 'road' ? 'Carrera 7 · calzada norte' : outdoor.type === 'parking' ? 'Parqueadero visitantes' : 'Rótulo opcional'}"${disabled}></label>
-        ${outdoor.type === 'road' || outdoor.type === 'sidewalk' ? `<div class="metric-grid">
-          ${this.numberField('Ancho', 'widthM', Number(outdoor.widthM) || (outdoor.type === 'road' ? 6 : 2), { disabled: !canEdit, min: 0.8, max: 30, step: 0.1, unit: 'm' })}
-          ${outdoor.type === 'road' ? this.numberField('Carriles', 'lanes', Number(outdoor.lanes) || 2, { disabled: !canEdit, min: 1, max: 6, step: 1 }) : '<span></span>'}
+        ${outdoor.type === 'road' ? `${outdoor.section ? '' : `<div class="metric-grid">
+          ${this.numberField('Ancho', 'widthM', Number(outdoor.widthM) || 6, { disabled: !canEdit, min: 0.8, max: 46, step: 0.1, unit: 'm' })}
+          ${this.numberField('Carriles', 'lanes', Number(outdoor.lanes) || 2, { disabled: !canEdit, min: 1, max: 6, step: 1 })}
+        </div>`}${this.roadSectionPanel(outdoor, { canEdit })}` : outdoor.type === 'sidewalk' ? `<div class="metric-grid">
+          ${this.numberField('Ancho', 'widthM', Number(outdoor.widthM) || 2, { disabled: !canEdit, min: 0.8, max: 30, step: 0.1, unit: 'm' })}
         </div>` : ''}
         <p class="help-text">${outdoor.type === 'parking' ? 'Los puestos se dibujan a 2,50 × 5,00 m y la etiqueta indica cuántos caben en la caja.' : outdoor.type === 'property' ? 'Línea de punto y raya: marca el lindero del predio. No es un muro y no bloquea el paso.' : 'La vía es esquemática: ordena la lectura del plano, no sustituye perfiles viales ni el POT.'} Cuenta como exterior en el auditor y no bloquea el tránsito.</p>`,
         { badge: outdoor.type === 'parking' ? '2,5 × 5 m' : '' }) : '';

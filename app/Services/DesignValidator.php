@@ -63,9 +63,10 @@ final class DesignValidator
             }
         }
         // Formato 2: plano sin curvas (idéntico a la 1.10.0). Formato 3: añade
-        // `curves` alineado con `points`. Un plano v2 se sigue abriendo igual.
+        // `curves` alineado con `points`. Formato 4: la vía lleva `section`
+        // (sección tipo). Un plano anterior se sigue abriendo igual.
         $format = $design['format'] ?? null;
-        if (!in_array($format, [2, 3], true)) {
+        if (!in_array($format, [2, 3, 4], true)) {
             throw new DomainException('La versión del formato del diseño no es compatible.');
         }
         $canvas = self::normalizeCanvas($design['canvas'] ?? null);
@@ -76,15 +77,18 @@ final class DesignValidator
         $extinguishers = self::normalizeExtinguisherSettings($design['extinguishers'] ?? null);
 
         $hasCurves = false;
+        $hasSection = false;
         foreach ($elements as $element) {
             if (isset($element['curves']) && is_array($element['curves']) && $element['curves'] !== []) {
                 $hasCurves = true;
-                break;
+            }
+            if (isset($element['section'])) {
+                $hasSection = true;
             }
         }
 
         return [
-            'format' => $hasCurves ? 3 : 2,
+            'format' => $hasSection ? 4 : ($hasCurves ? 3 : 2),
             'canvas' => $canvas,
             'layers' => $layers,
             'elements' => $elements,
@@ -339,6 +343,78 @@ final class DesignValidator
         return $result;
     }
 
+    /** Límites de la sección tipo, en metros (los mismos que el editor). */
+    private const ROAD_SECTION_LIMITS = [
+        'lanes' => [1, 6], 'laneM' => [2.5, 4], 'medianM' => [0, 4],
+        'shoulderM' => [0, 2], 'bikeM' => [0, 3], 'sidewalkM' => [0, 4],
+    ];
+
+    private const ROAD_SECTION_DEFAULTS = [
+        'lanes' => 2, 'laneM' => 3, 'medianM' => 0, 'shoulderM' => 0, 'bikeM' => 0, 'sidewalkM' => 0,
+    ];
+
+    /**
+     * Sección tipo de una vía: carriles, separador, berma, ciclorruta y andén.
+     * Los valores que no llegan se completan con el reparto por defecto.
+     */
+    private static function normalizeRoadSection(mixed $section): array
+    {
+        if (!is_array($section) || array_is_list($section)) {
+            throw new DomainException('La sección de la vía no es válida.');
+        }
+        foreach (array_keys($section) as $key) {
+            if (!array_key_exists($key, self::ROAD_SECTION_LIMITS)) {
+                throw new DomainException('La sección de la vía contiene una propiedad no permitida: ' . (string) $key . '.');
+            }
+        }
+        $normalized = [];
+        foreach (self::ROAD_SECTION_LIMITS as $key => [$min, $max]) {
+            $value = $section[$key] ?? self::ROAD_SECTION_DEFAULTS[$key];
+            $normalized[$key] = $key === 'lanes'
+                ? self::integer($value, $min, $max, 'carriles de la vía')
+                : round(self::number($value, $min, $max, 'medida de la sección'), 2);
+        }
+        return $normalized;
+    }
+
+    /**
+     * Glorieta o intersección: el tipo define el dibujo, los accesos cuántos
+     * brazos y la isla el radio interior de la glorieta (en metros).
+     */
+    private static function normalizeRoadJunction(mixed $junction): array
+    {
+        if (!is_array($junction) || array_is_list($junction)) {
+            throw new DomainException('La glorieta o intersección no es válida.');
+        }
+        foreach (array_keys($junction) as $key) {
+            if (!in_array($key, ['kind', 'legs', 'islandM'], true)) {
+                throw new DomainException('La glorieta o intersección contiene una propiedad no permitida: ' . (string) $key . '.');
+            }
+        }
+        $kind = $junction['kind'] ?? null;
+        if (!in_array($kind, ['roundabout', 'tee', 'cross'], true)) {
+            throw new DomainException('El tipo de glorieta o intersección no es válido.');
+        }
+        if ($kind === 'roundabout') {
+            return [
+                'kind' => 'roundabout',
+                'legs' => self::integer($junction['legs'] ?? 4, 3, 5, 'accesos de la glorieta'),
+                'islandM' => round(self::number($junction['islandM'] ?? 6, 1, 40, 'radio de la isla'), 2),
+            ];
+        }
+        return ['kind' => $kind, 'legs' => $kind === 'tee' ? 3 : 4, 'islandM' => 0.0];
+    }
+
+    /** Ancho total en metros que pide una sección tipo. */
+    private static function roadSectionWidth(array $section): float
+    {
+        return round(
+            $section['lanes'] * $section['laneM'] + $section['medianM']
+            + 2 * $section['shoulderM'] + 2 * $section['bikeM'] + 2 * $section['sidewalkM'],
+            2,
+        );
+    }
+
     /** @param array<int,string> $layerIds */
     private static function normalizeElements(mixed $elements, array $canvas, array $layerIds): array
     {
@@ -350,8 +426,8 @@ final class DesignValidator
         $baseKeys = [
             'id', 'type', 'layerId', 'x', 'y', 'w', 'h', 'rotation', 'color', 'stroke', 'opacity',
             'label', 'fontSize', 'points', 'curves', 'flipX', 'flipY', 'isExit', 'locked',
-            // Ancho de banda de vías y andenes, y carriles de la vía.
-            'widthM', 'lanes',
+            // Ancho de banda de vías y andenes, carriles y sección tipo (v4).
+            'widthM', 'lanes', 'section', 'junction',
         ];
         foreach ($elements as $element) {
             if (!is_array($element)) {
@@ -434,11 +510,32 @@ final class DesignValidator
             $curves = $points === null ? null : self::normalizeCurves($element['curves'] ?? null, $points, $type);
             $lanes = null;
             $widthM = null;
+            $section = null;
+            $junction = null;
             if ($type === 'road' || $type === 'sidewalk') {
-                $widthM = round(self::number($element['widthM'] ?? 2, 0.8, 30, 'ancho de la vía'), 2);
+                // Una vía puede llegar a 46 m con seis carriles, separador,
+                // bermas, ciclorrutas y andenes; el andén suelto sigue en 30 m.
+                $maxWidth = $type === 'road' ? 46 : 30;
+                $widthM = round(self::number($element['widthM'] ?? 2, 0.8, $maxWidth, 'ancho de la vía'), 2);
+            }
+            if ($type !== 'road' && array_key_exists('junction', $element)) {
+                throw new DomainException('Solo una vía puede ser glorieta o intersección.');
             }
             if ($type === 'road') {
                 $lanes = self::integer($element['lanes'] ?? 2, 1, 6, 'número de carriles');
+                if (array_key_exists('section', $element)) {
+                    $section = self::normalizeRoadSection($element['section']);
+                    $lanes = $section['lanes'];
+                    $widthM = self::roadSectionWidth($section);
+                }
+                if (array_key_exists('junction', $element)) {
+                    // Una glorieta o un cruce necesita la sección para saber el
+                    // ancho de la calzada del anillo o de los brazos.
+                    if ($section === null) {
+                        throw new DomainException('Una glorieta o intersección necesita sección tipo.');
+                    }
+                    $junction = self::normalizeRoadJunction($element['junction']);
+                }
             }
             $code = self::signCodeForType($type);
             if ($code !== null) {
@@ -533,6 +630,12 @@ final class DesignValidator
             }
             if ($lanes !== null) {
                 $normalized['lanes'] = $lanes;
+            }
+            if ($section !== null) {
+                $normalized['section'] = $section;
+            }
+            if ($junction !== null) {
+                $normalized['junction'] = $junction;
             }
             if (in_array($type, self::DOOR_TYPES, true)) {
                 $normalized['flipX'] = $flipX;

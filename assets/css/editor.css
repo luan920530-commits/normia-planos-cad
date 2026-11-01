@@ -1366,3 +1366,30 @@ body.is-presenting .ruler { display: none; }
   .guide-step, .guide-step-index, .guide-progress-fill { transition: none; }
   .rail-button.is-guide-target, .rail-caret.is-guide-target, .rail-flyout button.is-guide-target { animation: none; }
 }
+
+/* --------------------------- sección tipo de la vía --------------------------- */
+.road-section { display: flex; flex-direction: column; gap: 10px; padding: 10px; border-radius: 12px; background: rgba(15, 23, 42, .03); border: 1px solid var(--line); }
+.road-section-empty { align-items: flex-start; }
+.road-section-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.road-section-metrics .num-label { font-size: .7rem; }
+.road-section-figure { margin: 0; display: flex; flex-direction: column; gap: 4px; }
+.road-section-figure svg { width: 100%; height: auto; display: block; background: #fff; border-radius: 8px; border: 1px solid var(--line); }
+.road-section-figure figcaption { font-size: .68rem; color: var(--muted); }
+.road-section-total { display: flex; flex-direction: column; gap: 2px; font-size: .78rem; }
+.road-section-total span { font-size: .68rem; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) {
+  .road-section, .road-section-figure svg { transition: none; }
+}
+
+/* presets de sección y controles del cruce */
+.road-presets { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.chip-road { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; padding: 7px 8px; border-radius: 10px; border: 1px solid var(--line); background: #fff; text-align: left; cursor: pointer; font: inherit; }
+.chip-road strong { font-size: .74rem; font-weight: 600; }
+.chip-road span { font-size: .64rem; color: var(--muted); }
+.chip-road:hover { border-color: var(--accent); }
+.chip-road:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.chip-road.chip-junction { background: rgba(15, 118, 110, .06); }
+.road-junction-note { margin: 0; font-size: .74rem; color: var(--muted); }
+.road-section-metrics.road-junction { margin-top: -2px; }
+.rail-flyout-separator { display: block; height: 1px; margin: 4px 6px; background: var(--line); }
+.road-junction-note.is-warning { color: #b45309; }

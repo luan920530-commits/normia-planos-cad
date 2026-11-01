@@ -174,6 +174,8 @@
             <button type="button" role="menuitem" data-tool="crosswalk"><svg class="icon"><use href="#i-crosswalk"></use></svg>Paso cebra · C</button>
             <button type="button" role="menuitem" data-tool="parking"><svg class="icon"><use href="#i-parking"></use></svg>Parqueadero · Q</button>
             <button type="button" role="menuitem" data-tool="property"><svg class="icon"><use href="#i-property"></use></svg>Límite de predio · I</button>
+            <span class="rail-flyout-separator" role="separator"></span>
+            <button type="button" role="menuitem" data-insert-corridor><svg class="icon"><use href="#i-road"></use></svg>Insertar corredor de ejemplo</button>
           </div>
         </div>
         <span class="rail-separator" role="separator"></span>

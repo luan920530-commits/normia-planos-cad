@@ -145,8 +145,8 @@ async function main() {
     report.check('Señales de baño disponibles', ['SVC_WC_MEN', 'SVC_WC_WOMEN', 'SVC_WC_MIXED', 'SVC_WC_ACCESSIBLE', 'SVC_BABY'].every((code) => app.catalogs.signs[code]?.name),
       ['SVC_WC_MEN', 'SVC_WC_WOMEN', 'SVC_WC_MIXED', 'SVC_WC_ACCESSIBLE', 'SVC_BABY'].filter((code) => !app.catalogs.signs[code]).join(',') || 'todas');
     report.check('La familia de servicios está disponible', app.catalogs.signCategories.services?.label === 'Orientación y servicios', app.catalogs.signCategories.services?.label);
-    report.check('Catálogo CAD ampliado a 350 objetos', Object.keys(app.catalogs.cad).length === 350, String(Object.keys(app.catalogs.cad).length));
-    report.check('Familias CAD ampliadas a 28', Object.keys(app.catalogs.cadCategories).length === 28, Object.keys(app.catalogs.cadCategories).join(','));
+    report.check('Catálogo CAD ampliado a 420 objetos', Object.keys(app.catalogs.cad).length === 420, String(Object.keys(app.catalogs.cad).length));
+    report.check('Familias CAD ampliadas a 31', Object.keys(app.catalogs.cadCategories).length === 31, Object.keys(app.catalogs.cadCategories).join(','));
     const expectedFamilies = ['restaurant', 'warehouse', 'retail', 'hospital', 'textile', 'grill', 'supermarket', 'residential', 'sports', 'outdoor', 'electrico', 'hidraulico', 'eds', 'drogueria', 'gimnasio', 'colegio', 'cafeteria'];
     report.check('Nuevas familias sectoriales disponibles', expectedFamilies.every((key) => app.catalogs.cadCategories[key]?.label), expectedFamilies.filter((key) => !app.catalogs.cadCategories[key]).join(',') || 'todas');
     const nuevasFamilias = ['fire', 'emergency', 'technic', 'access', 'security'];
@@ -165,7 +165,7 @@ async function main() {
     report.check('Nombres de equipos sin duplicados', new Set(nombresCad).size === nombresCad.length,
       `${nombresCad.length - new Set(nombresCad).size} repetidos`);
     report.check('Paleta de colores expuesta', window.Normia.COLORS.length === 34, String(window.Normia.COLORS.length));
-    report.check('La barra lateral cuenta los equipos del catálogo', q(window, '[data-cad-count]')?.textContent === '350', q(window, '[data-cad-count]')?.textContent);
+    report.check('La barra lateral cuenta los equipos del catálogo', q(window, '[data-cad-count]')?.textContent === '420', q(window, '[data-cad-count]')?.textContent);
     report.check('La barra lateral cuenta las señales del catálogo', q(window, '[data-sign-count]')?.textContent === '395', q(window, '[data-sign-count]')?.textContent);
     report.check('Lienzo con el preset A4 horizontal', app.model.design.canvas.width === 1123 && app.model.design.canvas.height === 794, `${app.model.design.canvas.width}×${app.model.design.canvas.height}`);
     report.check('Barra de estado muestra el tamaño', q(window, '[data-canvas-size]').textContent.includes('794'), q(window, '[data-canvas-size]').textContent);
@@ -617,20 +617,20 @@ async function main() {
       `${roadBand?.getAttribute('stroke-width')} de ancho`);
     app.model.select([road.id]);
     app.inspector.render(true);
-    report.check('El inspector ofrece ancho y carriles de la vía',
-      Boolean(q(window, '[data-prop="widthM"]')) && Boolean(q(window, '[data-prop="lanes"]'))
+    report.check('El inspector ofrece la sección tipo de la vía',
+      Boolean(q(window, '[data-road-section="lanes"]')) && Boolean(q(window, '[data-road-section="laneM"]'))
       && Boolean(q(window, '[data-section="outdoor"]'))
       && Boolean(q(window, '[data-section="curves"]')),
       q(window, '[data-properties-title]')?.textContent);
-    q(window, '[data-prop="lanes"]').value = '3';
-    q(window, '[data-prop="lanes"]').dispatchEvent(new window.Event('change', { bubbles: true }));
+    q(window, '[data-road-section="lanes"]').value = '3';
+    q(window, '[data-road-section="lanes"]').dispatchEvent(new window.Event('change', { bubbles: true }));
     app.renderNow();
     app.inspector.render(true);
-    q(window, '[data-prop="widthM"]').value = '3';
-    q(window, '[data-prop="widthM"]').dispatchEvent(new window.Event('change', { bubbles: true }));
+    q(window, '[data-road-section="sidewalkM"]').value = '1';
+    q(window, '[data-road-section="sidewalkM"]').dispatchEvent(new window.Event('change', { bubbles: true }));
     app.renderNow();
-    report.check('El inspector ajusta ancho y carriles de la vía',
-      app.model.element(road.id).widthM === 3 && app.model.element(road.id).lanes === 3,
+    report.check('El inspector ajusta la sección y recalcula el ancho de la vía',
+      app.model.element(road.id).widthM === 11 && app.model.element(road.id).lanes === 3,
       `${app.model.element(road.id).widthM} m · ${app.model.element(road.id).lanes} carriles`);
     app.model.clearSelection();
     app.applyTool('parking');
@@ -663,9 +663,148 @@ async function main() {
     app.applyTool('select');
     app.model.clearSelection();
     app.renderNow();
-    report.check('El diseño con curvas se serializa en formato 3',
-      app.model.serialize().format === 3 && app.model.documentFormat() === 3,
+    app.model.select([road.id]);
+    app.model.clearRoadSection();
+    report.check('Una vía sin sección tipo mantiene el plano en formato 3',
+      !app.model.element(road.id).section && app.model.serialize().format === 3
+      && app.model.documentFormat() === 3,
       String(app.model.serialize().format));
+
+    /* ------------- sección tipo, glorieta e inserción del corredor ------------- */
+    app.model.clearSelection();
+    app.model.select([road.id]);
+    app.renderNow();
+    report.check('La vía se puede convertir en avenida con sección tipo',
+      app.model.applyRoadPreset('avenue') === true
+      && app.model.element(road.id).section?.lanes === 4
+      && app.model.element(road.id).widthM === 20,
+      `${app.model.element(road.id).section?.lanes} carriles · ${app.model.element(road.id).widthM} m`);
+    report.check('Una vía con sección tipo cambia el plano a formato 4',
+      app.model.documentFormat() === 4 && app.model.serialize().format === 4,
+      String(app.model.serialize().format));
+    app.renderNow();
+    const avenueGroup = app.svg.querySelector(`.plan-element[data-id="${road.id}"]`);
+    const avenueLines = avenueGroup?.querySelectorAll('polyline').length || 0;
+    const avenueWhite = [...(avenueGroup?.querySelectorAll('polyline') || [])]
+      .some((line) => line.getAttribute('stroke') === '#ffffff');
+    report.check('La vía dibuja calzada, líneas de carril, separador y andenes',
+      avenueLines >= 10 && avenueWhite, `${avenueLines} trazos · calzada ${avenueWhite ? 'sí' : 'no'}`);
+    report.check('La sección tipo no deja valores inválidos en el dibujo',
+      !/NaN|Infinity|undefined/.test(avenueGroup?.outerHTML || ''),
+      (avenueGroup?.outerHTML || '').slice(0, 120));
+    app.inspector.render(true);
+    const sectionFields = qa(window, '[data-road-section]').length;
+    report.check('El inspector muestra la sección tipo con su perfil',
+      sectionFields === 6 && Boolean(q(window, '.road-section-figure svg'))
+      && /Ancho total/.test(q(window, '.road-section-total')?.textContent || ''),
+      `${sectionFields} medidas · ${q(window, '.road-section-total')?.textContent?.slice(0, 40)}`);
+    q(window, '[data-road-section="sidewalkM"]').value = '3';
+    q(window, '[data-road-section="sidewalkM"]').dispatchEvent(new window.Event('change', { bubbles: true }));
+    app.renderNow();
+    report.check('Cambiar el andén recalcula el ancho total de la vía',
+      app.model.element(road.id).section?.sidewalkM === 3 && app.model.element(road.id).widthM === 22,
+      `${app.model.element(road.id).widthM} m`);
+    app.model.setRoadSection({ medianM: 0, sidewalkM: 2, bikeM: 1.8, shoulderM: 0.5, lanes: 4, laneM: 3.25 });
+    app.model.applyRoadPreset('roundabout');
+    app.renderNow();
+    const ring = app.model.element(road.id);
+    const ringGroup = app.svg.querySelector(`.plan-element[data-id="${road.id}"]`);
+    const ringCircles = ringGroup?.querySelectorAll('circle').length || 0;
+    const ringLabel = ringGroup?.querySelector('text')?.textContent || '';
+    report.check('La glorieta se dibuja como anillo con accesos e isla',
+      ring.junction?.kind === 'roundabout' && ring.w === ring.h
+      && ringCircles >= 4 && /accesos/.test(ringLabel) && /isla/.test(ringLabel),
+      `${ring.junction?.kind} · ${ringCircles} círculos · ${ringLabel}`);
+    app.inspector.render(true);
+    report.check('El inspector ofrece accesos e isla de la glorieta',
+      Boolean(q(window, '[data-road-junction="legs"]')) && Boolean(q(window, '[data-road-junction="islandM"]')),
+      q(window, '[data-road-junction="legs"]')?.value);
+    q(window, '[data-road-junction="legs"]').value = '5';
+    q(window, '[data-road-junction="legs"]').dispatchEvent(new window.Event('change', { bubbles: true }));
+    app.renderNow();
+    report.check('La glorieta admite cinco accesos', app.model.element(road.id).junction?.legs === 5,
+      String(app.model.element(road.id).junction?.legs));
+    app.model.applyRoadPreset('local');
+    report.check('Volver a una vía normal quita la glorieta',
+      !app.model.element(road.id).junction && app.model.element(road.id).section?.sidewalkM === 1.5,
+      String(app.model.element(road.id).junction));
+    // El corredor se dimensiona con el papel disponible: se le da un lienzo de
+    // plano de urbanismo para que la glorieta quepa a escala y se restituye al
+    // terminar, para no alterar las pruebas que vienen después.
+    const originalCanvasSize = { width: app.model.design.canvas.width, height: app.model.design.canvas.height };
+    app.model.design.canvas.width = 1600;
+    app.model.design.canvas.height = 1200;
+    app.renderNow();
+    const beforeCorridor = app.model.design.elements.length;
+    q(window, '[data-insert-corridor]').click();
+    app.renderNow();
+    const corridor = app.model.design.elements.slice(beforeCorridor);
+    const corridorTypes = corridor.map((element) => element.type);
+    report.check('El corredor de ejemplo inserta avenida, andenes, cebra, glorieta, señales y ruta en una acción',
+      corridor.length === 8
+      && corridorTypes.filter((type) => type === 'road').length === 2
+      && corridorTypes.filter((type) => type === 'sidewalk').length === 2
+      && corridorTypes.includes('crosswalk') && corridorTypes.includes('route')
+      && corridorTypes.includes('cad_rd_traffic_light') && corridorTypes.includes('cad_rd_ped_light')
+      && corridor.some((element) => element.junction?.kind === 'roundabout')
+      && corridor.every((element) => element.section || element.type !== 'road'),
+      `${corridor.length} elementos: ${corridorTypes.join(', ')}`);
+    report.check('El corredor queda seleccionado y en formato 4',
+      app.model.selection.size === 8 && app.model.documentFormat() === 4,
+      `${app.model.selection.size} seleccionados · formato ${app.model.documentFormat()}`);
+    report.check('El corredor de ejemplo se dibuja sin valores inválidos',
+      corridor.every((element) => !/NaN|Infinity|undefined/.test(app.svg.querySelector(`.plan-element[data-id="${element.id}"]`)?.outerHTML || '')),
+      `${corridor.length} elementos`);
+    const corridorRoad = corridor.find((element) => element.type === 'road' && !element.junction);
+    const corridorLabel = app.svg.querySelector(`.plan-element[data-id="${corridorRoad.id}"] text`)?.textContent || '';
+    report.check('La avenida del corredor rotula carriles y ancho',
+      /2 carriles/.test(corridorLabel) && / m/.test(corridorLabel), corridorLabel);
+
+    /* ------------------- biblioteca: familias nuevas y sinónimos ------------------- */
+    app.library.open('cad');
+    const librarySearch = q(window, '[data-library-search]');
+    const searchLibrary = (text) => {
+      librarySearch.value = text;
+      librarySearch.dispatchEvent(new window.Event('input', { bubbles: true }));
+      return app.library.filtered();
+    };
+    const carroHits = searchLibrary('carro');
+    const biciHits = searchLibrary('bici');
+    const semaforoHits = searchLibrary('semaforo');
+    report.check('El buscador de equipos entiende «carro», «bici» y «semáforo» sin tildes',
+      carroHits.length >= 5 && biciHits.length >= 1 && semaforoHits.length >= 2,
+      `carro ${carroHits.length} · bici ${biciHits.length} · semáforo ${semaforoHits.length}`);
+    app.library.family = 'road';
+    app.library.query = '';
+    librarySearch.value = '';
+    const roadFamily = app.library.filtered();
+    app.library.family = 'traffic-signs';
+    const signFamily = app.library.filtered();
+    app.library.family = 'bikes';
+    const bikesFamily = app.library.filtered();
+    app.library.family = 'all';
+    app.library.renderChips();
+    app.library.renderGrid();
+    report.check('Las tres familias nuevas traen sus objetos y su conteo',
+      roadFamily.length === 19 && signFamily.length === 25 && bikesFamily.length === 10
+      && /Vías/.test(q(window, '[data-library-families]')?.textContent || ''),
+      `vías ${roadFamily.length} · señales ${signFamily.length} · bicis ${bikesFamily.length}`);
+    report.check('Las señales viales tienen su propia familia con chips reales',
+      Object.keys(app.catalogs.cadCategories).length === 31
+      && /Señales viales/.test(q(window, '[data-library-families]')?.textContent || ''),
+      q(window, '[data-library-families]')?.textContent?.slice(0, 80));
+    app.closeDrawer();
+    // Se retira el corredor y la sección de la vía de prueba para que el plano
+    // vuelva a su estado anterior y las pruebas siguientes sigan siendo v2/v3.
+    app.model.select(corridor.map((element) => element.id));
+    app.model.deleteSelected();
+    app.model.select([road.id]);
+    app.model.clearRoadSection();
+    app.model.clearSelection();
+    app.model.design.canvas.width = originalCanvasSize.width;
+    app.model.design.canvas.height = originalCanvasSize.height;
+    app.fit(true);
+    app.renderNow();
 
     /* ------------- apertura de planos v2 y degradación de los v3 ------------- */
     const v3Doc = {
@@ -1572,7 +1711,7 @@ async function main() {
         assetFailures.push(`${key}: ${error.message}`);
       }
     }
-    report.check('Los 395 pictogramas y 350 equipos se instancian sin errores', assetsOk === 745 && assetFailures.length === 0,
+    report.check('Los 395 pictogramas y 420 equipos se instancian sin errores', assetsOk === 815 && assetFailures.length === 0,
       `${assetsOk}/500 · ${assetFailures.slice(0, 3).join(', ')}`);
 
     const xlink = new window.DOMParser().parseFromString(

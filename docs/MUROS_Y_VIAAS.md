@@ -103,7 +103,7 @@ Cinco tipos nuevos, todos **esquemáticos**:
 
 | Tipo | Atajo | Cómo se dibuja | Datos propios |
 | --- | --- | --- | --- |
-| `road` — vía vehicular | `A` | Arrastre de un extremo al otro | `widthM` (0,8–30 m, por defecto 6 m), `lanes` (1–6, por defecto 2), `label` |
+| `road` — vía vehicular | `A` | Arrastre de un extremo al otro | `section` (sección tipo: carriles, separador, berma, ciclorruta y andenes), `junction` (glorieta o intersección), `widthM` (0,8–46 m, derivado de la sección), `lanes` (1–6), `label` |
 | `sidewalk` — andén | `S` | Arrastre | `widthM` (0,8–30 m, por defecto 2 m), `label` |
 | `crosswalk` — paso cebra | `C` | Arrastre (caja) | Color y grosor de las franjas |
 | `parking` — parqueadero | `Q` | Arrastre (caja) | Filas de puestos de **2,50 × 5,00 m**; la etiqueta dice cuántos caben |
@@ -116,6 +116,52 @@ Cinco tipos nuevos, todos **esquemáticos**:
   funciona sobre ellos.
 - `parking` dibuja los puestos a escala 2,50 × 5,00 m y los cuenta en la etiqueta.
   Es una referencia de dimensionamiento habitual, no una norma de parqueaderos.
+
+### Sección tipo: de la banda gris al corredor
+
+Toda vía nueva nace con una sección tipo mínima (2 carriles de 3 m) y se ajusta
+desde el inspector, sección **Vía y andén**:
+
+| Medida | Límites | Se dibuja como |
+| --- | --- | --- |
+| Carriles | 1–6 | Líneas discontinuas entre carriles, a escala de 2,5 m por tramo |
+| Ancho de carril | 2,5–4 m | Ancho de cada franja de calzada |
+| Separador | 0–4 m | Banda clara con doble línea; en 0 el eje va discontinuo |
+| Berma | 0–2 m | Línea interior a cada lado de la calzada |
+| Ciclorruta | 0–3 m | Banda verde pegada al bordillo, con línea discontinua |
+| Andén | 0–4 m | Banda gris fuera de la calzada, con su borde |
+
+- El **ancho total** no se escribe a mano: es la suma del reparto
+  (`lanes·laneM + medianM + 2·shoulderM + 2·bikeM + 2·sidewalkM`) y el inspector
+  lo muestra bajo el perfil. El rótulo del plano repite «N carriles · X,X m».
+- Las **flechas de sentido** van al 45 % de opacidad, en dos posiciones del
+  trazo, y apuntan en sentidos opuestos en cada calzada: los carriles derechos
+  en un sentido y los izquierdos en el contrario.
+- El **perfil transversal** se dibuja a escala en el inspector (de andén a
+  andén) con sus cotas y el aviso de que es esquemático.
+- **Siete secciones de obra** en un clic: vía local, avenida, corredor con
+  ciclorruta, vía rural, glorieta, intersección en T e intersección en cruz.
+- **Insertar corredor de ejemplo** (menú de la baldosa de vías) crea en una sola
+  acción de deshacer: avenida con sección, dos andenes, paso cebra, glorieta,
+  dos señales y una ruta peatonal, todo seleccionado y ajustado al lienzo.
+  El corredor se dimensiona con el alto del papel: en un A4 a 1:100 sale una
+  vía de **5,3 m** (dos carriles de 2,65 m) con andenes de 1 m y una glorieta de
+  **7,3 m** de diámetro (isla de 1 m). Si el lienzo mide menos de 7 m de alto, el
+  corredor se inserta **sin glorieta** y se avisa; no se dibuja un anillo que no
+  corresponde con sus medidas. El inspector avisa también cuando la caja de una
+  glorieta es menor que su isla más el anillo.
+
+### Glorietas e intersecciones
+
+- `junction.kind = "roundabout"` dibuja un **anillo** con isla al centro, líneas
+  de carril en arco y brazos recortados al marco del elemento. `legs` (3–5) fija
+  los accesos e `islandM` el radio de la isla.
+- `tee` y `cross` dibujan la unión de dos calzadas con líneas de carril y cebras
+  en cada brazo.
+- La **caja del elemento** manda en el tamaño del cruce (siempre cuadrada y
+  ajustada al lienzo); la **sección** manda en el ancho de la calzada.
+- El rótulo dice «N accesos · isla X m» o «Intersección en T/cruz · N accesos».
+- Un cruce **exige** sección tipo: sin ella el servidor responde `422`.
 
 ### Cómo entran en el auditor y la cuadrícula
 
@@ -140,7 +186,7 @@ Consecuencias en `PlanGrid` y en el auditor:
 
 ---
 
-## 3. Formato de plano v3
+## 3. Formato de plano v3 y v4
 
 Con curvas, el documento sube a `format: 3`:
 
@@ -179,7 +225,9 @@ muro recto antes y después de combarlo y enderezarlo, y exige que sea idéntico
 - Un plano **v3** abierto en la **1.10.0** se ve con los tramos **rectos**: esa
   versión ignora la clave `curves` y normaliza a `format: 2`. No se pierde nada
   más, pero las curvas no se recuperan al volver a guardar desde la 1.10.0.
-- El servidor acepta `format: 2` y `format: 3`; cualquier otro valor responde
+- Con **sección tipo** el documento sube a `format: 4` (ver
+  [`docs/FORMATO-PLANO.md`](FORMATO-PLANO.md#sección-tipo-y-cruces-de-la-vía-formato-4)).
+- El servidor acepta `format: 2`, `3` y `4`; cualquier otro valor responde
   `422`.
 
 ---
@@ -215,7 +263,12 @@ Comprobaciones que cubren esta entrega:
 - enderezar deja el marcado idéntico al de antes de combar;
 - una vía no deja área inalcanzable y un muro recto en el mismo sitio sí;
 - un `curves` desalineado, un `kind` desconocido, curvas en una puerta o un
-  `format: 4` responden `422`.
+  `format: 5` responden `422`;
+- la sección tipo se guarda en formato 4, deriva el ancho (2 carriles de 3 m,
+  separador de 2 m, bermas de 0,5 m, ciclorruta de 1,8 m y andén de 1 m → 14,6 m)
+  y la glorieta llega al SVG como anillo con su isla y sus accesos;
+- un `laneM` fuera de rango, una clave desconocida en la sección, una glorieta
+  sin sección y un `kind` de cruce desconocido responden `422`.
 
 ---
 

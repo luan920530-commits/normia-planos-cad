@@ -282,6 +282,12 @@
       q('.rail')?.addEventListener('scroll', () => this.closeAllFlyouts(), { passive: true });
       window.addEventListener('resize', () => this.closeAllFlyouts());
 
+      qa('[data-insert-corridor]').forEach((button) => {
+        button.addEventListener('click', () => {
+          this.closeAllFlyouts();
+          this.insertCorridorExample();
+        });
+      });
       qa('[data-open-library]').forEach((button) => {
         button.addEventListener('click', () => {
           this.library.open(button.dataset.openLibrary);
@@ -1494,6 +1500,33 @@
         if (hit && (!best || hit.distance < best.distance)) best = hit;
       }
       return best;
+    }
+
+    /**
+     * Corredor de ejemplo en una sola acción (avenida, andenes, cebra,
+     * glorieta, señales y ruta). Todo queda seleccionado para ajustarlo.
+     */
+    insertCorridorExample() {
+      if (!this.model.canEdit()) {
+        this.toast('La capa activa está bloqueada. Desbloquéala para insertar el corredor.', 'error');
+        return;
+      }
+      try {
+        const count = this.model.insertCorridorExample();
+        if (!count) {
+          this.toast('No se pudo insertar el corredor.', 'error');
+          return;
+        }
+        this.applyTool('select');
+        this.scheduleRender();
+        // Sin alto de papel suficiente la glorieta no cabe: se dice, no se simula.
+        const note = count >= 8
+          ? ''
+          : ' Sin glorieta: el lienzo necesita al menos 7 m de alto; amplía el área del plano o cambia la escala.';
+        this.toast(`Corredor de ejemplo insertado: ${count} elementos seleccionados.${note}`, 'success', { duration: note ? 5200 : 3600 });
+      } catch (error) {
+        this.toast(error.message || 'No se pudo insertar el corredor.', 'error');
+      }
     }
 
     insertAtPoint(tool, point) {
