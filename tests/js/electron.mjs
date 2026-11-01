@@ -79,6 +79,20 @@ report.check('La guía de Electron explica el requisito de macOS 12 y qué hacer
   /macOS 12 Monterey/.test(docsElectron) && /Electron 44/.test(docsElectron)
   && /requiere macOS 13/.test(docsElectron));
 
+/*
+ * El intérprete PHP viaja en `runtime/node_modules`. electron-builder descarta
+ * cualquier `node_modules` que esté en la raíz del origen de `extraResources`,
+ * así que la 1.11.1 se publicó con el intérprete suelto y falló al abrir con
+ * «Cannot find package '@php-wasm/node'». Se comprueba que el armado use el
+ * filtro que evita ese descarte y que el verificador detecte un paquete así.
+ */
+const buildCode = build.split('\n').filter((line) => !line.trim().startsWith('//') && !line.trim().startsWith('*')).join('\n');
+report.check('El intérprete se copia con filtro: electron-builder descarta node_modules en la raíz',
+  /from:\s*'\.',\s*to:\s*'\.',\s*filter:\s*\['runtime\{,\/\*\*\/\*\}'\]/.test(buildCode)
+  && !/from:\s*'runtime',\s*to:\s*'runtime'/.test(buildCode));
+report.check('El armado revisa el instalador terminado y falla si le falta el intérprete',
+  /verifyInstallers\(out\);/.test(buildCode) && /El instalador quedó sin paquetes de php-wasm/.test(build));
+
 report.check('Las sumas del flujo evitan opciones de GNU que macOS no tiene',
   !/^\s*find .* -printf/m.test(workflow) && /sha256sum "\$archivo"/.test(workflow) && /shasum -a 256/.test(workflow));
 // Se mira la línea de comando del paso y no el texto: los comentarios explican
@@ -206,6 +220,25 @@ try {
 report.check('El verificador del paquete arranca el intérprete y el servidor desde resources/',
   verifyOk && /el servidor del paquete responde/.test(verifyOutput),
   verifyOutput.split('\n').filter((line) => line.includes('✗') || line.includes('::error')).join(' ').slice(0, 160));
+
+// El paquete de la 1.11.1: `runtime/php-wasm.mjs` suelto, sin node_modules.
+// El verificador tiene que rechazarlo en vez de darlo por bueno.
+const broken = path.join(out, 'paquete-roto');
+fs.mkdirSync(path.join(broken, 'runtime'), { recursive: true });
+fs.cpSync(path.join(stage, 'app'), path.join(broken, 'app'), { recursive: true });
+fs.copyFileSync(path.join(stage, 'runtime/php-wasm.mjs'), path.join(broken, 'runtime/php-wasm.mjs'));
+let brokenOutput = '';
+let brokenFailed = false;
+try {
+  execFileSync(process.execPath, [fileURLToPath(new URL('../../tools/electron/verify-package.mjs', import.meta.url)), broken], { stdio: 'pipe' });
+} catch (error) {
+  brokenFailed = true;
+  brokenOutput = String(error.stdout || error.message);
+}
+report.check('El verificador rechaza un paquete sin runtime/node_modules',
+  brokenFailed && /falta runtime\/node_modules\/@php-wasm\/node/.test(brokenOutput)
+  && /Cannot find package '@php-wasm\/node'/.test(brokenOutput),
+  brokenOutput.split('\n').find((line) => line.includes('::error')) || 'no falló');
 
 fs.rmSync(out, { recursive: true, force: true });
 

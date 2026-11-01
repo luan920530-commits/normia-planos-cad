@@ -68,6 +68,9 @@
         <button class="icon-button dark" type="button" data-open-drawer="footer" data-tooltip="Pie de plano" aria-label="Pie de plano">
           <svg class="icon"><use href="#i-layout-footer"></use></svg>
         </button>
+        <button class="icon-button dark" type="button" data-open-drawer="guide" data-tooltip="Guía de primeros pasos" aria-label="Guía de primeros pasos">
+          <svg class="icon"><use href="#i-guide"></use></svg>
+        </button>
         <button class="icon-button dark" type="button" data-open-drawer="shortcuts" data-tooltip="Atajos y ayuda" aria-label="Atajos y ayuda">
           <svg class="icon"><use href="#i-keyboard"></use></svg>
         </button>
@@ -78,6 +81,7 @@
           <div class="rail-flyout topbar-flyout" data-topbar-flyout role="menu" hidden>
             <button type="button" role="menuitem" data-open-drawer="versions"><svg class="icon"><use href="#i-history"></use></svg>Versiones del plano</button>
             <button type="button" role="menuitem" data-open-drawer="footer"><svg class="icon"><use href="#i-layout-footer"></use></svg>Pie de plano</button>
+            <button type="button" role="menuitem" data-open-drawer="guide"><svg class="icon"><use href="#i-guide"></use></svg>Guía de primeros pasos</button>
             <button type="button" role="menuitem" data-open-drawer="shortcuts"><svg class="icon"><use href="#i-keyboard"></use></svg>Atajos y ayuda</button>
           </div>
         </div>
@@ -147,13 +151,23 @@
           <button class="rail-button" type="button" data-tool="line" aria-pressed="false" data-tooltip="Línea · L" data-tooltip-side="right" aria-label="Dibujar línea">
             <svg class="icon"><use href="#i-line"></use></svg>
           </button>
-          <button class="rail-caret" type="button" data-shape-menu aria-expanded="false" aria-haspopup="menu" aria-label="Línea, formas y entorno" data-tooltip="Línea, formas, vías y andenes" data-tooltip-side="right">
+          <button class="rail-caret" type="button" data-shape-menu aria-expanded="false" aria-haspopup="menu" aria-label="Línea, rectángulo y elipse" data-tooltip="Rectángulo y elipse" data-tooltip-side="right">
             <svg class="icon"><use href="#i-chevron-down"></use></svg>
           </button>
           <div class="rail-flyout" data-shape-flyout role="menu" hidden>
             <button type="button" role="menuitem" data-tool="line"><svg class="icon"><use href="#i-line"></use></svg>Línea · L</button>
             <button type="button" role="menuitem" data-tool="rect"><svg class="icon"><use href="#i-rect"></use></svg>Rectángulo · B</button>
             <button type="button" role="menuitem" data-tool="ellipse"><svg class="icon"><use href="#i-ellipse"></use></svg>Elipse · O</button>
+          </div>
+        </div>
+        <div class="rail-flyout-wrap">
+          <button class="rail-button" type="button" data-tool="road" aria-pressed="false" data-tooltip="Vía vehicular · A" data-tooltip-side="right" aria-label="Dibujar vías y entorno">
+            <svg class="icon"><use href="#i-road"></use></svg>
+          </button>
+          <button class="rail-caret" type="button" data-road-menu aria-expanded="false" aria-haspopup="menu" aria-label="Vías, andenes y entorno" data-tooltip="Andén, paso cebra, parqueadero y lindero" data-tooltip-side="right">
+            <svg class="icon"><use href="#i-chevron-down"></use></svg>
+          </button>
+          <div class="rail-flyout" data-road-flyout role="menu" hidden>
             <p class="rail-flyout-title">Vías y entorno</p>
             <button type="button" role="menuitem" data-tool="road"><svg class="icon"><use href="#i-road"></use></svg>Vía vehicular · A</button>
             <button type="button" role="menuitem" data-tool="sidewalk"><svg class="icon"><use href="#i-sidewalk"></use></svg>Andén · S</button>
@@ -270,10 +284,11 @@
                 <button class="tool-choice" type="button" role="menuitem" data-present-open><span class="tool-choice-icon"><svg class="icon"><use href="#i-present"></use></svg></span><span class="tool-choice-name">Presentar</span></button>
                 <button class="tool-choice" type="button" role="menuitem" data-open-drawer="versions"><span class="tool-choice-icon"><svg class="icon"><use href="#i-history"></use></svg></span><span class="tool-choice-name">Versiones</span></button>
                 <button class="tool-choice" type="button" role="menuitem" data-open-drawer="footer"><span class="tool-choice-icon"><svg class="icon"><use href="#i-layout-footer"></use></svg></span><span class="tool-choice-name">Pie de plano</span></button>
+                <button class="tool-choice" type="button" role="menuitem" data-open-drawer="guide"><span class="tool-choice-icon"><svg class="icon"><use href="#i-guide"></use></svg></span><span class="tool-choice-name">Guía de primeros pasos</span></button>
                 <button class="tool-choice" type="button" role="menuitem" data-open-drawer="shortcuts"><span class="tool-choice-icon"><svg class="icon"><use href="#i-keyboard"></use></svg></span><span class="tool-choice-name">Atajos</span></button>
               </div>
             </div>
-            <p class="tools-empty" data-tools-empty hidden>Sin resultados para esa búsqueda.</p>
+            <p class="tools-empty" data-tools-empty hidden>Sin resultados. Prueba con «vía», «andén», «calle» o «parqueo»: el buscador entiende sinónimos y no necesita tildes.</p>
             <footer class="tools-popover-foot"><span class="tool-tip"><kbd>Ctrl</kbd> + clic sobre un elemento superpuesto baja al de abajo.</span></footer>
           </div>
         </div>
@@ -571,6 +586,29 @@
   <footer class="drawer-foot"><p>Las representaciones son esquemáticas y no certifican cumplimiento automático.</p></footer>
 </section>
 
+<section class="drawer drawer-narrow" data-drawer="guide" hidden aria-labelledby="guide-title">
+  <header class="drawer-head">
+    <div><span class="eyebrow">Primeros pasos</span><h2 id="guide-title">Guía del editor</h2></div>
+    <button class="icon-button" type="button" data-close-drawer aria-label="Cerrar guía"><svg class="icon"><use href="#i-close"></use></svg></button>
+  </header>
+  <div class="drawer-body guide-body" data-guide-body>
+    <p class="guide-intro">Siete pasos para pasar de un plano vacío a uno listo para revisar. Cada paso se marca solo cuando el plano lo cumple; no hay progreso simulado.</p>
+    <div class="guide-progress" data-guide-progress>
+      <div class="guide-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="7" aria-valuenow="0" aria-labelledby="guide-progress-label" data-guide-bar><span class="guide-progress-fill" data-guide-fill style="width:0%"></span></div>
+      <p class="guide-progress-label" id="guide-progress-label" data-guide-count>0 de 7 pasos</p>
+    </div>
+    <ol class="guide-steps" data-guide-steps></ol>
+    <p class="guide-note">Todo lo que dibujas es esquemático: la guía enseña el editor, no acredita cumplimiento de la norma. Los cálculos y la revisión van en sus paneles.</p>
+  </div>
+  <footer class="drawer-foot guide-foot">
+    <label class="guide-auto"><input type="checkbox" data-guide-auto checked> Abrir esta guía la primera vez que entro a un plano</label>
+    <div class="guide-foot-actions">
+      <button class="button button-ghost button-small" type="button" data-guide-reset>Reiniciar progreso</button>
+      <button class="button button-primary button-small" type="button" data-guide-next>Ir al paso pendiente</button>
+    </div>
+  </footer>
+</section>
+
 <section class="drawer drawer-narrow" data-drawer="shortcuts" hidden aria-labelledby="shortcuts-title">
   <header class="drawer-head">
     <div><span class="eyebrow">Ayuda</span><h2 id="shortcuts-title">Atajos de teclado</h2></div>
@@ -598,7 +636,7 @@
     <div><kbd>+ / −</kbd><span>Acercar / alejar</span></div><div><kbd>0</kbd><span>Ajustar a pantalla</span></div>
     <div><kbd>Esc</kbd><span>Cancelar o cerrar</span></div><div><kbd>Enter</kbd><span>Terminar ruta</span></div><div><kbd>Retroceso</kbd><span>Quitar el último punto de la ruta</span></div><div><kbd>Clic inicial</kbd><span>Cerrar el circuito de la ruta</span></div>
   </div>
-  <footer class="drawer-foot"><p>Los atajos se desactivan mientras escribes en un campo de formulario. Los muros curvos se trazan con arcos de tres puntos: cada trazo admite hasta 40 vértices y el radio mínimo es la mitad de la cuerda. Los dibujos son esquemáticos.</p></footer>
+  <footer class="drawer-foot"><p class="guide-link"><button class="button button-ghost button-small" type="button" data-open-drawer="guide">¿Primera vez? Abre la guía de primeros pasos</button></p><p>Los atajos se desactivan mientras escribes en un campo de formulario. Los muros curvos se trazan con arcos de tres puntos: cada trazo admite hasta 40 vértices y el radio mínimo es la mitad de la cuerda. Los dibujos son esquemáticos.</p></footer>
 </section>
 
 <textarea id="editor-design" hidden><?= e($designJson) ?></textarea>
@@ -617,6 +655,8 @@
 <script src="<?= e(asset('js/editor/schedule.js')) ?>" defer></script>
 <script src="<?= e(asset('js/editor/measure.js')) ?>" defer></script>
 <script src="<?= e(asset('js/editor/present.js')) ?>" defer></script>
+<script src="<?= e(asset('js/editor/toolsearch.js')) ?>" defer></script>
+<script src="<?= e(asset('js/editor/guide.js')) ?>" defer></script>
 <script src="<?= e(asset('js/editor.js')) ?>" defer></script>
 </body>
 </html>

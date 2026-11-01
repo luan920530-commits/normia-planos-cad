@@ -22,6 +22,8 @@ export const SCRIPTS = [
   'js/editor/schedule.js',
   'js/editor/measure.js',
   'js/editor/present.js',
+  'js/editor/toolsearch.js',
+  'js/editor/guide.js',
   'js/editor.js',
 ];
 
@@ -165,6 +167,14 @@ export async function openEditor(client, route, options = {}) {
   window.__errors = [];
   window.addEventListener('error', (event) => window.__errors.push(String(event.message)));
   window.addEventListener('unhandledrejection', (event) => window.__errors.push(String(event.reason)));
+  // La guía de primeros pasos se abre sola la primera vez. En las pruebas se
+  // desactiva aquí y se activa a propósito en las comprobaciones de la guía:
+  // así el resto de la suite no arrastra un cajón abierto.
+  try {
+    window.localStorage.setItem('normia.guia.auto', '0');
+  } catch (error) {
+    /* sin almacenamiento local la guía se comporta como en una sesión nueva */
+  }
   const bootField = window.document.querySelector('#editor-boot');
   const designField = window.document.querySelector('#editor-design');
   const boot = JSON.parse(bootField.value);

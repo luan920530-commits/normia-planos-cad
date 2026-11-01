@@ -21,6 +21,11 @@
     pipe: 'Tubería: arrastra o haz clic para trazar la red. Elige la red (agua, gas, desagües o incendio) en la flecha del botón y ajusta diámetro, material y pendiente en el inspector.',
     conduit: 'Tubería eléctrica: arrastra o haz clic para trazar el circuito. Asigna código, tensión y calibre en el inspector; el panel Redes calcula carga y caída de tensión.',
     place: 'Colocación: haz clic para insertar el recurso elegido. Mantén Shift para insertar varios. Esc cancela.',
+    road: 'Vía vehicular: arrastra para trazarla y ajusta ancho y carriles en el inspector. Ordena la lectura del plano; no bloquea el tránsito.',
+    sidewalk: 'Andén: arrastra para trazarlo junto a la vía; el ancho se ajusta en el inspector.',
+    crosswalk: 'Paso cebra: arrastra para dibujar la caja sobre la calzada.',
+    parking: 'Parqueadero: arrastra para dibujar la caja; los puestos se reparten a 2,50 × 5,00 m.',
+    property: 'Límite de predio: arrastra para marcar el lindero. No es un muro y no bloquea el paso.',
   };
   const TYPE_NAMES = {
     wall: 'Muro', door: 'Puerta sencilla', door_double: 'Puerta doble', door_garage: 'Portón de garaje', route: 'Ruta de evacuación', text: 'Texto', dimension: 'Medida',
@@ -74,6 +79,7 @@
       this.extinguishers = root.Extinguishers ? new root.Extinguishers(this) : null;
       this.measure = root.Measure ? new root.Measure(this) : null;
       this.present = root.Present ? new root.Present(this) : null;
+      this.guide = root.Guide ? new root.Guide(this) : null;
       this.tool = 'select';
       this.view = { zoom: 1, panX: 0, panY: 0 };
       this.showGrid = true;
@@ -109,6 +115,10 @@
       this.updateSaveStatus();
       this.store.startAutosave(bootData.autosaveInterval, (error) => this.onAutosaveError(error));
       this.showBootNotices();
+      // La guía de primeros pasos se abre una sola vez, cuando la pantalla de
+      // bienvenida ya se retiró; el usuario puede desactivarla desde su pie y
+      // volver a abrirla desde la barra superior.
+      window.setTimeout(() => this.autoGuide(0), 700);
       window.setInterval(() => {
         if (this.statusState === 'saving') return;
         this.updateSaveStatus();
@@ -122,6 +132,22 @@
     }
 
     /* ------------------------------ arranque ------------------------------ */
+
+    /**
+     * Espera a que el splash termine para abrir la guía: encima de la pantalla
+     * de bienvenida no se vería. Si el splash no se va (por ejemplo, en una
+     * página de prueba sin su script), se rinde a los pocos intentos.
+     */
+    autoGuide(attempt = 0) {
+      const splash = q('[data-splash]');
+      const splashVisible = Boolean(splash && splash.isConnected && splash.getAttribute('aria-hidden') !== 'true');
+      if (splashVisible && attempt < 16) {
+        window.setTimeout(() => this.autoGuide(attempt + 1), 150);
+        return;
+      }
+      this.guide?.maybeAutoOpen();
+    }
+
     showBootNotices() {
       if (this.boot.draftAt) {
         this.banner('info', 'Se recuperó un borrador automático sin confirmar. Revísalo y guarda una versión cuando esté listo.', [
@@ -176,6 +202,7 @@
         door: { button: '[data-door-menu]', flyout: '[data-door-flyout]' },
         pipe: { button: '[data-pipe-menu]', flyout: '[data-pipe-flyout]' },
         shape: { button: '[data-shape-menu]', flyout: '[data-shape-flyout]' },
+        road: { button: '[data-road-menu]', flyout: '[data-road-flyout]' },
         analysis: { button: '[data-analysis-menu]', flyout: '[data-analysis-flyout]' },
         view: { button: '[data-view-menu]', flyout: '[data-view-flyout]' },
         topbar: { button: '[data-topbar-menu]', flyout: '[data-topbar-flyout]' },
@@ -244,7 +271,7 @@
           this.applyTool('pipe');
         });
       });
-      qa('[data-shape-flyout] [data-tool], [data-door-flyout] [data-tool]').forEach((button) => {
+      qa('[data-shape-flyout] [data-tool], [data-door-flyout] [data-tool], [data-road-flyout] [data-tool]').forEach((button) => {
         button.addEventListener('click', () => this.closeAllFlyouts());
       });
       document.addEventListener('click', (event) => {
@@ -288,8 +315,9 @@
           if (!popover) return;
           const query = toolsFilter.value.trim().toLowerCase();
           let visible = 0;
+          const search = root.ToolSearch;
           popover.querySelectorAll('.tool-choice').forEach((choice) => {
-            const match = query === '' || choice.textContent.toLowerCase().includes(query);
+            const match = search ? search.matches(choice, query) : (query === '' || choice.textContent.toLowerCase().includes(query));
             choice.hidden = !match;
             if (match) visible += 1;
           });
@@ -428,6 +456,8 @@
       this.scheduleRender();
       if (this.activeDrawer === 'layers') this.renderLayers();
       if (this.activeDrawer === 'networks') this.renderNetworks();
+      // El progreso de la guía sale del plano: un muro nuevo marca su paso.
+      if (this.activeDrawer === 'guide') this.guide?.refresh();
       // El pliego se recalcula solo si su cajón está abierto; si no, se marca
       // como desactualizado para no recalcular en cada arrastre.
       this.schedule?.invalidate();
@@ -2363,6 +2393,7 @@
       if (name === 'schedule') this.schedule?.open();
       if (name === 'measure') this.measure?.open();
       if (name === 'footer') this.renderFooterPreview();
+      if (name === 'guide') this.guide?.open();
       const focusable = drawer.querySelector('input, button, select, textarea, a[href]');
       window.setTimeout(() => focusable?.focus(), 40);
     }

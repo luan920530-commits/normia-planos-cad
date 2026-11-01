@@ -1325,3 +1325,44 @@ body.is-presenting .ruler { display: none; }
 @media (prefers-reduced-motion: reduce) {
   .curve-row, .curve-row-head small { transition: none; }
 }
+
+/* --------------------------- guía de primeros pasos --------------------------- */
+.guide-body { gap: 12px; }
+.guide-intro { color: var(--muted); font-size: .82rem; line-height: 1.5; }
+.guide-progress { display: flex; align-items: center; gap: 10px; }
+.guide-progress-track { position: relative; flex: 1; height: 8px; border-radius: 999px; background: rgba(15, 23, 42, .08); overflow: hidden; }
+.guide-progress-fill { display: block; height: 100%; width: 0; border-radius: 999px; background: linear-gradient(90deg, var(--blue-strong), #37a0ff); transition: width .25s ease; }
+.guide-progress-label { font-size: .76rem; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.guide-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.guide-step { display: grid; grid-template-columns: 26px 1fr; gap: 6px 10px; padding: 11px 12px; border-radius: 14px; border: 1px solid var(--line); background: #fff; }
+.guide-step.is-done { background: rgba(37, 99, 235, .045); border-color: rgba(37, 99, 235, .18); }
+.guide-step-index { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 9px; background: rgba(15, 23, 42, .06); font-size: .76rem; font-weight: 700; color: var(--muted); }
+.guide-step.is-done .guide-step-index { background: rgba(22, 163, 74, .14); color: #15803d; }
+.guide-step-index .icon { width: 15px; height: 15px; }
+.guide-step-copy h3 { font-size: .9rem; margin: 0 0 3px; }
+.guide-step-copy p { font-size: .79rem; line-height: 1.5; color: var(--ink-soft, #40506b); margin: 0; }
+.guide-step-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px !important; font-size: .71rem; color: var(--muted); }
+.guide-step-state { font-weight: 700; text-transform: uppercase; letter-spacing: .04em; font-size: .64rem; }
+.guide-step.is-done .guide-step-state { color: #15803d; }
+.guide-step-go { grid-column: 2; justify-self: start; margin-top: 2px; }
+.guide-note { font-size: .74rem; color: var(--muted); line-height: 1.5; }
+.guide-foot { display: flex; flex-direction: column; gap: 9px; }
+.guide-auto { display: flex; align-items: flex-start; gap: 8px; font-size: .76rem; color: var(--ink-soft, #40506b); }
+.guide-auto input { margin-top: 2px; }
+.guide-foot-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.guide-link { margin: 0 0 8px; }
+
+/* La herramienta señalada por la guía se resalta en su sitio real. */
+.rail-button.is-guide-target, .rail-caret.is-guide-target, .rail-flyout button.is-guide-target {
+  position: relative; z-index: 1;
+  box-shadow: 0 0 0 2px rgba(55, 160, 255, .85), 0 0 0 6px rgba(55, 160, 255, .22);
+  animation: guide-pulse 1.3s ease-in-out 2;
+}
+@keyframes guide-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(55, 160, 255, .85), 0 0 0 6px rgba(55, 160, 255, .18); }
+  50% { box-shadow: 0 0 0 2px rgba(55, 160, 255, 1), 0 0 0 11px rgba(55, 160, 255, .08); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .guide-step, .guide-step-index, .guide-progress-fill { transition: none; }
+  .rail-button.is-guide-target, .rail-caret.is-guide-target, .rail-flyout button.is-guide-target { animation: none; }
+}

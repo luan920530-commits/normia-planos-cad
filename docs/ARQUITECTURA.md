@@ -168,6 +168,8 @@ assets/js/editor/audit.js    Cajón de revisión: pide el informe, pinta métric
 assets/js/editor/schedule.js Cajón del pliego: agrupa señales, tamaños, precios, consistencia y CSV
 assets/js/editor/measure.js  Cajón de rutas internas: retícula, A*, tramos, tiempos y guardado en capa
 assets/js/editor/present.js   Modo presentación: láser, spotlight, rutas animadas, capas y quiz
+assets/js/editor/toolsearch.js Buscador de la paleta: normaliza tildes y amplía con sinónimos de obra
+assets/js/editor/guide.js     Guía de primeros pasos: siete pasos, progreso desde el plano y salto al control real
 assets/js/editor.js          EditorApp: arranque, herramientas, puntero, teclado, guardado, exportación
 ```
 

@@ -89,6 +89,8 @@
         const data = await this.app.store.request(this.app.boot.auditUrl || `api/floors/${this.app.boot.floorId}/audit`);
         this.report = data.report || null;
         this.lastRunAt = new Date();
+        // La guía de primeros pasos marca «revisión» solo con un informe real.
+        if (this.report) this.app.guide?.mark('revision');
         this.render();
         this.updateBadge();
       } catch (error) {
