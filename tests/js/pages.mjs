@@ -9,7 +9,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { JSDOM } from 'jsdom';
-import { startApp, extractToken, repoRoot } from '../php/harness.mjs';
+import { startApp, extractToken, repoRoot, Client } from '../php/harness.mjs';
 import { makeReporter } from './boot.mjs';
 
 const VERSION = process.argv[2] || '8.3';
@@ -49,6 +49,42 @@ const $ = (window, selector) => window.document.querySelector(selector);
 const $$ = (window, selector) => Array.from(window.document.querySelectorAll(selector));
 const text = (node) => (node?.textContent || '').replace(/\s+/g, ' ').trim();
 
+/**
+ * Abre la página pública del modo brigadista y ejecuta su JS. No hay service
+ * worker en JSDOM: la copia del plan se prueba con `fetch` simulado.
+ */
+async function openBrigade(client, href) {
+  const response = await client.get(href);
+  if (response.status !== 200) throw new Error(`No se pudo abrir ${href} (${response.status}).`);
+  const dom = new JSDOM(response.text, {
+    url: new URL(href, 'http://127.0.0.1').href,
+    runScripts: 'outside-only',
+    pretendToBeVisual: true,
+  });
+  const { window } = dom;
+  window.__errors = [];
+  window.addEventListener('error', (event) => window.__errors.push(String(event.message)));
+  window.addEventListener('unhandledrejection', (event) => window.__errors.push(String(event.reason)));
+  if (!window.matchMedia) {
+    window.matchMedia = () => ({
+      matches: false, addEventListener() {}, removeEventListener() {},
+      addListener() {}, removeListener() {},
+    });
+  }
+  window.fetch = async () => ({
+    ok: true,
+    json: async () => ({
+      ok: true,
+      updated_at: '2026-11-01 10:00:00',
+      updated_label: '1 nov 2026 · 10:00',
+      groups: { ruta: [], reunion: [], extintores: [] },
+    }),
+  });
+  window.eval(`${fs.readFileSync(path.join(repoRoot, 'assets', 'js', 'brigade.js'), 'utf8')}\n//# sourceURL=js/brigade.js`);
+  await sleep(60);
+  return { window, dom, href, html: response.text };
+}
+
 async function main() {
   const runtime = await startApp(VERSION);
   const client = runtime.client;
@@ -73,6 +109,71 @@ async function main() {
     report.check('El panel titula la biblioteca de planos', /Biblioteca de planos/.test(text($(window, 'h2'))));
     const cards = $$(window, '.project-card');
     report.check('Cada proyecto se muestra en su tarjeta', cards.length === 2, `${cards.length} tarjetas`);
+
+    /* -------------------- modo brigadista (página pública) -------------------- */
+    const demoCard = dashboard.html.split('<article class="project-card')
+      .find((chunk) => chunk.includes('Planta de ejemplo')) || '';
+    const demoProjectId = Number(/projects\/(\d+)/.exec(decodeURIComponent(demoCard))?.[1] || 0);
+    const demoProject = await client.get(`projects/${demoProjectId}`);
+    const demoProjectHtml = decodeURIComponent(demoProject.text);
+    const demoFloorId = Number(/floors\/(\d+)\/editor">\s*Planta baja\s*</.exec(demoProjectHtml)?.[1] || 0)
+      || Number(/floors\/(\d+)\/editor/.exec(demoProjectHtml)?.[1] || 0);
+    client.csrf = extractToken(demoProject.text) || client.csrf;
+    report.check('Hay un plano de demostración con elementos para la página pública',
+      demoProjectId > 0 && demoFloorId > 0, `${demoProjectId}/${demoFloorId}`);
+    await client.postForm(`projects/${demoProjectId}/floors/${demoFloorId}/brigade`, { _token: client.csrf, action: 'enable' });
+    const brigadePanel = await client.get(`projects/${demoProjectId}/floors/${demoFloorId}/brigade`);
+    const publicToken = /b%2F([a-f0-9]{32})/.exec(brigadePanel.text)?.[1] || '';
+    report.check('El panel del modo brigadista entrega un enlace público', /^[a-f0-9]{32}$/.test(publicToken), publicToken.slice(0, 8));
+
+    const guest = new Client(runtime.handler);
+    const brigade = await openBrigade(guest, `/index.php?r=b%2F${publicToken}`);
+    const brigadeDoc = brigade.window.document;
+    report.check('La página pública carga sus acciones, su plano y su salida',
+      Boolean($(brigade.window, '[data-brigade-filter="ruta"]')) && Boolean($(brigade.window, '.brigade-plan svg'))
+      && Boolean($(brigade.window, '[data-brigade-clear]')) && /Llamar emergencias/.test(text($(brigade.window, '.brigade-quick'))));
+    const elementGroups = $$(brigade.window, '.brigade-plan g[data-element]');
+    report.check('El plano público conserva los elementos con su identificador', elementGroups.length > 20,
+      `${elementGroups.length} elementos · ${(brigade.html.match(/data-element=/g) || []).length} en el HTML · piso ${text($(brigade.window, '.brigade-floor'))} · g ${$$(brigade.window, 'g').length}`);
+
+    const rutaButton = $(brigade.window, '[data-brigade-filter="ruta"]');
+    rutaButton.click();
+    await sleep(30);
+    const focused = $$(brigade.window, '.brigade-plan g[data-element].is-focus');
+    const dimmed = $$(brigade.window, '.brigade-plan g[data-element].is-dim');
+    report.check('La acción «Ruta de evacuación» resalta la ruta y atenúa el resto',
+      rutaButton.getAttribute('aria-pressed') === 'true' && focused.length > 0 && dimmed.length > 0,
+      `${focused.length} resaltados · ${dimmed.length} atenuados`);
+    report.check('La misma acción vuelve al plano completo al pulsarla otra vez',
+      (() => {
+        rutaButton.click();
+        return rutaButton.getAttribute('aria-pressed') === 'false'
+          && $$(brigade.window, '.brigade-plan g[data-element].is-dim').length === 0;
+      })());
+
+    const contrast = $(brigade.window, '[data-brigade-contrast]');
+    contrast.click();
+    report.check('El alto contraste se activa y se recuerda para la visita',
+      brigadeDoc.documentElement.classList.contains('brigade-hc')
+      && contrast.getAttribute('aria-pressed') === 'true'
+      && brigade.window.localStorage.getItem('normia.brigade.contrast') === '1');
+    contrast.click();
+    report.check('El alto contraste se puede desactivar', !brigadeDoc.documentElement.classList.contains('brigade-hc'));
+
+    const beforeViewBox = $(brigade.window, '.brigade-plan svg').getAttribute('viewBox');
+    $(brigade.window, '[data-brigade-zoom="in"]').click();
+    const afterViewBox = $(brigade.window, '.brigade-plan svg').getAttribute('viewBox');
+    report.check('El zoom del plano cambia el encuadre sin recargar', beforeViewBox !== afterViewBox, `${beforeViewBox} → ${afterViewBox}`);
+
+    brigade.window.localStorage.setItem(`normia.brigade.${publicToken}.meta`, '{"savedAt":"2026-11-01"}');
+    $(brigade.window, '[data-brigade-clear]').click();
+    await sleep(30);
+    report.check('Salir y borrar datos limpia la copia del dispositivo',
+      brigade.window.localStorage.getItem(`normia.brigade.${publicToken}.meta`) === null
+      && /Datos borrados|No había datos/.test(text($(brigade.window, '[data-brigade-clear-status]'))),
+      text($(brigade.window, '[data-brigade-clear-status]')));
+    report.check('La página pública no registra errores de JavaScript', brigade.window.__errors.length === 0,
+      brigade.window.__errors.join(' | ').slice(0, 160));
 
     /* ------------------------ marca y bienvenida ------------------------ */
     const splash = $(window, '[data-splash]');

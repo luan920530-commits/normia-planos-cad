@@ -1,0 +1,2 @@
+21daed43873e42a0238ddf602e8f3289d563130f2555d8e59ecfe5c0af7808f4  normia-planos-cad-1.14.0.zip
+e2f829b862fa6e3f4800eda5f297baa75a9ce2388ae79021cbf70ceceed78963  normia-planos-cad-demo-1.14.0.zip

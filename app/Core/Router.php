@@ -23,7 +23,10 @@ final class Router
         $keys = [];
         $regex = preg_replace_callback('/\{([a-zA-Z_][a-zA-Z0-9_]*)\}/', static function (array $match) use (&$keys): string {
             $keys[] = $match[1];
-            return '(?P<' . $match[1] . '>[0-9]+)';
+            // Los enlaces del modo brigadista llevan un token hexadecimal;
+            // el resto de rutas usa identificadores numéricos.
+            $value = $match[1] === 'token' ? '[a-f0-9]{32}' : '[0-9]+';
+            return '(?P<' . $match[1] . '>' . $value . ')';
         }, $pattern) ?? '';
         $this->routes[] = [
             'method' => $method,
@@ -46,7 +49,8 @@ final class Router
             }
             $params = [];
             foreach ($candidate['keys'] as $key) {
-                $params[$key] = (int) ($matches[$key] ?? 0);
+                $value = (string) ($matches[$key] ?? '');
+                $params[$key] = $key === 'token' ? $value : (int) $value;
             }
             ($candidate['handler'])($params, $request);
             return true;

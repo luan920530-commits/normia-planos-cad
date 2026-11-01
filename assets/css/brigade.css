@@ -1,0 +1,157 @@
+/*
+ * Normia Planos CAD · modo brigadista.
+ * Página pública de emergencia: móvil primero, botones grandes, alto contraste
+ * y lectura del plano sin menús. Sin fuentes ni recursos externos.
+ */
+:root {
+  --bg: #f5f7fb;
+  --surface: #ffffff;
+  --ink: #0f172a;
+  --muted: #5b6b82;
+  --line: #dbe3ee;
+  --accent: #0f766e;
+  --accent-ink: #ffffff;
+  --danger: #b91c1c;
+  --call: #b91c1c;
+  --radius: 16px;
+  --shadow: 0 1px 2px rgba(15, 23, 42, .06), 0 10px 24px rgba(15, 23, 42, .07);
+}
+
+html { color-scheme: light; }
+html.brigade-hc {
+  --bg: #05070c;
+  --surface: #0d1420;
+  --ink: #f8fafc;
+  --muted: #b6c2d4;
+  --line: #273449;
+  --accent: #34d399;
+  --accent-ink: #04211a;
+  --call: #f87171;
+  --shadow: none;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+body.brigade {
+  margin: 0;
+  min-height: 100dvh;
+  background: var(--bg);
+  color: var(--ink);
+  font: 16px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, Roboto, sans-serif;
+  -webkit-text-size-adjust: 100%;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.brigade-skip {
+  position: absolute; left: -999px; top: 0; padding: 10px 14px; background: var(--accent);
+  color: var(--accent-ink); border-radius: 0 0 12px 0; z-index: 10;
+}
+.brigade-skip:focus { left: 0; }
+
+.brigade-head {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+  padding: calc(14px + env(safe-area-inset-top)) 16px 14px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  position: sticky; top: 0; z-index: 5;
+}
+.brigade-titles { min-width: 0; }
+.brigade-eyebrow {
+  margin: 0 0 2px; font-size: .72rem; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--accent); font-weight: 700;
+}
+.brigade-head h1 { margin: 0; font-size: 1.15rem; line-height: 1.2; overflow-wrap: anywhere; }
+.brigade-floor { margin: 2px 0 0; color: var(--muted); font-size: .86rem; }
+.brigade-updated { margin: 6px 0 0; font-size: .78rem; color: var(--muted); }
+.brigade-updated strong { color: var(--ink); font-weight: 600; }
+
+.brigade-contrast {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 12px;
+  border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+  font: inherit; font-size: .82rem; font-weight: 600; cursor: pointer; flex: none;
+}
+.brigade-contrast-dot { width: 14px; height: 14px; border-radius: 50%; background: var(--ink); opacity: .8; }
+.brigade-contrast[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.brigade-contrast[aria-pressed="true"] .brigade-contrast-dot { background: var(--accent); opacity: 1; }
+.brigade-contrast:focus-visible,
+.brigade-action:focus-visible,
+.brigade-tools button:focus-visible,
+.brigade-clear:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+.brigade-main { max-width: 980px; margin: 0 auto; padding: 16px 16px 28px; display: grid; gap: 14px; }
+
+.brigade-banner {
+  margin: 0; padding: 10px 12px; border-radius: 12px; font-size: .84rem;
+  background: #fef3c7; color: #78350f; border: 1px solid #fcd34d;
+}
+.brigade-banner.is-ok { background: #dcfce7; color: #14532d; border-color: #86efac; }
+html.brigade-hc .brigade-banner { background: #3a2c05; color: #fde68a; border-color: #a16207; }
+html.brigade-hc .brigade-banner.is-ok { background: #052e1b; color: #a7f3d0; border-color: #047857; }
+.brigade-banner[hidden] { display: none; }
+
+.brigade-quick { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.brigade-action {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 4px;
+  min-height: 96px; padding: 14px; border-radius: var(--radius); border: 1px solid var(--line);
+  background: var(--surface); color: var(--ink); font: inherit; text-align: left; cursor: pointer;
+  box-shadow: var(--shadow); text-decoration: none;
+}
+.brigade-action span { font-weight: 700; font-size: .98rem; }
+.brigade-action em { font-style: normal; font-size: .76rem; color: var(--muted); }
+.brigade-action .brigade-icon { width: 26px; height: 26px; color: var(--accent); margin-bottom: 2px; }
+.brigade-action[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; }
+.brigade-action[aria-pressed="true"] .brigade-icon { color: var(--accent); }
+.brigade-action.is-call { background: var(--call); border-color: var(--call); color: #fff; }
+.brigade-action.is-call em, .brigade-action.is-call .brigade-icon { color: #fee2e2; }
+
+.brigade-tools { display: flex; gap: 8px; justify-content: flex-end; }
+.brigade-tools button {
+  min-width: 48px; min-height: 44px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--line);
+  background: var(--surface); color: var(--ink); font: inherit; font-weight: 600; cursor: pointer;
+}
+
+.brigade-plan {
+  margin: 0; padding: 8px; border-radius: var(--radius); background: #fff; border: 1px solid var(--line);
+  box-shadow: var(--shadow); overflow: auto; max-height: 72dvh; -webkit-overflow-scrolling: touch;
+}
+.brigade-plan svg { display: block; width: 100%; height: auto; touch-action: pan-x pan-y; }
+html.brigade-hc .brigade-plan { background: #000; border-color: #334155; }
+html.brigade-hc .brigade-plan svg { filter: invert(1) hue-rotate(180deg) contrast(1.05); }
+.brigade-plan:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+
+/* Atenuar el plano cuando se pide una acción concreta. */
+.brigade-plan g[data-element].is-dim { opacity: .12; }
+.brigade-plan g[data-element].is-focus { opacity: 1; }
+.brigade-plan g[data-element].is-focus > * { stroke-width: 2.4; }
+
+.brigade-hint { margin: 0; min-height: 1.2em; font-size: .84rem; color: var(--muted); }
+
+.brigade-foot { display: grid; gap: 10px; padding-top: 6px; border-top: 1px solid var(--line); }
+.brigade-note { margin: 0; font-size: .78rem; color: var(--muted); }
+.brigade-foot-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.brigade-clear {
+  min-height: 44px; padding: 10px 14px; border-radius: 12px; border: 1px solid var(--line);
+  background: transparent; color: var(--danger); font: inherit; font-weight: 600; cursor: pointer;
+}
+.brigade-clear-status { font-size: .82rem; color: var(--muted); }
+.brigade-credit { margin: 0; font-size: .72rem; color: var(--muted); }
+
+/* Enlace vencido o desactivado. */
+body.brigade-message { display: grid; place-items: center; padding: 24px; }
+.brigade-message-box {
+  max-width: 460px; padding: 26px; border-radius: 20px; background: var(--surface);
+  border: 1px solid var(--line); box-shadow: var(--shadow);
+}
+.brigade-message-box h1 { margin: 0 0 10px; font-size: 1.3rem; }
+.brigade-message-box p { margin: 0 0 10px; color: var(--muted); }
+.brigade-muted { font-size: .78rem; }
+
+@media (min-width: 640px) {
+  .brigade-quick { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .brigade-action { min-height: 108px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}

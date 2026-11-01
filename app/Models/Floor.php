@@ -93,6 +93,8 @@ final class Floor
                 'UPDATE projects SET updated_at = CURRENT_TIMESTAMP WHERE id = (SELECT project_id FROM floors WHERE id = ?)',
                 [$floorId]
             );
+            // La página del modo brigadista muestra la fecha del último guardado.
+            Brigade::notePlanChange($floorId);
             return [
                 'version' => $newVersion,
                 'saved_at' => date('Y-m-d H:i:s'),
@@ -182,6 +184,7 @@ final class Floor
                 'INSERT INTO floor_versions (floor_id, version, design_json, note, created_by) VALUES (?, ?, ?, ?, ?)',
                 [$floorId, $newVersion, $json, 'Restauración de ' . version_label((int) $version['version']), $userId]
             );
+            Brigade::notePlanChange($floorId);
             return ['version' => $newVersion, 'design' => $design];
         });
     }

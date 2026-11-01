@@ -1,0 +1,128 @@
+/*
+ * Normia Planos CAD · verificación física.
+ * Lista de campo pensada para el celular: estados grandes, notas cortas y
+ * cobertura legible. Se apoya en las variables de app.css.
+ */
+.verif-sr {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+.verif-head { align-items: flex-start; }
+.verif-head-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.verif-board { margin: 18px 0; }
+.verif-metrics {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px;
+}
+.verif-metric {
+  display: grid; gap: 2px; padding: 14px 16px; border-radius: 16px;
+  background: var(--surface, #fff); border: 1px solid var(--line, #dbe3ee);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, .05);
+}
+.verif-metric-value { font-size: 1.6rem; font-weight: 700; letter-spacing: -.02em; }
+.verif-metric-label { font-size: .82rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted, #5b6b82); }
+.verif-metric-note { font-size: .78rem; color: var(--muted, #5b6b82); }
+.verif-metric.is-pending .verif-metric-value { color: #b45309; }
+.verif-metric.is-issue .verif-metric-value { color: #b91c1c; }
+.verif-metric.is-stale .verif-metric-value { color: #7c3aed; }
+
+.verif-round {
+  padding: 16px; border-radius: 16px; border: 1px solid var(--line, #dbe3ee);
+  background: var(--surface, #fff); display: grid; gap: 10px;
+}
+.verif-round h2 { margin: 0; font-size: 1rem; }
+.verif-round-open { margin: 0; font-size: .9rem; color: var(--muted, #5b6b82); }
+.verif-round-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; }
+.verif-round-form .field { flex: 1 1 260px; }
+
+.verif-filters { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 12px; }
+.verif-chip {
+  padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line, #dbe3ee);
+  background: var(--surface, #fff); color: inherit; font-size: .84rem; font-weight: 600; text-decoration: none;
+}
+.verif-chip.is-active { background: #0f172a; color: #fff; border-color: #0f172a; }
+.verif-chip:focus-visible { outline: 3px solid #0f766e; outline-offset: 2px; }
+
+.verif-list { display: grid; gap: 12px; }
+.verif-empty {
+  margin: 0; padding: 18px; border-radius: 14px; border: 1px dashed var(--line, #dbe3ee);
+  color: var(--muted, #5b6b82); font-size: .9rem;
+}
+.verif-card {
+  display: grid; gap: 10px; padding: 14px 16px; border-radius: 16px;
+  background: var(--surface, #fff); border: 1px solid var(--line, #dbe3ee);
+  border-left: 4px solid #cbd5e1;
+}
+.verif-card.is-ok { border-left-color: #16a34a; }
+.verif-card.is-issue { border-left-color: #b91c1c; }
+.verif-card.is-pending { border-left-color: #f59e0b; }
+.verif-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.verif-card-head h3 { margin: 0; font-size: 1rem; }
+.verif-card-meta { margin: 4px 0 0; display: flex; flex-wrap: wrap; gap: 8px; font-size: .78rem; color: var(--muted, #5b6b82); }
+.verif-tag {
+  padding: 2px 8px; border-radius: 999px; background: #eef2f7; color: #334155; font-weight: 600;
+}
+.verif-status {
+  flex: none; padding: 4px 10px; border-radius: 999px; font-size: .76rem; font-weight: 700;
+  background: #fef3c7; color: #78350f;
+}
+.verif-card.is-ok .verif-status { background: #dcfce7; color: #14532d; }
+.verif-card.is-issue .verif-status { background: #fee2e2; color: #7f1d1d; }
+.verif-last { margin: 0; font-size: .82rem; color: var(--muted, #5b6b82); }
+.verif-stale { color: #7c3aed; font-weight: 600; }
+.verif-photo { margin: 0; font-size: .82rem; }
+
+.verif-form { display: grid; gap: 10px; }
+.verif-note textarea { min-height: 54px; }
+.verif-buttons { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.verif-btn { min-height: 44px; border-radius: 12px; font-weight: 700; }
+.verif-btn.is-ok { background: #16a34a; border-color: #16a34a; color: #fff; }
+.verif-btn.is-issue { background: #b91c1c; border-color: #b91c1c; color: #fff; }
+.verif-btn.is-pending { background: #fff; color: #78350f; border-color: #fcd34d; }
+
+.verif-tables { margin-top: 26px; }
+.verif-tables h2, .verif-rounds h2 { font-size: 1rem; margin: 0 0 10px; }
+.verif-tables-grid { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+.verif-table { width: 100%; border-collapse: collapse; font-size: .84rem; }
+.verif-table caption { text-align: left; font-size: .78rem; color: var(--muted, #5b6b82); padding-bottom: 6px; }
+.verif-table th, .verif-table td { padding: 7px 8px; border-bottom: 1px solid var(--line, #dbe3ee); text-align: left; }
+.verif-table thead th { font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted, #5b6b82); }
+.verif-bar { display: inline-block; width: 64px; height: 6px; border-radius: 999px; background: #e2e8f0; margin-right: 8px; vertical-align: middle; overflow: hidden; }
+.verif-bar > span { display: block; height: 100%; background: #16a34a; border-radius: inherit; }
+
+.verif-rounds { margin-top: 26px; display: grid; gap: 12px; }
+.verif-rounds-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.verif-settings { display: flex; align-items: center; gap: 8px; font-size: .84rem; }
+.verif-settings input { width: 76px; }
+.verif-round-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.verif-round-list li {
+  display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; padding: 10px 12px;
+  border-radius: 12px; border: 1px solid var(--line, #dbe3ee); font-size: .84rem;
+}
+.verif-round-state { font-weight: 700; }
+.verif-round-state.is-open { color: #0f766e; }
+.verif-round-state.is-closed { color: #475569; }
+.verif-round-when, .verif-round-counts { color: var(--muted, #5b6b82); }
+.verif-disclaimer { margin: 4px 0 0; font-size: .78rem; color: var(--muted, #5b6b82); }
+
+/* Modo ronda: lista grande para recorrer el piso con una mano. */
+body.verif-round-mode .verif-board,
+body.verif-round-mode .verif-tables,
+body.verif-round-mode .verif-rounds,
+body.verif-round-mode .verif-filters { display: none; }
+body.verif-round-mode .verif-card { padding: 18px; }
+body.verif-round-mode .verif-card-head h3 { font-size: 1.15rem; }
+body.verif-round-mode .verif-btn { min-height: 56px; font-size: 1rem; }
+body.verif-round-mode .verif-round { display: grid; }
+body.verif-round-mode .verif-list { gap: 16px; }
+
+@media (max-width: 560px) {
+  .verif-buttons { grid-template-columns: 1fr; }
+  .verif-btn { min-height: 50px; }
+  .verif-round-list li { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}

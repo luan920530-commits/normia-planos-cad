@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS floors (
     draft_json TEXT NULL,
     draft_base_version INTEGER NULL,
     draft_updated_at TEXT NULL,
+    check_days INTEGER NOT NULL DEFAULT 30,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -51,4 +52,47 @@ CREATE TABLE IF NOT EXISTS floor_versions (
 );
 CREATE INDEX IF NOT EXISTS idx_versions_floor ON floor_versions(floor_id, version DESC);
 
-PRAGMA user_version = 1;
+-- Modo brigadista: enlace público de solo lectura por piso.
+CREATE TABLE IF NOT EXISTS brigade_links (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    floor_id INTEGER NOT NULL UNIQUE REFERENCES floors(id) ON DELETE CASCADE,
+    token TEXT NOT NULL UNIQUE,
+    enabled INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_brigade_token ON brigade_links(token);
+
+-- Verificación física: estado por elemento y rondas de inspección.
+CREATE TABLE IF NOT EXISTS verification_rounds (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    floor_id INTEGER NOT NULL REFERENCES floors(id) ON DELETE CASCADE,
+    status TEXT NOT NULL DEFAULT 'open',
+    note TEXT NOT NULL DEFAULT '',
+    started_by INTEGER REFERENCES users(id),
+    started_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    closed_by INTEGER REFERENCES users(id),
+    closed_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS element_checks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    floor_id INTEGER NOT NULL REFERENCES floors(id) ON DELETE CASCADE,
+    round_id INTEGER REFERENCES verification_rounds(id) ON DELETE SET NULL,
+    element_id TEXT NOT NULL,
+    element_type TEXT NOT NULL DEFAULT '',
+    sector TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'ok',
+    note TEXT NOT NULL DEFAULT '',
+    photo BLOB,
+    photo_type TEXT NOT NULL DEFAULT '',
+    photo_name TEXT NOT NULL DEFAULT '',
+    checked_by INTEGER REFERENCES users(id),
+    checked_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_checks_floor ON element_checks(floor_id, element_id);
+CREATE INDEX IF NOT EXISTS idx_checks_round ON element_checks(round_id);
+CREATE INDEX IF NOT EXISTS idx_rounds_floor ON verification_rounds(floor_id, id);
+
+PRAGMA user_version = 4;

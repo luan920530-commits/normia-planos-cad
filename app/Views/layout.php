@@ -12,6 +12,9 @@
   <link rel="apple-touch-icon" href="<?= e(asset('img/apple-touch-icon.png')) ?>">
   <link rel="manifest" href="<?= e(asset('manifest.webmanifest')) ?>">
   <link rel="stylesheet" href="<?= e(asset('css/app.css')) ?>">
+<?php foreach (($extraStyles ?? []) as $style): ?>
+  <link rel="stylesheet" href="<?= e(asset((string) $style)) ?>">
+<?php endforeach; ?>
 </head>
 <body class="<?= e($bodyClass ?? '') ?>">
 <?php \App\Core\View::partial('partials/icons'); ?>
@@ -51,5 +54,8 @@
 </footer>
 <script src="<?= e(asset('js/ui.js')) ?>" defer></script>
 <script src="<?= e(asset('js/app.js')) ?>" defer></script>
+<?php foreach (($extraScripts ?? []) as $script): ?>
+<script src="<?= e(asset((string) $script)) ?>" defer></script>
+<?php endforeach; ?>
 </body>
 </html>

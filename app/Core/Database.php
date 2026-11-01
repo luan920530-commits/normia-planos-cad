@@ -44,6 +44,86 @@ final class Database
         return $pdo;
     }
 
+    /**
+     * Migración mínima y repetible, paso a paso.
+     *
+     * Cada paso sube `PRAGMA user_version`. Las instalaciones nuevas ya traen
+     * todo en `resources/schema.sql`; las anteriores reciben aquí las tablas y
+     * columnas que falten sin perder datos.
+     */
+    public static function migrate(): void
+    {
+        static $done = false;
+        if ($done) {
+            return;
+        }
+        $done = true;
+        try {
+            $version = (int) self::value('PRAGMA user_version');
+            if ($version < 2) {
+                self::pdo()->exec(
+                    'CREATE TABLE IF NOT EXISTS brigade_links (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        floor_id INTEGER NOT NULL UNIQUE REFERENCES floors(id) ON DELETE CASCADE,
+                        token TEXT NOT NULL UNIQUE,
+                        enabled INTEGER NOT NULL DEFAULT 1,
+                        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_brigade_token ON brigade_links(token);
+                    PRAGMA user_version = 2;'
+                );
+                $version = 2;
+            }
+            if ($version < 3) {
+                self::pdo()->exec(
+                    'CREATE TABLE IF NOT EXISTS verification_rounds (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        floor_id INTEGER NOT NULL REFERENCES floors(id) ON DELETE CASCADE,
+                        status TEXT NOT NULL DEFAULT "open",
+                        note TEXT NOT NULL DEFAULT "",
+                        started_by INTEGER REFERENCES users(id),
+                        started_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        closed_by INTEGER REFERENCES users(id),
+                        closed_at TEXT
+                    );
+                    CREATE TABLE IF NOT EXISTS element_checks (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        floor_id INTEGER NOT NULL REFERENCES floors(id) ON DELETE CASCADE,
+                        round_id INTEGER REFERENCES verification_rounds(id) ON DELETE SET NULL,
+                        element_id TEXT NOT NULL,
+                        element_type TEXT NOT NULL DEFAULT "",
+                        sector TEXT NOT NULL DEFAULT "",
+                        status TEXT NOT NULL DEFAULT "ok",
+                        note TEXT NOT NULL DEFAULT "",
+                        photo BLOB,
+                        photo_type TEXT NOT NULL DEFAULT "",
+                        photo_name TEXT NOT NULL DEFAULT "",
+                        checked_by INTEGER REFERENCES users(id),
+                        checked_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_checks_floor ON element_checks(floor_id, element_id);
+                    CREATE INDEX IF NOT EXISTS idx_checks_round ON element_checks(round_id);
+                    CREATE INDEX IF NOT EXISTS idx_rounds_floor ON verification_rounds(floor_id, id);
+                    PRAGMA user_version = 3;'
+                );
+                $version = 3;
+            }
+            if ($version < 4) {
+                $columns = array_map(
+                    static fn (array $row): string => (string) $row['name'],
+                    self::query('PRAGMA table_info(floors)')
+                );
+                if (!in_array('check_days', $columns, true)) {
+                    self::execute('ALTER TABLE floors ADD COLUMN check_days INTEGER NOT NULL DEFAULT 30');
+                }
+                self::pdo()->exec('PRAGMA user_version = 4');
+            }
+        } catch (Throwable $exception) {
+            error_log('Normia: no se pudo migrar el esquema: ' . $exception->getMessage());
+        }
+    }
+
     public static function pdo(): PDO
     {
         if (self::$connection instanceof PDO) {

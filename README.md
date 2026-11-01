@@ -25,25 +25,28 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 8. [Extintores y cobertura](#extintores-y-cobertura)
 9. [Pliego de señalización y rutas internas](#pliego-de-señalización-y-rutas-internas)
 10. [Modo presentación](#modo-presentación)
-11. [Guardado, versiones y borradores](#guardado-versiones-y-borradores)
-12. [Exportaciones](#exportaciones)
-13. [Formato de datos](#formato-de-datos)
-14. [Arquitectura](#arquitectura)
-15. [Seguridad](#seguridad)
-16. [Pruebas](#pruebas)
-17. [Distribución: escritorio y Android](#distribución-escritorio-y-android)
-18. [Edición Electron](#edición-electron)
-19. [Guía de primeros pasos](#guía-de-primeros-pasos)
-20. [Cambios de la versión 1.13.0](#cambios-de-la-versión-1130)
-21. [Cambios de la versión 1.12.0](#cambios-de-la-versión-1120)
-22. [Cambios de la versión 1.11.1](#cambios-de-la-versión-1111)
-23. [Cambios de la versión 1.11.0](#cambios-de-la-versión-1110)
-24. [Cambios de la versión 1.10.0](#cambios-de-la-versión-1100)
-25. [Cambios de la versión 1.9.0](#cambios-de-la-versión-190)
-26. [Cambios de la versión 1.8.0](#cambios-de-la-versión-180)
-27. [Paquetes y verificación](#paquetes-y-verificación)
-28. [Limitaciones](#limitaciones)
-29. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
+11. [Verificación física](#verificación-física)
+12. [Modo brigadista](#modo-brigadista)
+13. [Guardado, versiones y borradores](#guardado-versiones-y-borradores)
+14. [Exportaciones](#exportaciones)
+15. [Formato de datos](#formato-de-datos)
+16. [Arquitectura](#arquitectura)
+17. [Seguridad](#seguridad)
+18. [Pruebas](#pruebas)
+19. [Distribución: escritorio y Android](#distribución-escritorio-y-android)
+20. [Edición Electron](#edición-electron)
+21. [Guía de primeros pasos](#guía-de-primeros-pasos)
+22. [Cambios de la versión 1.14.0](#cambios-de-la-versión-1140)
+23. [Cambios de la versión 1.13.0](#cambios-de-la-versión-1130)
+24. [Cambios de la versión 1.12.0](#cambios-de-la-versión-1120)
+25. [Cambios de la versión 1.11.1](#cambios-de-la-versión-1111)
+26. [Cambios de la versión 1.11.0](#cambios-de-la-versión-1110)
+27. [Cambios de la versión 1.10.0](#cambios-de-la-versión-1100)
+28. [Cambios de la versión 1.9.0](#cambios-de-la-versión-190)
+29. [Cambios de la versión 1.8.0](#cambios-de-la-versión-180)
+30. [Paquetes y verificación](#paquetes-y-verificación)
+31. [Limitaciones](#limitaciones)
+32. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
 
 ---
 
@@ -64,6 +67,8 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 | Extintores | Agente, capacidad, clasificación, riesgo y altura de montaje por equipo. Cajón **Extintores** con cobertura por recorrido real, superficie descubierta, mapa, acciones cuantificadas y CSV. Perfiles NTC 2885 + Resolución 2400 y NFPA 10. |
 | Revisión | Cajón **Revisión** con recorrido más largo hasta las salidas, salidas y anchos, ocupación declarada o estimada, ancho requerido, tiempo de evacuación y hallazgos por severidad enlazados al plano. |
 | Pliego | Cajón **Pliego** con las señales agrupadas por código y familia, cantidades, tamaño de lámina sugerido, desglose por capa, precios unitarios locales, total estimado, avisos de consistencia y exportación CSV/portapapeles. |
+| Verificación física | Lista de campo por elemento con estado Pendiente / Verificado / Con novedad, fecha, responsable, nota y foto opcional; rondas, cobertura % por tipo y sector, aviso por días sin verificación e historial de rondas. |
+| Modo brigadista | Enlace público de solo lectura para el celular, con token regenerable, sin sesión: acciones grandes, alto contraste, copia del plano en el dispositivo para consultarlo sin internet y botón para borrar esos datos. |
 | Rutas internas | Cajón **Rutas** que mide el recorrido caminable entre dos o más puntos: rodea muros y equipos, respeta los vanos, suma tramos, estima el tiempo a pie o en silla de ruedas y guarda la medición como capa. |
 | Presentación | Modo pantalla limpia con puntero láser, spotlight, animación de rutas con velocidad ajustable, panel de capas, quiz generado del plano y vuelta al editor con el mismo estado. |
 | Persistencia | Guardado manual con nota, versiones inmutables, restaurar versión, borrador automático cada 30 s y detección de conflictos. |
@@ -483,6 +488,34 @@ La barra de presentación muestra el piso y el proyecto, y el lienzo no edita mi
 
 ---
 
+## Verificación física
+
+Cada plano deja de ser solo un dibujo: en **Verificación física** (menú del piso → *Verificación física*) está la lista de los elementos que se pueden revisar en sitio —equipos del catálogo CAD, señalización, puertas y portones— con su sector tomado de las capas del plano. Los muros, rutas, textos y cotas no aparecen: no se verifican en el edificio.
+
+- **Tres estados por elemento.** *Pendiente*, *Verificado* y *Con novedad*. Cada marca guarda fecha y hora, el responsable con su cuenta, la nota de campo y, si se quiere, una **foto de evidencia** de hasta 512 KB. El estado vigente es siempre la última verificación; las anteriores quedan en el historial.
+- **Con novedad exige explicación.** El servidor rechaza una novedad sin nota: la idea es que quien recorre el piso deje escrito qué encontró y qué hace falta.
+- **Modo ronda.** Un botón agranda la lista para recorrerla con una mano en el celular y guarda la preferencia en el dispositivo. Sin JavaScript los formularios funcionan igual, con envío normal.
+- **Rondas.** Al iniciar una ronda, todas las verificaciones registradas quedan agrupadas con quién la abrió, cuándo y cuántas novedades aparecieron. Al cerrarla pasa al **historial de rondas**.
+- **Cobertura y avisos.** Cuatro tarjetas resumen cobertura %, pendientes, novedades y elementos **vencidos** (más de *X* días sin verificación, 30 por defecto y configurable entre 1 y 365). Debajo hay dos tablas de cobertura: por familia de elemento y por sector (capa del plano).
+- **Filtros** para ver solo pendientes, solo novedades o solo vencidos.
+
+Los datos viven en SQLite (`element_checks` y `verification_rounds`) y la foto solo se entrega a la cuenta dueña del plano. Las instalaciones anteriores reciben la tabla y la columna `check_days` con una migración automática al abrir la aplicación, sin perder nada.
+
+> La verificación es un **registro de campo**, no una certificación: confirma la señalización y los equipos con la persona competente y la normativa aplicable. El programa no valida el estado físico de un extintor ni de una señal.
+
+## Modo brigadista
+
+**Modo brigadista** (menú del piso → *Modo brigadista*) crea un **enlace público de solo lectura** para el celular de la brigada de emergencias. No pide cuenta ni muestra el editor, el proyecto ni datos de otras personas: solo el plano guardado, el nombre del proyecto, el piso y la fecha de actualización.
+
+- **Token aleatorio regenerable.** El enlace lleva 32 caracteres hexadecimales. *Regenerar* crea otro token y el anterior deja de abrir la página en el acto; *Desactivar* la apaga sin borrar el plano. Cada guardado del plano actualiza la fecha que ve la brigada.
+- **Sin sesión y sin menús.** La ruta `b/{token}` está fuera del control de sesión y tiene su propia política de caché (`no-store`), su `noindex` y sus encabezados de seguridad.
+- **Cuatro acciones grandes**: *Ruta de evacuación*, *Puntos de reunión*, *Extintores* y *Llamar emergencias* (123). Cada una atenúa el resto del plano y encuadra lo que importa; al pulsarla otra vez vuelve al plano completo. Si el plano no tiene esos elementos, lo dice en pantalla en lugar de aparentar que hay algo.
+- **Zoom** con botones y **alto contraste** para lugares con poca luz; la preferencia se recuerda y respeta `prefers-reduced-motion`.
+- **Funciona sin internet.** En el primer acceso el plano y sus datos se guardan en el dispositivo (caché del *service worker* y una copia en el almacenamiento local con fecha). Si la conexión se cae, la página avisa y sigue mostrando esa copia.
+- **Salir y borrar datos.** Un botón elimina la copia local, las cachés y el *service worker* del dispositivo, útil cuando el teléfono es compartido.
+
+> El modo brigadista es una ayuda de consulta. No reemplaza la señalización física, los simulacros, los procedimientos de la empresa ni la verificación en sitio; el plano es esquemático y las medidas se confirman en el edificio.
+
 ## Guardado, versiones y borradores
 
 - **Guardar** crea una versión nueva e inmutable en `floor_versions`; el piso apunta siempre a la última.
@@ -647,7 +680,7 @@ npm run test:php:81    # suite funcional en PHP 8.1
 npm run test:php:83    # suite funcional en PHP 8.3
 npm run test:js        # editor real en JSDOM (PHP 8.3)
 npm run test:package   # construye los ZIP y hace la instalación limpia de la demo
-npm run lint:php       # sintaxis de 52 archivos PHP en 8.1 y 8.3
+npm run lint:php       # sintaxis de todos los archivos PHP en 8.1 y 8.3
 npm run lint:js        # sintaxis de todos los JS/MJS
 npm run test:offline   # verifica que no haya ningún recurso ni dato externo
 npm run preview        # vista previa real en http://localhost:8080 (PHP en WebAssembly)
@@ -666,7 +699,7 @@ La aplicación está pensada para redes aisladas y equipos sin internet:
 - **La política de seguridad del navegador** (`Content-Security-Policy`) limita `script-src`, `style-src`, `img-src`, `font-src` y `connect-src` a `'self'`; cualquier intento de cargar algo externo queda bloqueado por el propio navegador.
 - **El servidor no hace llamadas salientes**: no usa `curl`, `fsockopen`, `get_headers` ni `file_get_contents()` sobre URLs.
 - **Las exportaciones se generan en local**: el SVG y el JSON los produce PHP; el PNG lo dibuja el navegador sobre el propio SVG. La impresión usa `print.css` local.
-- **`npm run test:offline`** recorre los 85 archivos que se sirven al navegador y falla si aparece una petición externa. Forma parte de `node tests/run-all.mjs`.
+- **`npm run test:offline`** recorre todos los archivos que se sirven al navegador y falla si aparece una petición externa. Forma parte de `node tests/run-all.mjs`.
 
 Lo único que no funciona sin red es la **vista previa de desarrollo** (`npm run preview`), que solo existe para revisar el editor en el equipo de desarrollo; nunca se incluye en los paquetes.
 
@@ -675,9 +708,9 @@ Lo único que no funciona sin red es la **vista previa de desarrollo** (`npm run
 | Bloque | Comprobaciones |
 | --- | --- |
 | `tests/php/lint.mjs` | `php -l` sobre todo `app/`, `bootstrap.php` e `index.php` en 8.1 y 8.3. |
-| `tests/php/functional.mjs` | 222 comprobaciones: instalador, requisitos, contraseñas débiles, CSRF, sesión, autorización entre cuentas, CRUD de proyectos/pisos, duplicados, importación v1/v2, catálogos (395 señales y 420 objetos), catálogo y guardado de redes, señales de baño y de servicios (guardado, color de familia y exportación SVG), **auditor y medición de evacuación** (salidas, recorrido máximo, zonas inalcanzables, rutas que cruzan muros o no llegan a la salida, ocupación declarada y estimada, señalización, validación de `isExit`, informe imprimible y demo coherente), **muros curvos y vías** (guardado en formato 3, auditor con el muro curvo separando recintos, arco `A` en el SVG, vía que no bloquea frente a muro que sí, `422` para curvas desalineadas, `kind` desconocido, curvas en una puerta y formato desconocido), **sección tipo y glorieta** (formato 4 con ancho derivado, SVG con calzada, andenes, anillo e isla, y `422` para una medida fuera de rango, una clave desconocida, una glorieta sin sección y un cruce desconocido), puertas y portones (geometría, sentidos de apertura, exportación con trazo), validaciones de la API, guardado/versiones/borradores/conflictos, exportaciones, ciclo de vida y logout. |
+| `tests/php/functional.mjs` | 263 comprobaciones: instalador, requisitos, contraseñas débiles, CSRF, sesión, autorización entre cuentas, CRUD de proyectos/pisos, duplicados, importación v1/v2, catálogos (395 señales y 420 objetos), catálogo y guardado de redes, señales de baño y de servicios (guardado, color de familia y exportación SVG), **auditor y medición de evacuación** (salidas, recorrido máximo, zonas inalcanzables, rutas que cruzan muros o no llegan a la salida, ocupación declarada y estimada, señalización, validación de `isExit`, informe imprimible y demo coherente), **muros curvos y vías** (guardado en formato 3, auditor con el muro curvo separando recintos, arco `A` en el SVG, vía que no bloquea frente a muro que sí, `422` para curvas desalineadas, `kind` desconocido, curvas en una puerta y formato desconocido), **sección tipo y glorieta** (formato 4 con ancho derivado, SVG con calzada, andenes, anillo e isla, y `422` para una medida fuera de rango, una clave desconocida, una glorieta sin sección y un cruce desconocido), **modo brigadista** (panel, token de 32 caracteres, página pública sin sesión ni scripts inline, API del plan, service worker, regeneración y desactivación del enlace) y **verificación física** (lista sin trazos, tres estados, novedad sin nota rechazada, rondas e historial, cobertura, aviso de días y foto servida solo a la cuenta dueña), puertas y portones (geometría, sentidos de apertura, exportación con trazo), validaciones de la API, guardado/versiones/borradores/conflictos, exportaciones, ciclo de vida y logout. |
 | `tests/js/editor.mjs` | 380 comprobaciones de interfaz sobre la app real: arranque, 395 señales y 420 objetos, **muros curvos** (rombo del tramo, arco de tres puntos, radio y flecha en el inspector, enderezar, doble clic que parte el arco, caja analítica, puerta sobre el arco, formato 3 y degradación a v2, marcado idéntico sin curvas), **vías y andenes** (banda de 6 m con carriles, cambio de ancho y carriles, parqueadero contado en la etiqueta, franjas del paso cebra y rótulo del lindero), **sección tipo y cruces** (avenida de 20 m en formato 4, perfil transversal en el inspector, cambio de andén que recalcula el ancho, glorieta de cinco accesos, vuelta a vía normal, corredor de ejemplo en una acción y sinónimos «carro», «bici» y «semáforo»), **trazado de tuberías y circuitos, inspector de red y panel de redes**, **mano y paneo, selección de superpuestos, inspector plegable y paleta de herramientas**, **guía de primeros pasos** (apertura en el primer uso, siete pasos, progreso tomado del plano, salto a la herramienta con la baldosa resaltada, reinicio y desactivación), **buscador con sinónimos y sin tildes** (calle → vía, anden → andén, parqueo → parqueadero), **baldosa propia de vías y andenes**, puertas dobles y portones, **vértices de ruta editables (arrastrar, doble clic, Alt+clic)**, **señal de baño insertada desde la biblioteca**, **posiciones reales del trazo**, **clic sobre muros finos, pictogramas y equipos**, **cambio de señal y de equipo desde el inspector**, **auditor de planos** (interruptor de salida, ocupación declarada, cajón de revisión, contador, filtros, «Ver en el plano», cierre sin dejar el fondo bloqueado), **pliego de señalización** (conteo, tamaño sugerido, CSV, precios y consistencia), **medición de rutas internas** (ruta que rodea muros, tramos, guardado en capa y comparación), **modo presentación** (pantalla limpia, láser, spotlight, rutas animadas, capas, quiz y salida sin perder el estado), **rotación**, **rutas cerradas**, **arrastrar y soltar desde la biblioteca sin que el cajón lo bloquee**, reglas, herramientas, inserción con puntero, selección, mover, escalar, rotar, color, cambio de tipo, deshacer/rehacer, duplicar, agrupar, bloquear, desplazar, texto y saneado, guardar, reabrir, borradores, conflictos, exportación SVG/JSON/PNG, tooltips sin acumulación, capas, versiones y límites. |
-| `tests/js/pages.mjs` | 32 comprobaciones de las páginas fuera del editor: menú de acciones de proyectos y pisos (capa fija, colocación, teclado, un solo menú), confirmación de borrado y borrado real de piso y proyecto, con la protección del último piso. |
+| `tests/js/pages.mjs` | 43 comprobaciones de las páginas fuera del editor: menú de acciones de proyectos y pisos (capa fija, colocación, teclado, un solo menú), confirmación de borrado y borrado real de piso y proyecto, con la protección del último piso, y **la página pública del modo brigadista** ejecutando su JavaScript: acciones rápidas, atenuado del plano, alto contraste recordado, zoom y borrado de la copia local. |
 | `tests/php/package.mjs` | 39 comprobaciones: construye ambos ZIP, verifica que no haya bases, sesiones, credenciales, logs ni carpetas de desarrollo, valida los SHA-256 y hace una instalación limpia de la demo comprobando assets, catálogos (395/420), los cuatro pisos del proyecto de ejemplo, señales de servicios y redes en la demo, la señal «Usted está aquí», **el auditor y su informe en la demo empaquetada**, editor, SVG, JSON e impresión. |
 | `tests/php/desktop.mjs` | 37 comprobaciones del escritorio: rutas de datos separadas del código, `NORMA_DATA_PATH` (solo absolutas), lanzador (argumentos, puerto, estado, cierre), enrutador (bloqueos, saltos de directorio, byte nulo) y una instalación completa escribiendo en una carpeta de datos externa. |
 | `tests/js/electron.mjs` | 37 comprobaciones de la edición Electron: ventana sin acceso a Node, puente mínimo, enlaces externos, instancia única, menú en español, descargas, servidor en `127.0.0.1` sin cookies en memoria, entorno de php-wasm, instalación completa con datos fuera del código, `storage/` inaccesible, armado del paquete (aplicación, ventana e intérprete), los ocho paquetes de php-wasm dentro de `runtime/node_modules`, el rechazo de un paquete sin ellos, el mínimo de macOS y la ausencia de ICU y de versiones de PHP que no se usan. |
@@ -849,6 +882,18 @@ encontraban nada. Desde la 1.12.0:
   exacto. Cuando no hay resultados, propone palabras cercanas.
 - El lienzo muestra la **pista de la herramienta** al elegir cualquiera de las
   cinco (antes caía en la pista de «Seleccionar»).
+
+## Cambios de la versión 1.14.0
+
+Los puntos 1 y 2 del [#6](https://github.com/luan920530-commits/normia-planos-cad/issues/6): el plano sale del escritorio y llega al celular de la brigada y a la ronda de campo, sin cuenta para consultar y con registro para verificar.
+
+- **Modo brigadista.** Enlace público de solo lectura por piso con token hexadecimal regenerable, ruta `b/{token}` sin sesión y sin acceso al editor. Página móvil con cuatro acciones grandes (ruta, puntos de reunión, extintores y llamar al 123), zoom, alto contraste, fecha de actualización, copia del plano en el dispositivo para consultarlo **sin internet** y botón que borra esa copia.
+- **Verificación física.** Lista de campo por elemento con estados *Pendiente / Verificado / Con novedad*, fecha, responsable, nota y **foto de evidencia** opcional (512 KB, en la base). Modo ronda para el celular, rondas con historial, cobertura % por tipo y sector, filtros y aviso configurable de días sin verificación.
+- **Base de datos.** Tablas `brigade_links`, `element_checks` y `verification_rounds`; columna `floors.check_days`. Migración automática e idempotente por `PRAGMA user_version` (2 → 4): las instalaciones anteriores se actualizan al abrir la aplicación sin perder planos, versiones ni cuentas.
+- **Rutas públicas con token.** El enrutador acepta un parámetro alfanumérico (`{token}`) además de los identificadores numéricos, y escapa el texto literal de los patrones. La página pública y su API entran por la lista de rutas sin sesión; el resto sigue exigiendo cuenta.
+- **Pruebas.** `tests/php/functional.mjs` pasa a **263** comprobaciones (enlace, token, regeneración, desactivación, service worker, página sin scripts inline, verificación, rondas, cobertura, foto y permisos) y `tests/js/pages.mjs` a **43** (acciones rápidas, atenuado del plano, contraste, zoom y borrado de datos ejecutando el JavaScript real).
+
+Sin cambios en el formato del plano: los diseños guardados siguen abriendo igual.
 
 ## Cambios de la versión 1.13.0
 
