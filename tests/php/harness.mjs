@@ -182,18 +182,20 @@ export async function startApp(version = '8.3') {
   return startRuntime(cloneProject(), version, { cleanup: true });
 }
 
-export function makeReporter(version) {
+export function makeReporter(version, runtime = 'PHP') {
   const results = [];
+  // Etiqueta: «PHP 8.3» en las suites del intérprete, «JS» en las de JavaScript.
+  const tag = [runtime, version].filter(Boolean).join(' ');
   return {
     check(name, condition, detail = '') {
       const ok = Boolean(condition);
       results.push({ name, ok, detail });
-      console.log(`${ok ? '✓' : '✗'} [PHP ${version}] ${name}${detail ? ` · ${detail}` : ''}`);
+      console.log(`${ok ? '✓' : '✗'} [${tag}] ${name}${detail ? ` · ${detail}` : ''}`);
       return ok;
     },
     summary() {
       const failed = results.filter((row) => !row.ok);
-      console.log(`\nPHP ${version}: ${results.length - failed.length}/${results.length} comprobaciones correctas.`);
+      console.log(`\n${tag}: ${results.length - failed.length}/${results.length} comprobaciones correctas.`);
       if (failed.length) {
         console.log('Fallos:\n' + failed.map((row) => `  - ${row.name}${row.detail ? ` (${row.detail})` : ''}`).join('\n'));
       }

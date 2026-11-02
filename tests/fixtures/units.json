@@ -1,0 +1,37 @@
+{
+  "_comment": "Casos compartidos por tests/php/units.mjs y tests/js/units.mjs. Una sola tabla para que PHP y JavaScript no puedan divergir. Los valores son los del código anterior a la etapa 0 (NORMIA-004).",
+  "units": [
+    { "unit": "mm", "metersPerUnit": 0.001, "cmPerUnit": 0.1, "unitsPerMeter": 1000, "tolerance": 5 },
+    { "unit": "cm", "metersPerUnit": 0.01, "cmPerUnit": 1, "unitsPerMeter": 100, "tolerance": 0.5 },
+    { "unit": "m", "metersPerUnit": 1, "cmPerUnit": 100, "unitsPerMeter": 1, "tolerance": 0.005 }
+  ],
+  "lengths": [
+    { "unit": "cm", "value": 1200, "meters": 12, "label": "12 m de fachada en centímetros" },
+    { "unit": "m", "value": 12, "meters": 12, "label": "12 m de fachada en metros" },
+    { "unit": "mm", "value": 12000, "meters": 12, "label": "12 m de fachada en milímetros" },
+    { "unit": "cm", "value": 418.6, "meters": 4.186, "label": "calibración típica en centímetros" },
+    { "unit": "cm", "value": 80, "meters": 0.8, "label": "ancho de puerta de 80 cm" },
+    { "unit": "m", "value": 0.8, "meters": 0.8, "label": "ancho de puerta en metros" },
+    { "unit": "mm", "value": 800, "meters": 0.8, "label": "ancho de puerta en milímetros" }
+  ],
+  "areas": [
+    { "unit": "cm", "value": 240000, "squareMeters": 24, "label": "24 m² dibujados en centímetros" },
+    { "unit": "m", "value": 24, "squareMeters": 24, "label": "24 m² dibujados en metros" },
+    { "unit": "mm", "value": 24000000, "squareMeters": 24, "label": "24 m² dibujados en milímetros" }
+  ],
+  "invalidUnits": [null, "", "M", "CM", "cm ", " pies", "pies", 0, 1, 100, true, false, [], {}],
+  "scales": [
+    { "scale": "1:1", "denominator": 1 },
+    { "scale": "1:50", "denominator": 50 },
+    { "scale": "1:100", "denominator": 100 },
+    { "scale": "1:99999", "denominator": 99999 },
+    { "scale": "100", "denominator": null },
+    { "scale": "1:0", "denominator": null },
+    { "scale": "1:100000", "denominator": null },
+    { "scale": "1: 100", "denominator": null },
+    { "scale": "1:100 ", "denominator": null },
+    { "scale": "0:100", "denominator": null },
+    { "scale": "", "denominator": null },
+    { "scale": null, "denominator": null }
+  ]
+}
