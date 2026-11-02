@@ -90,12 +90,21 @@ Los errores se traducen en un único punto:
 | GET | `api/floors/{id}/audit` | Auditor y medición de evacuación; `?occupancy=N` simula el aforo. |
 | GET | `catalogs/signs`, `catalogs/cad` | Catálogos locales. |
 | GET/POST | `account/password` | Cambio de contraseña. |
+| GET | `empresas`, `empresas/nueva` | Lista de empresas de la persona y formulario de alta. |
+| GET/POST | `empresas`, `empresas/{id}` | Alta de empresa y edición de sus datos (nombre, NIT, ciudad). |
+| POST | `empresas/{id}/personas` | Da acceso a una cuenta existente o crea la cuenta y la vincula. |
+| POST | `empresas/{id}/personas/{userId}/rol`, `.../quitar` | Cambia el rol o retira el acceso. |
+| POST | `empresas/{id}/eliminar` | Elimina la empresa con sus planos (solo el propietario, escribiendo el nombre). |
 
 ## Datos y persistencia
 
 ```sql
 users (id, name, email único, password_hash, is_admin, timestamps)
-projects (id, user_id → users, name, site, workplace, responsible, notes, timestamps)
+organizations (id, name, tax_id, city, created_by → users, timestamps)
+memberships (id, organization_id → organizations, user_id → users,
+             role owner|admin|editor|viewer, created_at, UNIQUE(organization_id, user_id))
+projects (id, organization_id → organizations, created_by → users,
+          name, site, workplace, responsible, notes, timestamps)
 floors (id, project_id → projects, name, level, sort_order, design_json,
         version, draft_json, draft_base_version, draft_updated_at, check_days, timestamps)
 floor_versions (id, floor_id → floors, version, design_json, note,
@@ -108,10 +117,12 @@ element_checks (id, floor_id → floors, round_id → verification_rounds, eleme
                 checked_by, checked_at)
 ```
 
-- **Esquema versionado.** `resources/schema.sql` crea todo en instalaciones nuevas con `PRAGMA user_version = 5`. En instalaciones anteriores, `Database::migrate()` aplica los pasos que falten al arrancar (2 → 3 → 4 → 5: enlace brigadista, verificación, `floors.check_days` y la tabla `plugins` de los complementos), comprueba la columna con `PRAGMA table_info` y no vuelve a ejecutarse dentro de la misma petición.
+- **Esquema versionado.** `resources/schema.sql` crea todo en instalaciones nuevas con `PRAGMA user_version = 6`. En instalaciones anteriores, `Database::migrate()` aplica los pasos que falten al arrancar (2 → 3 → 4 → 5 → 6: enlace brigadista, verificación, `floors.check_days`, la tabla `plugins` y las empresas con membresías), comprueba la columna con `PRAGMA table_info` y no vuelve a ejecutarse dentro de la misma petición.
+- **Paso 6 (empresas) sin pérdida de datos.** SQLite no permite añadir una columna `NOT NULL` con clave foránea, así que el paso reconstruye `projects` en una transacción: copia cada fila a una tabla nueva, resuelve la empresa a partir de la membresía de su antiguo `user_id`, comprueba que no quede ningún proyecto huérfano y solo entonces reemplaza la tabla. Si algo falla se revierte y se lanza `SchemaException`, que **detiene la petición con una página de error accionable** en lugar de dejar la aplicación trabajando sobre un esquema a medias. Al terminar se verifica con `PRAGMA foreign_key_check`.
 - **Fotos de evidencia.** Se guardan en la tabla como base64 (512 KB como máximo) porque algunos controladores SQLite empaquetados truncan los binarios con bytes de control; el tipo se detecta por la firma del archivo, sin depender de GD. Solo se sirven a la cuenta dueña del plano.
 
-- Todas las lecturas de piso incluyen la condición de propiedad (`projects.user_id = :userId`) en la misma consulta; no se confía en el `id` recibido.
+- Todas las lecturas de piso incluyen la condición de pertenencia (`JOIN memberships m ... m.user_id = :userId`) en la misma consulta; no se confía en el `id` recibido.
+- La **frontera de los datos es la empresa**: un proyecto cuelga de `projects.organization_id` y el acceso se resuelve con la membresía de la persona. Las escrituras añaden además el rol (`m.role IN ('owner','admin','editor')`) a la propia consulta, de modo que un lector no puede guardar aunque construya la petición a mano.
 - Los guardados y las duplicaciones usan transacciones.
 - El piso mantiene la versión actual en `floors.version`; cada guardado inserta en `floor_versions` y actualiza el piso con `WHERE version = :expected`. Si el `UPDATE` no afecta exactamente una fila, se lanza `VersionConflictException` con la versión real.
 - Las versiones son inmutables. Restaurar copia el diseño de la versión elegida a un **nuevo** registro con el siguiente número, conservando el historial.
@@ -328,6 +339,24 @@ señales (`signs`), equipos (`cad`) y familias propias (`categories`).
 La especificación y el manual están en `docs/PLUGINS.md` y dentro de la propia
 aplicación (`plugins/manual`).
 
+## Empresas, personas y roles
+
+La versión 1.17.0 introduce la tenencia. Antes, un proyecto pertenecía a una cuenta (`projects.user_id`); ahora pertenece a una **empresa** (`projects.organization_id`) y las personas entran por una **membresía** con rol.
+
+| Rol | Consulta | Edita planos | Crea y elimina proyectos | Administra personas |
+| --- | --- | --- | --- | --- |
+| `owner` | Sí | Sí | Sí | Sí (no puede quedarse sin propietario) |
+| `admin` | Sí | Sí | Sí | Sí, salvo otros administradores y el propietario |
+| `editor` | Sí | Sí | Crea; **no** elimina | No |
+| `viewer` | Sí | No | No | No |
+
+- **Una persona, varias empresas.** El panel muestra los planos de todas las empresas a las que pertenece, cada tarjeta con el nombre de su empresa. No hay «cambio de contexto»: la empresa es un atributo del plano.
+- **La empresa de cada cuenta se crea sola.** El instalador crea la empresa del propietario; la migración crea una por cada cuenta existente con sus proyectos dentro.
+- **Altas sin correo.** El administrador escribe el correo: si la cuenta existe se le añade la membresía; si no, se crea con la contraseña temporal que él mismo define y la entrega en mano. La aplicación no envía correo ni guarda invitaciones pendientes.
+- **Retirar acceso no borra historia.** Al quitar una membresía se conservan proyectos, versiones y autoría (`floor_versions.created_by`).
+- **Eliminar una empresa** borra en cascada sus proyectos, pisos, versiones, enlaces de brigada, rondas y verificaciones. Las cuentas de las personas sobreviven.
+- **Límites conocidos.** El rol se guarda como texto y la comprobación se hace en cada consulta; no hay permisos por proyecto, ni invitaciones con caducidad, ni bitácora de cambios de rol, ni segundo factor.
+
 ## Seguridad
 
 | Amenaza | Mitigación |
@@ -365,8 +394,8 @@ Cada prueba corre en PHP 8.1 y 8.3 (la de paquetes en 8.3), sin instalar PHP en 
 
 - Sin DWG/DXF: fuera de alcance; se documenta explícitamente para no prometer compatibilidad inexistente.
 - Sin colaboración en tiempo real: el bloqueo optimista por versión evita pérdidas silenciosas, pero la coordinación es humana.
-- Sin gestor de usuarios en la interfaz: la fase 1 crea la cuenta administradora en el instalador. El esquema y las consultas ya soportan varias cuentas con proyectos aislados, pero las cuentas adicionales se crean por base de datos; un gestor de usuarios queda para una fase posterior.
-- Migraciones automáticas y repetibles por `PRAGMA user_version` (hoy 5). Cada paso crea solo lo que falta; las instalaciones nuevas ya traen el esquema completo en `resources/schema.sql`.
+- **Empresas y roles en la interfaz (1.17.0).** Cada cuenta estrena su propia empresa como propietaria; desde *Empresas* el propietario o un administrador da acceso por correo, crea la cuenta si no existe (con contraseña temporal entregada en mano) y asigna rol `owner`, `admin`, `editor` o `viewer`. Una persona puede pertenecer a varias empresas y ve los planos de todas. El sistema impide dejar una empresa sin propietario y no permite administrar a alguien con un rol igual o superior al propio. **No se envían correos**: no hay SMTP, la entrega de credenciales es humana.
+- Migraciones automáticas y repetibles por `PRAGMA user_version` (hoy 6). Cada paso crea solo lo que falta; las instalaciones nuevas ya traen el esquema completo en `resources/schema.sql`. El paso que reescribe datos (empresas) va en transacción y, si falla, detiene la aplicación con un mensaje en vez de continuar.
 - La escala es una **referencia declarada**: el editor no mide el mundo real ni convierte unidades físicas a píxeles de impresión.
 
 

@@ -17,6 +17,22 @@
   <form method="post" action="<?= e($isEdit ? url('projects/' . (int) $project['id']) : url('projects')) ?>" class="panel-card form-stack">
     <?= csrf_field() ?>
     <div class="form-grid">
+      <?php if (!$isEdit && !empty($organizations)): ?>
+        <label class="field field-wide">
+          <span>Empresa</span>
+          <select name="organization_id">
+            <?php foreach ($organizations as $organization): ?>
+              <option value="<?= (int) $organization['id'] ?>" <?= (int) ($data['organization_id'] ?? 0) === (int) $organization['id'] ? 'selected' : '' ?>><?= e($organization['name']) ?> · <?= e(\App\Models\Membership::label((string) $organization['role'])) ?></option>
+            <?php endforeach; ?>
+          </select>
+          <small>El plano quedará en esa empresa y lo verán todas las personas con acceso a ella. <a href="<?= e(url('empresas')) ?>">Administrar empresas</a>.</small>
+        </label>
+      <?php elseif ($isEdit && !empty($data['organization_name'])): ?>
+        <div class="field field-wide">
+          <span>Empresa</span>
+          <p class="help-text"><?= e($data['organization_name']) ?>. Para mover el plano a otra empresa, duplícalo desde ella.</p>
+        </div>
+      <?php endif; ?>
       <label class="field field-wide">
         <span>Nombre del proyecto <em>Obligatorio</em></span>
         <input type="text" name="name" value="<?= e($data['name'] ?? '') ?>" required maxlength="120" placeholder="Planta principal · Edificio Norte">

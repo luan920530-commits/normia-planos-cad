@@ -159,9 +159,11 @@ final class Check
     {
         $row = Database::first(
             'SELECT c.photo, c.photo_type, c.photo_name FROM element_checks c
-             JOIN floors f ON f.id = c.floor_id JOIN projects p ON p.id = f.project_id
-             WHERE c.id = ? AND c.floor_id = ? AND p.user_id = ? AND c.photo IS NOT NULL',
-            [$checkId, $floorId, $userId]
+             JOIN floors f ON f.id = c.floor_id
+             JOIN projects p ON p.id = f.project_id
+             JOIN memberships m ON m.organization_id = p.organization_id AND m.user_id = ?
+             WHERE c.id = ? AND c.floor_id = ? AND c.photo IS NOT NULL',
+            [$userId, $checkId, $floorId]
         );
         if ($row === null || !is_string($row['photo']) || $row['photo'] === '') {
             return null;

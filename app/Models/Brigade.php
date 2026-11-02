@@ -28,8 +28,9 @@ final class Brigade
              FROM brigade_links b
              JOIN floors f ON f.id = b.floor_id
              JOIN projects p ON p.id = f.project_id
-             WHERE b.floor_id = ? AND p.user_id = ?',
-            [$floorId, $userId]
+             JOIN memberships m ON m.organization_id = p.organization_id AND m.user_id = ?
+             WHERE b.floor_id = ?',
+            [$userId, $floorId]
         );
     }
 
@@ -121,8 +122,11 @@ final class Brigade
     private static function floorForUser(int $floorId, int $userId): ?array
     {
         return Database::first(
-            'SELECT f.id FROM floors f JOIN projects p ON p.id = f.project_id WHERE f.id = ? AND p.user_id = ?',
-            [$floorId, $userId]
+            'SELECT f.id FROM floors f
+             JOIN projects p ON p.id = f.project_id
+             JOIN memberships m ON m.organization_id = p.organization_id AND m.user_id = ?
+             WHERE f.id = ? AND m.role IN ("owner", "admin", "editor")',
+            [$userId, $floorId]
         );
     }
 

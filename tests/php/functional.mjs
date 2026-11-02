@@ -1535,6 +1535,124 @@ echo 'USER_ID=' . $id;
   res = await second.get(`api/floors/${floorId}`, { accept: 'application/json' });
   report.check('Otra cuenta no accede a la API del piso', [404, 422].includes(res.status), String(res.status));
 
+  /* ---------------------------- empresas y roles ---------------------------- */
+  res = await client.get('empresas');
+  report.check('La pantalla de empresas responde 200 y nombra la empresa del instalador',
+    res.status === 200 && /Espacio de Administrador de prueba/.test(res.text) && /Propietario/.test(res.text),
+    String(res.status));
+  const organizationId = Number((res.text.match(/r=empresas%2F(\d+)/) || [])[1] || 0);
+  report.check('El instalador deja al usuario como propietario de su empresa', organizationId > 0, String(organizationId));
+
+  res = await client.get(`empresas/${organizationId}`);
+  report.check('La ficha de la empresa lista a la persona con su rol',
+    res.status === 200 && /Administrador de prueba/.test(res.text) && /owner|Propietario/.test(res.text));
+
+  // Un espectador ve los planos de la empresa, pero no puede guardarlos.
+  let resRol = await client.postForm(`empresas/${organizationId}/personas`, {
+    _token: homeToken,
+    email: 'otra@normia.local',
+    name: '',
+    password: '',
+    role: 'viewer',
+  });
+  report.check('Dar acceso a una cuenta existente redirige a la ficha', [302, 303].includes(resRol.status), String(resRol.status));
+  res = await second.get(`projects/${projectId}`);
+  report.check('Con acceso a la empresa, la otra cuenta ve el proyecto compartido', res.status === 200, String(res.status));
+  res = await second.get('empresas');
+  report.check('La otra cuenta ve la empresa compartida como lectora', res.status === 200 && /Lector/.test(res.text), String(res.status));
+  const secondHome = await second.get('empresas');
+  second.client.csrf = extractToken(secondHome.text);
+  const planoAjeno = (await second.get(`api/floors/${floorId}`, { accept: 'application/json' })).json();
+  resRol = await second.client.postJson(`api/floors/${floorId}/save`, {
+    design: planoAjeno.design,
+    expected_version: planoAjeno.floor.version,
+    note: 'Intento de un lector',
+  });
+  report.check('Un lector no puede guardar el plano', [403, 422].includes(resRol.status) && /rol/i.test(resRol.text), `${resRol.status} ${resRol.text.slice(0, 80)}`);
+  resRol = await second.client.postForm(`projects/${projectId}/delete`, { _token: extractToken((await second.get(`projects/${projectId}`)).text) });
+  const avisoLector = await second.get('');
+  const trasBorrado = await client.get(`projects/${projectId}`);
+  report.check('Un lector no puede eliminar el proyecto: recibe el aviso y el proyecto sigue',
+    [302, 303].includes(resRol.status) && /administrador o el propietario/.test(avisoLector.text) && trasBorrado.status === 200,
+    `${resRol.status} · proyecto ${trasBorrado.status} · aviso ${/administrador o el propietario/.test(avisoLector.text)}`);
+
+  // Un editor escribe pero no administra personas ni borra proyectos.
+  resRol = await client.postForm(`empresas/${organizationId}/personas/2/rol`, { _token: homeToken, role: 'editor' });
+  report.check('El propietario cambia el rol a editor', [302, 303].includes(resRol.status), String(resRol.status));
+  resRol = await second.client.postForm(`empresas/${organizationId}/personas`, {
+    _token: extractToken((await second.get('empresas')).text),
+    email: 'tercero@normia.local',
+    name: 'Tercera persona',
+    password: 'Temporal2026',
+    role: 'viewer',
+  });
+  const trasInvitar = await second.get(`empresas/${organizationId}`);
+  report.check('Un editor no puede añadir personas a la empresa',
+    [302, 303].includes(resRol.status) && /no permite añadir/i.test(trasInvitar.text) && !/tercero@normia\.local/.test(trasInvitar.text),
+    `${resRol.status} · aviso ${/no permite añadir/i.test(trasInvitar.text)}`);
+  resRol = await second.get(`empresas/${organizationId}/personas/1/quitar`);
+  report.check('Quitar personas exige una petición POST con token', resRol.status === 404 || resRol.status === 405, String(resRol.status));
+
+  // El propietario no puede quedarse solo fuera de la empresa.
+  resRol = await client.postForm(`empresas/${organizationId}/personas/1/rol`, { _token: homeToken, role: 'editor' });
+  const trasDegradar = await client.get(`empresas/${organizationId}`);
+  report.check('No se puede degradar al último propietario',
+    [302, 303].includes(resRol.status) && /al menos un propietario/.test(trasDegradar.text) && /Propietario/.test(trasDegradar.text),
+    `${resRol.status} · aviso ${/al menos un propietario/.test(trasDegradar.text)}`);
+
+  // Aislamiento entre empresas distintas.
+  const otraEmpresa = await app.run(`
+$id = App\\Models\\Organization::create(2, ['name' => 'Empresa ajena', 'tax_id' => '', 'city' => '']);
+echo 'ORG=' . $id;
+`);
+  const orgAjeno = Number((otraEmpresa.text.match(/ORG=(\d+)/) || [])[1] || 0);
+  report.check('Se puede crear una segunda empresa', orgAjeno > 0, String(orgAjeno));
+  res = await client.get(`empresas/${orgAjeno}`);
+  report.check('Un proyecto de otra empresa no se ve desde la primera', [404, 422].includes(res.status), String(res.status));
+  // La dueña de esa empresa es la otra cuenta: el intento lo hace quien no pertenece.
+  resRol = await client.postForm(`empresas/${orgAjeno}`, { _token: homeToken, name: 'Secuestro' });
+  const ajenaIntacta = await app.run(`
+echo 'NOMBRE=' . (string) App\\Core\\Database::value('SELECT name FROM organizations WHERE id = ' . (int) ${orgAjeno});
+`);
+  report.check('Sin membresía no se edita una empresa ajena',
+    [404, 422].includes(resRol.status) && !/Secuestro/.test(ajenaIntacta.text || ''),
+    `${resRol.status} · ${(ajenaIntacta.text || '').trim().slice(0, 60)}`);
+
+  /* ---------------------------- migración desde v5 ---------------------------- */
+  const migracion = await app.run(`
+$tmp = sys_get_temp_dir() . '/normia-migracion-' . bin2hex(random_bytes(4)) . '.sqlite';
+App\\Core\\Database::reset();
+App\\Core\\Database::connect($tmp);
+$pdo = App\\Core\\Database::pdo();
+$pdo->exec('CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, email TEXT NOT NULL COLLATE NOCASE UNIQUE, password_hash TEXT NOT NULL, is_admin INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)');
+$pdo->exec('CREATE TABLE projects (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, name TEXT NOT NULL, site TEXT NOT NULL DEFAULT "", workplace TEXT NOT NULL DEFAULT "", responsible TEXT NOT NULL DEFAULT "", notes TEXT NOT NULL DEFAULT "", created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)');
+$pdo->exec('CREATE TABLE floors (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE, name TEXT NOT NULL, level TEXT NOT NULL DEFAULT "", sort_order INTEGER NOT NULL DEFAULT 0, design_json TEXT NOT NULL, version INTEGER NOT NULL DEFAULT 1, draft_json TEXT NULL, draft_base_version INTEGER NULL, draft_updated_at TEXT NULL, check_days INTEGER NOT NULL DEFAULT 30, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)');
+$pdo->exec('PRAGMA user_version = 5');
+$pdo->exec('INSERT INTO users (name, email, password_hash) VALUES ("Ana Antigua", "ana@viejo.local", "x")');
+$pdo->exec('INSERT INTO users (name, email, password_hash) VALUES ("Beto Antiguo", "beto@viejo.local", "x")');
+$pdo->exec('INSERT INTO projects (user_id, name) VALUES (1, "Bodega uno"), (2, "Bodega dos")');
+$pdo->exec('INSERT INTO floors (project_id, name, design_json) VALUES (1, "Piso 1", "{}"), (2, "Piso 1", "{}")');
+App\\Core\\Database::migrate();
+$orgs = (int) App\\Core\\Database::value('SELECT COUNT(*) FROM organizations');
+$miembros = (int) App\\Core\\Database::value('SELECT COUNT(*) FROM memberships');
+$proyectos = (int) App\\Core\\Database::value('SELECT COUNT(*) FROM projects');
+$pisos = (int) App\\Core\\Database::value('SELECT COUNT(*) FROM floors');
+$huerfanos = (int) App\\Core\\Database::value('SELECT COUNT(*) FROM projects WHERE organization_id IS NULL');
+$duenos = (int) App\\Core\\Database::value('SELECT COUNT(*) FROM memberships WHERE role = "owner"');
+$version = (int) App\\Core\\Database::value('PRAGMA user_version');
+$fk = App\\Core\\Database::query('PRAGMA foreign_key_check');
+App\\Core\\Database::reset();
+App\\Core\\Database::connect(App\\Core\\Config::databasePath());
+App\\Core\\Database::migrate();
+@unlink($tmp);
+echo "ORGS=$orgs MIEMBROS=$miembros PROYECTOS=$proyectos PISOS=$pisos HUERFANOS=$huerfanos DUENOS=$duenos VERSION=$version FK=" . count($fk);
+`);
+  const mig = (migracion.text || '').trim();
+  report.check('La migración v5 crea una empresa por persona y conserva proyectos y pisos',
+    /ORGS=2 MIEMBROS=2 PROYECTOS=2 PISOS=2 HUERFANOS=0 DUENOS=2 VERSION=6 FK=0/.test(mig), mig);
+  res = await client.get('');
+  report.check('Tras migrar, la sesión sigue viendo sus planos', res.status === 200 && res.text.includes('Espacio de Administrador de prueba'));
+
   /* ---------------------------- sesión y cierre ---------------------------- */
   res = await client.postForm('logout', { _token: homeToken });
   report.check('Logout redirige', [302, 303].includes(res.status), String(res.status));

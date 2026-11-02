@@ -27,10 +27,12 @@ final class DemoSeeder
             throw new RuntimeException('El proyecto de demostración no es válido.');
         }
         $project = $data['project'];
-        Database::transaction(function () use ($project, $data, $userId): void {
+        $organizationId = \App\Models\Organization::ensurePersonal($userId, 'Espacio de demostración');
+        Database::transaction(function () use ($project, $data, $userId, $organizationId): void {
             Database::execute(
-                'INSERT INTO projects (user_id, name, site, workplace, responsible, notes) VALUES (?, ?, ?, ?, ?, ?)',
+                'INSERT INTO projects (organization_id, created_by, name, site, workplace, responsible, notes) VALUES (?, ?, ?, ?, ?, ?, ?)',
                 [
+                    $organizationId,
                     $userId,
                     text_limit((string) ($project['name'] ?? 'Proyecto de demostración'), 120),
                     text_limit((string) ($project['site'] ?? ''), 120),

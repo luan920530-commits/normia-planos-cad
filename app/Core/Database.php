@@ -135,8 +135,135 @@ final class Database
                 );
                 $version = 5;
             }
+            if ($version < 6) {
+                // Fase 2 · empresas. `projects` pasa de "un dueño" a "una
+                // organización", y la pertenencia se resuelve con membresías.
+                // SQLite no permite añadir una columna NOT NULL con referencia
+                // a otra tabla, así que se reconstruye `projects`: es DDL
+                // transaccional y la copia se hace con las claves foráneas
+                // desactivadas, verificando el resultado con foreign_key_check.
+                self::migrateToOrganizations();
+                $version = 6;
+            }
+        } catch (SchemaException $exception) {
+            error_log('Normia: migración de esquema detenida: ' . $exception->getMessage());
+            throw $exception;
         } catch (Throwable $exception) {
             error_log('Normia: no se pudo migrar el esquema: ' . $exception->getMessage());
+        }
+    }
+
+    /**
+     * Migración a empresas (Fase 2).
+     *
+     * Reconstruye `projects` para que apunte a `organizations` en lugar de a
+     * `users`. SQLite no admite añadir una columna `NOT NULL` con clave foránea,
+     * así que se copia a una tabla nueva y se renombra, con `foreign_keys`
+     * desactivadas para que `DROP TABLE` no arrastre los pisos en cascada.
+     *
+     * Todo ocurre en una transacción: si algo falla se revierte y se lanza
+     * `SchemaException` (no se continúa con un esquema a medias). Después del
+     * commit se verifica con `PRAGMA foreign_key_check`.
+     */
+    private static function migrateToOrganizations(): void
+    {
+        $pdo = self::pdo();
+        $columns = array_map(
+            static fn (array $row): string => (string) $row['name'],
+            self::query('PRAGMA table_info(projects)')
+        );
+        if (in_array('organization_id', $columns, true)) {
+            // Una ejecución anterior alcanzó a reconstruir la tabla pero no a
+            // subir la versión: se completa el marcador y se sigue.
+            $pdo->exec('PRAGMA user_version = 6');
+            return;
+        }
+
+        $foreignKeysOn = (int) self::value('PRAGMA foreign_keys') === 1;
+        $pdo->exec('PRAGMA foreign_keys = OFF');
+        try {
+            $pdo->beginTransaction();
+            $pdo->exec(
+                'CREATE TABLE IF NOT EXISTS organizations (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    tax_id TEXT NOT NULL DEFAULT "",
+                    city TEXT NOT NULL DEFAULT "",
+                    created_by INTEGER NULL REFERENCES users(id) ON DELETE SET NULL,
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+                CREATE TABLE IF NOT EXISTS memberships (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    organization_id INTEGER NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+                    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    role TEXT NOT NULL DEFAULT "editor",
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE (organization_id, user_id)
+                );
+                CREATE INDEX IF NOT EXISTS idx_memberships_user ON memberships(user_id, organization_id);
+                CREATE INDEX IF NOT EXISTS idx_memberships_org ON memberships(organization_id, role);'
+            );
+
+            foreach (self::query('SELECT id, name FROM users ORDER BY id') as $user) {
+                $existing = (int) self::value('SELECT organization_id FROM memberships WHERE user_id = ? ORDER BY id LIMIT 1', [(int) $user['id']]);
+                if ($existing > 0) {
+                    continue;
+                }
+                $pdo->prepare('INSERT INTO organizations (name, created_by) VALUES (?, ?)')
+                    ->execute([text_limit('Espacio de ' . (string) $user['name'], 120), (int) $user['id']]);
+                $orgId = (int) $pdo->lastInsertId();
+                $pdo->prepare('INSERT INTO memberships (organization_id, user_id, role) VALUES (?, ?, "owner")')
+                    ->execute([$orgId, (int) $user['id']]);
+            }
+
+            $pdo->exec(
+                'CREATE TABLE projects_migracion (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    organization_id INTEGER NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+                    created_by INTEGER NULL REFERENCES users(id) ON DELETE SET NULL,
+                    name TEXT NOT NULL,
+                    site TEXT NOT NULL DEFAULT "",
+                    workplace TEXT NOT NULL DEFAULT "",
+                    responsible TEXT NOT NULL DEFAULT "",
+                    notes TEXT NOT NULL DEFAULT "",
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )'
+            );
+            $pdo->exec(
+                'INSERT INTO projects_migracion (id, organization_id, created_by, name, site, workplace, responsible, notes, created_at, updated_at)
+                 SELECT p.id,
+                        (SELECT m.organization_id FROM memberships m WHERE m.user_id = p.user_id ORDER BY m.id LIMIT 1),
+                        p.user_id, p.name, p.site, p.workplace, p.responsible, p.notes, p.created_at, p.updated_at
+                 FROM projects p'
+            );
+            $huerfanos = (int) self::value('SELECT COUNT(*) FROM projects_migracion WHERE organization_id IS NULL');
+            if ($huerfanos > 0) {
+                throw new SchemaException(
+                    'Hay ' . $huerfanos . ' proyecto(s) sin empresa de destino: la migración se revirtió sin cambios.'
+                );
+            }
+            $pdo->exec('DROP TABLE projects');
+            $pdo->exec('ALTER TABLE projects_migracion RENAME TO projects');
+            $pdo->exec('CREATE INDEX IF NOT EXISTS idx_projects_org ON projects(organization_id, updated_at DESC)');
+            $pdo->exec('CREATE INDEX IF NOT EXISTS idx_projects_creator ON projects(created_by)');
+            $pdo->exec('PRAGMA user_version = 6');
+            $pdo->commit();
+        } catch (Throwable $exception) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            throw $exception instanceof SchemaException
+                ? $exception
+                : new SchemaException('No se pudo migrar a empresas: ' . $exception->getMessage(), 0, $exception);
+        } finally {
+            $pdo->exec('PRAGMA foreign_keys = ' . ($foreignKeysOn ? 'ON' : 'OFF'));
+        }
+
+        $violations = self::query('PRAGMA foreign_key_check');
+        if ($violations !== []) {
+            throw new SchemaException('La migración a empresas dejó ' . count($violations) . ' referencia(s) sin destino.');
         }
     }
 

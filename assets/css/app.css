@@ -696,3 +696,53 @@ kbd { font-family: var(--font-mono); font-size: .74rem; background: var(--surfac
   .manual-toc ol { columns: 1; }
   .plugin-actions .button { flex: 1 1 auto; justify-content: center; }
 }
+
+/* Texto solo para lectores de pantalla (etiquetas de controles compactos). */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
+/* Encabezado de página con acciones (usado por empresas y verificación). */
+.page-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
+.page-head h1 { margin: 4px 0 6px; font-size: clamp(1.5rem, 3vw, 2rem); letter-spacing: -.02em; }
+.page-head .eyebrow { display: inline-flex; align-items: center; gap: 6px; font-size: .74rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.page-head .eyebrow a { color: inherit; }
+.page-lead { margin: 0; max-width: 68ch; color: var(--muted); font-size: .95rem; line-height: 1.55; }
+.page-head-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.form-page-head .eyebrow { display: inline-flex; font-size: .74rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+
+/* ------------------------------ Empresas y personas ------------------------------ */
+/* Fase 2: la empresa (organización) agrupa planos y personas con un rol. */
+
+.org-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+.org-card { display: flex; flex-direction: column; gap: 10px; padding: 18px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); }
+.org-card h3 { margin: 0; font-size: 1.02rem; }
+.org-card h3 a { color: inherit; text-decoration: none; }
+.org-card h3 a:hover { color: var(--blue); }
+.org-card-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: .8rem; color: var(--muted); }
+.org-role { display: inline-flex; align-items: center; gap: 5px; font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; padding: 3px 8px; border-radius: 999px; background: var(--surface-sunken); color: var(--ink-soft); border: 1px solid var(--line); }
+.org-role.is-owner { background: var(--blue-soft); color: var(--blue-strong); border-color: transparent; }
+.org-role.is-admin { background: var(--green-soft); color: var(--green); border-color: transparent; }
+.org-role.is-viewer { background: var(--amber-soft); color: var(--amber); border-color: transparent; }
+.org-counts { display: flex; gap: 14px; margin: 0; padding: 0; list-style: none; font-size: .82rem; color: var(--ink-soft); }
+.org-counts strong { display: block; font-size: 1.1rem; color: var(--ink); }
+
+.member-list { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.member-row { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface-soft); }
+.member-id { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.member-id .avatar { flex: 0 0 auto; }
+.member-name { display: block; font-weight: 600; color: var(--ink); }
+.member-mail { display: block; font-size: .82rem; color: var(--muted); overflow-wrap: anywhere; }
+.member-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: flex-end; }
+.member-actions select { padding: 7px 10px; border-radius: 10px; border: 1px solid var(--line-strong); background: var(--surface); font: inherit; font-size: .85rem; }
+.member-self { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.role-legend { display: grid; gap: 8px; margin: 14px 0 0; padding: 0; list-style: none; font-size: .85rem; color: var(--ink-soft); }
+.role-legend li { display: grid; grid-template-columns: 120px 1fr; gap: 10px; align-items: start; }
+.role-legend dt, .role-legend strong { font-weight: 700; color: var(--ink); }
+.danger-zone { border: 1px solid #f3c9c4; background: #fff8f7; border-radius: var(--radius-md); padding: 18px; }
+.danger-zone h2 { margin-top: 0; font-size: 1rem; color: var(--red); }
+.project-org { display: inline-flex; align-items: center; gap: 5px; font-size: .74rem; font-weight: 600; color: var(--blue-strong); background: var(--blue-soft); border-radius: 999px; padding: 2px 8px; }
+
+@media (max-width: 640px) {
+  .member-row { grid-template-columns: 1fr; }
+  .member-actions { justify-content: flex-start; }
+  .role-legend li { grid-template-columns: 1fr; gap: 2px; }
+}

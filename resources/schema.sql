@@ -10,9 +10,34 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Empresas (organizaciones). Es la frontera de los datos: los proyectos
+-- pertenecen a una empresa y las personas entran por una membresía con rol.
+CREATE TABLE IF NOT EXISTS organizations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    tax_id TEXT NOT NULL DEFAULT '',
+    city TEXT NOT NULL DEFAULT '',
+    created_by INTEGER NULL REFERENCES users(id) ON DELETE SET NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Una fila por persona y empresa. `role` es owner, admin, editor o viewer.
+CREATE TABLE IF NOT EXISTS memberships (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    organization_id INTEGER NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    role TEXT NOT NULL DEFAULT 'editor',
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (organization_id, user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_memberships_user ON memberships(user_id, organization_id);
+CREATE INDEX IF NOT EXISTS idx_memberships_org ON memberships(organization_id, role);
+
 CREATE TABLE IF NOT EXISTS projects (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    organization_id INTEGER NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    created_by INTEGER NULL REFERENCES users(id) ON DELETE SET NULL,
     name TEXT NOT NULL,
     site TEXT NOT NULL DEFAULT '',
     workplace TEXT NOT NULL DEFAULT '',
@@ -21,7 +46,8 @@ CREATE TABLE IF NOT EXISTS projects (
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-CREATE INDEX IF NOT EXISTS idx_projects_user ON projects(user_id, updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_projects_org ON projects(organization_id, updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_projects_creator ON projects(created_by);
 
 CREATE TABLE IF NOT EXISTS floors (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -106,4 +132,4 @@ CREATE TABLE IF NOT EXISTS plugins (
     installed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-PRAGMA user_version = 5;
+PRAGMA user_version = 6;

@@ -10,16 +10,20 @@ use App\Services\DesignValidator;
 
 final class Project
 {
+    /** Planos de todas las empresas a las que pertenece la persona. */
     public static function allForUser(int $userId): array
     {
         return Database::query(
-            'SELECT p.*,
+            'SELECT p.*, o.name AS organization_name, m.role,
                     (SELECT COUNT(*) FROM floors f WHERE f.project_id = p.id) AS floor_count,
                     (SELECT f.id FROM floors f WHERE f.project_id = p.id ORDER BY f.sort_order, f.id LIMIT 1) AS first_floor_id,
                     (SELECT f.name FROM floors f WHERE f.project_id = p.id ORDER BY f.sort_order, f.id LIMIT 1) AS first_floor_name,
                     (SELECT MAX(f.updated_at) FROM floors f WHERE f.project_id = p.id) AS floor_updated_at,
                     (SELECT COUNT(*) FROM floor_versions v JOIN floors f2 ON f2.id = v.floor_id WHERE f2.project_id = p.id) AS version_count
-             FROM projects p WHERE p.user_id = ? ORDER BY COALESCE(floor_updated_at, p.updated_at) DESC, p.id DESC',
+             FROM projects p
+             JOIN organizations o ON o.id = p.organization_id
+             JOIN memberships m ON m.organization_id = p.organization_id AND m.user_id = ?
+             ORDER BY COALESCE(floor_updated_at, p.updated_at) DESC, p.id DESC',
             [$userId]
         );
     }
@@ -27,31 +31,54 @@ final class Project
     public static function findForUser(int $id, int $userId): ?array
     {
         return Database::first(
-            'SELECT p.*,
+            'SELECT p.*, o.name AS organization_name, m.role,
                     (SELECT COUNT(*) FROM floors f WHERE f.project_id = p.id) AS floor_count
-             FROM projects p WHERE p.id = ? AND p.user_id = ?',
-            [$id, $userId]
+             FROM projects p
+             JOIN organizations o ON o.id = p.organization_id
+             JOIN memberships m ON m.organization_id = p.organization_id AND m.user_id = ?
+             WHERE p.id = ?',
+            [$userId, $id]
         );
+    }
+
+    /**
+     * Comprueba que el rol de la persona en esa empresa alcance para la acción.
+     *
+     * @param array<string,mixed> $row fila con la columna `role`
+     */
+    public static function requireCapability(array $row, string $capability, string $message): void
+    {
+        if (!Membership::can($row['role'] ?? null, $capability)) {
+            throw new \DomainException($message);
+        }
     }
 
     public static function stats(int $userId): array
     {
         return [
-            'projects' => (int) Database::value('SELECT COUNT(*) FROM projects WHERE user_id = ?', [$userId]),
+            'projects' => (int) Database::value(
+                'SELECT COUNT(*) FROM projects p JOIN memberships m ON m.organization_id = p.organization_id WHERE m.user_id = ?',
+                [$userId]
+            ),
             'floors' => (int) Database::value(
-                'SELECT COUNT(*) FROM floors f JOIN projects p ON p.id = f.project_id WHERE p.user_id = ?',
+                'SELECT COUNT(*) FROM floors f JOIN projects p ON p.id = f.project_id
+                 JOIN memberships m ON m.organization_id = p.organization_id WHERE m.user_id = ?',
                 [$userId]
             ),
             'versions' => (int) Database::value(
-                'SELECT COUNT(*) FROM floor_versions v JOIN floors f ON f.id = v.floor_id JOIN projects p ON p.id = f.project_id WHERE p.user_id = ?',
+                'SELECT COUNT(*) FROM floor_versions v JOIN floors f ON f.id = v.floor_id
+                 JOIN projects p ON p.id = f.project_id
+                 JOIN memberships m ON m.organization_id = p.organization_id WHERE m.user_id = ?',
                 [$userId]
             ),
+            'organizations' => (int) Database::value('SELECT COUNT(*) FROM memberships WHERE user_id = ?', [$userId]),
         ];
     }
 
     public static function create(int $userId, array $data): int
     {
         $clean = self::validate($data);
+        $organizationId = self::resolveOrganization($userId, $data['organization_id'] ?? null);
         $preset = (string) ($data['preset'] ?? 'libre');
         $presets = canvas_presets();
         $canvas = $presets[$preset] ?? $presets['libre'];
@@ -64,10 +91,10 @@ final class Project
         $design = DesignValidator::normalizeArray($design);
         $designJson = json_encode($design, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
 
-        return Database::transaction(static function () use ($userId, $clean, $floorName, $level, $designJson): int {
+        return Database::transaction(static function () use ($userId, $organizationId, $clean, $floorName, $level, $designJson): int {
             Database::execute(
-                'INSERT INTO projects (user_id, name, site, workplace, responsible, notes) VALUES (?, ?, ?, ?, ?, ?)',
-                [$userId, $clean['name'], $clean['site'], $clean['workplace'], $clean['responsible'], $clean['notes']]
+                'INSERT INTO projects (organization_id, created_by, name, site, workplace, responsible, notes) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                [$organizationId, $userId, $clean['name'], $clean['site'], $clean['workplace'], $clean['responsible'], $clean['notes']]
             );
             $projectId = Database::lastId();
             Database::execute(
@@ -86,14 +113,16 @@ final class Project
     public static function update(int $id, int $userId, array $data): void
     {
         $clean = self::validate($data);
-        $updated = Database::execute(
-            'UPDATE projects SET name = ?, site = ?, workplace = ?, responsible = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
-             WHERE id = ? AND user_id = ?',
-            [$clean['name'], $clean['site'], $clean['workplace'], $clean['responsible'], $clean['notes'], $id, $userId]
-        );
-        if ($updated !== 1) {
+        $project = self::findForUser($id, $userId);
+        if ($project === null) {
             throw new \DomainException('El proyecto no existe o no tienes acceso.');
         }
+        self::requireCapability($project, 'write', 'Tu rol en esta empresa permite consultar, pero no editar el proyecto.');
+        Database::execute(
+            'UPDATE projects SET name = ?, site = ?, workplace = ?, responsible = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
+             WHERE id = ?',
+            [$clean['name'], $clean['site'], $clean['workplace'], $clean['responsible'], $clean['notes'], $id]
+        );
     }
 
     public static function duplicate(int $id, int $userId): int
@@ -102,10 +131,15 @@ final class Project
         if ($project === null) {
             throw new \DomainException('El proyecto no existe o no tienes acceso.');
         }
+        self::requireCapability($project, 'write', 'Tu rol en esta empresa permite consultar, pero no duplicar el proyecto.');
         return Database::transaction(static function () use ($id, $userId, $project): int {
             Database::execute(
-                'INSERT INTO projects (user_id, name, site, workplace, responsible, notes) VALUES (?, ?, ?, ?, ?, ?)',
-                [$userId, text_limit($project['name'] . ' · copia', 120), $project['site'], $project['workplace'], $project['responsible'], $project['notes']]
+                'INSERT INTO projects (organization_id, created_by, name, site, workplace, responsible, notes) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                [
+                    (int) $project['organization_id'], $userId,
+                    text_limit($project['name'] . ' · copia', 120),
+                    $project['site'], $project['workplace'], $project['responsible'], $project['notes'],
+                ]
             );
             $newId = Database::lastId();
             $floors = Database::query('SELECT * FROM floors WHERE project_id = ? ORDER BY sort_order, id', [$id]);
@@ -126,10 +160,12 @@ final class Project
 
     public static function delete(int $id, int $userId): void
     {
-        $deleted = Database::execute('DELETE FROM projects WHERE id = ? AND user_id = ?', [$id, $userId]);
-        if ($deleted !== 1) {
+        $project = self::findForUser($id, $userId);
+        if ($project === null) {
             throw new \DomainException('El proyecto no existe o no tienes acceso.');
         }
+        self::requireCapability($project, 'manage', 'Solo un administrador o el propietario de la empresa puede eliminar un proyecto.');
+        Database::execute('DELETE FROM projects WHERE id = ?', [$id]);
     }
 
     public static function floors(int $projectId, int $userId): array
@@ -148,9 +184,7 @@ final class Project
 
     public static function createFloor(int $projectId, int $userId, array $data): int
     {
-        if (self::findForUser($projectId, $userId) === null) {
-            throw new \DomainException('El proyecto no existe o no tienes acceso.');
-        }
+        self::requireWrite($projectId, $userId, 'Tu rol en esta empresa permite consultar, pero no añadir pisos.');
         $count = (int) Database::value('SELECT COUNT(*) FROM floors WHERE project_id = ?', [$projectId]);
         if ($count >= 30) {
             throw new \DomainException('Cada proyecto admite hasta 30 pisos.');
@@ -186,9 +220,7 @@ final class Project
 
     public static function createFloorFromDesign(int $projectId, int $userId, array $design, string $name, string $level = ''): int
     {
-        if (self::findForUser($projectId, $userId) === null) {
-            throw new \DomainException('El proyecto no existe o no tienes acceso.');
-        }
+        self::requireWrite($projectId, $userId, 'Tu rol en esta empresa permite consultar, pero no importar pisos.');
         $count = (int) Database::value('SELECT COUNT(*) FROM floors WHERE project_id = ?', [$projectId]);
         if ($count >= 30) {
             throw new \DomainException('Cada proyecto admite hasta 30 pisos.');
@@ -215,9 +247,7 @@ final class Project
 
     public static function duplicateFloor(int $projectId, int $floorId, int $userId): int
     {
-        if (self::findForUser($projectId, $userId) === null) {
-            throw new \DomainException('El proyecto no existe o no tienes acceso.');
-        }
+        self::requireWrite($projectId, $userId, 'Tu rol en esta empresa permite consultar, pero no duplicar pisos.');
         $floor = Database::first('SELECT * FROM floors WHERE id = ? AND project_id = ?', [$floorId, $projectId]);
         if ($floor === null) {
             throw new \DomainException('El piso no existe.');
@@ -243,9 +273,7 @@ final class Project
 
     public static function deleteFloor(int $projectId, int $floorId, int $userId): void
     {
-        if (self::findForUser($projectId, $userId) === null) {
-            throw new \DomainException('El proyecto no existe o no tienes acceso.');
-        }
+        self::requireWrite($projectId, $userId, 'Tu rol en esta empresa permite consultar, pero no eliminar pisos.');
         $count = (int) Database::value('SELECT COUNT(*) FROM floors WHERE project_id = ?', [$projectId]);
         if ($count <= 1) {
             throw new \DomainException('Un proyecto debe conservar al menos un piso.');
@@ -254,6 +282,42 @@ final class Project
         if ($deleted !== 1) {
             throw new \DomainException('El piso no existe.');
         }
+    }
+
+    /** Exige permiso de edición en el proyecto (o lanza un error con mensaje). */
+    private static function requireWrite(int $projectId, int $userId, string $message): void
+    {
+        $project = self::findForUser($projectId, $userId);
+        if ($project === null) {
+            throw new \DomainException('El proyecto no existe o no tienes acceso.');
+        }
+        self::requireCapability($project, 'write', $message);
+    }
+
+    /**
+     * Empresa donde se crea el proyecto.
+     *
+     * Si el formulario envía una empresa, se comprueba que la persona pueda
+     * escribir en ella; si no, se usa la primera donde tenga permiso.
+     */
+    private static function resolveOrganization(int $userId, mixed $requested): int
+    {
+        if ($requested !== null && $requested !== '' && (int) $requested > 0) {
+            $organizationId = (int) $requested;
+            $role = Membership::roleFor($organizationId, $userId);
+            if ($role === null) {
+                throw new \DomainException('No perteneces a esa empresa.');
+            }
+            if (!Membership::can($role, 'write')) {
+                throw new \DomainException('Tu rol en esa empresa permite consultar, pero no crear proyectos.');
+            }
+            return $organizationId;
+        }
+        $default = Organization::defaultForUser($userId);
+        if ($default === null) {
+            throw new \DomainException('Necesitas pertenecer a una empresa para crear proyectos. Pide acceso a un administrador.');
+        }
+        return (int) $default['id'];
     }
 
     private static function validate(array $data): array

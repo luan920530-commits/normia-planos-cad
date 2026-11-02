@@ -7,6 +7,7 @@ use App\Core\Request;
 use App\Core\Response;
 use App\Core\Session;
 use App\Core\ValidationException;
+use App\Models\Organization;
 use App\Models\Project;
 use App\Services\DesignImporter;
 
@@ -14,12 +15,25 @@ final class ProjectController extends BaseController
 {
     public function create(): void
     {
+        $user = $this->user();
+        $organizations = Organization::writableForUser((int) $user['id']);
+        $requested = (int) ($this->request()->query('organization_id') ?? 0);
+        $selected = 0;
+        foreach ($organizations as $organization) {
+            if ((int) $organization['id'] === $requested) {
+                $selected = $requested;
+            }
+        }
+        if ($selected === 0 && $organizations !== []) {
+            $selected = (int) $organizations[0]['id'];
+        }
         $this->render('projects/form', [
             'title' => 'Nuevo proyecto',
             'project' => null,
             'errors' => [],
-            'old' => [],
+            'old' => ['organization_id' => $selected],
             'presets' => canvas_presets(),
+            'organizations' => $organizations,
         ]);
     }
 
@@ -38,6 +52,17 @@ final class ProjectController extends BaseController
                 'errors' => $exception->errors(),
                 'old' => $request->all(),
                 'presets' => canvas_presets(),
+                'organizations' => Organization::writableForUser((int) $user['id']),
+            ]);
+        } catch (\DomainException $exception) {
+            flash_error($exception->getMessage());
+            $this->render('projects/form', [
+                'title' => 'Nuevo proyecto',
+                'project' => null,
+                'errors' => ['organization_id' => $exception->getMessage()],
+                'old' => $request->all(),
+                'presets' => canvas_presets(),
+                'organizations' => Organization::writableForUser((int) $user['id']),
             ]);
         }
     }
@@ -45,17 +70,22 @@ final class ProjectController extends BaseController
     public function show(int $projectId): void
     {
         $project = $this->project($projectId);
-        $floors = Project::floors($projectId, (int) $this->user()['id']);
+        $user = $this->user();
+        $floors = Project::floors($projectId, (int) $user['id']);
         $this->render('projects/show', [
             'title' => $project['name'],
             'project' => $project,
             'floors' => $floors,
             'presets' => canvas_presets(),
+            'role' => (string) ($project['role'] ?? 'viewer'),
+            'canWrite' => \App\Models\Membership::can($project['role'] ?? null, 'write'),
+            'canManage' => \App\Models\Membership::can($project['role'] ?? null, 'manage'),
         ]);
     }
 
     public function edit(int $projectId): void
     {
+        $user = $this->user();
         $project = $this->project($projectId);
         $this->render('projects/form', [
             'title' => 'Editar proyecto',
@@ -63,6 +93,7 @@ final class ProjectController extends BaseController
             'errors' => [],
             'old' => $project,
             'presets' => canvas_presets(),
+            'organizations' => Organization::writableForUser((int) $user['id']),
         ]);
     }
 
@@ -82,6 +113,7 @@ final class ProjectController extends BaseController
                 'errors' => $exception->errors(),
                 'old' => array_merge($project, $request->all()),
                 'presets' => canvas_presets(),
+                'organizations' => Organization::writableForUser((int) $user['id']),
             ]);
         }
     }

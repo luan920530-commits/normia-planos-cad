@@ -5,6 +5,7 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 - **Editor completo**: instalador web, cuentas, proyectos y pisos, editor SVG real, biblioteca de **395 pictogramas** (332 ISO 7010 + 23 de orientación y servicios como baños, vestidores, cafetería y **«Usted está aquí»** + **34 de señalización de tránsito** + **6 de emergencia y brigada**), **420 objetos CAD esquemáticos en 31 familias** (estación de servicio, droguería, gimnasio, colegio, cafetería, supermercado, restaurante, bodega, comercio, hospital, costura, asadero, vivienda, deportes, exteriores, instalaciones eléctricas y redes hidrosanitarias, más **vías y tránsito, señalización vial y bicicletas**, entre otras), puertas de uno y dos batientes y portones, **muros curvos con arcos de tres puntos** (radio y flecha editables), **rutas con vértices editables**, **vías con sección tipo (carriles, separador, berma, ciclorruta y andenes), glorietas e intersecciones paramétricas, corredor de ejemplo en una acción, andenes, pasos cebra, parqueaderos y límites de predio esquemáticos**, **redes de tubería (agua, gas, desagües e incendio) y circuitos eléctricos**, cambio de señal y de equipo desde el inspector, guardado con versiones, borradores automáticos, deshacer/rehacer y exportación SVG/JSON/PNG/impresión.
 - **Auditor de planos y evacuación**: el cajón **Revisión** mide el recorrido más largo hasta las salidas marcadas, cuenta salidas y anchos útiles, estima la ocupación (declarada o por densidad), calcula el ancho requerido y el tiempo de evacuación, y lista los hallazgos por severidad con un botón para verlos en el plano. Los umbrales viven en `resources/audit-criteria.json`, el cálculo también corre en el servidor y el informe se imprime o se guarda como PDF.
 - **Instalaciones**: tuberías de agua, gas, desagües e incendio y red eléctrica con longitudes, diámetros, circuitos, cargas y caída de tensión estimada.
+- **Empresas, personas y roles.** Los planos pertenecen a una empresa y las personas entran por una membresía con rol (propietario, administrador, editor o lector). Una persona puede pertenecer a varias empresas; el sistema impide quedarse sin propietario y no deja que un lector guarde cambios.
 - **PHP ≥ 8.1 + SQLite/PDO**, arquitectura MVC propia, sin Composer, sin `node_modules` en producción y sin CDN.
 - **100 % local**: las fuentes, los estilos, los iconos, los pictogramas y los catálogos viven en el paquete. La aplicación no hace llamadas a servicios de terceros.
 - **Licencia GPL-3.0**. Los pictogramas ISO 7010 conservan su licencia MIT y su atribución (ver [Créditos](#créditos-licencias-y-atribución)).
@@ -38,30 +39,31 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 21. [Edición Electron](#edición-electron)
 22. [Guía de primeros pasos](#guía-de-primeros-pasos)
 23. [Complementos](#complementos)
-24. [Cambios de la versión 1.16.0](#cambios-de-la-versión-1160)
-25. [Cambios de la versión 1.15.9](#cambios-de-la-versión-1159)
-26. [Cambios de la versión 1.15.8](#cambios-de-la-versión-1158)
-27. [Cambios de la versión 1.15.7](#cambios-de-la-versión-1157)
-28. [Cambios de la versión 1.15.6](#cambios-de-la-versión-1156)
-29. [Cambios de la versión 1.15.5](#cambios-de-la-versión-1155)
-30. [Cambios de la versión 1.15.4](#cambios-de-la-versión-1154)
-31. [Cambios de la versión 1.15.3](#cambios-de-la-versión-1153)
-32. [Cambios de la versión 1.15.2](#cambios-de-la-versión-1152)
-33. [Cambios de la versión 1.15.1](#cambios-de-la-versión-1151)
-34. [Cambios de la versión 1.15.0](#cambios-de-la-versión-1150)
-35. [Cambios de la versión 1.14.2](#cambios-de-la-versión-1142)
-36. [Cambios de la versión 1.14.1](#cambios-de-la-versión-1141)
-37. [Cambios de la versión 1.14.0](#cambios-de-la-versión-1140)
-38. [Cambios de la versión 1.13.0](#cambios-de-la-versión-1130)
-39. [Cambios de la versión 1.12.0](#cambios-de-la-versión-1120)
-40. [Cambios de la versión 1.11.1](#cambios-de-la-versión-1111)
-41. [Cambios de la versión 1.11.0](#cambios-de-la-versión-1110)
-42. [Cambios de la versión 1.10.0](#cambios-de-la-versión-1100)
-43. [Cambios de la versión 1.9.0](#cambios-de-la-versión-190)
-44. [Cambios de la versión 1.8.0](#cambios-de-la-versión-180)
-45. [Paquetes y verificación](#paquetes-y-verificación)
-46. [Limitaciones](#limitaciones)
-47. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
+24. [Cambios de la versión 1.17.0](#cambios-de-la-versión-1170)
+25. [Cambios de la versión 1.16.0](#cambios-de-la-versión-1160)
+26. [Cambios de la versión 1.15.9](#cambios-de-la-versión-1159)
+27. [Cambios de la versión 1.15.8](#cambios-de-la-versión-1158)
+28. [Cambios de la versión 1.15.7](#cambios-de-la-versión-1157)
+29. [Cambios de la versión 1.15.6](#cambios-de-la-versión-1156)
+30. [Cambios de la versión 1.15.5](#cambios-de-la-versión-1155)
+31. [Cambios de la versión 1.15.4](#cambios-de-la-versión-1154)
+32. [Cambios de la versión 1.15.3](#cambios-de-la-versión-1153)
+33. [Cambios de la versión 1.15.2](#cambios-de-la-versión-1152)
+34. [Cambios de la versión 1.15.1](#cambios-de-la-versión-1151)
+35. [Cambios de la versión 1.15.0](#cambios-de-la-versión-1150)
+36. [Cambios de la versión 1.14.2](#cambios-de-la-versión-1142)
+37. [Cambios de la versión 1.14.1](#cambios-de-la-versión-1141)
+38. [Cambios de la versión 1.14.0](#cambios-de-la-versión-1140)
+39. [Cambios de la versión 1.13.0](#cambios-de-la-versión-1130)
+40. [Cambios de la versión 1.12.0](#cambios-de-la-versión-1120)
+41. [Cambios de la versión 1.11.1](#cambios-de-la-versión-1111)
+42. [Cambios de la versión 1.11.0](#cambios-de-la-versión-1110)
+43. [Cambios de la versión 1.10.0](#cambios-de-la-versión-1100)
+44. [Cambios de la versión 1.9.0](#cambios-de-la-versión-190)
+45. [Cambios de la versión 1.8.0](#cambios-de-la-versión-180)
+46. [Paquetes y verificación](#paquetes-y-verificación)
+47. [Limitaciones](#limitaciones)
+48. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
 
 ---
 
@@ -758,7 +760,7 @@ Lo único que no funciona sin red es la **vista previa de desarrollo** (`npm run
 | Bloque | Comprobaciones |
 | --- | --- |
 | `tests/php/lint.mjs` | `php -l` sobre todo `app/`, `bootstrap.php` e `index.php` en 8.1 y 8.3. |
-| `tests/php/functional.mjs` | 310 comprobaciones: instalador, requisitos, contraseñas débiles, CSRF, sesión, autorización entre cuentas, CRUD de proyectos/pisos, duplicados, importación v1/v2, catálogos (395 señales y 420 objetos), catálogo y guardado de redes, señales de baño y de servicios (guardado, color de familia y exportación SVG), **auditor y medición de evacuación** (salidas, recorrido máximo, zonas inalcanzables, rutas que cruzan muros o no llegan a la salida, ocupación declarada y estimada, señalización, validación de `isExit`, informe imprimible y demo coherente), **muros curvos y vías** (guardado en formato 3, auditor con el muro curvo separando recintos, arco `A` en el SVG, vía que no bloquea frente a muro que sí, `422` para curvas desalineadas, `kind` desconocido, curvas en una puerta y formato desconocido), **sección tipo y glorieta** (formato 4 con ancho derivado, SVG con calzada, andenes, anillo e isla, y `422` para una medida fuera de rango, una clave desconocida, una glorieta sin sección y un cruce desconocido), **modo brigadista** (panel, token de 32 caracteres, página pública sin sesión ni scripts inline, API del plan, service worker, regeneración y desactivación del enlace), **complementos** (pantalla, manual, descarga de las dos plantillas, instalación desde `plugin.json` y desde `.zip` con SVG al lado, familia y color propios en el catálogo, sinónimos en el buscador, activar/desactivar, borrado, rechazo de un manifiesto inválido y de un `.zip` sin su SVG) y **verificación física** (lista sin trazos, tres estados, novedad sin nota rechazada, rondas e historial, cobertura, aviso de días y foto servida solo a la cuenta dueña), puertas y portones (geometría, sentidos de apertura, exportación con trazo), validaciones de la API, guardado/versiones/borradores/conflictos, exportaciones, ciclo de vida y logout. |
+| `tests/php/functional.mjs` | 327 comprobaciones: instalador, requisitos, contraseñas débiles, CSRF, sesión, autorización entre cuentas, CRUD de proyectos/pisos, duplicados, importación v1/v2, catálogos (395 señales y 420 objetos), catálogo y guardado de redes, señales de baño y de servicios (guardado, color de familia y exportación SVG), **auditor y medición de evacuación** (salidas, recorrido máximo, zonas inalcanzables, rutas que cruzan muros o no llegan a la salida, ocupación declarada y estimada, señalización, validación de `isExit`, informe imprimible y demo coherente), **muros curvos y vías** (guardado en formato 3, auditor con el muro curvo separando recintos, arco `A` en el SVG, vía que no bloquea frente a muro que sí, `422` para curvas desalineadas, `kind` desconocido, curvas en una puerta y formato desconocido), **sección tipo y glorieta** (formato 4 con ancho derivado, SVG con calzada, andenes, anillo e isla, y `422` para una medida fuera de rango, una clave desconocida, una glorieta sin sección y un cruce desconocido), **modo brigadista** (panel, token de 32 caracteres, página pública sin sesión ni scripts inline, API del plan, service worker, regeneración y desactivación del enlace), **complementos** (pantalla, manual, descarga de las dos plantillas, instalación desde `plugin.json` y desde `.zip` con SVG al lado, familia y color propios en el catálogo, sinónimos en el buscador, activar/desactivar, borrado, rechazo de un manifiesto inválido y de un `.zip` sin su SVG), **verificación física** (lista sin trazos, tres estados, novedad sin nota rechazada, rondas e historial, cobertura, aviso de días y foto servida solo a la cuenta dueña) y **empresas y roles** (alta de empresa, acceso compartido, lector que no guarda ni borra, editor que no administra, último propietario protegido, aislamiento entre empresas y migración real desde una base `user_version = 5`), puertas y portones (geometría, sentidos de apertura, exportación con trazo), validaciones de la API, guardado/versiones/borradores/conflictos, exportaciones, ciclo de vida y logout. |
 | `tests/js/plugins.mjs` | 20 comprobaciones de los complementos en el editor: traducción `plg_…` ↔ `PLG_…`, color y tamaño de la familia propia, búsqueda por sinónimos, filtro por familia, inserción, guardado y reapertura del elemento. |
 | `tests/js/editor.mjs` | 383 comprobaciones de interfaz sobre la app real: arranque, 395 señales y 420 objetos, **muros curvos** (rombo del tramo, arco de tres puntos, radio y flecha en el inspector, enderezar, doble clic que parte el arco, caja analítica, puerta sobre el arco, formato 3 y degradación a v2, marcado idéntico sin curvas), **vías y andenes** (banda de 6 m con carriles, cambio de ancho y carriles, parqueadero contado en la etiqueta, franjas del paso cebra y rótulo del lindero), **sección tipo y cruces** (avenida de 20 m en formato 4, perfil transversal en el inspector, cambio de andén que recalcula el ancho, glorieta de cinco accesos, vuelta a vía normal, corredor de ejemplo en una acción y sinónimos «carro», «bici» y «semáforo»), **trazado de tuberías y circuitos, inspector de red y panel de redes**, **mano y paneo, selección de superpuestos, inspector plegable y paleta de herramientas**, **guía de primeros pasos** (apertura en el primer uso, siete pasos, progreso tomado del plano, salto a la herramienta con la baldosa resaltada, reinicio y desactivación), **buscador con sinónimos y sin tildes** (calle → vía, anden → andén, parqueo → parqueadero), **baldosa propia de vías y andenes**, puertas dobles y portones, **vértices de ruta editables (arrastrar, doble clic, Alt+clic)**, **señal de baño insertada desde la biblioteca**, **posiciones reales del trazo**, **clic sobre muros finos, pictogramas y equipos**, **cambio de señal y de equipo desde el inspector**, **auditor de planos** (interruptor de salida, ocupación declarada, cajón de revisión, contador, filtros, «Ver en el plano», cierre sin dejar el fondo bloqueado), **pliego de señalización** (conteo, tamaño sugerido, CSV, precios y consistencia), **medición de rutas internas** (ruta que rodea muros, tramos, guardado en capa y comparación), **modo presentación** (pantalla limpia, láser, spotlight, rutas animadas, capas, quiz y salida sin perder el estado), **rotación**, **rutas cerradas**, **arrastrar y soltar desde la biblioteca sin que el cajón lo bloquee**, reglas, herramientas, inserción con puntero, selección, mover, escalar, rotar, color, cambio de tipo, deshacer/rehacer, duplicar, agrupar, bloquear, desplazar, texto y saneado, guardar, reabrir, borradores, conflictos, exportación SVG/JSON/PNG, tooltips sin acumulación, capas, versiones y límites. |
 | `tests/js/pages.mjs` | 50 comprobaciones de las páginas fuera del editor y de la portada pública: menú de acciones de proyectos y pisos (capa fija, colocación, teclado, un solo menú), confirmación de borrado y borrado real de piso y proyecto, con la protección del último piso, la **portada pública** (cinco capturas con texto alternativo, flechas de la galería y token del formulario) y **la página pública del modo brigadista** ejecutando su JavaScript: acciones rápidas, atenuado del plano, alto contraste recordado, zoom y borrado de la copia local. |
@@ -776,8 +778,8 @@ Resultados esperados de la última ejecución completa:
 ✓ Sintaxis JavaScript · 61 archivos, sin errores
 ✓ Complementos (JS) · 20/20
 ✓ Funcionamiento sin conexión · 124 archivos, sin referencias externas
-✓ Funcional PHP 8.1 · 310/310
-✓ Funcional PHP 8.3 · 310/310
+✓ Funcional PHP 8.1 · 327/327
+✓ Funcional PHP 8.3 · 327/327
 ✓ Interfaz (JSDOM) PHP 8.1 · 383/383
 ✓ Interfaz (JSDOM) PHP 8.3 · 383/383
 ✓ Páginas y menús PHP 8.1 · 50/50
@@ -968,6 +970,33 @@ empaqueta sus pictogramas y sus equipos, los sube y los activa.
 Límites: **4 MB** por archivo, **400 elementos** por complemento, SVG de 40 bytes
 a 400 KB y 12 sinónimos por señal. Un complemento no certifica nada: sus
 elementos son referencias gráficas que se verifican en sitio.
+
+## Cambios de la versión 1.17.0
+
+- **Empresas y personas con roles.** Los planos dejan de pertenecer a una cuenta
+  y pasan a pertenecer a una **empresa**. Cada persona entra por una membresía
+  con rol: **propietario**, **administrador**, **editor** o **lector**. Una
+  persona puede pertenecer a varias empresas y el panel le muestra los planos de
+  todas, cada tarjeta con el nombre de su empresa.
+- **Pantalla *Empresas*.** Lista de empresas con su rol y sus cifras; ficha con
+  las personas, su rol y el alta de accesos por correo. Si la cuenta existe se le
+  añade la membresía; si no, se crea con la contraseña temporal que escribe quien
+  invita (la aplicación **no envía correos**).
+- **Reglas que el sistema hace cumplir**: un lector no guarda ni borra nada; un
+  editor no elimina proyectos ni administra personas; nadie administra a alguien
+  con un rol igual o superior al suyo; una empresa no puede quedarse sin
+  propietario; solo el propietario elimina la empresa y debe escribir su nombre.
+- **Migración sin pérdida.** Las instalaciones anteriores reciben una empresa por
+  cuenta con todos sus proyectos dentro. El paso reescribe la tabla `projects`
+  dentro de una transacción, comprueba que no quede ningún proyecto huérfano y,
+  si algo falla, **detiene la aplicación con un mensaje accionable** en vez de
+  seguir sobre un esquema a medias.
+- **Pruebas**: alta de empresa, acceso compartido, lector que no guarda, editor
+  que no administra, último propietario protegido, aislamiento entre empresas y
+  migración real desde una base `user_version = 5` con dos cuentas.
+
+El formato del plano no cambia; la base sube a `user_version = 6` con las tablas
+`organizations` y `memberships` y el nuevo `projects.organization_id`.
 
 ## Cambios de la versión 1.16.0
 

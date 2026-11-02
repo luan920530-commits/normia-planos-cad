@@ -1,7 +1,10 @@
 <section class="project-head">
   <div class="project-head-main">
     <a class="back-link" href="<?= e(url('')) ?>"><svg class="icon"><use href="#i-chevron-left"></use></svg>Mis planos</a>
-    <span class="eyebrow">Proyecto</span>
+    <span class="eyebrow">
+      <a href="<?= e(url('empresas/' . (int) $project['organization_id'])) ?>"><?= e($project['organization_name'] ?? 'Empresa') ?></a>
+      · <?= e(\App\Models\Membership::label($project['role'] ?? null)) ?>
+    </span>
     <h1><?= e($project['name']) ?></h1>
     <p class="project-subtitle">
       <span><svg class="icon"><use href="#i-folder"></use></svg><?= e($project['site'] !== '' ? $project['site'] : 'Sede sin definir') ?></span>
@@ -10,16 +13,24 @@
     </p>
     <?php if ($project['notes'] !== ''): ?><p class="project-notes"><?= nl2br(e($project['notes'])) ?></p><?php endif; ?>
   </div>
+  <?php $puedeEditar = $canWrite ?? true; $puedeAdministrar = $canManage ?? true; ?>
   <div class="project-head-actions">
-    <a class="button button-ghost" href="<?= e(url('projects/' . (int) $project['id'] . '/edit')) ?>"><svg class="icon"><use href="#i-settings"></use></svg>Editar datos</a>
-    <form method="post" action="<?= e(url('projects/' . (int) $project['id'] . '/duplicate')) ?>">
-      <?= csrf_field() ?>
-      <button class="button button-ghost" type="submit"><svg class="icon"><use href="#i-duplicate"></use></svg>Duplicar</button>
-    </form>
-    <form method="post" action="<?= e(url('projects/' . (int) $project['id'] . '/delete')) ?>" data-confirm="Se eliminará el proyecto «<?= e($project['name']) ?>» con sus <?= count($floors) ?> <?= count($floors) === 1 ? 'piso' : 'pisos' ?> y todas sus versiones. Esta acción no se puede deshacer.">
-      <?= csrf_field() ?>
-      <button class="button button-danger" type="submit"><svg class="icon"><use href="#i-trash"></use></svg>Eliminar proyecto</button>
-    </form>
+    <?php if ($puedeEditar): ?>
+      <a class="button button-ghost" href="<?= e(url('projects/' . (int) $project['id'] . '/edit')) ?>"><svg class="icon"><use href="#i-settings"></use></svg>Editar datos</a>
+      <form method="post" action="<?= e(url('projects/' . (int) $project['id'] . '/duplicate')) ?>">
+        <?= csrf_field() ?>
+        <button class="button button-ghost" type="submit"><svg class="icon"><use href="#i-duplicate"></use></svg>Duplicar</button>
+      </form>
+    <?php endif; ?>
+    <?php if ($puedeAdministrar): ?>
+      <form method="post" action="<?= e(url('projects/' . (int) $project['id'] . '/delete')) ?>" data-confirm="Se eliminará el proyecto «<?= e($project['name']) ?>» con sus <?= count($floors) ?> <?= count($floors) === 1 ? 'piso' : 'pisos' ?> y todas sus versiones. Esta acción no se puede deshacer.">
+        <?= csrf_field() ?>
+        <button class="button button-danger" type="submit"><svg class="icon"><use href="#i-trash"></use></svg>Eliminar proyecto</button>
+      </form>
+    <?php endif; ?>
+    <?php if (!$puedeEditar): ?>
+      <span class="org-role is-viewer">Solo lectura</span>
+    <?php endif; ?>
   </div>
 </section>
 
