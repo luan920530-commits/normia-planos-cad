@@ -9,7 +9,7 @@ pueda dibujar, anotar medidas y recibir cálculos sin aprender metrología.
 | Rama | `arena/48ee92e3-normia-planos-cad` |
 | Base | `bddc2dc` (NORMIA-005 entregado, PR #56 abierto) |
 | Reemplaza en parte | [`NORMIA-005-CALIBRACION-DIMENSIONAL.md`](NORMIA-005-CALIBRACION-DIMENSIONAL.md) — §8 de trazabilidad |
-| Estado | **propuesta para aprobar**; no se tocó código ni datos |
+| Estado | **DEC-1 a DEC-6 aprobadas** (2026-11-02); pendiente el resto del alcance (3.B y siguientes). No se tocó código ni datos |
 
 ---
 
@@ -642,7 +642,12 @@ aparato construido encima, y cae porque el modelo nuevo lo hace innecesario.
 | R-05 | El usuario cree que «medida exacta» certifica el plano | media | alto | la etiqueta describe la medida, no el plano; el pie mantiene el aviso |
 | R-06 | Un documento con `format: 5` en una app vieja parece corrupto | media | medio | mensaje por versión (§7.2) |
 
-### 10.2 Decisiones para aprobar
+### 10.2 Decisiones aprobadas
+
+> **Aprobadas el 2026-11-02.** Las seis van como están: no queda ninguna abierta.
+> Lo que falta para cerrar la misión no es una decisión, es el resto del alcance
+> (puntos 3.B y siguientes), que todavía no llegó. La etapa 1 queda desbloqueada;
+> su implementación necesita una orden aparte.
 
 **DEC-1 · Geometría en centímetros y unidad como etiqueta.**
 Es el corazón del rediseño y lo que hace que cambiar de unidad no sorprenda.
@@ -671,6 +676,12 @@ geometría en cm).
 
 **DEC-6 · Arreglar de paso C-06 (extintores) y C-07 (holguras de ruta).**
 Recomendación: **sí**. Al simplificar quedan a la vista y son dos líneas.
+
+Y una nota sobre el orden, ya aprobada la forma: las tres etapas de §11 son
+independientes entre sí en el código, pero **la etapa 1 va primero siempre**. Las
+medidas de la etapa 2 se guardan en metros y se comparan contra geometría en
+centímetros: si esa geometría todavía puede estar en `mm` o en `m`, la jerarquía
+de §6.1 compara peras con manzanas.
 
 ---
 

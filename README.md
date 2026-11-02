@@ -1054,12 +1054,17 @@ en PHP y `window.Normia.Units` en el editor— y el resto del código delega.
 
 El detalle y los límites están en [docs/DIMENSIONAL.md](docs/DIMENSIONAL.md).
 
-El **sistema de dimensiones** está diseñado y **no implementado**. La propuesta
-vigente es [docs/NORMIA-006-DIMENSIONES-SIMPLES.md](docs/NORMIA-006-DIMENSIONES-SIMPLES.md):
+El **sistema de dimensiones** está diseñado, **aprobado y no implementado**. El
+diseño vigente es [docs/NORMIA-006-DIMENSIONES-SIMPLES.md](docs/NORMIA-006-DIMENSIONES-SIMPLES.md):
 la geometría se guarda en centímetros, la unidad del plano es solo cómo se lee y se
 escribe, y cada objeto puede llevar su medida real declarada. Sustituye a la
 calibración de [docs/NORMIA-005-CALIBRACION-DIMENSIONAL.md](docs/NORMIA-005-CALIBRACION-DIMENSIONAL.md),
 que se conserva como registro y no se implementa.
+
+Las seis decisiones del diseño (DEC-1 a DEC-6) quedaron **aprobadas el 2026-11-02**.
+La etapa 1 —geometría en centímetros— está desbloqueada pero **no ejecutada**: no
+hay código nuevo en el repositorio. Falta el resto del alcance de la misión
+(puntos 3.B y siguientes) para cerrar el documento.
 
 ## Cambios de la versión 1.18.0
 
