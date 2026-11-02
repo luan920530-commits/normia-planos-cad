@@ -10,7 +10,7 @@ pueda dibujar, anotar medidas y recibir cálculos sin aprender metrología.
 | Base | `bddc2dc` (NORMIA-005 entregado, PR #56 abierto) |
 | Reemplaza en parte | [`NORMIA-005-CALIBRACION-DIMENSIONAL.md`](NORMIA-005-CALIBRACION-DIMENSIONAL.md) — §8 de trazabilidad |
 | Alcance | **3.A a 3.J** — los nueve apartados, recibidos el 2026-11-02 |
-| Estado | **diseño completo**; DEC-1, DEC-2, DEC-5 y DEC-6 implementadas en la 1.19.0 (§26); **aforo calculado y publicado** en la 1.20.0 (§27); DEC-3 y DEC-7 a DEC-12 pendientes |
+| Estado | **diseño completo**; DEC-1, DEC-2, DEC-5 y DEC-6 implementadas en la 1.19.0 (§26); **aforo calculado y publicado** en la 1.20.0 (§27); **ajuste global por mediana** en la 1.21.0 (§28); DEC-7 a DEC-12 pendientes |
 
 ---
 
@@ -651,8 +651,9 @@ aparato construido encima, y cae porque el modelo nuevo lo hace innecesario.
 > (puntos 3.B y siguientes), que todavía no llegó.
 >
 > **Implementadas el 2026-11-02 en la 1.19.0:** DEC-1, DEC-2 y DEC-5 (etapas 1 y 2
-> de §11), y DEC-6 como consecuencia de DEC-1. DEC-3 (etapa 3, ajuste global) sigue
-> sin implementar. Lo ejecutado, con sus contratos y sus pruebas, está en §26.
+> de §11), y DEC-6 como consecuencia de DEC-1. DEC-3 (etapa 3, ajuste global) se
+> implementó en la 1.21.0. Lo ejecutado, con sus contratos y sus pruebas, está en
+> §26, §27 y §28.
 
 **DEC-1 · Geometría en centímetros y unidad como etiqueta.**
 Es el corazón del rediseño y lo que hace que cambiar de unidad no sorprenda.
@@ -1487,9 +1488,9 @@ hay que probar.
 
 ## 25. Lo que no pude verificar
 
-1. **Al escribir el diseño no implementé nada.** Hoy ya existen las etapas 1 y 2
-   (§26); lo que sigue siendo solo diseño es DEC-3 y DEC-7 a DEC-12. Ni una tabla
-   nueva: `user_version` sigue en 7.
+1. **Al escribir el diseño no implementé nada.** Hoy ya existen las etapas 1, 2 y
+   el ajuste global (§26–§28); lo que sigue siendo solo diseño es DEC-7 a DEC-12.
+   Ni una tabla nueva: `user_version` sigue en 7.
 2. **No sé cuántos documentos hay en `mm` o `m`.** La consulta de §3.4 lo responde.
 3. **No medí el coste real de tocar los consumidores.** Estimo por número de
    sitios, no por dificultad.
@@ -1584,7 +1585,8 @@ exportado dice `420,0 cm` en centímetros y `4,20 m` en metros.
 
 ### 26.5 Lo que sigue sin hacerse
 
-- **DEC-3 (etapa 3):** el ajuste global por mediana. Sigue sin implementar.
+- **DEC-3 (etapa 3):** el ajuste global por mediana. Se implementó en la 1.21.0
+  (§28).
 - **DEC-7 a DEC-12:** edificios, áreas, aforo, escenarios, escala física de
   impresión e importados. `user_version` sigue en **7**: la 1.19.0 no crea tablas.
 - La ergonomía del campo de medida y la impresión física con regla siguen sin
@@ -1657,3 +1659,67 @@ densidad 0 → techo, sección del informe, aforo en el pie del SVG), interfaz
 **8/8** con 6 504 valores. El golden cambia donde el plano declaraba más gente de
 la que cabe: aparece `occupancy_over_capacity` y los cuatro SVG ganan las dos
 líneas del aforo. Las métricas de evacuación no se mueven.
+
+## 28. Ajuste global por mediana (1.21.0 · DEC-3)
+
+Etapa 3, cuarta entrega. Hasta ahora el editor **comparaba** lo declarado con lo
+dibujado; ahora puede **hacer que coincidan** sin obligar a nadie a recalibrar ni
+a volver a dibujar. Se cierra DEC-3 tal como se aprobó: **una acción del
+historial, sin estado nuevo**.
+
+### 28.1 Qué hace, en una frase
+
+Toma todas las medidas declaradas, calcula **la mediana** de `medida / dibujo` y
+reescala el plano entero por ese factor. Ni media, ni promedio ponderado: la
+mediana aguanta que alguien escriba 40 m donde eran 4,0 m sin arrastrar al resto.
+
+| Clave de `measureFit()` | Qué es |
+| --- | --- |
+| `count` | objetos con medida declarada y trazo medible |
+| `median` | mediana de las relaciones `medida / dibujo` |
+| `rows[]` | por objeto: `drawn` (cm), `measuredCm` (cm) y `deviation` respecto a la mediana |
+| `worstDeviationPct` | el peor residuo, en %; por encima de **2 %** las medidas se contradicen |
+| `averageDeviationPct` | residuo medio, solo para el texto del panel |
+| `consistent` | `worstDeviationPct ≤ 2` |
+| `inRange` | el lienzo resultante cabe en 400–4 000 × 300–3 000 cm |
+| `applicable` | hay medidas, hay algo que corregir y el lienzo cabe |
+| `reason` | `sin_medidas` · `inconsistente` · `coincide` · `fuera_de_rango` · `aplicable` |
+| `before` / `after` | ancho y alto del lienzo antes y después |
+| `moved` | cuántos elementos se moverían |
+
+`applyMeasureFit()` aplica el factor a `canvas`, a `x/y/w/h`, a los `points` y a
+los `curves[].through`, redondeando a dos decimales para no acumular ruido. **No**
+toca `stroke`, los tamaños de letra, `widthM` ni `section` (son dibujo o metros de
+proyecto, no medidas del lienzo) ni las medidas declaradas, que siguen siendo la
+verdad de referencia. Si no hay medidas, si discrepan o si el lienzo se sale del
+formato, **lanza un error explicado** en lugar de ajustar a medias.
+
+### 28.2 Dónde se ve
+
+| Superficie | Qué muestra |
+| --- | --- |
+| Cajón **Ajustes** del editor | «N medidas no coinciden con el dibujo (X % de media)», el lienzo antes/después, cuántos elementos se moverían, el residuo de cada medida, y dos botones: **Ajustar el dibujo a esas medidas** y **Dejar solo las medidas** |
+| Medidas contradictorias | «Las medidas no coinciden entre sí: revisa si alguna está en otra unidad», con el botón **deshabilitado** |
+| Al guardar | la versión queda como **«Ajuste a 3 medidas (×1,0032)»**; es toda la trazabilidad |
+| Historial | una sola acción: `Ctrl+Z` devuelve el plano a su tamaño anterior |
+
+El bloque solo aparece cuando hay algo que contar; se puede descartar y no vuelve
+a molestar hasta que cambien las medidas o la mediana.
+
+### 28.3 Lo que deliberadamente **no** se guarda
+
+No hay `factor`, ni `calibration`, ni bloque nuevo en el documento: el plano
+guardado es el plano ajustado, con sus medidas intactas. Guardar el factor
+obligaría a decidir cuándo deja de valer, y ese estado es exactamente lo que
+DEC-3 evitó. La nota de la versión nombra el ajuste y el factor, y ahí termina.
+
+### 28.4 Pruebas
+
+Funcional **343** (la nota del ajuste llega a la versión, la medida declarada
+sobrevive al guardado y el documento no lleva factor), interfaz **406** (mediana
+con residuos de 0,011 / 0,012 / 0,000 %, lienzo 16,00 × 10,00 → 16,05 × 10,03 m,
+deshacer completo, medidas contradictorias al 16,9 % sin ajuste, bloque del panel
+con sus dos botones, y un plano abierto que conserva sus medidas), golden **8/8**
+con 6 504 valores —el ajuste es del editor y no mueve ninguna cifra del
+servidor—. Sin verificar: el aspecto del bloque en pantalla real y el ajuste sobre
+documentos de obra grandes.

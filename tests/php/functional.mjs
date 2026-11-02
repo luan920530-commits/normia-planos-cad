@@ -1131,6 +1131,29 @@ echo json_encode([
   report.check('El auditor mide el cuarto recto', straightAudit.travel?.computed === true && straightFree > 15,
     `${straightFree} m² libres`);
 
+  /* Trazabilidad del ajuste (NORMIA-006 §5.4): el factor vive en la nota de la
+     versión, no en el documento. Se guarda un plano con tres medidas que no
+     coinciden y se comprueba que la medida sobrevive y que no hay factor. */
+  const ajusteDoc = JSON.parse(JSON.stringify(straightRoom));
+  ajusteDoc.format = 5;
+  ajusteDoc.canvas.unit = 'cm';
+  ajusteDoc.elements[0].measuredM = 4.2;
+  ajusteDoc.elements[0].quality = 'exacta';
+  res = await client.postJson(`api/floors/${curveFloorId}/save`, {
+    design: ajusteDoc,
+    expected_version: (await json(`api/floors/${curveFloorId}`)).body.floor.version,
+    note: 'Ajuste a 3 medidas (×1,0032)',
+  });
+  const versionesAjuste = (await json(`api/floors/${curveFloorId}/versions`)).body.versions || [];
+  const ultima = versionesAjuste[0] || {};
+  const guardadoAjuste = (await json(`api/floors/${curveFloorId}`)).body.design || {};
+  report.check('El ajuste deja el factor en la nota de la versión y no en el plano',
+    res.status === 200 && /^Ajuste a 3 medidas/.test(String(ultima.note || ''))
+    && guardadoAjuste.elements?.[0]?.measuredM === 4.2
+    && !JSON.stringify(guardadoAjuste).includes('factor'),
+    `${ultima.note} · ${guardadoAjuste.elements?.[0]?.measuredM} m`);
+
+
   // Muro derecho curvo: el arco se comba hacia el interior del cuarto.
   const curvedRoom = {
     ...curveBase,

@@ -397,6 +397,10 @@
 
       q('[data-floor-settings-form]')?.addEventListener('submit', (event) => this.saveFloorMeta(event));
       q('[data-canvas-form]')?.addEventListener('submit', (event) => this.applyCanvasSettings(event));
+      q('[data-measure-fit]')?.addEventListener('click', (event) => {
+        if (event.target.closest('[data-measure-fit-apply]')) this.applyMeasureFit();
+        else if (event.target.closest('[data-measure-fit-dismiss]')) this.dismissMeasureFit();
+      });
       // Cambiar de unidad solo reetiqueta el formulario: los números se
       // convierten para que el lienzo mida lo mismo (NORMIA-006 §4.4).
       q('[data-canvas-form] select[name="unit"]')?.addEventListener('change', (event) => {
@@ -467,6 +471,7 @@
       this.scheduleRender();
       if (this.activeDrawer === 'layers') this.renderLayers();
       if (this.activeDrawer === 'networks') this.renderNetworks();
+      if (this.activeDrawer === 'settings') this.renderMeasureFit();
       // El progreso de la guía sale del plano: un muro nuevo marca su paso.
       if (this.activeDrawer === 'guide') this.guide?.refresh();
       // El pliego se recalcula solo si su cajón está abierto; si no, se marca
@@ -1854,6 +1859,9 @@
 
     /* ------------------------------- guardado ------------------------------- */
     async saveNow(note = 'Guardado manual', options = {}) {
+      // El ajuste a las medidas deja constancia en la nota de la versión
+      // (NORMIA-006 §5.4): el factor es toda la trazabilidad que hace falta.
+      const etiqueta = note === 'Guardado manual' && this.fitNote ? this.fitNote : note;
       if (this.store.saving) return;
       const force = options.force === true;
       const unversioned = this.store.version <= 1;
@@ -1864,7 +1872,7 @@
       }
       this.updateSaveStatus();
       try {
-        const result = await this.store.save(note);
+        const result = await this.store.save(etiqueta);
         if (!result) return;
         this.conflictVersion = null;
         this.updateVersionLabel();
@@ -1872,6 +1880,7 @@
         this.removeBannerByAction('reload');
         this.removeBannerByAction('download');
         this.updateSaveStatus();
+        if (etiqueta === this.fitNote) this.fitNote = null;
         this.audit?.invalidate();
         this.extinguishers?.invalidate();
         if (this.activeDrawer === 'versions') this.loadVersions();
@@ -2234,6 +2243,104 @@
       this.fillCanvasForm(unit);
     }
 
+    /* ---------------- ajuste a las medidas declaradas (DEC-3) ----------------
+     * Una frase y dos botones, nada más (NORMIA-006 §5.4). El cálculo vive en
+     * el modelo; aquí solo se cuenta lo que pasaría y se pide permiso.
+     */
+    renderMeasureFit() {
+      const host = q('[data-measure-fit]');
+      if (!host) return;
+      const fit = this.model.measureFit();
+      if (fit.count === 0) {
+        host.hidden = true;
+        host.innerHTML = '';
+        return;
+      }
+      const unidad = this.model.design.canvas.unit;
+      const metros = (cm) => root.Units.fromCm(Number(cm), 'm');
+      const medida = (cm) => `${metros(cm).toLocaleString('es-CO', { maximumFractionDigits: 2 })} m`;
+      const n = fit.count;
+      const residuo = fit.worstDeviationPct;
+      if (host.dataset.dismissedFor === `${n}:${fit.median.toFixed(6)}` && fit.applicable) {
+        host.hidden = true;
+        return;
+      }
+      const coinciden = fit.reason === 'coincide';
+      /* Con una sola medida no hay «media» que enseñar: se enseña el dibujo
+         frente a lo declarado, que es lo que la persona puede comprobar. */
+      const unica = n === 1 ? fit.rows[0] : null;
+      const cabecera = coinciden
+        ? `${n} ${n === 1 ? 'medida coincide' : 'medidas coinciden'} con el dibujo`
+        : (unica
+          ? `1 medida no coincide con el dibujo: mide ${medida(unica.drawn)} y se declararon ${medida(unica.measuredCm)}`
+          : `${n} medidas no coinciden con el dibujo (${fit.averageDeviationPct.toFixed(2)} % de media)`);
+      const aviso = !fit.consistent
+        ? `<p class="measure-fit-note is-warning">Las medidas no coinciden entre sí (hasta ${residuo.toFixed(1)} %). Revisa si alguna está en otra unidad o mal escrita; no se ajusta un plano con medidas contradictorias.</p>`
+        : (!fit.inRange
+          ? `<p class="measure-fit-note is-warning">El ajuste llevaría el lienzo a ${fit.after.width} × ${fit.after.height} cm, fuera de los límites del formato.</p>`
+          : '');
+      /* Residuo de cada medida tras el ajuste: lo que queda de diferencia una vez
+         aplicado el factor. Se enseñan las seis primeras para no llenar el cajón. */
+      const residuos = fit.rows.slice(0, 6).map((row) => {
+        const element = this.model.element(row.id);
+        const nombre = (element?.label || '').trim() || (element ? this.typeLabel(element) : 'Trazo');
+        return `<li>${esc(nombre)}: ${medida(row.drawn)} dibujados · ${medida(row.measuredCm)} declarados · queda ${(row.deviation * 100).toFixed(2)} %</li>`;
+      }).join('');
+      const resto = fit.rows.length > 6 ? `<li>y ${fit.rows.length - 6} más</li>` : '';
+      const detalle = coinciden ? '' : `
+        <ul class="measure-fit-list">
+          <li>El plano pasaría a medir <strong>${medida(fit.after.width)} × ${medida(fit.after.height)}</strong> (antes ${medida(fit.before.width)} × ${medida(fit.before.height)}).</li>
+          <li>${fit.moved} ${fit.moved === 1 ? 'elemento se movería' : 'elementos se moverían'} · se puede deshacer.</li>
+          ${residuos}${resto}
+        </ul>`;
+      const acciones = fit.applicable ? `
+        <div class="measure-fit-actions">
+          <button class="button button-primary button-small" type="button" data-measure-fit-apply>Ajustar el dibujo</button>
+          <button class="button button-ghost button-small" type="button" data-measure-fit-dismiss>Dejar solo las medidas</button>
+        </div>` : '';
+      host.innerHTML = `
+        <h3>Ajuste a las medidas</h3>
+        <p class="measure-fit-head">${cabecera}</p>
+        ${detalle}
+        ${aviso}
+        ${acciones}
+        <p class="help-text">El dibujo se reescala a la mediana de las medidas declaradas. No se guarda ningún factor: queda como un cambio más, con deshacer.</p>`;
+      host.hidden = false;
+      host.dataset.unit = unidad;
+    }
+
+    /** Aplica el ajuste como una edición más del historial. */
+    applyMeasureFit() {
+      let summary = null;
+      try {
+        summary = this.model.applyMeasureFit();
+      } catch (error) {
+        this.toast(error.message, 'error');
+        return;
+      }
+      if (!summary) {
+        this.toast('El dibujo ya coincide con las medidas declaradas.', 'info');
+        return;
+      }
+      // La nota de la próxima versión cuenta de dónde salió el cambio.
+      this.fitNote = `Ajuste a ${summary.count} ${summary.count === 1 ? 'medida' : 'medidas'} (×${summary.factor.toFixed(4)})`;
+      this.fit(true);
+      this.renderNow();
+      this.renderMeasureFit();
+      this.toast(`Plano ajustado a ${summary.count} ${summary.count === 1 ? 'medida' : 'medidas'} (×${summary.factor.toFixed(4)}). Se puede deshacer.`, 'success');
+    }
+
+    /** «Dejar solo las medidas»: no toca el dibujo y no vuelve a insistir con lo mismo. */
+    dismissMeasureFit() {
+      const host = q('[data-measure-fit]');
+      const fit = this.model.measureFit();
+      if (host) {
+        host.dataset.dismissedFor = `${fit.count}:${fit.median.toFixed(6)}`;
+        host.hidden = true;
+      }
+      this.toast('Se conserva el dibujo tal cual; las medidas declaradas siguen mandando en los cálculos.', 'info');
+    }
+
     applyCanvasSettings(event) {
       event.preventDefault();
       const form = event.target;
@@ -2497,7 +2604,10 @@
       if (name === 'versions') this.loadVersions();
       if (name === 'layers') this.renderLayers();
       if (name === 'networks') this.renderNetworks();
-      if (name === 'settings') this.fillCanvasForm();
+      if (name === 'settings') {
+        this.fillCanvasForm();
+        this.renderMeasureFit();
+      }
       if (name === 'audit') this.audit?.open();
       if (name === 'extinguishers') this.extinguishers?.open();
       if (name === 'schedule') this.schedule?.open();

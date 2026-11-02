@@ -1759,6 +1759,99 @@ async function main() {
         elementById(app, wall.id).measuredM === undefined);
     }
 
+    /* --------- ajuste a las medidas declaradas (NORMIA-006 §5.4 · DEC-3) ---------
+     * Tres trazos dibujados a 418,6 / 897,2 / 1 236,0 cm y medidos 4,20 / 9,00 /
+     * 12,40 m dan relaciones 1,003344 / 1,003121 / 1,003236; la mediana es
+     * 1,003236 y el lienzo pasa de 16,00 × 10,00 a 16,05 × 10,03 m.
+     */
+    {
+      const conMedidas = (tercera) => ({
+        format: 5,
+        canvas: { width: 1600, height: 1000, grid: 20, unit: 'm', scale: '1:100', background: '#ffffff', occupancy: 0 },
+        layers: [{ id: 'capa_planta', name: 'Planta', visible: true, locked: false }],
+        elements: [
+          { id: 'm1', type: 'wall', layerId: 'capa_planta', x: 100, y: 100, w: 418.6, h: 2, stroke: 4, color: '#0f172a', points: [{ x: 0, y: 0 }, { x: 418.6, y: 0 }], measuredM: 4.2, quality: 'exacta' },
+          { id: 'm2', type: 'wall', layerId: 'capa_planta', x: 100, y: 300, w: 897.2, h: 2, stroke: 4, color: '#0f172a', points: [{ x: 0, y: 0 }, { x: 897.2, y: 0 }], measuredM: 9, quality: 'exacta' },
+          { id: 'm3', type: 'wall', layerId: 'capa_planta', x: 100, y: 500, w: 1236, h: 2, stroke: 4, color: '#0f172a', points: [{ x: 0, y: 0 }, { x: 1236, y: 0 }], measuredM: tercera, quality: 'aproximada' },
+        ],
+        groups: [],
+      });
+      const ajuste = new window.Normia.Model(conMedidas(12.4), app.catalogs, {});
+      // Al abrir un plano, la medida declarada se conserva: perderla sería
+      // borrar en silencio lo que la persona escribió.
+      report.check('Un plano abierto conserva las medidas declaradas',
+        ajuste.element('m1').measuredM === 4.2 && ajuste.element('m3').quality === 'aproximada');
+      const fit = ajuste.measureFit();
+      report.check('El ajuste usa la mediana de las medidas, no la media',
+        fit.count === 3 && Math.abs(fit.median - 1.003236) < 1e-6
+        && Math.abs(fit.before.width - 1600) < 0.001 && fit.after.width === 1605 && fit.after.height === 1003,
+        `×${fit.median.toFixed(6)} · ${fit.before.width}→${fit.after.width} cm`);
+
+      const antes = JSON.stringify(ajuste.design);
+      const aplicado = ajuste.applyMeasureFit();
+      report.check('Ajustar reescala el plano y deja los residuos por debajo del 0,05 %',
+        aplicado?.applied === true && aplicado.factor === fit.median
+        && ajuste.design.canvas.width === 1605
+        && Math.abs(ajuste.element('m1').w - 419.95) < 0.02
+        && ajuste.measureFit().worstDeviationPct < 0.05,
+        `${ajuste.design.canvas.width} cm · peor residuo ${ajuste.measureFit().worstDeviationPct.toFixed(3)} %`);
+      const guardado = JSON.stringify(ajuste.serialize());
+      report.check('El ajuste deja intactas las medidas declaradas y no arrastra factor',
+        ajuste.element('m3').measuredM === 12.4 && ajuste.element('m1').quality === 'exacta'
+        && !('calibration' in ajuste.design) && ajuste.serialize().format === 5
+        && !('factor' in ajuste.serialize()) && !/localFactor|calibration/.test(guardado),
+        `${ajuste.element('m1').measuredM} m · formato ${ajuste.serialize().format} · ${guardado.length} bytes`);
+      ajuste.undo();
+      report.check('Deshacer devuelve el plano a su tamaño anterior',
+        JSON.stringify(ajuste.design) === antes && ajuste.design.canvas.width === 1600,
+        `ancho ${ajuste.design.canvas.width} cm`);
+
+      const contradictorio = new window.Normia.Model(conMedidas(14.5), app.catalogs, {});
+      const roto = contradictorio.measureFit();
+      let rechazado = false;
+      try {
+        contradictorio.applyMeasureFit();
+      } catch {
+        rechazado = true;
+      }
+      report.check('Con medidas que discrepan más del 2 % no se ajusta y se explica',
+        roto.consistent === false && roto.applicable === false && rechazado
+        && roto.worstDeviationPct > 2
+        && /no coinciden entre sí/.test((() => { try { contradictorio.applyMeasureFit(); } catch (error) { return error.message; } return ''; })()),
+        `peor desvío ${roto.worstDeviationPct.toFixed(1)} %`);
+
+      const sinMedidas = new window.Normia.Model(conMedidas(0), app.catalogs, {});
+      sinMedidas.design.elements.forEach((element) => { delete element.measuredM; });
+      let sinMedidasError = '';
+      try { sinMedidas.applyMeasureFit(); } catch (error) { sinMedidasError = error.message; }
+      report.check('Sin medidas declaradas el ajuste no propone nada y lo explica',
+        sinMedidas.measureFit().count === 0 && sinMedidas.measureFit().applicable === false
+        && /No hay medidas declaradas/.test(sinMedidasError),
+        sinMedidasError.slice(0, 60));
+    }
+
+    /* El bloque del panel: aparece al abrir Ajustes y explica qué pasaría. */
+    {
+      app.model.select([wall.id]);
+      app.model.setProps({ measuredM: 4.2, quality: 'exacta' });
+      q(window, '[data-open-drawer="settings"]')?.click();
+      const bloque = q(window, '[data-measure-fit]');
+      const texto = (bloque?.textContent || '').replace(/\s+/g, ' ');
+      report.check('El panel del lienzo propone ajustar el dibujo a las medidas',
+        bloque?.hidden === false && /medida .* coincide con el dibujo/i.test(texto)
+        && /Ajustar el dibujo/.test(texto) && /Dejar solo las medidas/.test(texto),
+        texto.slice(0, 90));
+      const anchoAntes = app.model.design.canvas.width;
+      q(window, '[data-measure-fit-apply]')?.click();
+      report.check('Ajustar desde el panel reescala y deja nota para la versión',
+        app.model.design.canvas.width !== anchoAntes && /Ajuste a 1 medida/.test(app.fitNote || ''),
+        `${anchoAntes} → ${app.model.design.canvas.width} cm · ${app.fitNote}`);
+      app.model.undo();
+      app.renderNow();
+      app.closeDrawer();
+      app.model.setProps({ measuredM: null });
+    }
+
     /* ------------------------------ límites/seguridad ------------------------------ */
     const previousTool = app.tool;
     app.model.addElement.bind(app.model);

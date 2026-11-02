@@ -143,6 +143,9 @@
   };
   const EXT_TYPES = Object.keys(EXT_DEFAULTS);
   const EXT_PROFILES = ['colombia', 'nfpa10'];
+  /** Dispersión máxima entre medidas declaradas para poder ajustar el plano. */
+  const MEASURE_FIT_SPREAD = 0.02;
+
   const EXT_HAZARDS = ['light', 'ordinary', 'extra'];
   let idCounter = 0;
 
@@ -466,6 +469,14 @@
           label: typeof element.label === 'string' ? element.label.slice(0, 240) : base.label,
           locked: Boolean(element.locked),
         };
+        /* La medida declarada viaja con el objeto (NORMIA-006 §5): si el editor
+           la descartara al abrir, se perdería lo que la persona escribió. Las
+           reglas son las mismas que al editarla: 0,01–5 000 m y tres decimales. */
+        const measured = Number(element.measuredM);
+        if (Number.isFinite(measured) && measured >= 0.01 && measured <= 5000) {
+          normalized.measuredM = Math.round(measured * 1000) / 1000;
+          if (QUALITIES.includes(element.quality)) normalized.quality = element.quality;
+        }
         const code = this.signCodeForType(type);
         if (code) normalized.color = this.signCategoryColor(code);
         if (type === 'text' || type === 'dimension') normalized.fontSize = G.clamp(Number(element.fontSize) || base.fontSize || 14, 8, 160);
@@ -2086,6 +2097,143 @@
       return this.apply('canvas', () => {
         this.design.canvas = canvas;
       }), true;
+    }
+
+    /* --------------- ajuste a las medidas declaradas (DEC-3) --------------- */
+
+    /**
+     * Largo geométrico de un objeto, en unidades del lienzo, con el mismo
+     * criterio que `ElementMeasure::geometryCm()`: el arco cuando hay trazo y el
+     * ancho del cajón cuando no lo hay (un vano mide su hueco, no su diagonal).
+     */
+    geometryLength(element) {
+      if (!element) return 0;
+      if (Array.isArray(element.points) && element.points.length >= 2) {
+        return this.pathLength(element);
+      }
+      return Math.max(0, Number(element.w) || 0);
+    }
+
+    /**
+     * Compara lo declarado con lo dibujado, sin tocar nada.
+     *
+     * Es el diagnóstico del ajuste global (NORMIA-006 §5.4): para cada objeto con
+     * `measuredM` calcula la relación `medida / dibujo`, y con ellas la
+     * **mediana** —no la media—, de modo que una medida mal escrita no arrastra
+     * al resto. Si las medidas se contradicen entre sí más de un 2 %, el ajuste
+     * se declara no aplicable en vez de inventar un factor.
+     *
+     * Devuelve `count: 0` cuando no hay ninguna medida declarada, y `applicable`
+     * solo cuando hay medidas, hay algo que corregir y el lienzo resultante cabe
+     * en los límites del formato.
+     */
+    measureFit() {
+      const perMeter = root.Units.unitsPerMeter(root.Units.GEOMETRY_UNIT);
+      const rows = [];
+      for (const element of this.design.elements) {
+        const measured = Number(element.measuredM);
+        if (!Number.isFinite(measured) || measured <= 0) continue;
+        const drawn = this.geometryLength(element);
+        if (!Number.isFinite(drawn) || drawn <= 0) continue;
+        rows.push({ id: element.id, drawn, measuredCm: measured * perMeter, ratio: (measured * perMeter) / drawn });
+      }
+      const empty = {
+        count: 0, median: 1, consistent: true, worstDeviationPct: 0, averageDeviationPct: 0,
+        rows: [], moved: 0, inRange: true, applicable: false, reason: 'sin_medidas', canvas: null,
+        before: null, after: null,
+      };
+      if (rows.length === 0) return empty;
+
+      const ratios = rows.map((row) => row.ratio).sort((a, b) => a - b);
+      const middle = Math.floor(ratios.length / 2);
+      const median = ratios.length % 2 === 1
+        ? ratios[middle]
+        : (ratios[middle - 1] + ratios[middle]) / 2;
+
+      const entries = rows.map((row) => ({
+        ...row,
+        deviation: median > 0 ? row.ratio / median - 1 : 0,
+      }));
+      const worst = entries.reduce((max, entry) => Math.max(max, Math.abs(entry.deviation)), 0);
+      const average = entries.reduce((total, entry) => total + Math.abs(entry.deviation), 0) / entries.length;
+      const consistent = worst <= MEASURE_FIT_SPREAD;
+
+      const canvas = this.design.canvas;
+      const nextWidth = Math.round(Number(canvas.width) * median);
+      const nextHeight = Math.round(Number(canvas.height) * median);
+      const inRange = nextWidth >= 400 && nextWidth <= 4000 && nextHeight >= 300 && nextHeight <= 3000;
+      const decided = Math.abs(median - 1) > 1e-6;
+      let reason = '';
+      if (!consistent) reason = 'inconsistente';
+      else if (!decided) reason = 'coincide';
+      else if (!inRange) reason = 'fuera_de_rango';
+
+      return {
+        count: entries.length,
+        median,
+        consistent,
+        worstDeviationPct: worst * 100,
+        averageDeviationPct: average * 100,
+        rows: entries,
+        moved: this.design.elements.length,
+        inRange,
+        applicable: consistent && decided && inRange,
+        reason: reason || 'aplicable',
+        canvas: { width: nextWidth, height: nextHeight },
+        before: { width: canvas.width, height: canvas.height },
+        after: { width: nextWidth, height: nextHeight },
+      };
+    }
+
+    /**
+     * Reescala el plano entero para que el dibujo cuadre con las medidas
+     * declaradas. Es **una acción del historial**: `undo()` la revierte como
+     * cualquier otra edición y no deja factor, ni bloque nuevo, ni estado que
+     * pueda quedar obsoleto.
+     *
+     * No se tocan los trazos ni los tipos de letra (son dibujo, no medidas) ni
+     * las medidas declaradas (siguen siendo la verdad). Los anchos de vía
+     * (`widthM`, `section`…) van en metros de proyecto y tampoco se escalan.
+     *
+     * @returns {object|null} resumen del ajuste, o `null` si no había nada que hacer.
+     */
+    applyMeasureFit() {
+      const fit = this.measureFit();
+      if (fit.count === 0) {
+        throw new Error('No hay medidas declaradas: escribe el largo real de algún objeto para poder ajustar el dibujo.');
+      }
+      if (!fit.consistent) {
+        throw new Error(`Las medidas no coinciden entre sí (hasta ${fit.worstDeviationPct.toFixed(1)} %): revisa si alguna está en otra unidad o mal escrita.`);
+      }
+      if (!fit.inRange) {
+        throw new Error(`El ajuste llevaría el lienzo a ${fit.after.width} × ${fit.after.height} cm, fuera de los límites del formato.`);
+      }
+      if (!fit.applicable) return null;
+
+      const factor = fit.median;
+      const round = (value) => Math.round((Number(value) || 0) * factor * 100) / 100;
+      this.apply('measure-fit', () => {
+        const canvas = this.design.canvas;
+        canvas.width = fit.canvas.width;
+        canvas.height = fit.canvas.height;
+        for (const element of this.design.elements) {
+          element.x = round(element.x);
+          element.y = round(element.y);
+          element.w = round(element.w);
+          element.h = round(element.h);
+          if (Array.isArray(element.points)) {
+            element.points = element.points.map((point) => ({ x: round(point.x), y: round(point.y) }));
+          }
+          if (Array.isArray(element.curves)) {
+            element.curves = element.curves.map((curve) => (
+              curve && curve.through
+                ? { ...curve, through: { x: round(curve.through.x), y: round(curve.through.y) } }
+                : curve
+            ));
+          }
+        }
+      });
+      return { ...fit, factor, applied: true };
     }
 
     updateGroupName(id, name) {

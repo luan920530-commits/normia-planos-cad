@@ -594,6 +594,9 @@
       <button class="button button-primary button-small" type="submit">Aplicar lienzo</button>
       <p class="help-text">Los cambios de lienzo forman parte del diseño y se confirman al guardar el plano.</p>
     </form>
+    <?php /* Ajuste a las medidas declaradas (NORMIA-006 §5.4). El editor lo rellena
+             solo cuando hay algo que decir: sin medidas el bloque no aparece. */ ?>
+    <section class="measure-fit" data-measure-fit hidden aria-live="polite"></section>
     <hr class="drawer-divider">
     <label class="switch-row"><span><strong>Guardado automático</strong><small>Guarda un borrador recuperable cada pocos segundos.</small></span><input type="checkbox" data-autosave-toggle checked></label>
     <a class="text-link" href="<?= e(url('projects/' . (int) $project['id'] . '/edit')) ?>">Editar datos del proyecto</a>
