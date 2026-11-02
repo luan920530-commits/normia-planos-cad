@@ -131,6 +131,40 @@ const squares = U.SUPPORTED.every((unit) => {
 });
 report.check('La superficie sale del mismo factor que la longitud', squares);
 
+/* ------------------ divergencia conocida: longitud de arcos ------------------
+ * Defecto conocido y documentado en docs/DIMENSIONAL.md:
+ *
+ *   JavaScript (Mep.elementLengthMeters → Geometry.pathLength) incluye los
+ *   arcos; PHP (MepCalculator::length) suma hypot entre vértices e ignora los
+ *   arcos. Con un semicírculo de 400 unidades de cuerda y 200 de flecha, el
+ *   trazo mide 628,3 unidades y la cuerda 400.
+ *
+ * Este aserto fija el comportamiento **actual** de JavaScript para que la
+ * corrección (una entrega aparte, pendiente de aprobación) tenga un punto de
+ * partida explícito. Cuando se apruebe, este bloque cambia a igualdad con PHP.
+ */
+for (const file of ['js/lib/geometry.js', 'js/lib/mep.js']) {
+  window.eval(`${fs.readFileSync(path.join(repoRoot, 'assets', file), 'utf8')}\n//# sourceURL=${file}`);
+}
+const Mep = window.Normia?.Mep;
+const arco = {
+  id: 'el_arco',
+  type: 'pipe',
+  points: [{ x: 0, y: 200 }, { x: 400, y: 200 }],
+  curves: [{ kind: 'arc', through: { x: 200, y: 0 } }, null],
+};
+const chord = 400;
+const arcLength = Math.PI * 200;
+const canvasCm = { unit: 'cm', scale: '1:100' };
+const jsMeters = Mep?.elementLengthMeters?.(arco, canvasCm);
+
+report.check('La longitud de un trazo curvo en el editor incluye el arco',
+  Number.isFinite(jsMeters) && near(jsMeters, arcLength / 100, 1e-9),
+  `${jsMeters} m (arco) frente a ${chord / 100} m de cuerda`);
+report.check('Divergencia conocida PHP/JS registrada: el editor mide más que la red',
+  near(jsMeters, 6.283185307179586, 1e-9) && Math.abs(jsMeters - chord / 100) > 2,
+  'MepCalculator devuelve 4 m; la corrección va aparte');
+
 /* ------------------------------ pureza ------------------------------ */
 
 report.check('El módulo no toca el DOM ni la red',

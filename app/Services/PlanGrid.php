@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Core\Units;
+
 /**
  * Rejilla de cálculo del plano.
  *
@@ -31,7 +33,8 @@ final class PlanGrid
         $canvas = $design['canvas'];
         $width = (float) $canvas['width'];
         $height = (float) $canvas['height'];
-        $cmPerUnit = self::cmPerUnit((string) $canvas['unit']);
+        $unit = (string) $canvas['unit'];
+        $cmPerUnit = Units::cmPerUnit($unit);
         $cellCm = max(5.0, (float) $criteria['grid']['cellCm']);
         $cell = max(1.0, $cellCm / $cmPerUnit);
         $nx = max(1, (int) ceil($width / $cell));
@@ -42,7 +45,7 @@ final class PlanGrid
             $nx = max(1, (int) ceil($width / $cell));
             $ny = max(1, (int) ceil($height / $cell));
         }
-        $metersPerUnit = $cmPerUnit / 100;
+        $metersPerUnit = Units::metersPerUnit($unit);
         $cellM = $cell * $metersPerUnit;
         $cellAreaM2 = $cellM * $cellM;
 
@@ -219,7 +222,7 @@ final class PlanGrid
         float $height,
     ): void {
         $types = ['road', 'sidewalk', 'crosswalk', 'parking', 'property'];
-        $cmPerUnit = self::cmPerUnit($unit);
+        $cmPerUnit = Units::cmPerUnit($unit);
         $index = static fn (int $ix, int $iy): int => $iy * $nx + $ix;
         foreach ($design['elements'] ?? [] as $element) {
             $type = (string) ($element['type'] ?? '');
@@ -232,7 +235,7 @@ final class PlanGrid
             $h = (float) $element['h'];
             $rotation = (float) ($element['rotation'] ?? 0);
             $isArea = $type === 'crosswalk' || $type === 'parking';
-            $band = $isArea ? 0.0 : (($type === 'property' ? 0.0 : max(0.8, (float) ($element['widthM'] ?? 2)) * 100 / $cmPerUnit));
+            $band = $isArea ? 0.0 : (($type === 'property' ? 0.0 : Units::fromMeters(max(0.8, (float) ($element['widthM'] ?? 2)), $unit)));
             $reach = $isArea ? 0.0 : (($band > 0 ? $band / 2 : max(2.0, $cell * 0.5)) + $cell * 0.25);
             $points = $isArea ? [] : self::visualPoints($element, $unit);
             $margin = $isArea ? 0.0 : $reach + $cell;
@@ -374,12 +377,13 @@ final class PlanGrid
         return hypot((float) $a['x'] - (float) $b['x'], (float) $a['y'] - (float) $b['y']);
     }
 
+    /**
+     * Centímetros por unidad del lienzo. Delega en `Units`, que es la autoridad
+     * única; se conserva el método porque lo usan `PathGeometry` y los
+     * exportadores.
+     */
     public static function cmPerUnit(string $unit): float
     {
-        return match ($unit) {
-            'm' => 100.0,
-            'mm' => 0.1,
-            default => 1.0,
-        };
+        return Units::cmPerUnit($unit);
     }
 }

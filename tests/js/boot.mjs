@@ -10,6 +10,7 @@ import { repoRoot } from '../php/harness.mjs';
 
 export const SCRIPTS = [
   'js/ui.js',
+  'js/lib/units.js',
   'js/lib/geometry.js',
   'js/lib/mep.js',
   'js/lib/model.js',

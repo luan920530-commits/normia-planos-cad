@@ -645,6 +645,7 @@
 <textarea id="editor-boot" hidden><?= e(json_encode($boot, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?></textarea>
 <noscript><div class="noscript-warning">El editor necesita JavaScript activado. El servidor valida y guarda el diseño, pero el lienzo interactivo no estará disponible.</div></noscript>
 <script src="<?= e(asset('js/ui.js')) ?>" defer></script>
+<script src="<?= e(asset('js/lib/units.js')) ?>" defer></script>
 <script src="<?= e(asset('js/lib/geometry.js')) ?>" defer></script>
 <script src="<?= e(asset('js/lib/mep.js')) ?>" defer></script>
 <script src="<?= e(asset('js/lib/model.js')) ?>" defer></script>

@@ -1504,7 +1504,7 @@
     resizeForJunction(element, junction, section) {
       if (!junction || !section) return;
       const unit = this.design.canvas.unit;
-      const perMeter = 100 / G.cmPerUnit(unit);
+      const perMeter = root.Units.unitsPerMeter(unit);
       const pavement = section.lanes * section.laneM + 2 * section.shoulderM;
       const outer = junction.kind === 'roundabout'
         ? 2 * (pavement + junction.islandM + section.bikeM + section.sidewalkM)
@@ -1529,7 +1529,7 @@
     insertCorridorExample() {
       if (!this.canEdit()) return 0;
       const canvas = this.design.canvas;
-      const perMeter = 100 / G.cmPerUnit(canvas.unit);
+      const perMeter = root.Units.unitsPerMeter(canvas.unit);
       const margin = Math.max(20, Math.round(Math.min(canvas.width, canvas.height) * 0.04));
       // El anillo necesita alto de papel: todo el corredor se dimensiona con lo
       // que quepa, para que el dibujo y las medidas nunca se contradigan.

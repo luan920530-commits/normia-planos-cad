@@ -19,8 +19,9 @@
   const LAYER_NAME = 'Mediciones de ruta';
   const COLOR = '#7c3aed';
 
-  const cmPerUnit = (unit) => ({ m: 100, mm: 0.1, cm: 1 }[unit] ?? 1);
-  const metersPerUnit = (unit) => cmPerUnit(unit) / 100;
+  const Units = root.Units;
+  const cmPerUnit = (unit) => Units.cmPerUnit(unit);
+  const metersPerUnit = (unit) => Units.metersPerUnit(unit);
 
   /** Cola de prioridad mínima para A* (heap binario). */
   class Heap {

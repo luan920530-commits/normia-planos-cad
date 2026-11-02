@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Core\Units;
+
 /**
  * Cálculos de redes hidrosanitarias y eléctricas.
  *
@@ -16,14 +18,16 @@ final class MepCalculator
      * Una unidad del lienzo equivale a la unidad declarada (igual que la cota
      * del editor). La escala es una referencia de impresión: no altera las
      * longitudes del plano.
+     *
+     * Delega en `Units`, que es la autoridad única. El segundo parámetro se
+     * conserva por compatibilidad con las llamadas existentes y **no se usa**:
+     * está obsoleto y se retirará cuando ningún consumidor lo pase.
+     *
+     * @deprecated Usa `Units::metersPerUnit($unit)`.
      */
     public static function unitsToMeters(string $unit, string $scale = '1:100'): float
     {
-        return match ($unit) {
-            'm' => 1.0,
-            'mm' => 0.001,
-            default => 0.01,
-        };
+        return Units::metersPerUnit($unit);
     }
 
     /** Longitud de un trazo en unidades del lienzo. */

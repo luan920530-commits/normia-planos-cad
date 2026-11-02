@@ -65,11 +65,7 @@
    * unidad declarada (igual que la cota del editor); la escala es una
    * referencia de impresión y no cambia las longitudes del plano.
    */
-  const unitsToMeters = (unit) => {
-    if (unit === 'm') return 1;
-    if (unit === 'mm') return 0.001;
-    return 0.01;
-  };
+  const unitsToMeters = (unit) => root.Units.metersPerUnit(unit);
 
   const pathLength = (points) => {
     if (!Array.isArray(points) || points.length < 2) return 0;

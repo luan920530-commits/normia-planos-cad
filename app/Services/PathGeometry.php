@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Core\Units;
+
 /**
  * Geometría de trazos con curvas.
  *
@@ -17,14 +19,15 @@ namespace App\Services;
  */
 final class PathGeometry
 {
-    public const TOLERANCE_CM = 0.5;
+    /** Tolerancia de aplanado en centímetros; la define `Units`. */
+    public const TOLERANCE_CM = Units::TOLERANCE_CM;
 
     private const MAX_STEPS = 720;
 
     /** Tolerancia en unidades del lienzo para la unidad declarada. */
     public static function tolerance(string $unit): float
     {
-        return self::TOLERANCE_CM / PlanGrid::cmPerUnit($unit);
+        return Units::tolerance($unit);
     }
 
     public static function hasCurves(?array $curves): bool

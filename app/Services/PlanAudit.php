@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Core\Units;
 use JsonException;
 
 /**
@@ -102,9 +103,10 @@ final class PlanAudit
             $design['elements'],
             static fn (array $element): bool => self::layerVisible($design, (string) $element['layerId'])
         ));
-        $cmPerUnit = self::cmPerUnit((string) $canvas['unit']);
-        $metersPerUnit = $cmPerUnit / 100;
-        $toUnits = static fn (float $cm): float => $cm / $cmPerUnit;
+        $unit = (string) $canvas['unit'];
+        $cmPerUnit = Units::cmPerUnit($unit);
+        $metersPerUnit = Units::metersPerUnit($unit);
+        $toUnits = static fn (float $cm): float => Units::fromCm($cm, $unit);
 
         $exits = [];
         $doors = [];
@@ -773,15 +775,6 @@ final class PlanAudit
             'x' => min($width, ($ix + 0.5) * $cell),
             'y' => min($height, ($iy + 0.5) * $cell),
         ];
-    }
-
-    private static function cmPerUnit(string $unit): float
-    {
-        return match ($unit) {
-            'm' => 100.0,
-            'mm' => 0.1,
-            default => 1.0,
-        };
     }
 
     private static function layerVisible(array $design, string $layerId): bool

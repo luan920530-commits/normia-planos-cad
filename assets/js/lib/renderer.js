@@ -436,7 +436,7 @@
       if (element.junction) return this.roadJunctionNode(element, canvas, parts);
       const { color, stroke, zoom, cm, group, font } = parts;
       const section = element.section;
-      const perMeter = 100 / cm;
+      const perMeter = root.Units.unitsPerMeter(canvas?.unit || 'cm');
       const median = (Number(section.medianM) || 0);
       const shoulder = (Number(section.shoulderM) || 0);
       const bike = (Number(section.bikeM) || 0);
@@ -563,7 +563,7 @@
     roadJunctionNode(element, canvas, parts) {
       const { color, stroke, zoom, group, font } = parts;
       const cm = G.cmPerUnit(canvas?.unit || 'cm');
-      const perMeter = 100 / cm;
+      const perMeter = root.Units.unitsPerMeter(canvas?.unit || 'cm');
       const section = element.section || {};
       const lanes = Math.max(1, Math.round(Number(section.lanes) || 1));
       const laneM = Number(section.laneM) || 3;
@@ -718,7 +718,7 @@
         }));
         if (type === 'crosswalk') {
           // Franjas de 50 cm con junta de 50 cm, como un paso peatonal cebra.
-          const step = Math.max(6, 100 / cm);
+          const step = Math.max(6, root.Units.fromCm(100, unit));
           const bar = step / 2;
           const horizontal = element.w >= element.h;
           const span = horizontal ? element.w : element.h;
@@ -777,7 +777,7 @@
       if (type === 'road' && element.section) {
         return this.roadNode(element, canvas, { color, stroke, zoom, cm, group, flat, label, font });
       }
-      const bandWidth = type === 'property' ? 0 : Math.max(2, (Number(element.widthM) || 2) * 100 / cm);
+      const bandWidth = type === 'property' ? 0 : Math.max(2, root.Units.fromMeters(Number(element.widthM) || 2, unit));
       const exact = this.elementPathData(element);
       const flatData = G.pathData(flat, null);
       const strokePath = (attributes) => {

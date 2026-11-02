@@ -18,8 +18,8 @@
 
   const PRICE_KEY = 'normia.schedule.prices';
 
-  /** Unidad del lienzo → centímetros. El editor trabaja en cm por defecto. */
-  const cmPerUnit = (unit) => ({ m: 100, mm: 0.1, cm: 1 }[unit] ?? 1);
+  /** Unidad del lienzo → centímetros. La conversión vive en `Units`. */
+  const cmPerUnit = (unit) => root.Units.cmPerUnit(unit);
 
   /** Tamaño de lámina sugerido según el área del piso (referencia de compra). */
   const suggestedSize = (areaM2) => {

@@ -89,10 +89,19 @@ final class Units
         return (float) $value * self::metersPerUnit($unit);
     }
 
-    /** Metros → unidades del lienzo. */
+    /**
+     * Metros → unidades del lienzo.
+     *
+     * Se multiplica por 100 y se divide por los centímetros por unidad, y no se
+     * divide por los metros por unidad, porque así lo hacía el código que esta
+     * clase sustituye. Las dos formas son matemáticamente iguales pero pueden
+     * diferir en el último bit; conservar el orden evita mover una sola cifra
+     * publicada. Para código nuevo da igual cuál se use: la diferencia está muy
+     * por debajo de la precisión con la que se muestran las medidas.
+     */
     public static function fromMeters(float|int $meters, string $unit): float
     {
-        return (float) $meters / self::metersPerUnit($unit);
+        return (float) $meters * 100 / self::cmPerUnit($unit);
     }
 
     /** Longitud en unidades del lienzo → centímetros. */

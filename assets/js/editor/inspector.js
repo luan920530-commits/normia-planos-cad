@@ -370,7 +370,7 @@
       // que no corresponde con sus medidas.
       const road = this.model.selectedElements()[0];
       const unit = this.model.design.canvas.unit;
-      const perMeter = 100 / G.cmPerUnit(unit);
+      const perMeter = root.Units.unitsPerMeter(unit);
       const radiusM = road ? Math.min(road.w, road.h) / 2 / perMeter : 0;
       const neededM = junction.islandM + (Number(road?.section?.lanes) || 1) * (Number(road?.section?.laneM) || 3);
       const fits = radiusM === 0 || radiusM >= neededM;

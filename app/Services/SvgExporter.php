@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Core\Units;
+
 /**
  * Genera una representación SVG limpia del diseño guardado.
  * No incluye cuadrícula, guías, selección ni controles del editor.
@@ -352,7 +354,7 @@ final class SvgExporter
             for ($index = 1; $index < count($points); $index++) {
                 $length += hypot((float) $points[$index]['x'] - (float) $points[$index - 1]['x'], (float) $points[$index]['y'] - (float) $points[$index - 1]['y']);
             }
-            $factor = MepCalculator::unitsToMeters((string) $canvas['unit'], (string) $canvas['scale']);
+            $factor = Units::metersPerUnit((string) $canvas['unit']);
             $parts[] = self::meters($length * $factor);
         }
         if (!empty($network['gravity'])) {
@@ -442,10 +444,11 @@ final class SvgExporter
      * berma, ciclorruta y andenes. Réplica del dibujo del editor
      * (`Renderer.roadNode`) para que el SVG y la pantalla coincidan.
      */
-    private static function roadSectionMarkup(array $element, float $x, float $y, string $color, float $stroke, float $cmPerUnit, array $canvas): string
+    private static function roadSectionMarkup(array $element, float $x, float $y, string $color, float $stroke, array $canvas): string
     {
+        $unit = (string) ($canvas['unit'] ?? 'cm');
         $section = $element['section'];
-        $perMeter = 100 / $cmPerUnit;
+        $perMeter = Units::unitsPerMeter($unit);
         $lanes = max(1, (int) ($section['lanes'] ?? 2));
         $laneM = (float) ($section['laneM'] ?? 3);
         $median = (float) ($section['medianM'] ?? 0);
@@ -481,7 +484,7 @@ final class SvgExporter
         if ($bike > 0) {
             foreach ([-1, 1] as $side) {
                 $out .= $line($offset($side * ($halfPavement + ($bike / 2) * $perMeter)), 'stroke="#e7f5ea" stroke-width="' . self::n($bike * $perMeter) . '"');
-                $out .= $line($offset($side * ($halfPavement + $bike * $perMeter)), 'stroke="#15803d" stroke-width="' . self::n(max(0.7, $stroke * 0.6)) . '" stroke-dasharray="' . self::n(max(6.0, 120 / $cmPerUnit)) . ' ' . self::n(max(4.0, 80 / $cmPerUnit)) . '" opacity="0.8"');
+                $out .= $line($offset($side * ($halfPavement + $bike * $perMeter)), 'stroke="#15803d" stroke-width="' . self::n(max(0.7, $stroke * 0.6)) . '" stroke-dasharray="' . self::n(max(6.0, Units::fromCm(120, $unit))) . ' ' . self::n(max(4.0, Units::fromCm(80, $unit))) . '" opacity="0.8"');
             }
         }
         // 3. Calzada y sus bordes.
@@ -499,10 +502,10 @@ final class SvgExporter
                 $out .= $line($offset($side * ($median / 2) * $perMeter), 'stroke="' . self::x($color) . '" stroke-width="' . self::n(max(1.0, $stroke * 0.9)) . '"');
             }
         } else {
-            $out .= $line($offset(0), 'stroke="' . self::x($color) . '" stroke-width="' . self::n(max(0.8, $stroke * 0.8)) . '" stroke-dasharray="' . self::n(max(8.0, 300 / $cmPerUnit)) . ' ' . self::n(max(6.0, 200 / $cmPerUnit)) . '" opacity="0.85"');
+            $out .= $line($offset(0), 'stroke="' . self::x($color) . '" stroke-width="' . self::n(max(0.8, $stroke * 0.8)) . '" stroke-dasharray="' . self::n(max(8.0, Units::fromCm(300, $unit))) . ' ' . self::n(max(6.0, Units::fromCm(200, $unit))) . '" opacity="0.85"');
         }
         // 5. Separación entre carriles.
-        $dash = self::n(max(7.0, 250 / $cmPerUnit)) . ' ' . self::n(max(5.0, 150 / $cmPerUnit));
+        $dash = self::n(max(7.0, Units::fromCm(250, $unit))) . ' ' . self::n(max(5.0, Units::fromCm(150, $unit)));
         $rightLanes = (int) ceil($lanes / 2);
         $leftLanes = $lanes - $rightLanes;
         for ($index = 1; $index < $rightLanes; $index += 1) {
@@ -556,11 +559,12 @@ final class SvgExporter
      * brazos toman el ancho de la sección tipo y la caja del elemento fija el
      * tamaño del cruce. Se dibuja en coordenadas absolutas del lienzo.
      */
-    private static function roadJunctionMarkup(array $element, float $x, float $y, string $color, float $stroke, float $cmPerUnit, array $canvas): string
+    private static function roadJunctionMarkup(array $element, float $x, float $y, string $color, float $stroke, array $canvas): string
     {
+        $unit = (string) ($canvas['unit'] ?? 'cm');
         $section = $element['section'];
         $junction = $element['junction'];
-        $perMeter = 100 / $cmPerUnit;
+        $perMeter = Units::unitsPerMeter($unit);
         $lanes = max(1, (int) ($section['lanes'] ?? 2));
         $laneM = (float) ($section['laneM'] ?? 3);
         $median = (float) ($section['medianM'] ?? 0);
@@ -574,7 +578,7 @@ final class SvgExporter
         $cx = $x + $w / 2;
         $cy = $y + $h / 2;
         $edge = max(1.0, $stroke);
-        $dash = self::n(max(6.0, 250 / $cmPerUnit)) . ' ' . self::n(max(4.0, 150 / $cmPerUnit));
+        $dash = self::n(max(6.0, Units::fromCm(250, $unit))) . ' ' . self::n(max(4.0, Units::fromCm(150, $unit)));
         $out = '';
         $circle = static function (float $radius, string $attributes) use ($cx, $cy): string {
             return '<circle cx="' . self::n($cx) . '" cy="' . self::n($cy) . '" r="' . self::n($radius) . '" ' . $attributes . '/>' . "\n";
@@ -814,31 +818,31 @@ final class SvgExporter
     private static function outdoorBand(array $element, float $x, float $y, float $w, float $h, string $color, float $stroke, array $canvas): string
     {
         $type = (string) $element['type'];
-        $cmPerUnit = PlanGrid::cmPerUnit((string) ($canvas['unit'] ?? 'cm'));
+        $unit = (string) ($canvas['unit'] ?? 'cm');
         $band = $type === 'property'
             ? 0.0
-            : max(2.0, (float) ($element['widthM'] ?? 2) * 100 / $cmPerUnit);
+            : max(2.0, Units::fromMeters((float) ($element['widthM'] ?? 2), $unit));
         $out = '';
         if ($type === 'road' && is_array($element['section'] ?? null)) {
             // Glorieta o intersección: anillo o cruce de calzadas.
             if (is_array($element['junction'] ?? null)) {
-                return $out . self::roadJunctionMarkup($element, $x, $y, $color, $stroke, $cmPerUnit, $canvas);
+                return $out . self::roadJunctionMarkup($element, $x, $y, $color, $stroke, $canvas);
             }
             // Vía con sección tipo: calzada con carriles, separador, berma,
             // ciclorruta y andenes. Mismo dibujo que el editor; esquemático.
-            return $out . self::roadSectionMarkup($element, $x, $y, $color, $stroke, $cmPerUnit, $canvas);
+            return $out . self::roadSectionMarkup($element, $x, $y, $color, $stroke, $canvas);
         }
         if ($band > 0) {
             $out .= self::strokeMarkup($element, $x, $y, 'fill="none" stroke="' . self::x($color) . '" stroke-width="' . self::n($band + $stroke * 2) . '" stroke-opacity="0.55" stroke-linecap="butt" stroke-linejoin="round"');
             $out .= self::strokeMarkup($element, $x, $y, 'fill="none" stroke="#f8fafc" stroke-width="' . self::n(max(1.0, $band)) . '" stroke-linecap="butt" stroke-linejoin="round"');
             if ($type === 'road') {
-                $out .= self::strokeMarkup($element, $x, $y, 'fill="none" stroke="#ffffff" stroke-width="' . self::n(max(0.9, $stroke * 0.8)) . '" stroke-dasharray="' . self::n(max(8.0, 300 / $cmPerUnit)) . ' ' . self::n(max(6.0, 200 / $cmPerUnit)) . '" stroke-linecap="butt" opacity="0.9"');
+                $out .= self::strokeMarkup($element, $x, $y, 'fill="none" stroke="#ffffff" stroke-width="' . self::n(max(0.9, $stroke * 0.8)) . '" stroke-dasharray="' . self::n(max(8.0, Units::fromCm(300, $unit))) . ' ' . self::n(max(6.0, Units::fromCm(200, $unit))) . '" stroke-linecap="butt" opacity="0.9"');
             }
             if ($type === 'sidewalk') {
-                $out .= self::sidewalkHatch($element, $x, $y, $color, $stroke, $band, $cmPerUnit, $canvas, $w, $h);
+                $out .= self::sidewalkHatch($element, $x, $y, $color, $stroke, $band, $canvas, $w, $h);
             }
         } else {
-            $out .= self::strokeMarkup($element, $x, $y, 'fill="none" stroke="' . self::x($color) . '" stroke-width="' . self::n(max(1.0, $stroke)) . '" stroke-dasharray="' . self::n(18 / $cmPerUnit) . ' ' . self::n(6 / $cmPerUnit) . ' ' . self::n(3 / $cmPerUnit) . ' ' . self::n(6 / $cmPerUnit) . '" stroke-linejoin="round"');
+            $out .= self::strokeMarkup($element, $x, $y, 'fill="none" stroke="' . self::x($color) . '" stroke-width="' . self::n(max(1.0, $stroke)) . '" stroke-dasharray="' . self::n(Units::fromCm(18, $unit)) . ' ' . self::n(Units::fromCm(6, $unit)) . ' ' . self::n(Units::fromCm(3, $unit)) . ' ' . self::n(Units::fromCm(6, $unit)) . '" stroke-linejoin="round"');
         }
         $label = (string) ($element['label'] ?? '');
         if ($label !== '') {
@@ -850,13 +854,14 @@ final class SvgExporter
     }
 
     /** Trama de losas del andén: marcas perpendiculares cada 60 cm. */
-    private static function sidewalkHatch(array $element, float $x, float $y, string $color, float $stroke, float $band, float $cmPerUnit, array $canvas, float $w, float $h): string
+    private static function sidewalkHatch(array $element, float $x, float $y, string $color, float $stroke, float $band, array $canvas, float $w, float $h): string
     {
+        $unit = (string) ($canvas['unit'] ?? 'cm');
         $points = PlanGrid::visualPoints($element, (string) ($canvas['unit'] ?? 'cm'));
         if (count($points) < 2) {
             return '';
         }
-        $step = max(6.0, 60 / $cmPerUnit);
+        $step = max(6.0, Units::fromCm(60, $unit));
         $out = '';
         $travelled = 0.0;
         for ($index = 1; $index < count($points); $index += 1) {
@@ -887,10 +892,10 @@ final class SvgExporter
     private static function outdoorArea(array $element, float $x, float $y, float $w, float $h, string $color, float $stroke, array $canvas): string
     {
         $type = (string) $element['type'];
-        $cmPerUnit = PlanGrid::cmPerUnit((string) ($canvas['unit'] ?? 'cm'));
+        $unit = (string) ($canvas['unit'] ?? 'cm');
         $out = '<rect x="' . self::n($x) . '" y="' . self::n($y) . '" width="' . self::n($w) . '" height="' . self::n($h) . '" rx="2" fill="#f8fafc" stroke="' . self::x($color) . '" stroke-width="' . self::n($stroke) . '"/>' . "\n";
         if ($type === 'crosswalk') {
-            $step = max(6.0, 100 / $cmPerUnit);
+            $step = max(6.0, Units::fromCm(100, $unit));
             $bar = $step / 2;
             $horizontal = $w >= $h;
             $span = $horizontal ? $w : $h;
@@ -905,8 +910,8 @@ final class SvgExporter
             }
             return $out;
         }
-        $bayWidth = max(4.0, 250 / $cmPerUnit);
-        $bayDepth = max(4.0, 500 / $cmPerUnit);
+        $bayWidth = max(4.0, Units::fromCm(250, $unit));
+        $bayDepth = max(4.0, Units::fromCm(500, $unit));
         $columns = max(1, (int) round($w / $bayWidth));
         $rows = max(1, (int) round($h / $bayDepth));
         for ($column = 1; $column < $columns; $column += 1) {

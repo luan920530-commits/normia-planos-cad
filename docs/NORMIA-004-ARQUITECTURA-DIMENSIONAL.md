@@ -3,9 +3,15 @@
 **Documento de diagnóstico y propuesta para aprobación.**
 Versión analizada: **1.18.0** (`main` = `a221309`, esquema `user_version = 7`).
 Fecha: 2026-11-01.
-Estado del trabajo: **solo lectura**. No se modificó código, base de datos ni archivos
-de producción; no se ejecutaron migraciones, no se creó ninguna tabla y no hubo
-commits, ramas ni versiones.
+Estado del trabajo: **documento de diagnóstico y propuesta**. Se redactó en solo
+lectura, sin tocar código, base de datos ni archivos de producción.
+
+> **Avance (etapa 0).** Aprobadas DEC-1 a DEC-4, la etapa 0 se implementó en dos
+> pasos: la autoridad única de unidades con sus pruebas y, después, la delegación
+> de los siete conversores con un golden de regresión que demuestra que ninguna
+> cifra se movió. El resultado vivo está en [DIMENSIONAL.md](DIMENSIONAL.md).
+> La corrección de la longitud de arcos quedó **propuesta y sin implementar**, a
+> la espera de aprobación (DIMENSIONAL.md §8).
 
 ---
 

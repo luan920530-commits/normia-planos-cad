@@ -30,42 +30,43 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 12. [Verificación física](#verificación-física)
 13. [Modo brigadista](#modo-brigadista)
 14. [Guardado, versiones y borradores](#guardado-versiones-y-borradores)
-15. [Exportaciones](#exportaciones)
-16. [Formato de datos](#formato-de-datos)
-17. [Arquitectura](#arquitectura)
-18. [Seguridad](#seguridad)
-19. [Pruebas](#pruebas)
-20. [Distribución: escritorio y Android](#distribución-escritorio-y-android)
-21. [Edición Electron](#edición-electron)
-22. [Guía de primeros pasos](#guía-de-primeros-pasos)
-23. [Complementos](#complementos)
-24. [Datos y respaldo](#datos-y-respaldo)
-25. [Cambios de la versión 1.18.0](#cambios-de-la-versión-1180)
-26. [Cambios de la versión 1.17.0](#cambios-de-la-versión-1170)
-27. [Cambios de la versión 1.16.0](#cambios-de-la-versión-1160)
-28. [Cambios de la versión 1.15.9](#cambios-de-la-versión-1159)
-29. [Cambios de la versión 1.15.8](#cambios-de-la-versión-1158)
-30. [Cambios de la versión 1.15.7](#cambios-de-la-versión-1157)
-31. [Cambios de la versión 1.15.6](#cambios-de-la-versión-1156)
-32. [Cambios de la versión 1.15.5](#cambios-de-la-versión-1155)
-33. [Cambios de la versión 1.15.4](#cambios-de-la-versión-1154)
-34. [Cambios de la versión 1.15.3](#cambios-de-la-versión-1153)
-35. [Cambios de la versión 1.15.2](#cambios-de-la-versión-1152)
-36. [Cambios de la versión 1.15.1](#cambios-de-la-versión-1151)
-37. [Cambios de la versión 1.15.0](#cambios-de-la-versión-1150)
-38. [Cambios de la versión 1.14.2](#cambios-de-la-versión-1142)
-39. [Cambios de la versión 1.14.1](#cambios-de-la-versión-1141)
-40. [Cambios de la versión 1.14.0](#cambios-de-la-versión-1140)
-41. [Cambios de la versión 1.13.0](#cambios-de-la-versión-1130)
-42. [Cambios de la versión 1.12.0](#cambios-de-la-versión-1120)
-43. [Cambios de la versión 1.11.1](#cambios-de-la-versión-1111)
-44. [Cambios de la versión 1.11.0](#cambios-de-la-versión-1110)
-45. [Cambios de la versión 1.10.0](#cambios-de-la-versión-1100)
-46. [Cambios de la versión 1.9.0](#cambios-de-la-versión-190)
-47. [Cambios de la versión 1.8.0](#cambios-de-la-versión-180)
-48. [Paquetes y verificación](#paquetes-y-verificación)
-49. [Limitaciones](#limitaciones)
-50. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
+15. [Datos y respaldo](#datos-y-respaldo)
+16. [Exportaciones](#exportaciones)
+17. [Formato de datos](#formato-de-datos)
+18. [Arquitectura](#arquitectura)
+19. [Seguridad](#seguridad)
+20. [Pruebas](#pruebas)
+21. [Distribución: escritorio y Android](#distribución-escritorio-y-android)
+22. [Edición Electron](#edición-electron)
+23. [Guía de primeros pasos](#guía-de-primeros-pasos)
+24. [Complementos](#complementos)
+25. [Unidades y medidas](#unidades-y-medidas)
+26. [Cambios de la versión 1.18.0](#cambios-de-la-versión-1180)
+27. [Cambios de la versión 1.17.0](#cambios-de-la-versión-1170)
+28. [Cambios de la versión 1.16.0](#cambios-de-la-versión-1160)
+29. [Cambios de la versión 1.15.9](#cambios-de-la-versión-1159)
+30. [Cambios de la versión 1.15.8](#cambios-de-la-versión-1158)
+31. [Cambios de la versión 1.15.7](#cambios-de-la-versión-1157)
+32. [Cambios de la versión 1.15.6](#cambios-de-la-versión-1156)
+33. [Cambios de la versión 1.15.5](#cambios-de-la-versión-1155)
+34. [Cambios de la versión 1.15.4](#cambios-de-la-versión-1154)
+35. [Cambios de la versión 1.15.3](#cambios-de-la-versión-1153)
+36. [Cambios de la versión 1.15.2](#cambios-de-la-versión-1152)
+37. [Cambios de la versión 1.15.1](#cambios-de-la-versión-1151)
+38. [Cambios de la versión 1.15.0](#cambios-de-la-versión-1150)
+39. [Cambios de la versión 1.14.2](#cambios-de-la-versión-1142)
+40. [Cambios de la versión 1.14.1](#cambios-de-la-versión-1141)
+41. [Cambios de la versión 1.14.0](#cambios-de-la-versión-1140)
+42. [Cambios de la versión 1.13.0](#cambios-de-la-versión-1130)
+43. [Cambios de la versión 1.12.0](#cambios-de-la-versión-1120)
+44. [Cambios de la versión 1.11.1](#cambios-de-la-versión-1111)
+45. [Cambios de la versión 1.11.0](#cambios-de-la-versión-1110)
+46. [Cambios de la versión 1.10.0](#cambios-de-la-versión-1100)
+47. [Cambios de la versión 1.9.0](#cambios-de-la-versión-190)
+48. [Cambios de la versión 1.8.0](#cambios-de-la-versión-180)
+49. [Paquetes y verificación](#paquetes-y-verificación)
+50. [Limitaciones](#limitaciones)
+51. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
 
 ---
 
@@ -767,12 +768,13 @@ La suite usa **php-wasm** (PHP compilado a WebAssembly) y **JSDOM**, de modo que
 
 ```bash
 npm install            # solo desarrollo: @php-wasm/node y jsdom
-npm test               # suite completa (20 pasos)
+npm test               # suite completa (22 pasos)
 npm run test:quick     # sin construir/validar paquetes
 npm run test:php:81    # suite funcional en PHP 8.1
 npm run test:php:83    # suite funcional en PHP 8.3
 npm run test:stability # respaldo, migraciones, conflicto y poda en 8.1 y 8.3
 npm run test:units     # autoridad única de unidades en PHP 8.1, 8.3 y JS
+npm run test:golden    # 6 405 valores fijos del auditor, extintores, redes y SVG
 npm run test:js        # editor real en JSDOM (PHP 8.3)
 npm run test:package   # construye los ZIP y hace la instalación limpia de la demo
 npm run lint:php       # sintaxis de todos los archivos PHP en 8.1 y 8.3
@@ -804,6 +806,7 @@ Lo único que no funciona sin red es la **vista previa de desarrollo** (`npm run
 | --- | --- |
 | `tests/php/lint.mjs` | `php -l` sobre todo `app/`, `bootstrap.php` e `index.php` en 8.1 y 8.3. |
 | `tests/php/functional.mjs` | 327 comprobaciones: instalador, requisitos, contraseñas débiles, CSRF, sesión, autorización entre cuentas, CRUD de proyectos/pisos, duplicados, importación v1/v2, catálogos (395 señales y 420 objetos), catálogo y guardado de redes, señales de baño y de servicios (guardado, color de familia y exportación SVG), **auditor y medición de evacuación** (salidas, recorrido máximo, zonas inalcanzables, rutas que cruzan muros o no llegan a la salida, ocupación declarada y estimada, señalización, validación de `isExit`, informe imprimible y demo coherente), **muros curvos y vías** (guardado en formato 3, auditor con el muro curvo separando recintos, arco `A` en el SVG, vía que no bloquea frente a muro que sí, `422` para curvas desalineadas, `kind` desconocido, curvas en una puerta y formato desconocido), **sección tipo y glorieta** (formato 4 con ancho derivado, SVG con calzada, andenes, anillo e isla, y `422` para una medida fuera de rango, una clave desconocida, una glorieta sin sección y un cruce desconocido), **modo brigadista** (panel, token de 32 caracteres, página pública sin sesión ni scripts inline, API del plan, service worker, regeneración y desactivación del enlace), **complementos** (pantalla, manual, descarga de las dos plantillas, instalación desde `plugin.json` y desde `.zip` con SVG al lado, familia y color propios en el catálogo, sinónimos en el buscador, activar/desactivar, borrado, rechazo de un manifiesto inválido y de un `.zip` sin su SVG), **verificación física** (lista sin trazos, tres estados, novedad sin nota rechazada, rondas e historial, cobertura, aviso de días y foto servida solo a la cuenta dueña) y **empresas y roles** (alta de empresa, acceso compartido, lector que no guarda ni borra, editor que no administra, último propietario protegido, aislamiento entre empresas y migración real desde una base `user_version = 5`), puertas y portones (geometría, sentidos de apertura, exportación con trazo), validaciones de la API, guardado/versiones/borradores/conflictos, exportaciones, ciclo de vida y logout. |
+| `tests/php/golden.mjs` | **Golden de regresión numérica**: 6 405 valores del auditor (con y sin ocupación declarada), la cobertura de extintores, el resumen de redes y el SVG de los cuatro pisos de la demostración, más un plano sintético con tubería curva. Se capturó **antes** de consolidar los conversores de unidad y cualquier diferencia es un fallo: es la prueba de que la refactorización no movió una cifra. Se regenera con `--write`. |
 | `tests/php/units.mjs` | 22 comprobaciones de la **autoridad única de unidades** (`App\Core\Units`) contra la tabla compartida `tests/fixtures/units.json`: factores de `mm`/`cm`/`m`, conversión de longitudes y superficies, unidad desconocida que cae a `cm` sin lanzar, lectura de la escala de impresión y, sobre todo, **paridad bit a bit de la ruta `cm`** con el cálculo anterior, para que consolidar los siete conversores no mueva un solo número. |
 | `tests/php/stability.mjs` | 45 comprobaciones de la Fase 0: panel de respaldo, creación de la copia, descarga del ZIP y de la base, verificación aislada y detección de un archivo corrupto, la fotografía dentro de la copia, rotación con copia fijada, reserva del respaldo a la cuenta que instaló, bitácora de migraciones completa, **migración que falla sin tocar la versión ni los datos**, restauración de versión y **conflicto de carrera sin insertar filas**, los cuatro casos de cuerpo JSON (`empty_body`, `invalid_json`, `payload_too_large` y estructura incompleta) y la conservación del historial (protección de vigente, inicial y fijadas, y poda que solo borra lo seleccionado). |
 | `tests/js/units.mjs` | 24 comprobaciones del módulo `assets/js/lib/units.js` contra la **misma** tabla compartida: si PHP y JavaScript se separan, falla una de las dos suites. Verifica además que el módulo no toca el DOM ni la red y que publica `window.Normia.Units`. |
@@ -823,10 +826,12 @@ Resultados esperados de la última ejecución completa:
 ✓ Sintaxis PHP 8.3 · 97 archivos, sin errores
 ✓ Sintaxis JavaScript · 65 archivos, sin errores
 ✓ Complementos (JS) · 20/20
-✓ Unidades (JS) · 24/24
+✓ Unidades (JS) · 26/26
 ✓ Funcionamiento sin conexión · 124 archivos, sin referencias externas
 ✓ Funcional PHP 8.1 · 327/327
 ✓ Funcional PHP 8.3 · 327/327
+✓ Golden numérico PHP 8.1 · 6/6
+✓ Golden numérico PHP 8.3 · 6/6
 ✓ Unidades PHP 8.1 · 22/22
 ✓ Unidades PHP 8.3 · 22/22
 ✓ Estabilidad PHP 8.1 · 45/45
@@ -839,7 +844,7 @@ Resultados esperados de la última ejecución completa:
 ✓ Android (APK) · 52/52
 ✓ Escritorio (Electron) · 40/40
 ✓ Paquetes y demo · 39/39
-20/20 pasos correctos
+22/22 pasos correctos
 ```
 
 Las pruebas trabajan sobre copias temporales: no escriben configuración ni bases en el repositorio. `node_modules` solo contiene dependencias de desarrollo y se excluye de los paquetes.
@@ -1021,6 +1026,26 @@ empaqueta sus pictogramas y sus equipos, los sube y los activa.
 Límites: **4 MB** por archivo, **400 elementos** por complemento, SVG de 40 bytes
 a 400 KB y 12 sinónimos por señal. Un complemento no certifica nada: sus
 elementos son referencias gráficas que se verifican en sitio.
+
+## Unidades y medidas
+
+Una unidad del lienzo equivale a la unidad declarada del plano (`mm`, `cm` o `m`),
+y **la escala `1:100` es una referencia de impresión: no interviene en ninguna
+medida**. Las conversiones viven en un solo sitio por lenguaje —`App\Core\Units`
+en PHP y `window.Normia.Units` en el editor— y el resto del código delega.
+
+- Tabla fuente en centímetros: `mm` 0,1 · `cm` 1 · `m` 100 por unidad. Así el
+  cálculo en `cm`, que es el de todos los planos actuales, no arrastra error de
+  coma flotante.
+- **No se redondea al convertir**: el redondeo es de presentación (auditor a 2
+  decimales, editor a 1).
+- Una unidad desconocida se interpreta como `cm`, sin romper planos antiguos.
+- **No se convierten** el grosor del trazo ni el tamaño del texto: son dibujo, no
+  medidas físicas.
+
+El detalle, los límites y el **defecto conocido de longitud de arcos** (el editor
+cuenta el arco y el cálculo de redes todavía no) están en
+[docs/DIMENSIONAL.md](docs/DIMENSIONAL.md).
 
 ## Cambios de la versión 1.18.0
 
