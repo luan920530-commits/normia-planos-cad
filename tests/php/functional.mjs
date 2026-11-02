@@ -922,6 +922,61 @@ echo json_encode([
     !/(href|src)="https?:/.test(res.text)
     && !/xlink:href="(?!#|data:image\/)/.test(res.text)
     && !/url\((?!#)/.test(res.text));
+
+  /* ------------------ escala física al exportar (NORMIA-006 §17 · DEC-8) ------------------
+   * El tamaño impreso depende de la escala elegida al exportar y de nada más. La
+   * geometría no se reescala: solo cambia la caja del SVG.
+   */
+  const svgRoute = `/index.php?r=projects/${projectId}/floors/${floorId}/export/svg`;
+  const design1 = (await json(`api/floors/${floorId}`)).body;
+  const escalaPlano = String(design1.design.canvas.scale || '1:100');
+  const denominadorPlano = Number(escalaPlano.split(':')[1]);
+  const anchoCm = Number(design1.design.canvas.width);
+  const planWidthMm = (svg) => Number((/data-plan-width-mm="([\d.]+)"/.exec(svg) || [])[1] || 0);
+  const sheetWidthMm = (svg) => Number((/width="([\d.]+)mm"/.exec(svg) || [])[1] || 0);
+  report.check('El SVG exportado trae su tamaño en milímetros, no píxeles',
+    /width="[\d.]+mm" height="[\d.]+mm"/.test(res.text) && res.text.includes(`data-scale="${escalaPlano}"`),
+    `${sheetWidthMm(res.text)} mm · ${escalaPlano}`);
+  report.check('El plano se dibuja a la escala del documento',
+    Math.abs(planWidthMm(res.text) - (anchoCm * 10) / denominadorPlano) < 0.02
+    && res.text.includes(`transform="scale(${Number((10 / denominadorPlano).toFixed(2))})"`),
+    `${planWidthMm(res.text)} mm para ${anchoCm} cm a ${escalaPlano}`);
+  const svgMedio = (await client.get(`${svgRoute}&escala=1:50`)).text;
+  const trazo = (svg) => (/<g data-element="[^"]+"[^>]*>[\s\S]{0,400}?<\/g>/.exec(svg) || [''])[0];
+  report.check('A 1:50 el mismo plano ocupa el doble y las coordenadas no cambian',
+    Math.abs(planWidthMm(svgMedio) - planWidthMm(res.text) * (denominadorPlano / 50)) < 0.05
+    && svgMedio.includes('data-scale="1:50"') && trazo(svgMedio) === trazo(res.text),
+    `${planWidthMm(res.text)} → ${planWidthMm(svgMedio)} mm`);
+  report.check('El pie imprime la escala elegida, no la guardada',
+    /Escala 1:50 ·/.test(svgMedio.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' '))
+    && /Escala [^ ]+ ·/.test(res.text.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ')),
+    (svgMedio.match(/Escala 1:50 ·/) || ['sin escala'])[0]);
+  report.check('El pie lleva barra de escala con su largo en papel',
+    /data-scale-bar="1" data-scale-bar-metres="\d+"/.test(res.text) && /mm<\/text>/.test(res.text),
+    (res.text.match(/Barra de escala · [^<]+/) || ['sin barra'])[0]);
+  const svgRaro = (await client.get(`${svgRoute}&escala=mitad`)).text;
+  report.check('Una escala que no se entiende vuelve a la del plano',
+    svgRaro.includes(`data-scale="${escalaPlano}"`), escalaPlano);
+  const despuesEscala = (await json(`api/floors/${floorId}`)).body;
+  report.check('Elegir escala al exportar no toca el documento guardado',
+    JSON.stringify(despuesEscala.design) === JSON.stringify(design1.design)
+    && despuesEscala.floor.version === design1.floor.version,
+    `v${despuesEscala.floor.version}`);
+  const printRoute = `/index.php?r=projects/${projectId}/floors/${floorId}/print`;
+  const print50 = await client.get(`${printRoute}&escala=1:50&hoja=a3h`);
+  report.check('La impresión deja elegir escala y hoja sin guardar nada',
+    print50.status === 200 && print50.text.includes('data-print-scale') && print50.text.includes('data-print-paper')
+    && print50.text.includes('@page { size: A3 landscape') && /value="1:50" selected/.test(print50.text)
+    && /value="a3h" selected/.test(print50.text),
+    `${print50.status} · A3 horizontal`);
+  report.check('La impresión dice cuánto mide el plano y si cabe en la hoja',
+    /data-print-size/.test(print50.text) && /el plano mide/.test(print50.text)
+    && /Cabe en|No cabe en la hoja/.test(print50.text),
+    (print50.text.match(/Escala <strong>[^<]+<\/strong>[^<]*/) || [''])[0].replace(/<[^>]+>/g, ' '));
+  const printAjustada = await client.get(`${printRoute}&hoja=a4h`);
+  report.check('La vista de impresión ofrece la escala mayor que cabe',
+    /data-print-fit/.test(printAjustada.text) || /Cabe en/.test(printAjustada.text),
+    (printAjustada.text.match(/Ajustar a la hoja · 1:\d+/) || ['ya cabe'])[0]);
   report.check('SVG con pictogramas embebidos', res.text.includes('<svg x=') && res.text.includes('data-layer='));
   const footerSvg = res.text;
   const footerCells = [...footerSvg.matchAll(/data-footer-cell="([a-z]+)"/g)].map((match) => match[1]);

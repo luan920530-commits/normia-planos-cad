@@ -13,7 +13,64 @@ final class SvgExporter
 {
     private static int $assetSequence = 0;
 
-    public static function render(array $design, array $meta = [], bool $withFrame = true): string
+    /**
+     * Ancho virtual del marco (pie, leyenda y perfiles), en unidades propias.
+     *
+     * El marco **no se dibuja a la escala del plano**: si lo hiciera, a 1:500 la
+     * letra del pie mediría medio milímetro. Se dibuja en un lienzo de 1 200
+     * unidades y se mapea al ancho del papel, así su tamaño en milímetros no
+     * depende de la escala elegida.
+     */
+    public const FRAME_WIDTH = 1200.0;
+
+    /** Ancho mínimo de la hoja, en milímetros: debajo, el pie no es legible. */
+    public const MIN_SHEET_MM = 190.0;
+
+    /** Escalas de impresión que se ofrecen en la vista de impresión. */
+    public const SCALES = ['1:20', '1:25', '1:50', '1:75', '1:100', '1:125', '1:150', '1:200', '1:250', '1:500', '1:1000'];
+
+    /**
+     * Tamaño de la hoja que produce `render()` con marco, en milímetros.
+     *
+     * Lo usan la vista de impresión y las pruebas para saber si un plano cabe en
+     * la hoja elegida sin tener que analizar el SVG. `planWidthMm` y
+     * `planHeightMm` son el dibujo a la escala pedida; `widthMm` y `heightMm`
+     * incluyen el marco y el ancho mínimo legible.
+     *
+     * @param array<string,mixed> $design
+     * @return array{widthMm:float,heightMm:float,planWidthMm:float,planHeightMm:float,frameHeightMm:float,denominator:float,mmPerCm:float,scale:string}
+     */
+    public static function sheet(array $design, ?string $scale = null): array
+    {
+        $canvas = is_array($design['canvas'] ?? null) ? $design['canvas'] : [];
+        $requested = $scale ?? (string) ($canvas['scale'] ?? '');
+        $denominator = Units::scaleDenominator($requested) ?? 100.0;
+        $label = '1:' . (int) $denominator;
+        $mmPerCm = 10.0 / $denominator;
+        $planWidthMm = (float) ($canvas['width'] ?? 0) * $mmPerCm;
+        $planHeightMm = (float) ($canvas['height'] ?? 0) * $mmPerCm;
+        $widthMm = max(self::MIN_SHEET_MM, $planWidthMm);
+        $frameScale = $widthMm / self::FRAME_WIDTH;
+        $frameUnits = self::frameUnits($design, $frameScale);
+        $frameHeightMm = $frameUnits * $frameScale;
+        return [
+            'widthMm' => round($widthMm, 2),
+            'heightMm' => round($planHeightMm + $frameHeightMm + 2.0, 2),
+            'planWidthMm' => round($planWidthMm, 2),
+            'planHeightMm' => round($planHeightMm, 2),
+            'frameHeightMm' => round($frameHeightMm, 2),
+            'denominator' => $denominator,
+            'mmPerCm' => $mmPerCm,
+            'scale' => $label,
+        ];
+    }
+
+    /**
+     * @param array<string,mixed> $design
+     * @param array<string,mixed> $meta
+     * @param array{scale?:string,papel?:string} $options escala pedida, sin tocar el documento
+     */
+    public static function render(array $design, array $meta = [], bool $withFrame = true, array $options = []): string
     {
         $canvas = $design['canvas'];
         $width = (float) $canvas['width'];
@@ -22,14 +79,16 @@ final class SvgExporter
         $mepItems = $withFrame ? self::mepLegend($design) : [];
         $mepColumns = $mepItems === [] ? 1 : self::legendColumns($width);
         $mepRows = $mepItems === [] ? [] : array_chunk($mepItems, $mepColumns);
-        $footer = $withFrame ? PlanFooter::payload($design, $meta) : null;
-        $bandHeight = $withFrame ? PlanFooter::bandHeight($width) : 0.0;
-        $dataHeight = $withFrame ? PlanFooter::dataHeight($width, (array) $footer) : 0.0;
+        $sheet = $withFrame ? self::sheet($design, $options['scale'] ?? null) : null;
+        $footer = $withFrame
+            ? PlanFooter::payload($design, $meta + ['print_scale' => (string) ($sheet['scale'] ?? '')])
+            : null;
+        $frameWidth = $withFrame ? self::FRAME_WIDTH : $width;
+        $bandHeight = $withFrame ? PlanFooter::bandHeight($frameWidth) : 0.0;
+        $dataHeight = $withFrame ? PlanFooter::dataHeight($frameWidth, (array) $footer, self::scaleInfo($sheet)) : 0.0;
         $mepHeight = $withFrame && $mepRows !== [] ? 10.0 + 15.0 * count($mepRows) : 0.0;
         $profileRoads = $withFrame ? self::profileRoads($design) : [];
         $profileHeight = $profileRoads === [] ? 0.0 : 8.0 + 42.0 * count($profileRoads);
-        $frameHeight = $withFrame ? 2.0 + $bandHeight + $dataHeight + $mepHeight + $profileHeight + 8.0 : 0.0;
-        $totalHeight = $height + $frameHeight;
         $title = trim((string) ($meta['floor_name'] ?? 'Plano de emergencia'));
         $project = trim((string) ($meta['project_name'] ?? ''));
         $scale = (string) $canvas['scale'];
@@ -37,13 +96,100 @@ final class SvgExporter
         $unit = Units::GEOMETRY_UNIT;
 
         $svg = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
-        $svg .= '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="' . self::n($width) . '" height="' . self::n($totalHeight) . '" '
-            . 'viewBox="0 0 ' . self::n($width) . ' ' . self::n($totalHeight) . '" role="img" aria-label="' . self::x($title) . '">' . "\n";
+        if ($withFrame && $sheet !== null) {
+            /* Hoja física: el `viewBox` está en milímetros de papel y el plano se
+               adentra con una transformación de escala. Así un muro de 4,20 m mide
+               42 mm en un 1:100 y 84 mm en un 1:50 sin que cambie una coordenada
+               del documento. */
+            $svg .= '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="' . self::n($sheet['widthMm']) . 'mm" height="' . self::n($sheet['heightMm']) . 'mm" '
+                . 'viewBox="0 0 ' . self::n($sheet['widthMm']) . ' ' . self::n($sheet['heightMm']) . '" data-scale="' . self::x((string) $sheet['scale']) . '" data-plan-width-mm="' . self::n($sheet['planWidthMm']) . '" data-plan-height-mm="' . self::n($sheet['planHeightMm']) . '" '
+                . 'role="img" aria-label="' . self::x($title) . '">' . "\n";
+        } else {
+            $totalHeight = $height;
+            $svg .= '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="' . self::n($width) . '" height="' . self::n($totalHeight) . '" '
+                . 'viewBox="0 0 ' . self::n($width) . ' ' . self::n($totalHeight) . '" role="img" aria-label="' . self::x($title) . '">' . "\n";
+        }
         $svg .= '<title>' . self::x($title . ($project !== '' ? ' · ' . $project : '')) . '</title>' . "\n";
         $svg .= '<desc>Representación esquemática de un plano de emergencia. Las dimensiones y la escala deben verificarse en sitio.</desc>' . "\n";
         $svg .= '<rect width="100%" height="100%" fill="#ffffff"/>' . "\n";
-        $svg .= '<g id="plano">' . "\n";
 
+        $plan = self::plan($design, $canvas);
+        if ($withFrame && $sheet !== null) {
+            $svg .= '<g id="plano" transform="scale(' . self::n((float) $sheet['mmPerCm'], 6) . ')">' . "\n" . $plan . '</g>' . "\n";
+            $frameTop = (float) $sheet['planHeightMm'] + 2.0;
+            $frameScale = (float) $sheet['widthMm'] / self::FRAME_WIDTH;
+            $svg .= '<g id="leyenda" data-frame="1" transform="translate(0 ' . self::n($frameTop) . ') scale(' . self::n($frameScale, 6) . ')"'
+                . ' font-family="Helvetica, Arial, sans-serif">' . "\n";
+            $svg .= '<line x1="0" y1="0.5" x2="' . self::n(self::FRAME_WIDTH) . '" y2="0.5" stroke="#e2e8f0" stroke-width="1"/>' . "\n";
+            $svg .= PlanFooter::render(self::FRAME_WIDTH, 2.0, (array) $footer, self::scaleInfo($sheet));
+            $mepTop = 2.0 + $bandHeight + $dataHeight;
+            foreach ($mepRows as $rowIndex => $row) {
+                $rowY = $mepTop + 12 + 15 * $rowIndex;
+                foreach ($row as $columnIndex => $item) {
+                    $itemX = PlanFooter::PAD + self::legendColumnWidth(self::FRAME_WIDTH) * $columnIndex;
+                    $svg .= '<g data-mep-legend="' . self::x($item['key']) . '">';
+                    $svg .= '<line x1="' . self::n($itemX) . '" y1="' . self::n($rowY - 3) . '" x2="' . self::n($itemX + 20) . '" y2="' . self::n($rowY - 3) . '" stroke="' . self::x($item['color']) . '" stroke-width="2.4" stroke-linecap="round"'
+                        . ($item['dash'] !== '' ? ' stroke-dasharray="' . self::x($item['dash']) . '"' : '') . '/>';
+                    $svg .= '<text x="' . self::n($itemX + 26) . '" y="' . self::n($rowY) . '" font-size="9" fill="#475569">' . self::x($item['text']) . '</text>';
+                    $svg .= '</g>' . "\n";
+                }
+            }
+            if ($profileRoads !== []) {
+                $svg .= self::roadProfiles($profileRoads, self::FRAME_WIDTH, $mepTop + $mepHeight + 4);
+            }
+            $svg .= '</g>' . "\n";
+        } else {
+            $svg .= '<g id="plano">' . "\n" . $plan . '</g>' . "\n";
+        }
+
+        $svg .= '</svg>' . "\n";
+        return $svg;
+    }
+
+    /**
+     * Datos de la barra de escala para el pie: denominador, milímetros que ocupa
+     * una unidad del marco y el ancho de hoja. Sin esto el pie no puede dibujar
+     * una barra que sea cierta al imprimir.
+     *
+     * @param array{mmPerCm:float,widthMm:float,denominator:float}|null $sheet
+     * @return array{denominator:float,mmPerUnit:float}|null
+     */
+    private static function scaleInfo(?array $sheet): ?array
+    {
+        if ($sheet === null) {
+            return null;
+        }
+        return [
+            'denominator' => (float) $sheet['denominator'],
+            'mmPerUnit' => (float) $sheet['widthMm'] / self::FRAME_WIDTH,
+        ];
+    }
+
+    /**
+     * Alto del marco, en sus unidades (1 200 de ancho).
+     *
+     * @param array<string,mixed> $design
+     */
+    private static function frameUnits(array $design, float $mmPerUnit): float
+    {
+        $footer = PlanFooter::payload($design, []);
+        $mepItems = self::mepLegend($design);
+        $mepHeight = $mepItems === [] ? 0.0 : 10.0 + 15.0 * count(array_chunk($mepItems, self::legendColumns(self::FRAME_WIDTH)));
+        $profiles = self::profileRoads($design);
+        $profileHeight = $profiles === [] ? 0.0 : 8.0 + 42.0 * count($profiles);
+        return 2.0 + PlanFooter::bandHeight(self::FRAME_WIDTH)
+            + PlanFooter::dataHeight(self::FRAME_WIDTH, $footer, ['denominator' => 100, 'mmPerUnit' => max(0.0001, $mmPerUnit)])
+            + $mepHeight + $profileHeight + 8.0;
+    }
+
+    /**
+     * Capas y elementos del plano, en centímetros del documento.
+     *
+     * @param array<string,mixed> $design
+     * @param array<string,mixed> $canvas
+     */
+    private static function plan(array $design, array $canvas): string
+    {
         $visibleLayers = [];
         foreach ($design['layers'] as $layer) {
             if (($layer['visible'] ?? true) === true) {
@@ -57,6 +203,7 @@ final class SvgExporter
             }
             $byLayer[$element['layerId']][] = $element;
         }
+        $svg = '';
         foreach ($design['layers'] as $layer) {
             if (!isset($byLayer[$layer['id']])) {
                 continue;
@@ -67,31 +214,6 @@ final class SvgExporter
             }
             $svg .= '</g>' . "\n";
         }
-        $svg .= '</g>' . "\n";
-
-        if ($withFrame) {
-            $svg .= '<g id="leyenda" font-family="Helvetica, Arial, sans-serif">' . "\n";
-            $svg .= '<line x1="0" y1="' . self::n($height + 0.5) . '" x2="' . self::n($width) . '" y2="' . self::n($height + 0.5) . '" stroke="#e2e8f0" stroke-width="1"/>' . "\n";
-            $svg .= PlanFooter::render($width, $height + 2, (array) $footer);
-            $mepTop = $height + 2 + $bandHeight + $dataHeight;
-            foreach ($mepRows as $rowIndex => $row) {
-                $rowY = $mepTop + 12 + 15 * $rowIndex;
-                foreach ($row as $columnIndex => $item) {
-                    $itemX = PlanFooter::PAD + self::legendColumnWidth($width) * $columnIndex;
-                    $svg .= '<g data-mep-legend="' . self::x($item['key']) . '">';
-                    $svg .= '<line x1="' . self::n($itemX) . '" y1="' . self::n($rowY - 3) . '" x2="' . self::n($itemX + 20) . '" y2="' . self::n($rowY - 3) . '" stroke="' . self::x($item['color']) . '" stroke-width="2.4" stroke-linecap="round"'
-                        . ($item['dash'] !== '' ? ' stroke-dasharray="' . self::x($item['dash']) . '"' : '') . '/>';
-                    $svg .= '<text x="' . self::n($itemX + 26) . '" y="' . self::n($rowY) . '" font-size="9" fill="#475569">' . self::x($item['text']) . '</text>';
-                    $svg .= '</g>' . "\n";
-                }
-            }
-            $svg .= '</g>' . "\n";
-            if ($profileRoads !== []) {
-                $svg .= self::roadProfiles($profileRoads, $width, $mepTop + $mepHeight + 4);
-            }
-        }
-
-        $svg .= '</svg>' . "\n";
         return $svg;
     }
 
@@ -1043,9 +1165,9 @@ final class SvgExporter
         return text_limit($parts[0] ?? '', 60);
     }
 
-    private static function n(float|int $value): string
+    private static function n(float|int $value, int $decimals = 2): string
     {
-        $text = rtrim(rtrim(number_format((float) $value, 2, '.', ''), '0'), '.');
+        $text = rtrim(rtrim(number_format((float) $value, max(0, $decimals), '.', ''), '0'), '.');
         return $text === '' || $text === '-0' ? '0' : $text;
     }
 

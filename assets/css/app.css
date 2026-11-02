@@ -77,53 +77,90 @@ p { margin: 0; }
 /* ---------------------------- estructura ---------------------------- */
 .app-shell { min-height: 100vh; display: flex; flex-direction: column; }
 
+/* Barra flotante: una pastilla translúcida que se queda arriba, el apartado
+   actual en relieve y las acciones a la derecha. Todo en CSS, sin scripts y sin
+   dependencias: el relieve del apartado lo decide el servidor. */
 .site-header {
   position: sticky; top: 0; z-index: 40;
-  display: flex; align-items: center; justify-content: space-between; gap: 18px;
-  padding: 10px clamp(16px, 4vw, 44px);
-  background: rgba(255, 255, 255, .82);
-  backdrop-filter: saturate(180%) blur(18px);
-  -webkit-backdrop-filter: saturate(180%) blur(18px);
-  border-bottom: 1px solid rgba(226, 232, 240, .9);
+  padding: 10px clamp(12px, 3vw, 28px) 6px;
+  background: linear-gradient(180deg, rgba(244, 246, 250, .96), rgba(244, 246, 250, .62) 64%, rgba(244, 246, 250, 0));
 }
-.site-header .brand { display: flex; align-items: center; gap: 10px; color: var(--ink); }
+.site-header-inner {
+  width: 100%; max-width: 1180px; margin: 0 auto;
+  display: flex; align-items: center; gap: 14px;
+  padding: 7px 9px 7px 11px; border-radius: 18px;
+  background: rgba(255, 255, 255, .88);
+  border: 1px solid rgba(226, 232, 240, .78);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, .05), 0 16px 36px -24px rgba(15, 23, 42, .55), inset 0 1px 0 rgba(255, 255, 255, .92);
+  -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px);
+}
+.site-header .brand { display: flex; align-items: center; gap: 11px; color: var(--ink); flex: 0 0 auto; padding-right: 4px; }
 .site-header .brand:hover { text-decoration: none; }
 .brand-mark {
   position: relative; isolation: isolate;
-  width: 38px; height: 38px; display: grid; place-items: center;
-  border-radius: 30%;
-  background: radial-gradient(120% 90% at 30% 0%, rgba(255, 255, 255, .16), rgba(11, 18, 32, .92) 60%);
-  box-shadow: 0 6px 18px rgba(8, 23, 48, .32), inset 0 1px 0 rgba(255, 255, 255, .22);
+  width: 36px; height: 36px; display: grid; place-items: center;
+  border-radius: 12px;
+  background: radial-gradient(120% 92% at 28% -10%, rgba(255, 255, 255, .2), rgba(11, 18, 32, .95) 62%);
+  box-shadow: 0 6px 16px -6px rgba(8, 23, 48, .55), inset 0 1px 0 rgba(255, 255, 255, .22);
   transition: transform .4s cubic-bezier(.34, 1.56, .64, 1), box-shadow .3s ease;
 }
 .brand-mark img {
-  width: 34px; height: 34px; display: block; object-fit: contain;
+  width: 32px; height: 32px; display: block; object-fit: contain;
   filter: drop-shadow(0 2px 4px rgba(3, 16, 38, .45));
 }
-a.brand:hover .brand-mark { transform: translateY(-1px) scale(1.04); box-shadow: 0 10px 24px rgba(8, 23, 48, .36), inset 0 1px 0 rgba(255, 255, 255, .3); }
+a.brand:hover .brand-mark { transform: translateY(-1px) scale(1.04); box-shadow: 0 10px 22px -8px rgba(8, 23, 48, .6), inset 0 1px 0 rgba(255, 255, 255, .3); }
 .brand-mark::after {
   content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
-  background: linear-gradient(180deg, rgba(255, 255, 255, .16), rgba(255, 255, 255, 0) 46%);
+  background: linear-gradient(180deg, rgba(255, 255, 255, .18), rgba(255, 255, 255, 0) 46%);
 }
 .brand-mark .icon { position: relative; z-index: 1; }
-.brand-text { display: flex; flex-direction: column; line-height: 1.15; }
-.brand-text strong { font-size: .98rem; letter-spacing: -.01em; }
-.brand-text small { color: var(--muted); font-size: .72rem; letter-spacing: .02em; text-transform: uppercase; }
-.site-nav { display: flex; align-items: center; gap: 4px; }
+.brand-text { display: flex; flex-direction: column; line-height: 1.08; }
+.brand-text strong { font-size: 1rem; letter-spacing: -.02em; }
+.brand-text small { color: var(--muted); font-size: .62rem; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; }
+
+/* Control segmentado: fondo hundido, pastilla blanca en el apartado actual. */
+.site-nav {
+  display: flex; align-items: center; gap: 2px; margin-left: auto;
+  padding: 3px; border-radius: 13px;
+  background: rgba(241, 245, 249, .92);
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, .06);
+  max-width: 100%; overflow-x: auto; scrollbar-width: none;
+}
+.site-nav::-webkit-scrollbar { display: none; }
 .nav-link {
-  display: inline-flex; align-items: center; gap: 7px;
-  padding: 8px 12px; border-radius: 10px; color: var(--ink-soft);
-  font-size: .9rem; font-weight: 600;
+  display: inline-flex; align-items: center; gap: 7px; flex: 0 0 auto;
+  padding: 7px 11px; border-radius: 10px; color: var(--ink-soft);
+  font-size: .875rem; font-weight: 600; white-space: nowrap;
+  border: 1px solid transparent;
 }
-.nav-link:hover { background: var(--surface-sunken); text-decoration: none; }
-.nav-link.is-active { background: var(--blue-soft); color: var(--blue-strong); }
-.nav-link .icon { width: 18px; height: 18px; }
-.site-header .account-chip { display: flex; align-items: center; gap: 10px; }
+.nav-link:hover { background: rgba(255, 255, 255, .78); color: var(--ink); text-decoration: none; }
+.nav-link.is-active {
+  background: var(--surface); color: var(--blue-strong);
+  border-color: rgba(255, 255, 255, .9);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, .12), 0 2px 8px -3px rgba(15, 23, 42, .22);
+}
+.nav-link.is-active .icon { color: var(--blue); }
+.nav-link .icon { width: 17px; height: 17px; opacity: .92; }
+/* «Nuevo» es una acción, no un apartado: se distingue sin gritar. */
+.nav-link-primary { color: var(--blue-strong); }
+.nav-link-primary .icon { color: var(--blue); }
+.nav-link-primary:hover { background: var(--blue-soft); }
+
+.account-menu { display: flex; align-items: center; gap: 2px; flex: 0 0 auto; padding-left: 10px; border-left: 1px solid var(--line); }
+.site-header .account-chip {
+  display: flex; align-items: center; gap: 9px;
+  padding: 3px 9px 3px 3px; border-radius: 999px; color: var(--ink);
+}
+.site-header .account-chip:hover { background: var(--surface-sunken); text-decoration: none; }
 .avatar {
-  width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center;
-  background: linear-gradient(150deg, #dfe9ff, #c7d9ff); color: #1d4ed8; font-weight: 700; font-size: .82rem;
+  width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center;
+  background: linear-gradient(150deg, #e9f1ff, #c9dbff); color: #1d4ed8;
+  font-weight: 700; font-size: .8rem; letter-spacing: 0;
+  box-shadow: inset 0 0 0 1px rgba(29, 78, 216, .14);
+  transition: transform .28s cubic-bezier(.34, 1.4, .64, 1);
 }
-.account-name { font-size: .86rem; font-weight: 600; color: var(--ink-soft); max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.site-header .account-chip:hover .avatar { transform: scale(1.05); }
+.account-name { font-size: .85rem; font-weight: 600; color: var(--ink-soft); max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .app-main { flex: 1; width: 100%; max-width: 1180px; margin: 0 auto; padding: clamp(22px, 4vw, 40px) clamp(16px, 4vw, 44px) 56px; }
 .app-main.narrow-page { max-width: 620px; }
@@ -475,19 +512,26 @@ kbd { font-family: var(--font-mono); font-size: .74rem; background: var(--surfac
 .visually-hidden { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
 /* ---------------------------- responsive ---------------------------- */
+@media (max-width: 1040px) {
+  .account-name { display: none; }
+  .site-header .account-chip { padding-right: 3px; }
+}
 @media (max-width: 900px) {
   .install-grid, .import-block { grid-template-columns: minmax(0, 1fr); }
-  .site-header { gap: 10px; }
-  .account-name { display: none; }
+  .site-header-inner { gap: 8px; }
+  .site-nav .nav-link span { display: none; }
+  .site-nav .nav-link { padding: 9px; }
+  .brand-text small { display: none; }
 }
 @media (max-width: 640px) {
   body { font-size: 14.5px; }
-  .site-nav .nav-link span { display: none; }
-  .site-nav .nav-link { padding: 8px; }
   .dashboard-hero h1, .project-head-main h1 { font-size: 1.5rem; }
   .project-grid { grid-template-columns: minmax(0, 1fr); }
-  .site-header { padding: 9px 14px; }
-  .brand-text small { display: none; }
+  .site-header { padding: 8px 10px 4px; }
+  .site-header-inner { padding: 6px 7px 6px 9px; border-radius: 16px; }
+  .brand-mark { width: 32px; height: 32px; border-radius: 10px; }
+  .brand-mark img { width: 28px; height: 28px; }
+  .brand-text strong { font-size: .94rem; }
   .app-main { padding: 18px 14px 40px; }
 }
 @media (prefers-reduced-motion: reduce) {

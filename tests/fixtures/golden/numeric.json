@@ -1770,8 +1770,8 @@
         "warnings.__vacío": 0
       },
       "svg": {
-        "sha256": "8e042920459f0d4d7051eee9ae749cd745df94f32529fdb479023c23d5d635ab",
-        "bytes": 97324
+        "sha256": "7c1514d0b8b5a68aec7654038e03dd00848e5e84107e233373c42816437f699a",
+        "bytes": 98395
       }
     },
     "piso2": {
@@ -2781,8 +2781,8 @@
         "warnings.__vacío": 0
       },
       "svg": {
-        "sha256": "c365f78c7bffa8494585a6dc265ad518bb9ca447e2fdfb21c93d92d41b5a9f03",
-        "bytes": 45518
+        "sha256": "7693678768f9b2eabb3111ecf4f779950d4c34cf6d686e0727216d5395b753b1",
+        "bytes": 46494
       }
     },
     "piso3": {
@@ -4800,8 +4800,8 @@
         "warnings.__vacío": 0
       },
       "svg": {
-        "sha256": "c68fcce6f296b325a76a20df55d40c033db2053b9a31687565afb5fc7e5478b8",
-        "bytes": 69212
+        "sha256": "0f78377386f817bec298cbc10b9ad414798ab64802e2f87893da1198cde93724",
+        "bytes": 70209
       }
     },
     "piso4": {
@@ -6569,8 +6569,8 @@
         "warnings.__vacío": 0
       },
       "svg": {
-        "sha256": "6b176d9eb219f459f7f7da2b8159902a66182aee68bd87c6c4b67393dfee53ab",
-        "bytes": 50857
+        "sha256": "06f4dd56d4b5b84d70bf9c5e6ddb42ba12ea77217d0ae687f0e53559ca13300d",
+        "bytes": 51830
       }
     }
   },

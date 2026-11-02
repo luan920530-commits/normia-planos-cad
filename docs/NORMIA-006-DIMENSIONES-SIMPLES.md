@@ -10,7 +10,7 @@ pueda dibujar, anotar medidas y recibir cálculos sin aprender metrología.
 | Base | `bddc2dc` (NORMIA-005 entregado, PR #56 abierto) |
 | Reemplaza en parte | [`NORMIA-005-CALIBRACION-DIMENSIONAL.md`](NORMIA-005-CALIBRACION-DIMENSIONAL.md) — §8 de trazabilidad |
 | Alcance | **3.A a 3.J** — los nueve apartados, recibidos el 2026-11-02 |
-| Estado | **diseño completo**; DEC-1, DEC-2, DEC-5 y DEC-6 implementadas en la 1.19.0 (§26); **aforo calculado y publicado** en la 1.20.0 (§27); **ajuste global por mediana** en la 1.21.0 (§28); DEC-7 a DEC-12 pendientes |
+| Estado | **diseño completo**; DEC-1, DEC-2, DEC-5 y DEC-6 implementadas en la 1.19.0 (§26); **aforo calculado y publicado** en la 1.20.0 (§27); **ajuste global por mediana** en la 1.21.0 (§28); **escala física al exportar (DEC-8)** en la 1.22.0 (§29); DEC-7 y DEC-9 a DEC-12 pendientes |
 
 ---
 
@@ -665,6 +665,10 @@ la unidad destino, que hoy no ocurre en ningún plano de edificio.
 Recomendación: **sí**, con `measuredM` + `quality` por elemento.
 Alternativa: un factor global editable a mano. Es más barato de implementar y es
 exactamente el número mágico que la misión quiere quitar de la vista del usuario.
+
+**DEC-8 · La escala se elige al exportar y no se guarda.** *(aprobada así en la
+1.22.0, §29)* El documento no cambia al imprimir a otra escala; `canvas.scale` es
+solo la sugerencia inicial.
 
 **DEC-3 · El ajuste global es una acción, no un estado.**
 Recomendación: **sí**: mediana, vista previa, deshacer y nota de versión, sin
@@ -1453,7 +1457,9 @@ Por qué este orden y no otro:
 
 ## 24. Decisiones pendientes (DEC-7 a DEC-12)
 
-Ninguna de estas seis está aprobada. Las anteriores, DEC-1 a DEC-6, sí (§10.2).
+**DEC-8 quedó aprobada el 2026-11-02** y se implementó en la 1.22.0 (§29). Las
+otras cinco (DEC-7, DEC-9, DEC-10, DEC-11 y DEC-12) siguen sin aprobar. Las
+anteriores, DEC-1 a DEC-6, sí (§10.2).
 
 **DEC-7 · No crear el tipo «ventana» todavía.**
 Recomendación: **sí**, la ventana se dibuja como muro con rótulo hasta que haya un
@@ -1462,9 +1468,9 @@ uso real (un pliego de ventanas). Alternativa: crear `window` ahora con `format:
 
 **DEC-8 · La escala de impresión se elige al exportar, no en el documento.**
 Recomendación: **sí**: `canvas.scale` queda como sugerencia y la exportación
-propone 1:50, 1:100, 1:200 y 1:500. Alternativa: guardar la escala de impresión en
-el documento — la vuelve un estado que se queda viejo cada vez que cambia el
-tamaño del plano.
+propone 1:20 a 1:1000. Alternativa: guardar la escala de impresión en el
+documento — la vuelve un estado que se queda viejo cada vez que cambia el tamaño
+del plano. **Implementada en la 1.22.0; ver §29.**
 
 **DEC-9 · `canvas.occupancy` pasa a ser «máximo declarado del piso», con fuente.**
 Recomendación: **sí**, conservando el número y añadiendo la fuente en
@@ -1723,3 +1729,64 @@ con sus dos botones, y un plano abierto que conserva sus medidas), golden **8/8*
 con 6 504 valores —el ajuste es del editor y no mueve ninguna cifra del
 servidor—. Sin verificar: el aspecto del bloque en pantalla real y el ajuste sobre
 documentos de obra grandes.
+
+## 29. Escala física al exportar (1.22.0 · DEC-8)
+
+Etapa 4, quinta entrega. Hasta aquí el «1:100» del plano era decorativo: el SVG
+salía en unidades del lienzo, el navegador las leía como píxeles y la impresión
+recortaba a lo que cupiera. Ahora **el SVG tiene tamaño de papel** y la escala se
+elige al exportar.
+
+### 29.1 El modelo, en tres magnitudes que ya no se mezclan
+
+| Magnitud | Unidad | De qué depende |
+| --- | --- | --- |
+| Dimensión real | metros | lo que se midió (§5) |
+| Tamaño del dibujo | milímetros de papel | dimensión ÷ escala |
+| Escala de impresión | `1:N` | lo que se elige al exportar |
+
+`viewBox` va en milímetros de papel y el plano se adentra con
+`transform="scale(10 / N)"`: un muro de 4,20 m mide **42 mm en 1:100** y **84 mm en
+1:50**, sin que cambie **ni una coordenada** del documento. El mismo plano produce
+cualquier escala sin guardar nada distinto.
+
+### 29.2 Qué se ve
+
+| Dónde | Qué |
+| --- | --- |
+| SVG exportado (`…/export/svg`) | `width`/`height` en `mm`, `data-scale="1:N"`, `data-plan-width-mm` y `data-plan-height-mm` |
+| `?escala=1:50` en esa ruta | la misma exportación a otra escala; lo que no se entiende vuelve a la del plano |
+| Vista de impresión (`…/print`) | selector de **escala** y de **hoja** (A4/A3, horizontal o vertical), el ancho y alto que tendrá el plano en papel, si cabe, y el botón **Ajustar a la hoja** con la escala mayor que entra |
+| Pie del plano | la escala **impresa** (no la guardada) y una **barra de escala** con su largo en milímetros, que es lo único que sigue siendo cierto si alguien imprime al 97 % |
+| Impresión | `@page` según la hoja elegida y el SVG a tamaño real: el CSS ya no lo estira |
+
+### 29.3 Decisiones que van con esto
+
+- **El pie no se dibuja a la escala del plano.** Si lo hiciera, a 1:500 la letra
+  mediría medio milímetro. Se dibuja en un lienzo fijo de 1 200 unidades que se
+  mapea al ancho de la hoja, así que su tamaño en milímetros no depende de `N`.
+- **Ancho mínimo de hoja de 190 mm.** Si el plano es más estrecho que eso a la
+  escala pedida, la hoja se completa con blanco para que el pie siga siendo
+  legible. No se agranda el dibujo: eso sería cambiar la escala a escondidas.
+- **Nunca se reescala el documento.** Elegir escala u hoja no guarda nada, no
+  crea versión y no toca `canvas.scale`. Si se cierra la vista sin imprimir, todo
+  está como estaba.
+- **No se elige sola.** «Ajustar a la hoja» es un botón; la vista no cambia la
+  escala por su cuenta.
+- **La impresión del navegador puede estropearlo.** Si el diálogo imprime
+  «ajustar a la página», la escala se pierde; la vista lo advierte y la barra del
+  pie lo permite comprobar con una regla.
+
+### 29.4 Pruebas
+
+Funcional **353** (tamaño en milímetros, plano a la escala del documento, 1:50
+mide el doble con coordenadas idénticas, pie con la escala impresa y su barra,
+escala inválida que vuelve a la del plano, el documento no cambia, y la vista de
+impresión con escala, hoja, aviso de recorte y «ajustar a la hoja»), interfaz
+**406** y **54** de páginas (la cabecera nueva), golden **8/8** con 6 504 valores.
+En el golden **solo cambian los cuatro SVG** (+1 KB cada uno: la caja en
+milímetros, la transformación y la barra); ninguna cifra del auditor, de la
+cobertura ni de las redes se mueve.
+
+Sin verificar: la medida con regla sobre papel real —aquí no hay impresora— y el
+diálogo de impresión de cada navegador.

@@ -42,35 +42,36 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 23. [Guía de primeros pasos](#guía-de-primeros-pasos)
 24. [Complementos](#complementos)
 25. [Unidades y medidas](#unidades-y-medidas)
-26. [Cambios de la versión 1.21.0](#cambios-de-la-versión-1210)
-27. [Cambios de la versión 1.20.0](#cambios-de-la-versión-1200)
-28. [Cambios de la versión 1.19.0](#cambios-de-la-versión-1190)
-29. [Cambios de la versión 1.18.0](#cambios-de-la-versión-1180)
-30. [Cambios de la versión 1.17.0](#cambios-de-la-versión-1170)
-31. [Cambios de la versión 1.16.0](#cambios-de-la-versión-1160)
-32. [Cambios de la versión 1.15.9](#cambios-de-la-versión-1159)
-33. [Cambios de la versión 1.15.8](#cambios-de-la-versión-1158)
-34. [Cambios de la versión 1.15.7](#cambios-de-la-versión-1157)
-35. [Cambios de la versión 1.15.6](#cambios-de-la-versión-1156)
-36. [Cambios de la versión 1.15.5](#cambios-de-la-versión-1155)
-37. [Cambios de la versión 1.15.4](#cambios-de-la-versión-1154)
-38. [Cambios de la versión 1.15.3](#cambios-de-la-versión-1153)
-39. [Cambios de la versión 1.15.2](#cambios-de-la-versión-1152)
-40. [Cambios de la versión 1.15.1](#cambios-de-la-versión-1151)
-41. [Cambios de la versión 1.15.0](#cambios-de-la-versión-1150)
-42. [Cambios de la versión 1.14.2](#cambios-de-la-versión-1142)
-43. [Cambios de la versión 1.14.1](#cambios-de-la-versión-1141)
-44. [Cambios de la versión 1.14.0](#cambios-de-la-versión-1140)
-45. [Cambios de la versión 1.13.0](#cambios-de-la-versión-1130)
-46. [Cambios de la versión 1.12.0](#cambios-de-la-versión-1120)
-47. [Cambios de la versión 1.11.1](#cambios-de-la-versión-1111)
-48. [Cambios de la versión 1.11.0](#cambios-de-la-versión-1110)
-49. [Cambios de la versión 1.10.0](#cambios-de-la-versión-1100)
-50. [Cambios de la versión 1.9.0](#cambios-de-la-versión-190)
-51. [Cambios de la versión 1.8.0](#cambios-de-la-versión-180)
-52. [Paquetes y verificación](#paquetes-y-verificación)
-53. [Limitaciones](#limitaciones)
-54. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
+26. [Cambios de la versión 1.22.0](#cambios-de-la-versión-1220)
+27. [Cambios de la versión 1.21.0](#cambios-de-la-versión-1210)
+28. [Cambios de la versión 1.20.0](#cambios-de-la-versión-1200)
+29. [Cambios de la versión 1.19.0](#cambios-de-la-versión-1190)
+30. [Cambios de la versión 1.18.0](#cambios-de-la-versión-1180)
+31. [Cambios de la versión 1.17.0](#cambios-de-la-versión-1170)
+32. [Cambios de la versión 1.16.0](#cambios-de-la-versión-1160)
+33. [Cambios de la versión 1.15.9](#cambios-de-la-versión-1159)
+34. [Cambios de la versión 1.15.8](#cambios-de-la-versión-1158)
+35. [Cambios de la versión 1.15.7](#cambios-de-la-versión-1157)
+36. [Cambios de la versión 1.15.6](#cambios-de-la-versión-1156)
+37. [Cambios de la versión 1.15.5](#cambios-de-la-versión-1155)
+38. [Cambios de la versión 1.15.4](#cambios-de-la-versión-1154)
+39. [Cambios de la versión 1.15.3](#cambios-de-la-versión-1153)
+40. [Cambios de la versión 1.15.2](#cambios-de-la-versión-1152)
+41. [Cambios de la versión 1.15.1](#cambios-de-la-versión-1151)
+42. [Cambios de la versión 1.15.0](#cambios-de-la-versión-1150)
+43. [Cambios de la versión 1.14.2](#cambios-de-la-versión-1142)
+44. [Cambios de la versión 1.14.1](#cambios-de-la-versión-1141)
+45. [Cambios de la versión 1.14.0](#cambios-de-la-versión-1140)
+46. [Cambios de la versión 1.13.0](#cambios-de-la-versión-1130)
+47. [Cambios de la versión 1.12.0](#cambios-de-la-versión-1120)
+48. [Cambios de la versión 1.11.1](#cambios-de-la-versión-1111)
+49. [Cambios de la versión 1.11.0](#cambios-de-la-versión-1110)
+50. [Cambios de la versión 1.10.0](#cambios-de-la-versión-1100)
+51. [Cambios de la versión 1.9.0](#cambios-de-la-versión-190)
+52. [Cambios de la versión 1.8.0](#cambios-de-la-versión-180)
+53. [Paquetes y verificación](#paquetes-y-verificación)
+54. [Limitaciones](#limitaciones)
+55. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
 
 ---
 
@@ -814,7 +815,7 @@ Lo único que no funciona sin red es la **vista previa de desarrollo** (`npm run
 | Bloque | Comprobaciones |
 | --- | --- |
 | `tests/php/lint.mjs` | `php -l` sobre todo `app/`, `bootstrap.php` e `index.php` en 8.1 y 8.3. |
-| `tests/php/functional.mjs` | 343 comprobaciones: instalador, requisitos, contraseñas débiles, CSRF, sesión, autorización entre cuentas, CRUD de proyectos/pisos, duplicados, importación v1/v2, catálogos (395 señales y 420 objetos), catálogo y guardado de redes, señales de baño y de servicios (guardado, color de familia y exportación SVG), **auditor y medición de evacuación** (salidas, recorrido máximo, zonas inalcanzables, rutas que cruzan muros o no llegan a la salida, ocupación declarada y estimada, señalización, validación de `isExit`, informe imprimible y demo coherente), **muros curvos y vías** (guardado en formato 3, auditor con el muro curvo separando recintos, arco `A` en el SVG, vía que no bloquea frente a muro que sí, `422` para curvas desalineadas, `kind` desconocido, curvas en una puerta y formato desconocido), **sección tipo y glorieta** (formato 4 con ancho derivado, SVG con calzada, andenes, anillo e isla, y `422` para una medida fuera de rango, una clave desconocida, una glorieta sin sección y un cruce desconocido), **modo brigadista** (panel, token de 32 caracteres, página pública sin sesión ni scripts inline, API del plan, service worker, regeneración y desactivación del enlace), **complementos** (pantalla, manual, descarga de las dos plantillas, instalación desde `plugin.json` y desde `.zip` con SVG al lado, familia y color propios en el catálogo, sinónimos en el buscador, activar/desactivar, borrado, rechazo de un manifiesto inválido y de un `.zip` sin su SVG), **verificación física** (lista sin trazos, tres estados, novedad sin nota rechazada, rondas e historial, cobertura, aviso de días y foto servida solo a la cuenta dueña) y **empresas y roles** (alta de empresa, acceso compartido, lector que no guarda ni borra, editor que no administra, último propietario protegido, aislamiento entre empresas y migración real desde una base `user_version = 5`), puertas y portones (geometría, sentidos de apertura, exportación con trazo), validaciones de la API, guardado/versiones/borradores/conflictos, exportaciones, ciclo de vida y logout. |
+| `tests/php/functional.mjs` | 353 comprobaciones: instalador, requisitos, contraseñas débiles, CSRF, sesión, autorización entre cuentas, CRUD de proyectos/pisos, duplicados, importación v1/v2, catálogos (395 señales y 420 objetos), catálogo y guardado de redes, señales de baño y de servicios (guardado, color de familia y exportación SVG), **auditor y medición de evacuación** (salidas, recorrido máximo, zonas inalcanzables, rutas que cruzan muros o no llegan a la salida, ocupación declarada y estimada, señalización, validación de `isExit`, informe imprimible y demo coherente), **muros curvos y vías** (guardado en formato 3, auditor con el muro curvo separando recintos, arco `A` en el SVG, vía que no bloquea frente a muro que sí, `422` para curvas desalineadas, `kind` desconocido, curvas en una puerta y formato desconocido), **sección tipo y glorieta** (formato 4 con ancho derivado, SVG con calzada, andenes, anillo e isla, y `422` para una medida fuera de rango, una clave desconocida, una glorieta sin sección y un cruce desconocido), **modo brigadista** (panel, token de 32 caracteres, página pública sin sesión ni scripts inline, API del plan, service worker, regeneración y desactivación del enlace), **complementos** (pantalla, manual, descarga de las dos plantillas, instalación desde `plugin.json` y desde `.zip` con SVG al lado, familia y color propios en el catálogo, sinónimos en el buscador, activar/desactivar, borrado, rechazo de un manifiesto inválido y de un `.zip` sin su SVG), **verificación física** (lista sin trazos, tres estados, novedad sin nota rechazada, rondas e historial, cobertura, aviso de días y foto servida solo a la cuenta dueña) y **empresas y roles** (alta de empresa, acceso compartido, lector que no guarda ni borra, editor que no administra, último propietario protegido, aislamiento entre empresas y migración real desde una base `user_version = 5`), puertas y portones (geometría, sentidos de apertura, exportación con trazo), validaciones de la API, guardado/versiones/borradores/conflictos, exportaciones, ciclo de vida y logout. |
 | `tests/php/golden.mjs` | **Golden de regresión numérica**: 6 405 valores del auditor (con y sin ocupación declarada), la cobertura de extintores, el resumen de redes y el SVG de los cuatro pisos de la demostración, más un plano sintético con tubería curva que comprueba que `MepCalculator` mide el arco igual que `PathGeometry`. Se capturó **antes** de consolidar los conversores de unidad y cualquier diferencia inesperada es un fallo. Se regenera con `--write`. |
 | `tests/php/units.mjs` | 23 comprobaciones de la **autoridad única de unidades** (`App\Core\Units`) contra la tabla compartida `tests/fixtures/units.json`: factores de `mm`/`cm`/`m`, conversión de longitudes y superficies, unidad desconocida que cae a `cm` sin lanzar en los conversores, lectura de la escala de impresión, **paridad bit a bit de la ruta `cm`** con el cálculo anterior y **identidad exacta de `fromMeters` con JavaScript** (18 casos en `mm`, `cm` y `m`), para que consolidar los siete conversores no mueva un solo número ni separe los dos lenguajes. |
 | `tests/php/curves.mjs` | 17 comprobaciones de la **medición de trazos curvos**: el arco en `mm`, `cm` y `m`, la recta idéntica bit a bit al cálculo anterior, la escala de impresión que no interviene, un arco degenerado que vuelve a medirse como recta, un elemento sin puntos que conserva la diagonal de su cajón, el informe de redes sumando 6,28 m donde antes sumaba 4, la caída de tensión que crece en la misma proporción, el rótulo del SVG con la nueva cifra también en milímetros y la puerta estricta de unidad del documento. |
@@ -1075,10 +1076,41 @@ el mismo documento (§1 a §12 el núcleo; §13 a §25 edificios, áreas, aforo,
 escenarios, escala física, importados y compatibilidad).
 
 Las seis primeras decisiones (DEC-1 a DEC-6) quedaron **aprobadas el 2026-11-02**;
-las seis siguientes (DEC-7 a DEC-12) están **pendientes**. Están implementadas las
-etapas 1 y 2 (geometría en centímetros y medida por objeto), el aforo calculado y
-el ajuste global por mediana; las etapas 4 a 10 no han empezado. Ni una tabla
-nueva: `user_version` sigue en 7.
+siguen **pendientes** DEC-7 y DEC-9 a DEC-12. Están implementadas las etapas 1 a
+4 (geometría en centímetros, medida por objeto, aforo calculado, ajuste por
+mediana y escala física al exportar); las etapas 5 a 10 no han empezado. Ni una
+tabla nueva: `user_version` sigue en 7.
+
+## Cambios de la versión 1.22.0
+
+**Etapa 4 · la escala deja de ser decorativa (DEC-8) y una cabecera nueva.**
+
+- **El plano exportado tiene tamaño de papel.** El SVG sale con `width` y `height`
+  en **milímetros** y un `viewBox` en milímetros; el dibujo entra con una
+  transformación de escala. Un muro de 4,20 m mide **42 mm a 1:100** y **84 mm a
+  1:50**, sin que cambie ni una coordenada del documento.
+- **La escala se elige al exportar, y no se guarda.** `?escala=1:50` en la
+  exportación SVG; la vista de impresión añade **selector de escala y de hoja**
+  (A4/A3, horizontal o vertical), dice cuánto medirá el plano en papel, avisa si
+  se recortaría y ofrece **Ajustar a la hoja** con la escala mayor que entra. El
+  documento no cambia: `canvas.scale` es solo la sugerencia.
+- **Barra de escala en el pie.** Cinco divisiones con su largo real en milímetros,
+  más la escala impresa en la línea de datos. Es lo único que sigue siendo cierto
+  si alguien imprime al 97 % o hace una fotocopia.
+- **El pie no se encoge con la escala.** Se dibuja en un lienzo fijo que se mapea
+  al ancho de la hoja, con un ancho mínimo de 190 mm: a 1:500 la letra se lee
+  igual que a 1:50.
+- **La impresión ya no recorta a 170 mm.** El CSS de impresión deja el SVG a su
+  tamaño real y `@page` toma la hoja elegida. La vista recuerda desactivar
+  «ajustar a la página» en el diálogo del navegador.
+- **Cabecera nueva.** Barra flotante translúcida con el apartado actual en
+  relieve, «Nuevo» como acción, cuenta y salida separadas, y adaptación a móvil
+  sin perder ninguna entrada del menú.
+- **Pruebas**: funcional **353**, interfaz **406**, páginas **54**, golden **8/8**
+  con 6 504 valores. En el golden solo cambian los cuatro SVG (+1 KB cada uno):
+  ninguna cifra del auditor, de la cobertura ni de las redes se mueve.
+
+El formato del plano y la base no cambian: `user_version` sigue en **7**.
 
 ## Cambios de la versión 1.21.0
 

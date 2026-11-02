@@ -23,6 +23,17 @@ function asset(string $path): string
     return Url::asset($path);
 }
 
+/**
+ * Ruta interna que se está viendo (`projects/12/...`), sin barras en los
+ * extremos. La usa la cabecera para marcar el apartado actual; no es una
+ * fuente de autorización: cada controlador vuelve a comprobar los permisos.
+ */
+function current_route(): string
+{
+    $route = $_GET['r'] ?? '';
+    return is_string($route) ? trim($route, '/') : '';
+}
+
 function csrf_field(): string
 {
     return '<input type="hidden" name="_token" value="' . e(Csrf::token()) . '">';
