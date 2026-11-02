@@ -30,15 +30,18 @@ final class MepCalculator
         return Units::metersPerUnit($unit);
     }
 
-    /** Longitud de un trazo en unidades del lienzo. */
+    /**
+     * Longitud de un trazo en unidades del lienzo.
+     *
+     * Un tramo curvo se mide por su arco, no por su cuerda: delega en
+     * `PathGeometry::length()`, que aplana con la misma tolerancia de 0,5 cm
+     * que el auditor y que el lienzo. Así el rótulo del plano, el informe de
+     * redes y lo que ve el editor dicen lo mismo.
+     */
     public static function length(array $element): float
     {
-        $points = self::points($element);
-        $total = 0.0;
-        for ($index = 1; $index < count($points); $index++) {
-            $total += hypot($points[$index]['x'] - $points[$index - 1]['x'], $points[$index]['y'] - $points[$index - 1]['y']);
-        }
-        return $total;
+        $curves = is_array($element['curves'] ?? null) ? $element['curves'] : null;
+        return PathGeometry::length(self::points($element), $curves);
     }
 
     public static function lengthMeters(array $element, array $canvas): float

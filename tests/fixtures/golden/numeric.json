@@ -6480,10 +6480,10 @@
       "unidad": "cm",
       "rectaUnidades": 400,
       "rectaMetros": 4,
-      "arcoUnidadesMep": 400,
-      "arcoMetrosMep": 4,
-      "arcoUnidadesConArcos": 628.3185307179587,
-      "arcoMetrosConArcos": 6.283185307179586
+      "arcoUnidadesMep": 628.3185307179587,
+      "arcoMetrosMep": 6.283185307179586,
+      "arcoUnidadesPath": 628.3185307179587,
+      "arcoMetrosPath": 6.283185307179586
     }
   }
 }

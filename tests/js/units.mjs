@@ -131,17 +131,16 @@ const squares = U.SUPPORTED.every((unit) => {
 });
 report.check('La superficie sale del mismo factor que la longitud', squares);
 
-/* ------------------ divergencia conocida: longitud de arcos ------------------
- * Defecto conocido y documentado en docs/DIMENSIONAL.md:
+/* --------------------- longitud de arcos: PHP y JS iguales ---------------------
+ * El trazo curvo se mide por su arco en los dos lados:
  *
- *   JavaScript (Mep.elementLengthMeters → Geometry.pathLength) incluye los
- *   arcos; PHP (MepCalculator::length) suma hypot entre vértices e ignora los
- *   arcos. Con un semicírculo de 400 unidades de cuerda y 200 de flecha, el
- *   trazo mide 628,3 unidades y la cuerda 400.
+ *   JavaScript: Mep.elementLengthMeters → Geometry.pathLength
+ *   PHP:        MepCalculator::length     → PathGeometry::length
  *
- * Este aserto fija el comportamiento **actual** de JavaScript para que la
- * corrección (una entrega aparte, pendiente de aprobación) tenga un punto de
- * partida explícito. Cuando se apruebe, este bloque cambia a igualdad con PHP.
+ * Con un semicírculo de 400 unidades de cuerda y 200 de flecha, el trazo mide
+ * 628,318… unidades y la cuerda 400. Aquí se fija el valor del editor y se
+ * comprueba contra la referencia que también guarda el golden en PHP, para que
+ * una regresión en cualquiera de los dos lados rompa esta suite.
  */
 for (const file of ['js/lib/geometry.js', 'js/lib/mep.js']) {
   window.eval(`${fs.readFileSync(path.join(repoRoot, 'assets', file), 'utf8')}\n//# sourceURL=${file}`);
@@ -161,9 +160,12 @@ const jsMeters = Mep?.elementLengthMeters?.(arco, canvasCm);
 report.check('La longitud de un trazo curvo en el editor incluye el arco',
   Number.isFinite(jsMeters) && near(jsMeters, arcLength / 100, 1e-9),
   `${jsMeters} m (arco) frente a ${chord / 100} m de cuerda`);
-report.check('Divergencia conocida PHP/JS registrada: el editor mide más que la red',
+report.check('El servidor mide lo mismo que el editor (referencia del golden PHP)',
   near(jsMeters, 6.283185307179586, 1e-9) && Math.abs(jsMeters - chord / 100) > 2,
-  'MepCalculator devuelve 4 m; la corrección va aparte');
+  'MepCalculator y Mep.elementLengthMeters coinciden en 6,283185307179586 m');
+report.check('Un trazo recto no se mueve al medir con arcos',
+  near(Mep?.elementLengthMeters?.({ points: [{ x: 0, y: 0 }, { x: 400, y: 0 }] }, canvasCm), 4, 1e-12),
+  'recta de 400 unidades = 4 m');
 
 /* ------------------------------ pureza ------------------------------ */
 

@@ -1,7 +1,7 @@
 # Unidades y medidas del plano
 
-Cómo se pasa de lo dibujado a lo medido, qué se convierte y qué no, y qué
-defectos se conocen. Describe el código desde la **etapa 0 de NORMIA-004**.
+Cómo se pasa de lo dibujado a lo medido, qué se convierte y qué no, y cómo se
+mide un trazo curvo. Describe el código desde la **etapa 0 de NORMIA-004**.
 
 ---
 
@@ -120,78 +120,69 @@ plano de 12 m a 1:100 se exporta con 1 200 píxeles de ancho (317 mm) en lugar d
 
 ---
 
-## 7. Defecto conocido: la longitud de un trazo curvo no coincide entre PHP y JavaScript
+## 7. Un trazo curvo se mide por su arco
 
-**Qué pasa.** Para un tramo con arco, el editor y el servidor miden distinto:
+Un tramo con curva se mide siguiendo el arco, no la cuerda que une sus extremos.
+Da igual dónde se mida: el editor, el informe de redes y el rótulo del SVG
+exportado dan la misma cifra.
 
-| Dónde | Función | Resultado para un semicírculo de 400 unidades de cuerda |
+| Dónde | Función | Semicírculo de 400 unidades de cuerda |
 | --- | --- | --- |
-| Editor (JS) | `Mep.elementLengthMeters` → `Geometry.pathLength` | **628,3 unidades = 6,28 m** (cuenta el arco) |
-| Redes (PHP) | `MepCalculator::length` | **400 unidades = 4,00 m** (suma `hypot` entre vértices) |
+| Editor (JS) | `Mep.elementLengthMeters` → `Geometry.pathLength` | **628,3 unidades = 6,283 m** |
+| Redes (PHP) | `MepCalculator::length` → `PathGeometry::length` | **628,3 unidades = 6,283 m** |
+| Rótulo del SVG | `SvgExporter::mepCaption` → `MepCalculator::length` | **6,3 m** |
 
-Se ve en el rótulo del tramo en el editor y en la tabla del SVG exportado: la
-misma tubería puede aparecer con dos longitudes.
+Los tres caminos terminan en el mismo aplanado: `PathGeometry`, con la tolerancia
+de 0,5 cm del plano que también usa el auditor. No hay una segunda fórmula de
+longitud para redes.
 
-**Por qué se dejó así.** La etapa 0 se comprometió a no mover ni una cifra.
-Corregir PHP cambia números de tuberías y circuitos con curvas, y eso exige su
-propia aprobación.
+**Qué implica.** La longitud de un tramo curvo es mayor que la distancia entre sus
+extremos: en el caso extremo de una semicircunferencia, un 57 % más (π/2). El
+informe de redes arrastra ese aumento a la longitud por red, a la longitud por
+circuito y a la **caída de tensión estimada**, que depende de la longitud.
 
-**Dónde está fijado.** `tests/fixtures/golden/numeric.json` guarda los dos
-valores (`arcoMetrosMep` = 4 y `arcoMetrosConArcos` = 6,283…) y
-`tests/js/units.mjs` comprueba que el editor sigue midiendo el arco. Cuando se
-apruebe la corrección, los dos asertos cambian a igualdad.
-
-**Propuesta de corrección** (no implementada): ver §8.
+**No afecta** al auditor de evacuación ni a la cobertura de extintores: no miden
+con `MepCalculator`. **No toca la base de datos**: los informes se calculan al
+vuelo, así que no hay nada guardado que reescribir ni datos históricos que
+corregir.
 
 ---
 
-## 8. Propuesta de corrección de curvas (para aprobación)
+## 8. La corrección de curvas, y por qué llegó después
 
-### Alcance
+Hasta la etapa 0 el servidor medía la **cuerda**: `MepCalculator::length()` sumaba
+`hypot` entre vértices e ignoraba los arcos, mientras el editor sí los contaba. La
+misma tubería curva aparecía con 4,00 m en el informe y 6,28 m en pantalla.
+
+**Por qué no se corrigió de una vez.** La etapa 0 se comprometió a no mover ni una
+cifra: era una entrega de consolidación, no de cambio de comportamiento. Corregir
+la medición cambia números, y cambiarlos en silencio dentro de una refactorización
+es justo lo que el golden existe para impedir. El defecto se documentó, se congeló
+con un aserto por lado y se presentó aparte.
+
+**Qué cambió cuando se aprobó.**
 
 | Archivo | Cambio |
 | --- | --- |
-| `app/Services/MepCalculator.php` | `length()` pasa a usar `PathGeometry::length($points, $curves)`, que aplana arcos con la misma tolerancia de 0,5 cm que el auditor |
-| `app/Services/SvgExporter.php` | el rótulo de longitud de un tramo deja de sumar `hypot` propio y usa `MepCalculator::length()` |
-| `tests/php/golden.mjs` | el bloque sintético cambia: `arcoMetrosMep` pasa de 4 a 6,283… |
-| `tests/js/units.mjs` | el aserto de divergencia pasa a igualdad PHP/JS |
-| `docs/DIMENSIONAL.md` | §7 deja de describir un defecto y pasa a describir una regla |
+| `app/Services/MepCalculator.php` | `length()` delega en `PathGeometry::length($points, $curves)`; ya no suma `hypot` |
+| `app/Services/SvgExporter.php` | el rótulo del tramo usa `MepCalculator::length()`; se fue la suma propia |
+| `tests/php/golden.mjs` | el bloque sintético registra el arco (6,283…) y comprueba que Mep y PathGeometry coinciden |
+| `tests/php/curves.mjs` | suite nueva: 14 comprobaciones en PHP 8.1 y 8.3 |
+| `tests/js/units.mjs` | el aserto de divergencia pasa a igualdad con la referencia del servidor |
 
-### Impacto numérico
+**Qué no se movió.** El golden de los cuatro pisos de la demo quedó idéntico: los
+6 405 valores del auditor, los extintores, las redes y los cuatro SVG. Sus 13
+tuberías y circuitos no tienen arcos, así que la corrección no los toca ni un
+bit. El diff del fixture son cuatro líneas: los dos valores del plano sintético y
+el nombre de sus dos claves de control.
 
-- **Solo afecta a tuberías y circuitos con arcos** (`pipe` y `conduit`): son los
-  únicos tipos que pasan por `MepCalculator`. Los muros, rutas y vías curvos no
-  se miden ahí. La longitud de un tramo curvo **sube** hasta un 57 % en el caso
-  extremo de una semicircunferencia (π/2).
-- Ese aumento arrastra, en los informes de redes: longitud total por red, longitud
-  por circuito y la **caída de tensión estimada** (`voltageDrop` depende de la
-  longitud), que subiría en la misma proporción.
-- **No afecta** al auditor de evacuación ni a la cobertura de extintores: ya miden
-  con `PathGeometry` o sobre la rejilla, no con `MepCalculator`.
-- **No afecta** a planos sin curvas en redes: los cuatro pisos de la demostración
-  tienen 13 tuberías y circuitos y **ninguno con arcos** (verificado), así que el
-  golden de la demo **no cambiaría**; solo cambia el bloque sintético.
-- **No toca la base de datos** ni los documentos guardados: es cálculo, no
-  persistencia.
-
-### Pruebas
-
-1. Golden: `arcoMetrosMep` de 4 a 6,283185307179586 (y `rectaMetros` sin cambio).
-2. Unidad: `MepCalculator::length` de un trazo con arco == `PathGeometry::length`
-   en las tres unidades (`mm`, `cm`, `m`).
-3. Paridad: el valor de PHP == el de `Mep.elementLengthMeters` en JS para el mismo
-   elemento (el aserto que hoy documenta la divergencia).
-4. Regresión: los cuatro pisos de la demo, el auditor, los extintores y el SVG de
-   un plano sin tuberías curvas no cambian.
-5. Red: una sola tubería curva en un plano con circuito eléctrico demuestra que
-   la caída de tensión recalculada es coherente con la longitud nueva.
-
-### Riesgo
-
-Bajo en código, medio en comunicación: hay que decirlo en el changelog, porque
-quien tenga guardados informes de redes con tramos curvos verá cifras distintas
-(las correctas). No hay datos históricos que reescribir: los informes se calculan
-al vuelo.
+**Cómo se comprueba ahora.** `tests/php/curves.mjs` fija: el arco en las tres
+unidades; que la recta sigue midiendo exactamente lo mismo (`===`, bit a bit); que
+la escala de impresión no interviene; que un arco degenerado vuelve a medirse como
+recta; que un elemento sin puntos conserva la diagonal de su cajón; que el informe
+de redes suma 6,28 m donde antes sumaba 4; que la caída de tensión crece en la
+misma proporción; y que el rótulo del SVG dice 6,3 m para el arco y 4,0 m para la
+recta.
 
 ---
 
@@ -200,6 +191,7 @@ al vuelo.
 | Suite | Qué fija |
 | --- | --- |
 | `tests/php/units.mjs` | factores, conversiones, superficies, unidad inválida, escala, paridad bit a bit de la ruta `cm` |
-| `tests/js/units.mjs` | lo mismo en JavaScript contra la **misma** tabla compartida, más el defecto conocido de §7 |
+| `tests/js/units.mjs` | lo mismo en JavaScript contra la **misma** tabla compartida, más la longitud de arcos (§7) |
+| `tests/php/curves.mjs` | medición de trazos curvos: arco frente a cuerda, tres unidades, escala, casos degenerados, redes, caída de tensión y rótulo del SVG |
 | `tests/fixtures/units.json` | la tabla de casos que leen las dos suites |
-| `tests/php/golden.mjs` | 6 405 valores del auditor, extintores, redes y el SVG de los cuatro pisos de la demo: si la consolidación de unidades mueve una cifra, falla |
+| `tests/php/golden.mjs` | 6 405 valores del auditor, extintores, redes y el SVG de los cuatro pisos de la demo, más el plano sintético con arco: si una cifra se mueve sin querer, falla |

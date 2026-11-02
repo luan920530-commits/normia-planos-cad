@@ -110,11 +110,13 @@ foreach ($floors as $floor) {
 }
 
 /* ---------------- plano sintético: longitud de tubería con arco ----------------
- * Se fija aquí el comportamiento actual: MepCalculator::length() suma hypot
- * entre vértices e ignora los arcos. JavaScript, en cambio, usa
- * Geometry::pathLength() y sí los cuenta. La diferencia queda registrada como
- * defecto conocido (ver docs/DIMENSIONAL.md); la corrección va en una entrega
- * aparte y este bloque es el que tendrá que cambiar cuando se apruebe.
+ * MepCalculator::length() mide el arco, no la cuerda: delega en
+ * PathGeometry::length(), igual que Geometry.pathLength() en el editor. Se
+ * fijan los dos caminos por separado (Mep y PathGeometry) para que el golden
+ * demuestre que siguen coincidiendo y que la recta no se movió.
+ *
+ * Antes de esta corrección el servidor sumaba hypot entre vértices e ignoraba
+ * los arcos: 4 m cada vez que el editor decía 6,283… m.
  */
 $pipe = static fn (string $id, float $y, float $h, array $points, ?array $curves = null): array => array_filter([
     'id' => $id,
@@ -159,9 +161,10 @@ $out['synthetic']['tuberia'] = [
     'rectaMetros' => App\\Services\\MepCalculator::lengthMeters($porId['el_recta'], $synthetic['canvas']),
     'arcoUnidadesMep' => App\\Services\\MepCalculator::length($arco),
     'arcoMetrosMep' => App\\Services\\MepCalculator::lengthMeters($arco, $synthetic['canvas']),
-    // Lo que mide el trazo de verdad, contando el arco (lo que ya usa el editor).
-    'arcoUnidadesConArcos' => App\\Services\\PathGeometry::length($arco['points'], $curvas),
-    'arcoMetrosConArcos' => App\\Core\\Units::toMeters(App\\Services\\PathGeometry::length($arco['points'], $curvas), 'cm'),
+    // El mismo trazo medido directamente con PathGeometry, que es lo que usa el
+    // editor: debe dar exactamente lo mismo que MepCalculator.
+    'arcoUnidadesPath' => App\\Services\\PathGeometry::length($arco['points'], $curvas),
+    'arcoMetrosPath' => App\\Core\\Units::toMeters(App\\Services\\PathGeometry::length($arco['points'], $curvas), 'cm'),
 ];
 
 echo json_encode($out, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
@@ -268,10 +271,14 @@ report.check('Ningún valor de extintores ni de redes se mueve',
 report.check('El SVG exportado de los cuatro pisos es idéntico',
   problems.every((line) => !line.includes('SVG')),
   problems.filter((line) => line.includes('SVG')).join(' · ') || 'hash sha-256 igual');
-report.check('El comportamiento de la tubería curva se mantiene igual (defecto conocido congelado)',
+const curva = payload?.synthetic?.tuberia ?? {};
+report.check('La tubería curva se mide por su arco, como en el editor',
   syntheticProblems.length === 0,
   syntheticProblems.slice(0, 4).join(' · ')
-  || `Mep ${payload.synthetic.tuberia.arcoMetrosMep} m · con arcos ${payload.synthetic.tuberia.arcoMetrosConArcos} m`);
+  || `arco ${curva.arcoMetrosMep} m · recta ${curva.rectaMetros} m`);
+report.check('MepCalculator y PathGeometry dan la misma longitud',
+  curva.arcoUnidadesMep === curva.arcoUnidadesPath && curva.arcoMetrosMep === curva.arcoMetrosPath,
+  `Mep ${curva.arcoMetrosMep} m · PathGeometry ${curva.arcoMetrosPath} m`);
 report.check('El golden coincide por completo con la referencia', problems.length === 0,
   problems.length === 0 ? `${totalValues} valores · 4 SVG` : problems.slice(0, 5).join(' · '));
 

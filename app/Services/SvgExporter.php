@@ -348,14 +348,10 @@ final class SvgExporter
             return '';
         }
         $parts = [$network['short'] . ' Ø ' . (string) ($element['diameter'] ?? $network['diameter'])];
-        $points = self::pointList($element);
-        if (count($points) >= 2) {
-            $length = 0.0;
-            for ($index = 1; $index < count($points); $index++) {
-                $length += hypot((float) $points[$index]['x'] - (float) $points[$index - 1]['x'], (float) $points[$index]['y'] - (float) $points[$index - 1]['y']);
-            }
+        if (count(self::pointList($element)) >= 2) {
+            // La misma longitud que el editor y el informe: incluye los arcos.
             $factor = Units::metersPerUnit((string) $canvas['unit']);
-            $parts[] = self::meters($length * $factor);
+            $parts[] = self::meters(MepCalculator::length($element) * $factor);
         }
         if (!empty($network['gravity'])) {
             $parts[] = 'i=' . self::n((float) ($element['slope'] ?? 0)) . ' %';

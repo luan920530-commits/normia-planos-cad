@@ -6,12 +6,11 @@ Fecha: 2026-11-01.
 Estado del trabajo: **documento de diagnóstico y propuesta**. Se redactó en solo
 lectura, sin tocar código, base de datos ni archivos de producción.
 
-> **Avance (etapa 0).** Aprobadas DEC-1 a DEC-4, la etapa 0 se implementó en dos
-> pasos: la autoridad única de unidades con sus pruebas y, después, la delegación
-> de los siete conversores con un golden de regresión que demuestra que ninguna
-> cifra se movió. El resultado vivo está en [DIMENSIONAL.md](DIMENSIONAL.md).
-> La corrección de la longitud de arcos quedó **propuesta y sin implementar**, a
-> la espera de aprobación (DIMENSIONAL.md §8).
+> **Avance (etapa 0).** Aprobadas DEC-1 a DEC-4, la etapa 0 se implementó en tres
+> pasos: la autoridad única de unidades con sus pruebas, la delegación de los siete
+> conversores con un golden de regresión que demuestra que ninguna cifra se movió y,
+> aprobada aparte, la corrección de la longitud de arcos para que el servidor mida
+> el arco como el editor. El resultado vivo está en [DIMENSIONAL.md](DIMENSIONAL.md).
 
 ---
 
