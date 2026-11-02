@@ -31,6 +31,9 @@
       <a class="nav-link" href="<?= e(url('projects/new')) ?>"><svg class="icon"><use href="#i-plus"></use></svg><span>Nuevo</span></a>
       <a class="nav-link" href="<?= e(url('empresas')) ?>"><svg class="icon"><use href="#i-property"></use></svg><span>Empresas</span></a>
       <a class="nav-link" href="<?= e(url('plugins')) ?>"><svg class="icon"><use href="#i-stack"></use></svg><span>Complementos</span></a>
+      <?php if ((int) ($user['is_admin'] ?? 0) === 1): ?>
+        <a class="nav-link" href="<?= e(url('respaldo')) ?>"><svg class="icon"><use href="#i-cloud"></use></svg><span>Respaldo</span></a>
+      <?php endif; ?>
     </nav>
     <div class="account-menu">
       <a class="account-chip" href="<?= e(url('account/password')) ?>" data-tooltip="Cuenta y contraseña">

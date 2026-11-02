@@ -178,7 +178,7 @@ final class Floor
             throw new \DomainException('El piso no existe o no tienes acceso.');
         }
         return Database::query(
-            'SELECT v.id, v.version, v.note, v.created_at, v.design_json, u.name AS created_by_name
+            'SELECT v.id, v.version, v.note, v.created_at, v.design_json, v.pinned, u.name AS created_by_name
              FROM floor_versions v LEFT JOIN users u ON u.id = v.created_by
              WHERE v.floor_id = ? ORDER BY v.version DESC',
             [$floorId]
@@ -209,21 +209,46 @@ final class Floor
             if ($version === null) {
                 throw new \DomainException('La versión solicitada no existe.');
             }
-            $design = DesignValidator::normalizeJson((string) $version['design_json']);
-            $json = json_encode($design, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
-            $newVersion = (int) $floor['version'] + 1;
-            Database::execute(
-                'UPDATE floors SET design_json = ?, version = ?, draft_json = NULL, draft_base_version = NULL,
-                        draft_updated_at = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND version = ?',
-                [$json, $newVersion, $floorId, (int) $floor['version']]
-            );
-            Database::execute(
-                'INSERT INTO floor_versions (floor_id, version, design_json, note, created_by) VALUES (?, ?, ?, ?, ?)',
-                [$floorId, $newVersion, $json, 'Restauración de ' . version_label((int) $version['version']), $userId]
-            );
-            Brigade::notePlanChange($floorId);
-            return ['version' => $newVersion, 'design' => $design];
+            return self::applyRestore($floorId, $version, $userId, (int) $floor['version']);
         });
+    }
+
+    /**
+     * Aplica la restauración sobre una versión esperada concreta.
+     *
+     * El `UPDATE` va condicionado a `version = ?` y **se comprueba cuántas filas
+     * cambió**. Si otra persona guardó o restauró entre la lectura y la
+     * escritura, no se toca nada y se lanza `VersionConflictException`: antes se
+     * insertaba igualmente la versión en el historial, que quedaba registrando
+     * como vigente un diseño que nunca llegó a estarlo.
+     *
+     * Es público para poder probar la carrera de forma determinista; la puerta
+     * normal es `restoreVersion()`.
+     *
+     * @param array<string,mixed> $version fila de `floor_versions`
+     * @return array{version:int,design:array<string,mixed>}
+     */
+    public static function applyRestore(int $floorId, array $version, int $userId, int $expectedVersion): array
+    {
+        $design = DesignValidator::normalizeJson((string) $version['design_json']);
+        $json = json_encode($design, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+        $newVersion = $expectedVersion + 1;
+        $updated = Database::execute(
+            'UPDATE floors SET design_json = ?, version = ?, draft_json = NULL, draft_base_version = NULL,
+                    draft_updated_at = NULL, updated_at = CURRENT_TIMESTAMP
+             WHERE id = ? AND version = ?',
+            [$json, $newVersion, $floorId, $expectedVersion]
+        );
+        if ($updated !== 1) {
+            $current = (int) Database::value('SELECT version FROM floors WHERE id = ?', [$floorId]);
+            throw new VersionConflictException($current);
+        }
+        Database::execute(
+            'INSERT INTO floor_versions (floor_id, version, design_json, note, created_by) VALUES (?, ?, ?, ?, ?)',
+            [$floorId, $newVersion, $json, 'Restauración de ' . version_label((int) $version['version']), $userId]
+        );
+        Brigade::notePlanChange($floorId);
+        return ['version' => $newVersion, 'design' => $design];
     }
 
     public static function updateMeta(int $floorId, int $userId, string $name, string $level): void

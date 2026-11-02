@@ -55,6 +55,20 @@ abstract class BaseController
         return $organization;
     }
 
+    /**
+     * La cuenta que instaló la aplicación. Los respaldos completos incluyen los
+     * datos de **todas** las empresas, así que no pueden quedar al alcance de un
+     * propietario de empresa: solo de la administración de la instalación.
+     */
+    protected function requireInstanceAdmin(string $message): array
+    {
+        $user = $this->user();
+        if ((int) ($user['is_admin'] ?? 0) !== 1) {
+            throw new \DomainException($message);
+        }
+        return $user;
+    }
+
     /** Detiene la acción cuando el rol de la empresa no alcanza. */
     protected function requireCapability(array $row, string $capability, string $message): void
     {

@@ -12,6 +12,8 @@ final class Request
     private array $query;
     private array $body;
     private array $files;
+    public const MAX_JSON_BYTES = 2_500_000;
+
     private ?array $json = null;
     private bool $jsonParsed = false;
 
@@ -84,24 +86,69 @@ final class Request
     }
 
     /** @return array<string,mixed> */
+    /**
+     * Cuerpo JSON de la petición.
+     *
+     * Distingue los tres casos que antes devolvían `[]` por igual y acababan en
+     * un 422 engañoso («no contiene un diseño válido»), aunque el problema fuera
+     * otro:
+     *
+     * - cuerpo vacío → **400** `empty_body`
+     * - JSON mal formado o que no es un objeto → **400** `invalid_json`
+     * - más de 2,5 MB → **413** `payload_too_large`
+     *
+     * Un JSON válido al que le falten campos lo valida el controlador y responde
+     * **422**, como antes.
+     *
+     * @return array<string,mixed>
+     * @throws HttpException
+     */
     public function json(): array
     {
         if ($this->jsonParsed) {
             return $this->json ?? [];
         }
         $this->jsonParsed = true;
+        // Un formulario normal (multipart o urlencoded) no trae cuerpo JSON:
+        // eso no es un error, simplemente no hay JSON que leer.
+        if (!$this->isJsonRequest()) {
+            return $this->json = [];
+        }
         $raw = $this->rawBody();
-        if ($raw === '' || strlen($raw) > 2_500_000) {
-            $this->json = [];
-            return $this->json;
+        if (trim($raw) === '') {
+            throw new HttpException(400, 'empty_body', 'La solicitud llegó sin contenido. Recarga la página e inténtalo de nuevo.');
+        }
+        if (strlen($raw) > self::MAX_JSON_BYTES) {
+            throw new HttpException(
+                413,
+                'payload_too_large',
+                'El contenido supera el límite de ' . self::limitLabel() . '. Reduce el plano (menos objetos o imágenes más ligeras) y vuelve a guardar.'
+            );
         }
         try {
             $decoded = json_decode($raw, true, 64, JSON_THROW_ON_ERROR);
-            $this->json = is_array($decoded) ? $decoded : [];
         } catch (JsonException) {
-            $this->json = [];
+            throw new HttpException(400, 'invalid_json', 'El contenido no es un JSON válido. Recarga la página e inténtalo de nuevo.');
         }
+        if (!is_array($decoded)) {
+            throw new HttpException(400, 'invalid_json', 'El contenido no es un objeto JSON válido.');
+        }
+        $this->json = $decoded;
         return $this->json;
+    }
+
+    /** ¿La petición declara que envía JSON? */
+    public function isJsonRequest(): bool
+    {
+        $type = (string) ($_SERVER['CONTENT_TYPE'] ?? $_SERVER['HTTP_CONTENT_TYPE'] ?? '');
+        return stripos($type, 'application/json') !== false
+            || stripos($type, 'text/json') !== false;
+    }
+
+    /** Límite de tamaño del cuerpo JSON, en un solo sitio. */
+    public static function limitLabel(): string
+    {
+        return round(self::MAX_JSON_BYTES / 1_000_000, 1) . ' MB';
     }
 
     public function rawBody(): string

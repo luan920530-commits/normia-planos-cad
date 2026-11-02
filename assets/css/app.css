@@ -700,6 +700,30 @@ kbd { font-family: var(--font-mono); font-size: .74rem; background: var(--surfac
 /* Texto solo para lectores de pantalla (etiquetas de controles compactos). */
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 
+/* ------------------------------ Respaldos ------------------------------ */
+.backup-list { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.backup-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; justify-content: space-between; padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); }
+.backup-main { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.backup-main strong { font-family: var(--font-mono); font-size: .88rem; }
+.backup-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: .82rem; color: var(--muted); }
+.backup-check { display: inline-flex; align-items: center; gap: 6px; font-size: .8rem; color: var(--ink-soft); }
+.backup-check .icon { width: 14px; height: 14px; color: var(--green); }
+.backup-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.restore-steps { margin: 0; padding-left: 1.2rem; display: grid; gap: 8px; color: var(--ink-soft); font-size: .9rem; }
+.restore-steps code { font-size: .84rem; }
+
+/* ------------------------------ Historial de versiones ------------------------------ */
+.version-list { display: grid; gap: 8px; margin: 0 0 16px; padding: 0; list-style: none; }
+.version-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; padding: 10px 14px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); }
+.version-row.is-candidate { background: #fffdf7; border-color: #f0e2c4; }
+.version-pick { display: flex; align-items: flex-start; gap: 10px; min-width: 0; flex: 1 1 320px; }
+.version-pick input { margin-top: 4px; }
+.version-keep { display: inline-flex; width: 18px; justify-content: center; color: var(--muted); }
+.version-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.version-text strong { font-size: .92rem; }
+.version-meta { font-size: .78rem; color: var(--muted); }
+.version-note { font-size: .82rem; color: var(--ink-soft); }
+
 /* Encabezado de página con acciones (usado por empresas y verificación). */
 .page-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
 .page-head h1 { margin: 4px 0 6px; font-size: clamp(1.5rem, 3vw, 2rem); letter-spacing: -.02em; }
