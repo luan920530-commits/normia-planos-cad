@@ -20,6 +20,7 @@
     "test:php:83": "node tests/php/functional.mjs 8.3",
     "test:stability": "node tests/php/stability.mjs 8.1 && node tests/php/stability.mjs 8.3",
     "test:units": "node tests/php/units.mjs 8.1 && node tests/php/units.mjs 8.3 && node tests/js/units.mjs",
+    "test:golden": "node tests/php/golden.mjs 8.1 && node tests/php/golden.mjs 8.3",
     "test:package": "node tests/php/package.mjs 8.3",
     "lint:php": "node tests/php/lint.mjs 8.1 && node tests/php/lint.mjs 8.3",
     "lint:js": "node tests/js/lint.mjs",

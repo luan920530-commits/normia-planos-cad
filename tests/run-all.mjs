@@ -20,6 +20,8 @@ const steps = [
   { name: 'Funcionamiento sin conexión', script: 'tests/js/offline.mjs', args: [] },
   { name: 'Funcional PHP 8.1', script: 'tests/php/functional.mjs', args: ['8.1'] },
   { name: 'Funcional PHP 8.3', script: 'tests/php/functional.mjs', args: ['8.3'] },
+  { name: 'Golden numérico PHP 8.1', script: 'tests/php/golden.mjs', args: ['8.1'] },
+  { name: 'Golden numérico PHP 8.3', script: 'tests/php/golden.mjs', args: ['8.3'] },
   { name: 'Unidades PHP 8.1', script: 'tests/php/units.mjs', args: ['8.1'] },
   { name: 'Unidades PHP 8.3', script: 'tests/php/units.mjs', args: ['8.3'] },
   { name: 'Estabilidad PHP 8.1', script: 'tests/php/stability.mjs', args: ['8.1'] },
