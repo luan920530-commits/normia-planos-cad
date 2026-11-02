@@ -297,6 +297,13 @@ try {
     && demoAudit.report.travel.freeAreaM2 < demoAudit.report.travel.reachableAreaM2 + 0.01,
     `libre ${demoAudit.report?.travel?.freeAreaM2} m² · exterior ${demoAudit.report?.travel?.exteriorAreaM2} m²`);
 
+  const demoEscenarios = demoAudit.report?.scenarios || {};
+  report.check('La demo declara escenarios de ocupación temporal y los calcula aparte',
+    demoEscenarios.count === 2
+    && demoEscenarios.items?.some((item) => item.name === 'Capacitación de brigada' && item.fits === false)
+    && (demoAudit.report?.findings || []).some((finding) => finding.code === 'scenario_over_capacity'
+      && finding.title.includes('Capacitación de brigada')),
+    `${demoEscenarios.count} escenarios · el más exigente ${demoEscenarios.peak?.persons} personas`);
   const demoExt = demoAudit.report?.extinguishers || {};
   report.check('La demo incluye extintores con datos de norma',
     demoExt.summary?.count === 4 && demoExt.profile === 'colombia'
@@ -454,6 +461,94 @@ try {
     catalogoBotiquin.body.objects?.cad_emg_firstaid?.name === 'Botiquín de primeros auxilios'
     && /^<svg/.test(catalogoBotiquin.body.objects?.cad_emg_firstaid?.svg || ''),
     catalogoBotiquin.body.objects?.cad_emg_firstaid?.name || 'sin botiquín');
+
+  /* --------------- escenarios de ocupación temporal (1.24.0) ---------------
+   * A-04: un evento con más gente que el uso habitual se calcula con las mismas
+   * fórmulas del piso y aparte, para que el aforo habitual no cambie solo.
+   */
+  const escBase = JSON.parse(JSON.stringify(sinRecursos));
+  escBase.canvas = { ...escBase.canvas, occupancy: 20 };
+  escBase.elements = [];
+  let resEsc = await client.postJson(`api/floors/${extFloorId}/save`, { design: escBase, expected_version: (await json(`api/floors/${extFloorId}`)).body.floor.version, note: 'Sin escenarios' });
+  const escBaseAudit = (await json(`api/floors/${extFloorId}/audit`)).body.report || {};
+  const capacidad = (escBaseAudit.scenarios?.base?.capacity || 0);
+  report.check('Sin escenarios el informe lo dice y no inventa la sección',
+    resEsc.status === 200 && escBaseAudit.scenarios?.count === 0 && escBaseAudit.scenarios?.peak === null
+    && (escBaseAudit.findings || []).every((finding) => !String(finding.code).startsWith('scenario_')),
+    `${escBaseAudit.scenarios?.count} escenarios · capacidad ${capacidad}`);
+  report.check('Un plano sin escenarios no guarda la clave en el lienzo',
+    (await json(`api/floors/${extFloorId}`)).body.design?.canvas?.scenarios === undefined,
+    'clave ausente');
+
+  const conEscenarios = JSON.parse(JSON.stringify(escBase));
+  conEscenarios.canvas.scenarios = [
+    { name: 'Capacitación de brigada', persons: capacidad + 7 },
+    { name: 'Visita corta', persons: 4 },
+  ];
+  res = await client.postJson(`api/floors/${extFloorId}/save`, { design: conEscenarios, expected_version: (await json(`api/floors/${extFloorId}`)).body.floor.version, note: 'Con escenarios' });
+  const guardadoEscenarios = (await json(`api/floors/${extFloorId}`)).body.design?.canvas?.scenarios || [];
+  const escAudit = (await json(`api/floors/${extFloorId}/audit`)).body.report || {};
+  report.check('Los escenarios se guardan con el plano y se calculan aparte',
+    res.status === 200 && guardadoEscenarios.length === 2
+    && guardadoEscenarios[0].name === 'Capacitación de brigada' && guardadoEscenarios[0].persons === capacidad + 7
+    && escAudit.scenarios?.count === 2 && escAudit.scenarios.base.capacity === capacidad,
+    `${guardadoEscenarios.length} guardados · ${escAudit.scenarios?.count} calculados`);
+  const hallazgoEscenario = (escAudit.findings || []).find((finding) => finding.code === 'scenario_over_capacity');
+  report.check('El escenario que no cabe se marca y el que cabe no',
+    hallazgoEscenario?.severity === 'medium'
+    && hallazgoEscenario.value === `${capacidad + 7} de ${capacidad}`
+    && hallazgoEscenario.title.includes('Capacitación de brigada')
+    && escAudit.scenarios.items[1].fits === true && escAudit.scenarios.items[1].excess === 0
+    && !(escAudit.findings || []).some((finding) => finding.code.startsWith('scenario_') && finding.title.includes('Visita corta')),
+    `${hallazgoEscenario?.value} · cabe ${escAudit.scenarios?.items?.[1]?.fits}`);
+  report.check('El escenario no cambia el aforo del uso habitual',
+    escAudit.occupancy?.people === 20
+    && escAudit.occupancy.permitted === Math.min(20, capacidad)
+    && escAudit.occupancy.excess === Math.max(0, 20 - capacidad)
+    && escAudit.scenarios.base.people === 20,
+    `personas ${escAudit.occupancy?.people} · permitido ${escAudit.occupancy?.permitted} · exceso ${escAudit.occupancy?.excess}`);
+
+  const escConSalida = JSON.parse(JSON.stringify(escBase));
+  escConSalida.elements = [{
+    id: 'puerta_escenarios', type: 'door', layerId: extLayer, x: 700, y: 560, w: 90, h: 16,
+    rotation: 0, color: '#0f172a', stroke: 2, opacity: 1, label: 'Salida', locked: false, isExit: true,
+  }];
+  escConSalida.canvas.scenarios = [{ name: 'Montaje de feria', persons: 200 }];
+  res = await client.postJson(`api/floors/${extFloorId}/save`, { design: escConSalida, expected_version: (await json(`api/floors/${extFloorId}`)).body.floor.version, note: 'Escenario con salida angosta' });
+  const escSalidaAudit = (await json(`api/floors/${extFloorId}/audit`)).body.report || {};
+  const codigosEscenario = (escSalidaAudit.findings || []).map((finding) => finding.code);
+  report.check('Un escenario con más gente que ancho útil también se marca',
+    res.status === 200 && codigosEscenario.includes('scenario_over_capacity')
+    && codigosEscenario.includes('scenario_width_short')
+    && escSalidaAudit.scenarios.items[0].widthOk === false,
+    `ancho exigido ${escSalidaAudit.scenarios?.items?.[0]?.requiredWidthM} m · disponible ${escSalidaAudit.scenarios?.items?.[0]?.availableWidthM} m`);
+
+  const demasiados = JSON.parse(JSON.stringify(escBase));
+  demasiados.canvas.scenarios = Array.from({ length: 9 }, (unused, index) => ({ name: `Escenario ${index + 1}`, persons: 5 }));
+  res = await client.postJson(`api/floors/${extFloorId}/save`, { design: demasiados, expected_version: (await json(`api/floors/${extFloorId}`)).body.floor.version });
+  report.check('La API rechaza más de ocho escenarios por piso', res.status === 422, String(res.status));
+  const sinNombre = JSON.parse(JSON.stringify(escBase));
+  sinNombre.canvas.scenarios = [{ name: '   ', persons: 10 }];
+  res = await client.postJson(`api/floors/${extFloorId}/save`, { design: sinNombre, expected_version: (await json(`api/floors/${extFloorId}`)).body.floor.version });
+  report.check('La API rechaza un escenario sin nombre', res.status === 422, String(res.status));
+  const sinPersonas = JSON.parse(JSON.stringify(escBase));
+  sinPersonas.canvas.scenarios = [{ name: 'Evento sin gente', persons: 0 }];
+  res = await client.postJson(`api/floors/${extFloorId}/save`, { design: sinPersonas, expected_version: (await json(`api/floors/${extFloorId}`)).body.floor.version });
+  report.check('La API rechaza un escenario con cero personas', res.status === 422, String(res.status));
+  const claveExtra = JSON.parse(JSON.stringify(escBase));
+  claveExtra.canvas.scenarios = [{ name: 'Evento', persons: 10, hora: '18:00' }];
+  res = await client.postJson(`api/floors/${extFloorId}/save`, { design: claveExtra, expected_version: (await json(`api/floors/${extFloorId}`)).body.floor.version });
+  report.check('La API rechaza datos de escenario fuera de nombre y personas', res.status === 422, String(res.status));
+
+  res = await client.postJson(`api/floors/${extFloorId}/save`, { design: conEscenarios, expected_version: (await json(`api/floors/${extFloorId}`)).body.floor.version, note: 'Escenarios para el informe' });
+  const informeEscenarios = await client.get(`projects/${extProjectId}/floors/${extFloorId}/audit`);
+  report.check('El informe imprimible trae la sección de escenarios',
+    informeEscenarios.status === 200
+    && informeEscenarios.text.includes('Escenarios de ocupación temporal')
+    && informeEscenarios.text.includes('Capacitación de brigada')
+    && informeEscenarios.text.includes('Visita corta')
+    && /No aprueba el evento/i.test(informeEscenarios.text),
+    `${informeEscenarios.status} · ${(informeEscenarios.text.match(/Escenarios de ocupación temporal/g) || []).length} sección`);
 
   res = await client.get('/assets/js/editor.js');
   report.check('JS del editor se sirve completo', res.status === 200 && res.text.length > 20000, `${res.text.length} bytes`);

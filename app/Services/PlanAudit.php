@@ -604,6 +604,17 @@ final class PlanAudit
             $findings[] = $finding;
         }
 
+        /* ------------------ escenarios de ocupación temporal ------------------
+         * A-04 (NORMIA-006 §31): un evento con más gente que el uso habitual se
+         * calcula con las mismas fórmulas del piso y aparte, para que el aforo
+         * del uso habitual no cambie en silencio. */
+        $speed = max(0.1, (float) $criteria['egress']['travelSpeedMps']);
+        $walkTimeS = $travel['longestM'] === null ? null : self::round((float) $travel['longestM'] / $speed, 1);
+        $scenarios = OccupancyScenarios::analyze($design, $aforo, $availableWidthM, $walkTimeS);
+        foreach ($scenarios['findings'] as $finding) {
+            $findings[] = $finding;
+        }
+
         /* ------------------------------ orden ------------------------------ */
         usort($findings, static function (array $a, array $b): int {
             $order = array_flip(self::SEVERITIES);
@@ -614,9 +625,7 @@ final class PlanAudit
             $counts[$finding['severity']] += 1;
         }
 
-        $speed = max(0.1, (float) $criteria['egress']['travelSpeedMps']);
         $flow = max(0.0, (float) $criteria['egress']['flowPersonsPerSecondPerMeter']);
-        $walkTimeS = $travel['longestM'] === null ? null : self::round((float) $travel['longestM'] / $speed, 1);
         $queueTimeS = ($availableWidthM > 0 && $flow > 0)
             ? self::round($declared / ($flow * $availableWidthM), 1)
             : null;
@@ -665,6 +674,7 @@ final class PlanAudit
             ],
             'extinguishers' => $extinguishers,
             'firstAid' => $firstAid,
+            'scenarios' => $scenarios,
             'routes' => $routesReport,
             'signs' => [
                 'youAreHere' => $hasYouAreHere,

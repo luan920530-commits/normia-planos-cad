@@ -9,6 +9,19 @@
   /* Calidad declarada de una medida (NORMIA-006 §5.3). Tres valores, sin
      tolerancias: describe cómo se obtuvo la medida, no el plano. */
   const QUALITIES = ['exacta', 'aproximada', 'estimada'];
+  /**
+   * Escenarios de ocupación temporal (NORMIA-006 §31): hasta ocho por piso.
+   * Son una declaración del usuario —un evento, una hora pico— y se guardan
+   * con el plano. El auditor los calcula aparte y no toca el aforo del piso.
+   */
+  const MAX_SCENARIOS = 8;
+  const normalizeScenarios = (list) => {
+    if (!Array.isArray(list)) return [];
+    return list.slice(0, MAX_SCENARIOS).map((scenario) => ({
+      name: String(scenario?.name || '').trim().replace(/[<>]/g, '').slice(0, 60),
+      persons: G.clamp(Math.round(Number(scenario?.persons) || 0), 1, 10000),
+    })).filter((scenario) => scenario.name !== '');
+  };
   /* Tipos a los que se les puede declarar una longitud real. */
   const MEASURABLE_TYPES = [
     'wall', 'route', 'line', 'pipe', 'conduit', 'road', 'sidewalk', 'property',
@@ -443,6 +456,11 @@
         // la estima con el área libre y lo advierte en el informe.
         occupancy: G.clamp(Math.round(Number(canvasSource.occupancy) || 0), 0, 10000),
       };
+      /* Escenarios de ocupación temporal (NORMIA-006 §31): una declaración del
+         usuario que viaja con el plano. Sin escenarios la clave no existe, para
+         que un documento anterior se guarde igual que antes. */
+      const scenarios = normalizeScenarios(canvasSource.scenarios);
+      if (scenarios.length) canvas.scenarios = scenarios;
       let layers = Array.isArray(source.layers) && source.layers.length ? source.layers : [{ id: 'capa_planta', name: 'Planta', visible: true, locked: false }];
       layers = layers.slice(0, 24).map((layer, index) => ({
         id: String(layer.id || `capa_${index + 1}`),
@@ -2092,6 +2110,14 @@
       if (patch.scale !== undefined && /^1:[1-9][0-9]{0,4}$/.test(patch.scale)) canvas.scale = patch.scale;
       if (patch.background !== undefined && ['#ffffff', '#f8fafc'].includes(patch.background)) canvas.background = patch.background;
       if (patch.occupancy !== undefined) canvas.occupancy = G.clamp(Math.round(Number(patch.occupancy)) || 0, 0, 10000);
+      if (patch.scenarios !== undefined) {
+        if (Array.isArray(patch.scenarios) && patch.scenarios.length > MAX_SCENARIOS) {
+          throw new Error(`Puedes declarar hasta ${MAX_SCENARIOS} escenarios de ocupación por piso.`);
+        }
+        const scenarios = normalizeScenarios(patch.scenarios);
+        if (scenarios.length) canvas.scenarios = scenarios;
+        else delete canvas.scenarios;
+      }
       const overflow = this.design.elements.some((element) => element.x + element.w > canvas.width + 0.5 || element.y + element.h > canvas.height + 0.5);
       if (overflow) throw new Error('No puedes reducir el lienzo: hay elementos fuera de los nuevos límites. Muévelos o amplía el lienzo.');
       return this.apply('canvas', () => {

@@ -591,6 +591,12 @@
       </div>
       <label class="field"><span>Escala de referencia</span><input type="text" name="scale" pattern="1:[0-9]{1,5}" value="<?= e($floor['design']['canvas']['scale']) ?>" required><small>Referencia de impresión; verifica en sitio.</small></label>
       <label class="field"><span>Ocupación declarada (personas)</span><input type="number" name="occupancy" min="0" max="10000" step="1" value="<?= e((string) ($floor['design']['canvas']['occupancy'] ?? 0)) ?>"><small>Con 0 el auditor estima la ocupación por superficie libre y lo advierte en el informe.</small></label>
+      <fieldset class="scenario-fieldset">
+        <legend>Escenarios de ocupación temporal</legend>
+        <p class="help-text">Un evento con más gente que el uso habitual se revisa aparte: el aforo del piso no cambia. Hasta 8 escenarios por piso.</p>
+        <div class="scenario-rows" data-scenario-rows></div>
+        <button class="button button-ghost button-small" type="button" data-scenario-add>Añadir escenario</button>
+      </fieldset>
       <button class="button button-primary button-small" type="submit">Aplicar lienzo</button>
       <p class="help-text">Los cambios de lienzo forman parte del diseño y se confirman al guardar el plano.</p>
     </form>

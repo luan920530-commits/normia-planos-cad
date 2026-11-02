@@ -4,6 +4,7 @@ $counts = $report['counts'];
 $travel = $report['travel'];
 $occupancy = $report['occupancy'];
 $firstAid = $report['firstAid'] ?? null;
+$scenarios = $report['scenarios'] ?? null;
 $egress = $report['egress'];
 $exits = $report['exits'];
 $labels = \App\Services\PlanAudit::SEVERITY_LABELS;
@@ -170,6 +171,59 @@ $severityLabels = ['high' => 'Críticos', 'medium' => 'Importantes', 'low' => 'M
   <p class="audit-note audit-firstaid-note">El auditor cuenta los recursos <strong>dibujados en el plano</strong> y mide su alcance en línea recta hasta el punto más lejano del espacio libre. <strong>No comprueba contenido, dotación, vigencia, carga ni mantenimiento</strong>: eso se verifica en sitio. Los umbrales son criterios de referencia de la aplicación, no exigencias normativas<?= ($firstAid['criteria']['reference'] ?? '') !== '' ? '; la norma aplicable (' . e((string) $firstAid['criteria']['reference']) . ') depende del establecimiento y de la afluencia de público' : '' ?>.</p>
   <?php endif; ?>
 
+
+  <?php if (is_array($scenarios) && (int) ($scenarios['count'] ?? 0) > 0): ?>
+  <?php $base = $scenarios['base'] ?? []; $peak = $scenarios['peak'] ?? null; ?>
+  <h2 class="audit-h2">Escenarios de ocupación temporal</h2>
+  <div class="audit-metrics">
+    <article>
+      <span>Escenarios declarados</span>
+      <strong><?= (int) $scenarios['count'] ?></strong>
+      <small>Máximo <?= (int) ($scenarios['criteria']['maxScenarios'] ?? 8) ?> por piso</small>
+    </article>
+    <article>
+      <span>El más exigente</span>
+      <strong><?= $peak === null ? 'Sin datos' : (int) $peak['persons'] . ' pers.' ?></strong>
+      <small><?= $peak === null ? 'Sin escenarios' : e((string) $peak['name']) ?></small>
+    </article>
+    <article>
+      <span>Uso habitual</span>
+      <strong><?= (int) ($base['people'] ?? 0) ?> pers.</strong>
+      <small><?= e($formatTime($base['estimatedTimeS'] ?? null)) ?> de salida · <?= ($base['source'] ?? 'estimated') === 'declared' ? 'ocupación declarada' : 'capacidad calculada' ?></small>
+    </article>
+    <article>
+      <span>Capacidad del piso</span>
+      <strong><?= (int) ($base['capacity'] ?? 0) ?> pers.</strong>
+      <small>La misma superficie libre × densidad del uso habitual</small>
+    </article>
+  </div>
+  <table class="print-table audit-table audit-scenarios">
+    <thead>
+      <tr>
+        <th scope="col">Escenario</th>
+        <th scope="col">Personas</th>
+        <th scope="col">Capacidad</th>
+        <th scope="col">Ancho exigido</th>
+        <th scope="col">Tiempo estimado</th>
+        <th scope="col">Cabe</th>
+      </tr>
+    </thead>
+    <tbody>
+      <?php foreach ($scenarios['items'] as $scenario): ?>
+        <tr>
+          <th scope="row"><?= e((string) $scenario['name']) ?></th>
+          <td><?= (int) $scenario['persons'] ?></td>
+          <td><?= (int) $scenario['capacity'] ?><?php if ((int) $scenario['excess'] > 0): ?> <small>+<?= (int) $scenario['excess'] ?> de más</small><?php endif; ?></td>
+          <td><?= $formatNumber((float) $scenario['requiredWidthM']) ?> m<?php if ($scenario['widthOk'] === false): ?> <small>disponible <?= $formatNumber((float) $scenario['availableWidthM']) ?> m</small><?php endif; ?></td>
+          <td><?= e($formatTime($scenario['estimatedTimeS'])) ?><?php if ($scenario['extraTimeS'] !== null && (float) $scenario['extraTimeS'] > 0.05): ?> <small>+<?= e($formatTime((float) $scenario['extraTimeS'])) ?></small><?php endif; ?></td>
+          <td><?= $scenario['fits'] ? 'Sí' : 'No' ?><?= $scenario['widthOk'] === false ? ' · ancho' : '' ?></td>
+        </tr>
+      <?php endforeach; ?>
+    </tbody>
+  </table>
+  <p class="audit-note audit-scenarios-note"><?= e((string) ($scenarios['notice'] ?? '')) ?></p>
+  <?php endif; ?>
+
   <h2 class="audit-h2">Hallazgos</h2>
   <?php if ($findings === []): ?>
     <p class="audit-clean">No se detectaron hallazgos con los criterios de referencia configurados. Aun así, verifica el plano en sitio antes de usarlo.</p>
@@ -236,6 +290,10 @@ $severityLabels = ['high' => 'Críticos', 'medium' => 'Importantes', 'low' => 'M
       <tr><th scope="row">Alcance del botiquín</th><td>≤ <?= $formatNumber((float) $firstAid['criteria']['kitTravelM'], 1) ?> m</td></tr>
       <tr><th scope="row">Alcance del DEA</th><td>≤ <?= $formatNumber((float) $firstAid['criteria']['aedTravelM'], 1) ?> m</td></tr>
       <tr><th scope="row">Umbral de afluencia para el DEA</th><td><?= (int) $firstAid['criteria']['aedMinPersons'] ?> personas</td></tr>
+      <?php endif; ?>
+      <?php if (is_array($scenarios) && (int) ($scenarios['count'] ?? 0) > 0): ?>
+      <tr><th scope="row">Escenarios de ocupación por piso</th><td>hasta <?= (int) ($scenarios['criteria']['maxScenarios'] ?? 8) ?></td></tr>
+      <tr><th scope="row">Ancho exigido por escenario</th><td><?= $formatNumber((float) ($scenarios['criteria']['widthMmPerPerson'] ?? 5), 1) ?> mm por persona</td></tr>
       <?php endif; ?>
     </tbody>
   </table>

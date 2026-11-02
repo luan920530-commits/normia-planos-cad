@@ -2161,6 +2161,36 @@ async function main() {
     report.check('La ocupación declarada se guarda en el lienzo', app.model.design.canvas.occupancy === 40,
       String(app.model.design.canvas.occupancy));
 
+    /* Escenarios de ocupación temporal (NORMIA-006 §31): nombre, personas y
+       quitar. Se guardan con el plano y el auditor los revisa aparte. */
+    const ajustesTexto = q(window, '[data-drawer="settings"]')?.textContent || '';
+    report.check('Los ajustes del piso ofrecen escenarios de ocupación temporal',
+      /Escenarios de ocupación temporal/.test(ajustesTexto) && Boolean(q(window, '[data-scenario-add]')),
+      'bloque presente');
+    q(window, '[data-scenario-add]').click();
+    report.check('Añadir escenario crea una fila corta', qa(window, '[data-scenario-row]').length === 1,
+      `${qa(window, '[data-scenario-row]').length} fila`);
+    let filaEscenario = q(window, '[data-scenario-row]');
+    filaEscenario.querySelector('[data-scenario-name]').value = 'Evento de prueba';
+    filaEscenario.querySelector('[data-scenario-persons]').value = '5';
+    q(window, '[data-canvas-form]').dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
+    report.check('El escenario se guarda en el lienzo sin tocar el aforo declarado',
+      app.model.design.canvas.scenarios?.length === 1
+      && app.model.design.canvas.scenarios[0].name === 'Evento de prueba'
+      && app.model.design.canvas.scenarios[0].persons === 5
+      && app.model.design.canvas.occupancy === 40,
+      `escenario ${app.model.design.canvas.scenarios?.[0]?.persons} · aforo ${app.model.design.canvas.occupancy}`);
+    q(window, '[data-scenario-remove]').click();
+    q(window, '[data-canvas-form]').dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
+    report.check('Quitar el escenario lo borra del lienzo sin dejar la clave',
+      app.model.design.canvas.scenarios === undefined,
+      app.model.design.canvas.scenarios === undefined ? 'clave ausente' : String(app.model.design.canvas.scenarios));
+    q(window, '[data-scenario-add]').click();
+    filaEscenario = q(window, '[data-scenario-row]');
+    filaEscenario.querySelector('[data-scenario-name]').value = 'Visita corta';
+    filaEscenario.querySelector('[data-scenario-persons]').value = '5';
+    q(window, '[data-canvas-form]').dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
+
     /* El lienzo se edita en la unidad de trabajo sin cambiar el tamaño real. */
     const canvasForm = q(window, '[data-canvas-form]');
     const unitSelect = canvasForm?.querySelector('select[name="unit"]');
@@ -2195,6 +2225,11 @@ async function main() {
     report.check('El servidor conserva la salida marcada y la ocupación',
       savedAuditDoor?.isExit === true && savedAuditFloor.design?.canvas?.occupancy === 40,
       `salida ${savedAuditDoor?.isExit} · ${savedAuditFloor.design?.canvas?.occupancy} personas`);
+    report.check('El servidor conserva los escenarios de ocupación temporal',
+      savedAuditFloor.design?.canvas?.scenarios?.length === 1
+      && savedAuditFloor.design.canvas.scenarios[0].name === 'Visita corta'
+      && savedAuditFloor.design.canvas.scenarios[0].persons === 5,
+      `${savedAuditFloor.design?.canvas?.scenarios?.length || 0} escenario guardado`);
 
     report.check('El arranque recibe la dirección del auditor', decodeURIComponent(String(app.boot.auditUrl || '')).includes('/audit'), app.boot.auditUrl);
     report.check('El cajón de revisión avisa de que no es un dictamen',
@@ -2220,6 +2255,13 @@ async function main() {
       && /Aforo máximo/.test(q(window, '[data-drawer="audit"]')?.textContent || '')
       && /Aforo permitido/.test(q(window, '[data-drawer="audit"]')?.textContent || ''),
       `máximo ${auditReport?.occupancy?.maxPersons} · permitido ${auditReport?.occupancy?.permitted} · ${auditReport?.occupancy?.freeAreaM2} m²`);
+    report.check('El cajón de revisión calcula el escenario y lo deja fuera del aforo habitual',
+      auditReport?.scenarios?.count === 1
+      && auditReport.scenarios.items[0].persons === 5
+      && auditReport.scenarios.base.people === auditReport.occupancy.people
+      && /Escenarios/.test(q(window, '[data-drawer="audit"]')?.textContent || '')
+      && /No aprueban el evento/.test(q(window, '[data-drawer="audit"]')?.textContent || ''),
+      `${auditReport?.scenarios?.count} escenario · base ${auditReport?.scenarios?.base?.people} personas`);
     report.check('El cajón muestra la medición y el listado de hallazgos',
       /Medición de evacuación/.test(q(window, '[data-drawer="audit"]')?.textContent || '')
       && qa(window, '[data-drawer="audit"] .audit-finding').length === (auditReport?.findings || []).length,

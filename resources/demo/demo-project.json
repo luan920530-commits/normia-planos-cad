@@ -19,7 +19,17 @@
           "unit": "cm",
           "scale": "1:100",
           "background": "#ffffff",
-          "occupancy": 30
+          "occupancy": 30,
+          "scenarios": [
+            {
+              "name": "Capacitación de brigada",
+              "persons": 30
+            },
+            {
+              "name": "Descargue de mercancía",
+              "persons": 12
+            }
+          ]
         },
         "layers": [
           {
@@ -2479,7 +2489,13 @@
           "grid": 20,
           "unit": "cm",
           "scale": "1:100",
-          "background": "#ffffff"
+          "background": "#ffffff",
+          "scenarios": [
+            {
+              "name": "Hora pico de cafetería",
+              "persons": 26
+            }
+          ]
         },
         "layers": [
           {

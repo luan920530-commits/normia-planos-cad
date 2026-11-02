@@ -1485,6 +1485,15 @@ permite agrupar dos torres sin trucos en el nombre.
 Recomendación: **sí** (`floor_version_id`). Alternativa: guardar solo la fecha — la
 historia deja de ser verificable si el plano cambia.
 
+**DEC-13 · Los escenarios de ocupación viven en el documento del piso.**
+Recomendación: **sí**, mientras no exista la migración de §20: `canvas.scenarios`
+con nombre y personas, calculados aparte por el auditor. Alternativa: esperar a la
+tabla `occupancy_scenarios` — deja sin cubrir A-04 durante toda la etapa 6, y el
+valor del escenario está en el cálculo, no en el registro histórico.
+**Implementada en la 1.24.0; ver §31.** Lo que falta de §20 —personas por área,
+vigencia, cierre inmutable y `floor_version_id`— sigue siendo diseño para cuando se
+apruebe DEC-11 y DEC-12.
+
 **DEC-12 · Una sola migración para todas las tablas nuevas (`user_version` 8).**
 Recomendación: **sí**, con respaldo previo y prueba de restauración. Alternativa:
 una migración por etapa — más granular y multiplica los estados intermedios que
@@ -1866,3 +1875,89 @@ interfaz **406**, páginas **54**, golden **8/8** con **6 974 valores**. El gold
 crece porque el informe gana el bloque `firstAid` y porque la demo incorpora los tres
 recursos en la planta baja: los otros pisos muestran lo que falta, que es justo lo
 que el cálculo tiene que decir.
+
+## 31. Escenarios de ocupación temporal en el cálculo (1.24.0 · A-04)
+
+El auditor sabía cuánta gente cabe **todos los días**. No sabía qué pasa el día que
+se monta un evento en la misma bodega. Un aforo de 23 personas no dice nada sobre la
+capacitación de brigada con 30 sillas, y el plano que se aprueba un martes se usa el
+sábado con otra gente. Ese hueco es el que cierra esta entrega.
+
+### 31.1 Qué se declara
+
+En **Ajustes del piso** → *Escenarios de ocupación temporal*, hasta **8** filas con
+dos datos:
+
+| Campo | Límite | Qué es |
+| --- | --- | --- |
+| Nombre | 1 a 60 caracteres, sin `<` ni `>` | «Capacitación de brigada», «Hora pico de cafetería» |
+| Personas | 1 a 10 000 | cuánta gente se espera en ese evento |
+
+Se guardan **con el plano**, en `canvas.scenarios`, y no en una tabla aparte. Viajan
+con la versión, el borrador, la exportación JSON y la demo; no hay migración,
+`user_version` sigue en **7**, y un plano sin escenarios se guarda exactamente igual
+que antes (la clave no existe).
+
+### 31.2 Qué se calcula, y con qué fórmulas
+
+Ninguna fórmula nueva. Las tres cifras del escenario salen de los criterios que ya
+usaba el piso:
+
+| Cifra | Fórmula |
+| --- | --- |
+| capacidad | superficie libre × densidad de referencia (`occupancy.densityPersonsPerM2`) |
+| ancho exigido | personas × `egress.widthMmPerPerson` |
+| tiempo estimado | marcha del piso (`egress.travelSpeedMps`) + cola `personas ÷ (flujo × ancho útil)` |
+
+Cada escenario se compara con el piso y devuelve `fits` (¿cabe?), `excess`,
+`widthOk`, `queueTimeS`, `estimatedTimeS` y `extraTimeS` (lo que suma sobre el uso
+habitual).
+
+**El escenario no cambia el aforo del piso.** `occupancy.people`, `permitted`,
+`excess` y el tiempo del uso habitual siguen siendo los mismos; el escenario se
+informa aparte. Mezclarlos habría cambiado en silencio el resultado de un plano ya
+revisado, y son dos preguntas distintas: *¿cuánta gente cabe aquí todos los días?* y
+*¿qué pasa el día del evento?*
+
+### 31.3 Los hallazgos
+
+| Código | Severidad | Cuándo |
+| --- | --- | --- |
+| `scenario_over_capacity` | importante | las personas del escenario superan la capacidad calculada |
+| `scenario_width_short` | importante | el ancho exigido por el escenario supera el ancho útil de las salidas |
+| `scenario_more` | informativo | más de cuatro escenarios se pasan: arriba van los cuatro más exigentes |
+
+Los hallazgos se emiten de mayor a menor número de personas, hasta cuatro
+escenarios; el resto se cuenta en `scenario_more` para no tapar el informe con
+repeticiones. Sin escenarios no aparece ninguna sección ni ningún hallazgo.
+
+### 31.4 Dónde se ve
+
+| Superficie | Qué muestra |
+| --- | --- |
+| Ajustes del piso | las filas de escenario, con añadir y quitar |
+| Informe imprimible (`…/audit`) | sección **Escenarios de ocupación temporal**: tabla con personas, capacidad, ancho exigido, tiempo estimado y si cabe, más el uso habitual y la capacidad del piso |
+| Cajón Revisión | dos filas nuevas: escenarios declarados (con el más exigente) y capacidad del piso, más una nota de alcance |
+| API (`api/floors/{id}/audit`) | `report.scenarios` con `count`, `items`, `peak`, `base`, `criteria` y `notice` |
+
+### 31.5 Lo que no hace, y se dice
+
+No aprueba el evento: no verifica el permiso, la silletería, las tarimas, las
+estructuras, los extintores adicionales que pida la autoridad ni la ocupación real en
+la puerta. El informe lo escribe con esas palabras. Tampoco reemplaza el diseño de
+§20 —personas por área, vigencia, cierre inmutable y `floor_version_id`—, que sigue
+pendiente de DEC-11 y DEC-12.
+
+### 31.6 Pruebas
+
+Funcional **373** (sin escenarios no hay sección ni clave; dos escenarios se guardan
+y solo el que no cabe se marca; el aforo habitual queda intacto; un escenario de 200
+personas con una salida de 90 cm produce `scenario_over_capacity` y
+`scenario_width_short`; `422` para nueve escenarios, nombre vacío, cero personas y
+claves de más; sección y nota en el informe; la demo declara dos escenarios en la
+planta baja), interfaz **412** (añadir, guardar, quitar y volver a añadir sin que el
+aforo declarado se mueva; el servidor los conserva; el cajón los resume), páginas
+**54**, golden **8/8** con **7 256 valores**. El golden crece por el bloque
+`scenarios` y por la demo: la planta baja gana un hallazgo importante y la cafetería
+otro, que es exactamente lo que un evento con más gente que la capacidad tiene que
+decir.

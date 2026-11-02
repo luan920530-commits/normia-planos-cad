@@ -670,6 +670,19 @@ body.is-dragging-resource .library-card { cursor: grabbing; }
 
 /* capas */
 .help-text { color: var(--muted); font-size: .78rem; line-height: 1.45; }
+
+/* Escenarios de ocupación temporal (NORMIA-006 §31): filas cortas, sin formularios
+   nuevos que aprender. Nombre, personas y quitar. */
+.scenario-fieldset { margin: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; display: grid; gap: 8px; }
+.scenario-fieldset legend { padding: 0 4px; font-size: .72rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.scenario-fieldset .help-text { margin: 0; }
+.scenario-rows { display: grid; gap: 8px; }
+.scenario-rows .scenario-empty { margin: 0; font-size: .78rem; }
+.scenario-row { display: grid; grid-template-columns: 1fr 92px 32px; gap: 8px; align-items: end; }
+.scenario-row .field span { font-size: .7rem; }
+.scenario-row input { font-size: .82rem; }
+.scenario-remove { width: 32px; height: 32px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--muted); cursor: pointer; }
+.scenario-remove:hover { color: var(--danger, #b91c1c); border-color: currentColor; }
 .inline-add-form { display: flex; gap: 8px; align-items: flex-end; }
 .inline-add-form .field { flex: 1; }
 .layer-list { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }

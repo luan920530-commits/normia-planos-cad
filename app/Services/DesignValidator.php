@@ -11,6 +11,9 @@ final class DesignValidator
 {
     public const MAX_ELEMENTS = 1200;
     public const MAX_LAYERS = 24;
+
+    /** Escenarios de ocupación temporal por piso (NORMIA-006 §31). */
+    public const MAX_SCENARIOS = 8;
     public const MAX_GROUPS = 80;
 
     public const COLORS = [
@@ -402,7 +405,7 @@ final class DesignValidator
         if (!is_array($canvas)) {
             throw new DomainException('Falta la configuración del lienzo.');
         }
-        $allowed = ['width', 'height', 'grid', 'unit', 'scale', 'background', 'occupancy'];
+        $allowed = ['width', 'height', 'grid', 'unit', 'scale', 'background', 'occupancy', 'scenarios'];
         foreach (array_keys($canvas) as $key) {
             if (!in_array($key, $allowed, true)) {
                 throw new DomainException('El lienzo contiene una propiedad no permitida.');
@@ -426,7 +429,8 @@ final class DesignValidator
         if (!is_string($background) || !in_array($background, ['#ffffff', '#f8fafc'], true)) {
             throw new DomainException('El fondo del lienzo no es válido.');
         }
-        return [
+        $rawScenarios = $canvas['scenarios'] ?? null;
+        $canvas = [
             'width' => $width,
             'height' => $height,
             'grid' => $grid,
@@ -435,6 +439,58 @@ final class DesignValidator
             'background' => $background,
             'occupancy' => $occupancy,
         ];
+        /* Escenarios de ocupación temporal (NORMIA-006 §31): un evento con más
+           gente que el uso habitual no cambia el aforo del piso, se revisa
+           aparte. La clave se omite cuando no hay escenarios para que un plano
+           anterior se guarde exactamente igual. */
+        $scenarios = self::normalizeScenarios($rawScenarios);
+        if ($scenarios !== []) {
+            $canvas['scenarios'] = $scenarios;
+        }
+        return $canvas;
+    }
+
+    /**
+     * Escenarios de ocupación temporal: `[{name, persons}]`.
+     *
+     * Son una declaración del usuario —«el sábado se sientan 60 personas en la
+     * bodega»— y se guardan con el plano, no en una tabla aparte: así viajan con
+     * la versión, la exportación y la demo. El auditor los calcula con la misma
+     * fórmula del piso y no toca la ocupación declarada.
+     *
+     * @return list<array{name:string,persons:int}>
+     */
+    private static function normalizeScenarios(mixed $scenarios): array
+    {
+        if ($scenarios === null) {
+            return [];
+        }
+        if (!is_array($scenarios) || !array_is_list($scenarios)) {
+            throw new DomainException('Los escenarios de ocupación deben ser una lista.');
+        }
+        if (count($scenarios) > self::MAX_SCENARIOS) {
+            throw new DomainException('Puedes declarar hasta ' . self::MAX_SCENARIOS . ' escenarios de ocupación por piso.');
+        }
+        $result = [];
+        foreach ($scenarios as $index => $scenario) {
+            if (!is_array($scenario) || array_is_list($scenario)) {
+                throw new DomainException('El escenario ' . ($index + 1) . ' de ocupación no es válido.');
+            }
+            foreach (array_keys($scenario) as $key) {
+                if (!in_array($key, ['name', 'persons'], true)) {
+                    throw new DomainException('Un escenario de ocupación contiene una propiedad no permitida.');
+                }
+            }
+            $name = $scenario['name'] ?? '';
+            if (!is_string($name) || trim($name) === '' || preg_match('/[<>]/u', $name) === 1 || preg_match_all('/./us', trim($name), $m) > 60) {
+                throw new DomainException('El nombre del escenario ' . ($index + 1) . ' debe tener entre 1 y 60 caracteres, sin los signos < ni >.');
+            }
+            $result[] = [
+                'name' => trim($name),
+                'persons' => self::integer($scenario['persons'] ?? null, 1, 10000, 'número de personas del escenario ' . ($index + 1)),
+            ];
+        }
+        return $result;
     }
 
     private static function normalizeLayers(mixed $layers): array

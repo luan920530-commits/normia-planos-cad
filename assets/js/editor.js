@@ -397,6 +397,7 @@
 
       q('[data-floor-settings-form]')?.addEventListener('submit', (event) => this.saveFloorMeta(event));
       q('[data-canvas-form]')?.addEventListener('submit', (event) => this.applyCanvasSettings(event));
+      q('[data-canvas-form]')?.addEventListener('click', (event) => this.onScenarioClick(event));
       q('[data-measure-fit]')?.addEventListener('click', (event) => {
         if (event.target.closest('[data-measure-fit-apply]')) this.applyMeasureFit();
         else if (event.target.closest('[data-measure-fit-dismiss]')) this.dismissMeasureFit();
@@ -2227,6 +2228,7 @@
       }
       if (form.elements.unit) form.elements.unit.value = unit;
       form.dataset.unit = unit;
+      this.renderScenarioRows();
     }
 
     /** Cambia la unidad visible del formulario sin mover ni redimensionar nada. */
@@ -2341,6 +2343,77 @@
       this.toast('Se conserva el dibujo tal cual; las medidas declaradas siguen mandando en los cálculos.', 'info');
     }
 
+    /* ------------------ escenarios de ocupación temporal ------------------
+     * A-04 (NORMIA-006 §31): una lista corta de nombre y personas. Se guarda con
+     * el plano y el auditor la calcula aparte; no toca el aforo del piso.
+     */
+    renderScenarioRows() {
+      const host = q('[data-scenario-rows]');
+      if (!host) return;
+      const scenarios = this.model.design.canvas.scenarios || [];
+      const rows = scenarios.map((scenario) => `
+        <div class="scenario-row" data-scenario-row>
+          <label class="field"><span>Nombre</span><input type="text" maxlength="60" data-scenario-name value="${esc(scenario.name || '')}" placeholder="Evento, hora pico, montaje…"></label>
+          <label class="field scenario-persons"><span>Personas</span><input type="number" min="1" max="10000" step="1" data-scenario-persons value="${Number(scenario.persons) || ''}"></label>
+          <button class="scenario-remove" type="button" data-scenario-remove data-tooltip="Quitar escenario" aria-label="Quitar escenario">
+            <svg class="icon" aria-hidden="true"><use href="#i-trash"></use></svg>
+          </button>
+        </div>`).join('');
+      host.innerHTML = rows || '<p class="muted scenario-empty">Sin escenarios: el piso se revisa con su aforo habitual.</p>';
+      const add = q('[data-scenario-add]');
+      if (add) add.disabled = scenarios.length >= 8;
+    }
+
+    /** Añadir o quitar una fila de escenario, sin guardar todavía. */
+    onScenarioClick(event) {
+      const add = event.target.closest('[data-scenario-add]');
+      if (add) {
+        const host = q('[data-scenario-rows]');
+        if (!host) return;
+        const count = host.querySelectorAll('[data-scenario-row]').length;
+        if (count >= 8) {
+          this.toast('Puedes declarar hasta 8 escenarios de ocupación por piso.', 'info');
+          return;
+        }
+        q('.scenario-empty', host)?.remove();
+        const html = `
+        <div class="scenario-row" data-scenario-row>
+          <label class="field"><span>Nombre</span><input type="text" maxlength="60" data-scenario-name placeholder="Evento, hora pico, montaje…"></label>
+          <label class="field scenario-persons"><span>Personas</span><input type="number" min="1" max="10000" step="1" data-scenario-persons placeholder="60"></label>
+          <button class="scenario-remove" type="button" data-scenario-remove data-tooltip="Quitar escenario" aria-label="Quitar escenario">
+            <svg class="icon" aria-hidden="true"><use href="#i-trash"></use></svg>
+          </button>
+        </div>`;
+        host.insertAdjacentHTML('beforeend', html);
+        const rows = host.querySelectorAll('[data-scenario-row]');
+        if (rows.length >= 8) add.disabled = true;
+        rows[rows.length - 1]?.querySelector('[data-scenario-name]')?.focus();
+        return;
+      }
+      const remove = event.target.closest('[data-scenario-remove]');
+      if (remove) {
+        remove.closest('[data-scenario-row]')?.remove();
+        const host = q('[data-scenario-rows]');
+        if (host && host.querySelectorAll('[data-scenario-row]').length === 0) {
+          host.innerHTML = '<p class="muted scenario-empty">Sin escenarios: el piso se revisa con su aforo habitual.</p>';
+        }
+        const add = q('[data-scenario-add]');
+        if (add) add.disabled = false;
+      }
+    }
+
+    /** Lee las filas del formulario; el modelo descarta las que no tienen nombre. */
+    readScenarioRows() {
+      const host = q('[data-scenario-rows]');
+      if (!host) return [];
+      return [...host.querySelectorAll('[data-scenario-row]')]
+        .map((row) => ({
+          name: row.querySelector('[data-scenario-name]')?.value || '',
+          persons: Number(row.querySelector('[data-scenario-persons]')?.value) || 0,
+        }))
+        .filter((scenario) => scenario.name.trim() !== '');
+    }
+
     applyCanvasSettings(event) {
       event.preventDefault();
       const form = event.target;
@@ -2356,6 +2429,7 @@
           unit,
           scale: form.elements.scale.value.trim(),
           occupancy: form.elements.occupancy ? Number(form.elements.occupancy.value) || 0 : 0,
+          scenarios: this.readScenarioRows(),
         });
         this.fillCanvasForm(unit);
         this.fit(true);

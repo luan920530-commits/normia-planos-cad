@@ -160,6 +160,10 @@
       /* Recursos de primeros auxilios (NORMIA-006 §30). Tres cifras que el
          plano guardado ya conoce: cuántos hay y hasta dónde llegan. */
       const firstAid = report.firstAid || null;
+      /* Escenarios de ocupación temporal (NORMIA-006 §31). No cambian el aforo
+         del piso: se revisan aparte y aquí se resume el más exigente. */
+      const scenarios = report.scenarios || null;
+      const peak = scenarios?.peak || null;
 
       this.host.innerHTML = `
         <section class="audit-score-row">
@@ -203,6 +207,9 @@
             <div><dt>Sin salida alcanzable</dt><dd>${number(travel.unreachableAreaM2)} m²</dd></div>
             <div><dt>Rejilla de cálculo</dt><dd>${number(travel.cellM, 2)} m</dd></div>
             <div><dt>Rutas dibujadas</dt><dd>${(report.routes || []).length}</dd></div>
+            ${scenarios && scenarios.count > 0 ? `
+            <div><dt>Escenarios</dt><dd>${number(scenarios.count, 0)} <small>el más exigente: ${esc(peak?.name || 'sin nombre')} (${number(peak?.persons, 0)} pers.${peak && peak.fits ? '' : peak ? ', no cabe' : ''})</small></dd></div>
+            <div><dt>Capacidad del piso</dt><dd>${number(scenarios.base?.capacity, 0)} pers. <small>la misma superficie libre × densidad del uso habitual</small></dd></div>` : ''}
             ${firstAid ? `
             <div><dt>Botiquines</dt><dd>${number(firstAid.kits.count, 0)} <small>${firstAid.coverage?.kitMaxM === null || firstAid.coverage?.kitMaxM === undefined ? 'sin medición' : `punto más lejano ${number(firstAid.coverage.kitMaxM)} m · referencia ${number(firstAid.criteria.kitTravelM, 1)} m`}</small></dd></div>
             <div><dt>Camillas</dt><dd>${number(firstAid.stretchers.count, 0)} <small>${firstAid.stretchers.count === 0 ? 'ninguna ubicada' : 'ubicadas en el plano'}</small></dd></div>
@@ -225,6 +232,7 @@
           ${findings.length ? `<ul class="audit-finding-list">${rows}</ul>` : '<p class="audit-empty">Sin hallazgos en esta categoría.</p>'}
         </section>
 
+        ${scenarios && scenarios.count > 0 ? `<p class="audit-note">Los <strong>escenarios de ocupación temporal</strong> se calculan con la misma superficie, densidad y ancho útil del piso, aparte del aforo del uso habitual. No aprueban el evento ni verifican el permiso, la silletería ni la ocupación real en la puerta.</p>` : ''}
         <p class="audit-note">El aforo máximo es una capacidad calculada (superficie útil libre × densidad de referencia) y el permitido es el menor entre la ocupación declarada y esa capacidad. El informe imprimible lo deja por escrito y el pie del plano exportado muestra las dos cifras.</p>
         <p class="audit-note">Análisis sobre el plano guardado (v${number(this.app.boot?.version, 0)}). Los umbrales son referencias configurables: ajústalos a la normativa aplicable y valida el resultado con un profesional competente.</p>`;
     }
