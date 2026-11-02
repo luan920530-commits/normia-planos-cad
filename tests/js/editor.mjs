@@ -1407,6 +1407,28 @@ async function main() {
         /position:\s*(relative|fixed|sticky|absolute)/.test(block) && zIndexOf(block) > canvasZ,
         `${selector} z-index ${zIndexOf(block)} · lienzo ${canvasZ} · ${block.replace(/\s+/g, ' ').slice(0, 90)}`);
     }
+    /* Los paneles de la barra superior («Más opciones») y del rail no son
+       elementos de la ventana: viven dentro del contexto de apilamiento que abre
+       su contenedor (`backdrop-filter` + `z-index`). Por eso el contenedor tiene
+       que ganarle a la barra de herramientas, que ocupa la franja justo debajo y
+       se dibuja después en el documento. Con la barra superior en 30 el panel se
+       veía por debajo de la paleta. */
+    const ladder = {
+      '.editor-topbar': zIndexOf(cssBlock('.editor-topbar')),
+      '.rail': zIndexOf(cssBlock('.rail')),
+      '.stage-toolbar': zIndexOf(cssBlock('.stage-toolbar')),
+    };
+    report.check('El menú «Más opciones» se dibuja por encima de la barra de herramientas',
+      ladder['.editor-topbar'] > ladder['.stage-toolbar'] && ladder['.editor-topbar'] > ladder['.rail'],
+      `barra superior ${ladder['.editor-topbar']} · rail ${ladder['.rail']} · herramientas ${ladder['.stage-toolbar']}`);
+    report.check('Los menús del rail se dibujan por encima de la barra de herramientas',
+      ladder['.rail'] > ladder['.stage-toolbar'],
+      `rail ${ladder['.rail']} · herramientas ${ladder['.stage-toolbar']}`);
+    report.check('Los cajones siguen por encima de la barra superior y del rail',
+      zIndexOf(cssBlock('.drawer')) > ladder['.editor-topbar']
+      && zIndexOf(cssBlock('.drawer')) > ladder['.rail'],
+      `cajón ${zIndexOf(cssBlock('.drawer'))} · barra superior ${ladder['.editor-topbar']}`);
+
     report.check('La paleta de herramientas se ancla a la barra y no se queda detrás del lienzo',
       /position:\s*absolute/.test(cssBlock('.tools-popover'))
       && zIndexOf(cssBlock('.tools-popover')) >= 1
