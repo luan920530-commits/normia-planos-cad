@@ -9,7 +9,8 @@ pueda dibujar, anotar medidas y recibir cálculos sin aprender metrología.
 | Rama | `arena/48ee92e3-normia-planos-cad` |
 | Base | `bddc2dc` (NORMIA-005 entregado, PR #56 abierto) |
 | Reemplaza en parte | [`NORMIA-005-CALIBRACION-DIMENSIONAL.md`](NORMIA-005-CALIBRACION-DIMENSIONAL.md) — §8 de trazabilidad |
-| Estado | **DEC-1 a DEC-6 aprobadas** (2026-11-02); pendiente el resto del alcance (3.B y siguientes). No se tocó código ni datos |
+| Alcance | **3.A a 3.J** — los nueve apartados, recibidos el 2026-11-02 |
+| Estado | **diseño completo**; DEC-1 a DEC-6 aprobadas, DEC-7 a DEC-12 pendientes. No se tocó código ni datos |
 
 ---
 
@@ -34,11 +35,12 @@ dice de dónde salió cada número. Nada es obligatorio.
 | la vista previa con token y caducidad para cambiar de unidad | el control de conflicto por versión | un ajuste global opcional, reversible, sin estado |
 | el `grid` y el `fontSize` en decimales (se quedan enteros) | la escala `1:N` como referencia de impresión | el eco de la medida en las dos unidades |
 
-**Nota de alcance.** El mensaje de la misión llegó con el punto **3.A (unidades)**
-completo; los puntos siguientes no llegaron. Este documento diseña el **núcleo**
-—unidades, medidas y cálculos— para que lo que falte encaje sin rehacerlo, y
-señala en §5.5 y §12 dónde se enchufa cada pieza pendiente. Si el resto pide otra
-cosa, se ajusta aquí mismo, no en otro documento.
+**Nota de alcance.** El mensaje de la misión llegó en dos veces: primero el punto
+**3.A (unidades)**, y el 2026-11-02 el resto —**3.B a 3.J**—. §1 a §12 diseñan el
+**núcleo** (unidades, medidas y cálculos) y §13 a §25 diseñan los nueve apartados
+restantes sobre ese núcleo, sin cambiar ninguna decisión aprobada. El documento
+está completo en su alcance; lo que falta es aprobar DEC-7 a DEC-12 y decidir qué
+etapa se implementa primero.
 
 ---
 
@@ -697,6 +699,9 @@ La etapa 1 es la única con riesgo real, porque toca a todos los consumidores. L
 que la hace manejable: el golden de la etapa 0, que no debe moverse, y una
 prueba nueva que compara el mismo plano en `cm` y en `m`.
 
+Las etapas **4 a 10**, que cubren los apartados 3.B a 3.J, están en §23 con sus
+dependencias y su orden.
+
 ---
 
 ## 12. Lo que no pude verificar
@@ -711,5 +716,792 @@ prueba nueva que compara el mismo plano en `cm` y en `m`.
    verla en pantalla antes de darla por buena.
 5. **No comprobé si alguna vista muestra la unidad del lienzo como si fuera una
    escala** más allá de la barra de estado y el panel que ya cito.
-6. **Los puntos 3.B y 3.C de la misión no llegaron**; §5.5 dice dónde encajan las
-   piezas de medida que faltan, pero si piden otra cosa, esto se ajusta.
+El resto del alcance (3.B a 3.J) llegó el 2026-11-02: se diseña en §13 a §25, y
+los límites de verificación de esos apartados están en §25, no aquí.
+
+---
+
+## 13. El alcance completo: 3.B a 3.J
+
+El 2026-11-02 llegó el resto de la misión. Los nueve apartados no cambian
+ninguna decisión aprobada: la amplían. Esto es lo que añade cada uno y dónde se
+diseña.
+
+| Apartado | En una frase | Se diseña en | Efecto sobre lo aprobado |
+| --- | --- | --- | --- |
+| 3.B | escribir y corregir la medida de cada elemento | §14 | convierte el campo de §5.2 en el patrón único; descubre una ausencia: no hay ventanas |
+| 3.C | toda cifra de los módulos sale de una dimensión | §15 | confirma §6 y le pone un contrato con nombre y firma |
+| 3.D | ajustar un plano que ya venía dibujado | §16 | es la misma acción de §5.4, con otra puerta de entrada |
+| 3.E | el plano exportado conserva su tamaño real | §17 | desarrolla NORMIA-004 DEC-4 |
+| 3.F | organizar la instalación en edificios, pisos y áreas | §18 | desarrolla NORMIA-004 DEC-1 y DEC-2 |
+| 3.G | tres cifras de ocupación distintas, no una | §19 | cambia el significado de `canvas.occupancy` |
+| 3.H | turnos y eventos con su historia | §20 | tablas nuevas; el plano no se toca |
+| 3.I | relacionar áreas, ocupación, rutas y recursos | §21 | usa casi todo lo que ya existe |
+| 3.J | que nada histórico se rompa | §22 | cierra compatibilidad, respaldo y pruebas |
+
+La misión fija cuatro prohibiciones. Se traducen a reglas que se pueden buscar en
+el código, no a intenciones:
+
+| Prohibición | Regla comprobable |
+| --- | --- |
+| Nada de calibraciones obligatorias | ningún flujo de dibujo, guardado o exportación abre un paso que no se pueda cerrar con «cancelar» y seguir |
+| Nada de procedimientos metrológicos | la interfaz no pide instrumento, margen, tolerancia ni verificación |
+| Nada de ajustes globales automáticos | el único reescalado es §5.4: lo pide el usuario, se ve antes y después, y se deshace |
+| Nada de configuración innecesaria | si un valor puede tener un predeterminado razonable, lo tiene y no se pregunta |
+
+Y una regla de redacción para el resto de este documento: **cada pieza nueva tiene
+que poder decirse en una frase con sujeto, verbo y resultado** —«el usuario escribe
+el ancho del vano y el plano lo usa en el cálculo de evacuación»—. Lo que no se
+pueda decir así, no entra.
+
+---
+
+## 14. 3.B · Ingreso y edición de dimensiones de los elementos
+
+### 14.1 Qué se puede medir hoy, tipo por tipo
+
+Los tipos no son un catálogo abierto: son una lista cerrada del validador
+(`DesignValidator.php:29-36`). Esto es todo lo que existe y qué medida tiene
+sentido en cada uno:
+
+| Tipo | Medida que tiene sentido | Estado |
+| --- | --- | --- |
+| `wall` | largo por el arco; el alto del muro no existe como dato | se mide, falta el alto |
+| `door`, `door_double`, `door_garage` | ancho del hueco = `w` | se mide |
+| `route` | largo del recorrido, por el arco | se mide |
+| `line` | largo | se mide |
+| `pipe`, `conduit` | largo; el diámetro y la sección salen del catálogo | se mide el largo |
+| `road` | ancho de banda (`widthM`) y largo | se mide |
+| `sidewalk`, `property` | largo y ancho de banda | se mide |
+| `crosswalk`, `parking` | ancho y largo de la franja o de la plaza | se miden como caja |
+| `rect`, `ellipse` | ancho y alto; si el usuario lo declara recinto, superficie | base de §18 |
+| `dimension` | la cota es la medida, no un objeto medido | rótulo |
+| `text` | no se mide | — |
+
+`CURVE_TYPES` (`DesignValidator.php:36`) dice cuáles admiten arco, y por tanto
+cuáles se miden por longitud de arco y no por la cuerda.
+
+### 14.2 Las dos ausencias que 3.B deja al descubierto
+
+**a) No existe el tipo «ventana».** El apartado pide dimensiones de «paredes,
+puertas, ventanas, pasillos, espacios». Puertas hay tres tipos; ventanas,
+ninguno. Dos caminos, y conviene decidirlo antes de escribir código:
+
+| Camino | Qué implica | Coste |
+| --- | --- | --- |
+| A · sin tipo nuevo | la ventana se dibuja como muro con rótulo; su ancho es el del tramo | cero; no se puede listar ni contar |
+| B · tipo `window` | símbolo, biblioteca, validación, `format: 6` y su conversión | medio; toca el validador y el exportador |
+
+Recomendación: **A ahora, B cuando alguien pida el listado de ventanas** (por
+ejemplo para un pliego de carpintería). Inventar el tipo antes de saber qué se
+hará con él es exactamente la configuración innecesaria que la misión prohíbe.
+
+**b) No existe la entidad «pasillo» ni «espacio».** Hoy un pasillo es el hueco
+entre dos muros: no tiene identidad, no se puede nombrar, no se puede medir como
+unidad. Eso no lo resuelve 3.B, lo resuelve 3.F (§18). Hasta entonces, de un
+pasillo solo se puede medir su largo entre ejes, que es lo que ya se mide.
+
+### 14.3 El campo único
+
+No hay un formulario de medidas distinto para cada tipo. Hay **un** campo, el de
+§5.2, con tres formas de llegar a él:
+
+| Dónde | Cómo se ve | Qué escribe |
+| --- | --- | --- |
+| Inspector, sección Geometría | «Largo real» con selector de unidad y eco | `measuredM` |
+| Al terminar un trazo | campo en línea con el largo geométrico ya escrito | `measuredM`, y ajusta el trazo |
+| Panel del lienzo | ancho, alto y cuadrícula en la unidad de trabajo | geometría en cm (§4.4) |
+
+Reglas de entrada, las mismas en los tres sitios: hasta 3 decimales en metros,
+2 en centímetros, 0 en milímetros (§4.2); se rechaza lo que no se puede
+representar con un mensaje que dice por qué; **nunca se redondea al guardar**, se
+redondea al mostrar.
+
+### 14.4 Editar sin romper el dibujo
+
+- **Mover un vértice no borra la medida.** El objeto queda con medida declarada y
+  geometría distinta: se marca con un punto discreto en el inspector, no en el
+  lienzo. El plano no se ensucia con avisos.
+- **Cambiar la medida de un trazo lo estira**, desde el primer vértice, mirando el
+  ángulo y las curvas (§5.2). No se reubica el objeto.
+- **Los límites son los del validador**: X e Y de 0 a 10 000 cm, ancho y alto de 2
+  a 10 000 cm (`DesignValidator::normalizeElements`). El lienzo va de 400 × 300 a
+  4 000 × 3 000 cm. Ninguno de estos números cambia con el rediseño.
+- **Una medida no se hereda.** Copiar un elemento copia su medida, porque es parte
+  del objeto; duplicar un piso copia las de sus elementos. No hay propagación
+  entre objetos parecidos.
+
+### 14.5 Aceptación
+
+| ID | Caso | Esperado |
+| --- | --- | --- |
+| B-01 | escribir el largo de un muro en el inspector | se guarda en cm; el campo muestra la medida y su eco |
+| B-02 | corregir la medida de un trazo dibujado | el trazo se estira y conserva ángulo y curvas |
+| B-03 | mover un vértice después de declarar la medida | la medida queda; el inspector marca la discrepancia |
+| B-04 | escribir el ancho de una puerta | se guarda como `measuredM` del vano y lo usa el auditor |
+| B-05 | escribir 5 decimales en metros | rechazo con mensaje; no se guarda redondeado en silencio |
+| B-06 | dibujar y exportar sin escribir ninguna medida | funciona igual que en 1.18.0 |
+| B-07 | duplicar un piso | las medidas viajan con los elementos; los identificadores son nuevos |
+| B-08 | ventana dibujada como muro con rótulo | no rompe validación, auditor ni exportación |
+
+---
+
+## 15. 3.C · Cálculos automáticos a partir de las dimensiones
+
+### 15.1 Un solo contrato, dos lenguajes
+
+Hoy cada servicio vuelve a decidir qué es una longitud: `PlanAudit` multiplica
+por `metersPerUnit`, `MepCalculator` divide por la unidad del lienzo, `measure.js`
+trabaja en celdas de 10. La regla de §3 los unifica, y para que la unificación no
+se deshaga sola hace falta una función con nombre:
+
+```text
+ElementMeasure::lengthCm(elemento, lienzo)  →  [valor_cm, fuente]
+                                          fuente ∈ {measured, geometry}
+```
+
+- **PHP y JavaScript dicen lo mismo**, como `Units` desde la etapa 0: mismo
+  fixture, misma igualdad estricta.
+- **No es una autoridad nueva**: por dentro usa `Units::toCm` y
+  `PathGeometry::length()` para el arco. No define factores.
+- **Devuelve la fuente**, y eso es lo que permite que el informe diga de dónde
+  salió cada cifra sin que cada módulo lo invente.
+
+### 15.2 Qué magnitud produce cada módulo
+
+| Módulo | Magnitudes | Con la regla nueva |
+| --- | --- | --- |
+| `PlanAudit` | recorridos, distancia a salida, ancho de vano, superficie libre, ocupación, tiempos | cm ÷ 100, o `measuredM`; el arco ya está (§6.2) |
+| `PlanGrid` | rejilla de 10 cm, holguras de muro | sin unidad que interpretar |
+| `ExtinguisherCoverage` | distancia a la señal y al equipo | cm ÷ 100 — arregla C-06 |
+| `MepCalculator` | longitud de red, caída de tensión, diámetro | cm ÷ 100, con arco |
+| `schedule.js` | superficie del piso, tamaño de señal sugerido | cm² × 10⁻⁴ |
+| Cotas | rótulo de la distancia | en la unidad de trabajo, 2 decimales en metros |
+| `PlanFooter` | resumen y pie | añade la fuente de las medidas |
+| Informe impreso | todas las anteriores | cada cifra con su apellido |
+
+### 15.3 Qué necesita cada módulo para no mentir
+
+Esta tabla es la respuesta a «qué información necesita cada módulo para dar
+resultados confiables», que era una de las preguntas de la misión:
+
+| Módulo | Necesita | Si falta |
+| --- | --- | --- |
+| recorrido de evacuación | al menos una ruta y una salida marcada (`isExit`) | «sin ruta de evacuación» en vez de 0 m |
+| ancho de salida | puertas con `isExit` y geometría válida | «sin salidas marcadas» |
+| ocupación | área del piso y densidad en criterios, o cifra declarada | «sin dato», rotulado |
+| tiempos de evacuación | recorrido, velocidad y flujo de `audit-criteria.json` | no se calcula el tiempo |
+| cobertura de extintores | extintores con su ubicación y radios del catálogo | «sin extintores» |
+| inventario de señalización | elementos del plano y biblioteca cargada | lista vacía, explicada |
+| redes y circuitos | trazos con red asignada | no aparece la red |
+| verificación física | rondas de `verification_rounds` y `element_checks` | «sin verificar», no «correcto» |
+
+La cifra hueca es el defecto silencioso más caro de esta lista: un `0 m` de
+recorrido se lee como «no hay recorrido», y en realidad significa «no hay ruta
+dibujada». El contrato de §15.1 obliga a distinguirlos.
+
+### 15.4 Aceptación
+
+| ID | Caso | Esperado |
+| --- | --- | --- |
+| C-01 | misma geometría, `unit: cm` y `unit: m` | cifras idénticas en todos los informes |
+| C-02 | trazo con `measuredM` en `PlanAudit`, `MepCalculator` y cota | la misma cifra en los tres |
+| C-03 | trazo curvo | longitud por el arco en los tres |
+| C-04 | plano sin rutas | «sin ruta de evacuación»; nunca 0 m |
+| C-05 | plano sin salidas marcadas | «sin salidas marcadas» |
+| C-06 | extintores en plano en `m` con geometría normalizada | cifras correctas (arregla C-06) |
+| C-07 | `measure.js` en un plano en `m` | mismas holguras en cm (arregla C-07) |
+
+---
+
+## 16. 3.D · Calibración opcional de planos importados
+
+### 16.1 Qué es, dicho sin metrología
+
+Un plano importado llega con una geometría que no se sabe a qué escala está. La
+herramienta le pregunta al usuario **una distancia que conoce** —el ancho de una
+puerta, el largo de un pasillo, la fachada— y ajusta el dibujo para que esa
+distancia sea la que él dice. Nada más. No hay instrumento, ni margen, ni
+verificación, ni estado que caduque.
+
+### 16.2 El flujo, en cinco gestos
+
+```text
+1. Abrir el plano importado            (no hay un asistente previo)
+2. Panel del lienzo › «Ajustar el dibujo»
+3. Marcar dos puntos y escribir la distancia real
+4. Ver el antes y el después            (16,00 × 10,00 m → 16,42 × 10,26 m)
+5. «Ajustar»  ·  queda en el historial  ·  Ctrl+Z lo revierte
+```
+
+Nada de esto es obligatorio. Un plano importado se puede guardar, exportar y
+auditar sin tocar el botón; las cifras saldrán rotuladas «del dibujo».
+
+### 16.3 Es la misma acción que la de §5.4
+
+Aquí está la simplificación grande de todo el apartado: **la calibración de un
+plano importado y el ajuste a las medidas declaradas son la misma operación**. Lo
+único que cambia es de dónde sale la referencia:
+
+| Situación | Referencia | Factor |
+| --- | --- | --- |
+| plano dibujado aquí, con varias medidas | `measuredM` de varios objetos | mediana de las relaciones (§5.4) |
+| plano importado, sin medidas | una distancia escrita a mano | esa única relación |
+
+Un solo motor, un solo botón, dos entradas. Y en ambos casos: vista previa,
+una acción del historial, nota en la versión y **ningún estado guardado**.
+
+### 16.4 Lo que no se guarda, y por qué
+
+- No hay bloque `calibration` en `canvas`.
+- No hay factor, ni `planScale`, ni `obsolete`.
+- No hay «calibración vigente» que se pueda quedar vieja cuando cambia la unidad:
+  la unidad ya no mueve el dibujo (§4.3).
+
+Lo único que queda es la nota de la versión: «Ajuste a una distancia de 4,20 m
+(×1,0263)». Si el usuario quiere volver atrás, deshace o restaura la versión
+anterior — el historial ya existe y ya se prueba.
+
+### 16.5 Cuándo se ofrece
+
+- Solo en el panel del lienzo, junto a ancho, alto y cuadrícula. Sin ventana
+  modal, sin paso obligatorio, sin globo de bienvenida.
+- Con un plano recién importado, el panel muestra una línea discreta: «Si conoces
+  una distancia real, puedes ajustar el dibujo».
+- Nunca aparece en un plano creado aquí con medidas declaradas: en ese caso la
+  sección ya propone el ajuste de §5.4 con sus residuos.
+
+### 16.6 Aceptación
+
+| ID | Caso | Esperado |
+| --- | --- | --- |
+| D-01 | importar un plano y no tocar nada | se guarda, se exporta y se audita; cifras «del dibujo» |
+| D-02 | ajustar con una distancia conocida | la relación aplicada es exactamente medida ÷ dibujo |
+| D-03 | deshacer tras ajustar | vuelve la geometría y la cifra anteriores |
+| D-04 | guardar tras ajustar | el documento no contiene factor ni bloque nuevo |
+| D-05 | ajustar dos veces seguidas | la segunda parte de la primera; no acumula estado oculto |
+
+---
+
+## 17. 3.E · Escala física, representación SVG e impresión
+
+### 17.1 Lo que hay hoy, verificado
+
+- El SVG sale con `width` y `height` **en unidades del lienzo** y el mismo
+  `viewBox` (`SvgExporter.php:39-40`). Un plano de 16 m en `cm` genera
+  `width="1600"`, que el navegador interpreta como 1600 px: unos 42 cm de ancho.
+- La impresión es **A4 horizontal** (`print.css:2`) y recorta el SVG a 170 mm de
+  alto (`print.css:46`). El tamaño impreso depende del hueco, no de la escala.
+- La escala `1:N` solo aparece como texto en el pie (`PlanFooter.php:71`) y se
+  valida sin intervenir en ningún cálculo (`DesignValidator.php:293`).
+
+Conclusión honesta: hoy el plano **se ve** a escala y **se imprime** a la escala
+que quepa. Eso no es un error de dibujo, es un error de representación.
+
+### 17.2 Las tres magnitudes que no se pueden mezclar
+
+| Magnitud | Unidad | De qué depende | Quién la decide |
+| --- | --- | --- | --- |
+| Dimensión real | metros | lo que se midió | el usuario (§5) |
+| Tamaño del dibujo | milímetros de papel | dimensión ÷ escala | la escala de impresión |
+| Escala de impresión | `1:N` | tamaño de la hoja | el usuario al exportar |
+
+El defecto que 3.E quiere evitar es que cambiar una de las tres mueva las otras
+dos. Con el modelo de §3, la primera ya no se toca nunca.
+
+### 17.3 Cómo se representa
+
+- **`viewBox` en centímetros**: `0 0 ancho alto`, con la geometría tal como está
+  guardada. Ni una coordenada cambia.
+- **`width` y `height` en milímetros**: `cm × 10` para tamaño real 1:1; dividido
+  por `N` cuando se elige una escala de impresión. Un muro de 4,20 m mide 42 mm
+  en un 1:100 y 84 mm en un 1:50.
+- **La geometría no se reescala nunca**: lo que cambia es la caja del SVG. Por
+  eso el mismo documento produce 1:50 y 1:200 sin guardar nada distinto.
+- **Escala gráfica dentro del plano**: una barra de 5 m con sus divisiones, en el
+  pie. Es lo único que sigue siendo cierto si alguien imprime al 97 % o hace una
+  fotocopia. Un número «1:100» impreso sin barra no protege de eso.
+
+### 17.4 Impresión
+
+- `@page` admite A4 y A3, horizontal y vertical.
+- «Ajustar a la hoja» calcula, para cada escala estándar (1:50, 1:100, 1:200,
+  1:500), si cabe, y ofrece la mayor que quepa con margen. No elige sola.
+- **Nunca reescala el documento**: si el usuario cierra el diálogo sin elegir,
+  todo queda como estaba.
+
+### 17.5 Qué no cambia
+
+`canvas.scale` sigue existiendo, sigue validándose igual y **sigue sin intervenir
+en ningún cálculo**. Pasa a ser la escala *sugerida* del plano, que la exportación
+propone como valor inicial. Si el usuario imprime a otra, el documento no se
+entera. DEC-8.
+
+### 17.6 Aceptación
+
+| ID | Caso | Esperado |
+| --- | --- | --- |
+| E-01 | exportar a 1:100 un muro de 4,20 m | mide 42 mm en el SVG |
+| E-02 | exportar el mismo plano a 1:50 | 84 mm; ni una coordenada cambia |
+| E-03 | `viewBox` en cualquier escala | idéntico entre escalas |
+| E-04 | cambiar la escala de impresión | el documento guardado no cambia |
+| E-05 | barra de escala gráfica | presente en el pie, con 5 m y divisiones |
+| E-06 | golden de SVG a 1:100 en `cm` | igual que 1.18.0 salvo `width`/`height` y la barra |
+
+---
+
+## 18. 3.F · Edificios, pisos y áreas
+
+### 18.1 Lo que hay
+
+La jerarquía real es **proyecto → pisos**. `floors` guarda `level` como texto
+libre y `sort_order` para ordenar (`schema.sql:52-66`). No hay edificios: un
+proyecto con dos torres mete sus pisos en la misma lista, y «Torre A · piso 3» y
+«Torre B · piso 3» solo se distinguen por el nombre.
+
+### 18.2 Edificios
+
+Tabla nueva (diseño, no ejecutada):
+
+| Campo | Tipo | Para qué |
+| --- | --- | --- |
+| `id` | entero | clave |
+| `project_id` | entero | a qué proyecto pertenece |
+| `name` | texto | «Torre A», «Bloque administrativo» |
+| `code` | texto | sigla corta para el pie y los informes |
+| `levels` | entero | número de pisos, informativo |
+| `notes` | texto | observaciones |
+| marcas de tiempo | texto | auditoría mínima |
+
+`floors` gana `building_id` (nulo permitido). **Relleno**: cada proyecto recibe un
+edificio «Edificio principal» y todos sus pisos se le asignan. Ningún piso cambia
+de nombre ni de orden, y ningún documento se reescribe.
+
+### 18.3 Áreas
+
+Un área es una **región con identidad**: se nombra, se mide, se le pone ocupación
+y se relaciona con rutas y equipos. Tabla nueva `spaces`:
+
+| Campo | Tipo | Para qué |
+| --- | --- | --- |
+| `id` | entero | clave interna |
+| `uuid` | texto único | identidad estable dentro del documento |
+| `floor_id` | entero | piso al que pertenece |
+| `name` | texto | «Aula 3», «Bodega norte» |
+| `kind` | texto | oficina, aula, bodega, pasillo, escalera, baño, zona externa |
+| `area_m2` | real | superficie calculada del polígono |
+| `area_measured_m2` | real nulo | superficie declarada, si el usuario la conoce |
+| `quality` | texto nulo | exacta, aproximada, estimada |
+| marcas de tiempo | texto | auditoría mínima |
+
+La **geometría vive en el documento** (NORMIA-004 DEC-2): el polígono son puntos
+en centímetros, dentro de `design_json`, con su `uuid`. La tabla es el índice que
+permite consultar «qué áreas tiene este piso» sin abrir cada documento; se
+reconstruye desde el documento y **nunca es la fuente de la verdad**.
+
+### 18.4 Identidad estable
+
+- El `uuid` se genera **una vez** y no se reutiliza jamás.
+- Cambiar el nombre, mover el polígono o redibujarlo **no cambia el uuid**.
+- Borrar un área deja una lápida con fecha; el histórico de ocupación y
+  verificación que la citaba sigue siendo legible.
+- Duplicar un piso genera uuids nuevos: dos áreas iguales en plantas distintas son
+  dos áreas.
+
+### 18.5 Relaciones geométricas
+
+Se calculan al guardar, no se editan a mano:
+
+| Relación | Cómo se obtiene | Para qué |
+| --- | --- | --- |
+| elementos dentro del área | punto en polígono | inventario por área |
+| rutas que atraviesan el área | intersección de segmentos | recorrido por área |
+| puertas en el borde | distancia al contorno menor que el ancho del vano | salidas del área |
+
+Si el usuario mueve un muro, las relaciones se recalculan solas. Si el polígono
+queda degenérico —menos de tres puntos, o área menor de 2 m² como el criterio
+`minRoomAreaM2` de `audit-criteria.json`— se avisa y no se indexa.
+
+### 18.6 Lo que no hace
+
+- **No sustituye a los pisos**: un área no contiene elementos por sí misma; los
+  contiene el documento.
+- **No detecta recintos solo.** «Encontrar áreas a partir de los muros» es
+  tentador y es una trampa: un muro mal cerrado inventa un aula que no existe y
+  el informe la cuenta. Si algún día se hace, será una propuesta que el usuario
+  acepta área por área, nunca un proceso automático.
+
+### 18.7 Aceptación
+
+| ID | Caso | Esperado |
+| --- | --- | --- |
+| F-01 | proyecto con dos torres | dos edificios, pisos separados |
+| F-02 | proyecto existente tras la migración | un edificio «Edificio principal»; pisos intactos |
+| F-03 | renombrar un área | el uuid no cambia |
+| F-04 | redibujar el polígono | el uuid no cambia; la superficie se recalcula |
+| F-05 | borrar un área con historial | lápida; el histórico sigue legible |
+| F-06 | área de menos de 2 m² | aviso; no se indexa |
+| F-07 | documento antiguo sin áreas | se abre igual; el índice queda vacío |
+
+---
+
+## 19. 3.G · Aforo y ocupación
+
+### 19.1 Las tres cifras, que no son la misma
+
+| Cifra | De dónde sale | Quién la cambia | Cómo se rotula |
+| --- | --- | --- | --- |
+| **Máximo documentado** | un documento, una licencia, un estudio, una norma aplicable | el usuario, con fuente y fecha | «máximo documentado · fuente» |
+| **Ocupación estimada** | geometría × densidad de `audit-criteria.json` | nadie: es un cálculo | «estimación por superficie» |
+| **Ocupación real** | lo que ocurrió: un escenario, un turno, un evento | el usuario, al registrar el escenario | «ocupación registrada · fecha» |
+
+La aplicación **nunca calcula el máximo documentado**. Es un dato que viene de
+fuera y que se escribe con su fuente; si no hay fuente, no hay máximo documentado,
+hay una cifra declarada y así se dice.
+
+### 19.2 Lo que hay hoy
+
+`canvas.occupancy` guarda personas y está en la lista blanca del validador
+(`DesignValidator.php:275`). El auditor la usa tal cual y, cuando vale 0, estima
+con `densityPersonsPerM2` (0,2 por defecto, `PlanAudit.php:347-360`). El resultado
+lleva `occupancySource` = `declared` o `estimated`, pero la interfaz no siempre lo
+dice con esas palabras.
+
+El riesgo es de lectura, no de cálculo: una cifra «declarada» sin fuente se
+interpreta como «el aforo permitido». El cambio de §19.1 lo evita sin mover
+ningún número: **se conserva `canvas.occupancy` como máximo declarado del piso**
+—compatibilidad total, ningún documento se toca— y se añade la fuente. DEC-9.
+
+### 19.3 Dónde vive cada cifra
+
+| Ámbito | Máximo documentado | Estimada | Real |
+| --- | --- | --- | --- |
+| edificio | `occupancy_records` (ámbito `building`) | suma de sus pisos | suma del escenario |
+| piso | `canvas.occupancy` + fuente en `occupancy_records` | geometría × densidad | escenario |
+| área | `spaces.area_measured_m2` y `occupancy_records` | superficie del área × densidad | escenario |
+
+Una sola tabla nueva, `occupancy_records`, con ámbito, tipo, personas, fuente,
+fecha y nota. Tres tipos, los de la tabla de §19.1. Es la pieza que permite decir
+«32 personas, estimación por superficie» sin adivinar de dónde salió.
+
+### 19.4 Cómo se muestran
+
+- Ninguna cifra de ocupación aparece sin apellido. Ni en el plano, ni en el
+  auditor, ni en el informe.
+- En el informe, las tres en columnas separadas; las que no existen, en blanco con
+  «sin dato».
+- En el plano impreso, solo la estimada y solo si el usuario la pide; el máximo
+  documentado es dato de gestión, no de evacuación.
+
+### 19.5 Lo que no se afirma
+
+El aforo no demuestra que una instalación sea segura, y el sistema no lo va a
+insinuar. La frase del pie es fija y no se configura:
+
+> La ocupación es un dato de referencia para dimensionar la evacuación. No
+> acredita el cumplimiento de ninguna norma ni sustituye la revisión de un
+> profesional competente.
+
+### 19.6 Aceptación
+
+| ID | Caso | Esperado |
+| --- | --- | --- |
+| G-01 | piso sin ocupación declarada | «estimación por superficie», nunca «aforo» |
+| G-02 | máximo documentado con fuente | se muestra con su fuente y su fecha |
+| G-03 | máximo documentado sin fuente | se llama «cifra declarada», no «máximo» |
+| G-04 | informe con las tres cifras | tres columnas rotuladas |
+| G-05 | cifra ausente | «sin dato»; nunca 0 |
+| G-06 | `canvas.occupancy` de un plano 1.18.0 | se sigue leyendo igual |
+| G-07 | plano impreso | sin cifras de ocupación salvo que se pidan |
+
+---
+
+## 20. 3.H · Escenarios de ocupación
+
+### 20.1 Qué es un escenario
+
+Una foto con fecha de cuánta gente hay y dónde: un turno, una jornada especial, un
+evento, una reunión, una capacitación, un simulacro. Tiene tipo, vigencia, personas
+por área y una nota. No es una propiedad del plano: es un hecho que ocurrió.
+
+### 20.2 Tablas (diseño)
+
+| Tabla | Campos principales | Para qué |
+| --- | --- | --- |
+| `occupancy_scenarios` | `id`, `floor_id`, `kind`, `name`, `starts_at`, `ends_at`, `status`, `floor_version_id`, `note` | el escenario y el plano con el que se calculó |
+| `occupancy_scenario_spaces` | `id`, `scenario_id`, `space_uuid`, `persons` | personas por área |
+
+`floor_version_id` es la pieza que hace honesta la historia: si el plano cambió
+después, el escenario sigue diciendo con qué plano se calculó.
+
+### 20.3 Historia que se conserva
+
+- Un escenario **cerrado es inmutable**. Se puede duplicar para repetirlo, no
+  editar.
+- No se borran: la retención de versiones (`VersionRetention`) no los toca.
+- Cambiar de tipo o de fecha exige crear otro. Los datos históricos no se
+  reescriben — la misma regla que ya rige para `floor_versions`.
+
+### 20.4 Qué cifra manda en un cálculo
+
+Orden, y siempre rotulado:
+
+```text
+1. escenario activo            →  «ocupación del escenario: Simulacro 2026-10»
+2. máximo documentado          →  «máximo documentado: 120 personas»
+3. estimación por superficie   →  «estimación por superficie»
+```
+
+Un escenario no cambia la ocupación del plano: la del momento en que se consulta.
+
+### 20.5 Qué no toca
+
+- **No toca la geometría** ni crea una versión del plano.
+- **No cambia `canvas.occupancy`.**
+- **No es obligatorio** para auditar: sin escenarios, todo funciona como en §19.
+
+### 20.6 Aceptación
+
+| ID | Caso | Esperado |
+| --- | --- | --- |
+| H-01 | crear un escenario de turno | personas por área y fecha |
+| H-02 | cerrarlo | inmutable; se puede duplicar |
+| H-03 | guardar el plano después | el escenario sigue apuntando a la versión con la que se calculó |
+| H-04 | auditor con escenario activo | usa sus personas y lo rotula |
+| H-05 | auditor sin escenario | máximo documentado o estimación |
+| H-06 | borrar un área citada por un escenario | el escenario sigue legible; el área queda en lápida |
+
+---
+
+## 21. 3.I · Integración con evacuación y recursos
+
+### 21.1 Mapa de relaciones
+
+```text
+edificio
+  └── piso ── documento ── elementos (muros, puertas, rutas, equipos, señales)
+        ├── áreas  ── ocupación (máximo, estimada, real)
+        │     ├── rutas que la atraviesan
+        │     ├── puertas en su borde
+        │     └── equipos y señales dentro
+        ├── salidas marcadas ── ancho ── personas que pueden pasar
+        └── verificación física ── qué está revisado y qué no
+```
+
+### 21.2 Lo que ya existe y sirve
+
+| Pieza | Qué aporta | Dónde |
+| --- | --- | --- |
+| `PlanAudit` | salidas, anchos, recorridos, ancho requerido por persona, flujo, tiempos | `PlanAudit.php` |
+| criterios de auditoría | `widthMmPerPerson` 5, flujo 1,3 pers/s/m, velocidad 1 m/s, recorrido máximo 30 m | `resources/audit-criteria.json` |
+| `ExtinguisherCoverage` | cobertura y distancia a la señal | `ExtinguisherCoverage.php` |
+| inventario de señalización | cuántas señales y de qué tipo | `schedule.js` |
+| verificación física | rondas y estado por elemento | `verification_rounds`, `element_checks` |
+| modo brigadista | enlace público de solo lectura | `brigade_links` |
+| bibliotecas locales | pictogramas y equipos | `assets/`, catálogos |
+
+Esto es lo que hace que 3.I no sea un módulo nuevo sino un **cableado**: los datos
+existen, lo que falta es que se hablen.
+
+### 21.3 Verificaciones cruzadas propuestas
+
+Todas son avisos, ninguno bloquea guardar:
+
+| Comprobación | Necesita | Qué dice |
+| --- | --- | --- |
+| área sin ocupación | `spaces` + `occupancy_records` | «Aula 3 no tiene ocupación registrada» |
+| escenario por encima del máximo documentado | escenario + máximo | «el simulacro declara más personas que el máximo documentado» |
+| salida sin ruta | puertas `isExit` + rutas | «la salida 2 no tiene ruta que llegue a ella» |
+| extintor sin señal | equipos + señales | «extintor sin señal de extintor a menos de X m» |
+| área sin salida en su borde | polígono + puertas | «Bodega norte no tiene puertas en su contorno» |
+| elemento sin verificar | rondas | «12 señales sin verificación física» |
+| ruta más larga que el criterio | recorridos | «recorrido de 34 m; criterio configurado: 30 m» |
+
+### 21.4 El límite, dicho claro
+
+Un aforo correcto y una ruta corta **no demuestran que una instalación sea
+segura**. Lo que el sistema puede decir es: «con los datos que hay, estas
+relaciones son coherentes o no». Lo que no puede decir, y no va a decir: que el
+plan de emergencia esté bien, que la instalación cumpla una norma, que la brigada
+esté preparada. Esas tres cosas se prueban en sitio, con personas y con
+simulacros, no en un archivo.
+
+Por eso el informe de 3.I no lleva una nota de cumplimiento: lleva una lista de
+comprobaciones con su estado y el aviso de siempre.
+
+### 21.5 Aceptación
+
+| ID | Caso | Esperado |
+| --- | --- | --- |
+| I-01 | área sin ocupación | aparece en las comprobaciones cruzadas |
+| I-02 | escenario por encima del máximo | aviso, no bloqueo |
+| I-03 | salida sin ruta | aviso con el número de salida |
+| I-04 | extintor sin señal | aviso con la distancia real |
+| I-05 | informe con todo correcto | dice «coherente», nunca «cumple» |
+| I-06 | elemento sin verificación | «sin verificar», nunca «correcto» |
+| I-07 | plano sin áreas | las comprobaciones que las necesitan no se ejecutan, y se dice |
+| I-08 | auditor de 1.18.0 | mismos números, con los apellidos nuevos |
+
+---
+
+## 22. 3.J · Compatibilidad, datos y pruebas
+
+### 22.1 Documentos históricos
+
+| Regla | Cómo se cumple |
+| --- | --- |
+| nada se reescribe | `floor_versions` es inmutable; la conversión ocurre al leer (§7.3) |
+| el formato dice lo que hay | `format` menor que 5 solo está en cm si su unidad es `cm` (§7.2) |
+| el número no se mueve | golden de 6 405 valores y 4 hash SVG como red |
+| lo viejo sigue entrando | el importador acepta `schema_version` 2 y 3 |
+
+### 22.2 Datos
+
+Todas las tablas de §18, §19 y §20 son **aditivas**: no renombran ni borran
+columnas existentes. `user_version` pasaría de **7 a 8** en una sola migración,
+con respaldo previo.
+
+Y una trampa que conviene dejar escrita: `Backup::TABLES`
+(`Backup.php:39-50`) es una **lista cerrada**. Una tabla nueva que no se añada ahí
+no entra en el respaldo y nadie se entera hasta que hace falta restaurar. Por eso
+la etapa correspondiente no está terminada hasta que la tabla nueva esté en esa
+lista y una prueba lo compruebe (J-02).
+
+### 22.3 Sin conexión
+
+Todo lo nuevo es local: polígonos en el documento, ocupación y escenarios en
+SQLite, escalas en el SVG. Nada depende de red. Las pruebas de «funcionamiento sin
+conexión» que ya existen se amplían a las pantallas nuevas.
+
+### 22.4 Pruebas
+
+| Bloque | Qué fija | Dónde |
+| --- | --- | --- |
+| U-01…U-08 | unidades (§9.1) | `tests/js/units.mjs`, `tests/php/units.mjs` |
+| M-01…M-09 | medidas declaradas (§9.2) | nuevo en la etapa 2 |
+| B-01…B-08 | ingreso y edición (§14.5) | nuevo |
+| C-01…C-07 | cálculos y cifras huecas (§15.4) | nuevo |
+| D-01…D-05 | ajuste de importados (§16.6) | nuevo |
+| E-01…E-06 | escala física y SVG (§17.6) | nuevo |
+| F-01…F-07 | edificios y áreas (§18.7) | nuevo |
+| G-01…G-07 | ocupación (§19.6) | nuevo |
+| H-01…H-06 | escenarios (§20.6) | nuevo |
+| I-01…I-08 | integración (§21.5) | nuevo |
+| J-01…J-08 | compatibilidad y datos (§22.6) | nuevo |
+| R-01…R-05 | regresión (§9.3) | ya existe |
+
+### 22.5 Aceptación global
+
+- [ ] Un plano de 1.18.0 se abre, se audita y se exporta con las mismas cifras.
+- [ ] Ninguna pantalla nueva es obligatoria para dibujar, guardar o exportar.
+- [ ] Ninguna cifra sin fuente: medida, del dibujo, estimación, o «sin dato».
+- [ ] Ninguna configuración nueva sin un predeterminado razonable.
+- [ ] El respaldo incluye todas las tablas nuevas y se prueba.
+- [ ] Todo funciona sin conexión.
+- [ ] El pie y los informes no afirman cumplimiento ni exactitud.
+
+### 22.6 Aceptación
+
+| ID | Caso | Esperado |
+| --- | --- | --- |
+| J-01 | documento `format: 2` de 1.18.0 | idéntico byte a byte tras abrir y guardar sin cambios |
+| J-02 | respaldo con las tablas nuevas | restaurado completo; ninguna tabla fuera |
+| J-03 | migración 7 → 8 con datos | ningún registro perdido; respaldo previo disponible |
+| J-04 | migración con la base ya en 8 | no hace nada |
+| J-05 | suite completa en PHP 8.1 y 8.3 | verde, sin cambios en el golden |
+| J-06 | todas las pantallas nuevas sin conexión | funcionan |
+| J-07 | APK y escritorio con las tablas nuevas | arrancan; los datos viejos se leen |
+| J-08 | auditor de un plano sin áreas ni ocupación | funciona; dice qué falta |
+
+---
+
+## 23. Etapas 4 a 10
+
+Continúan la tabla de §11. La etapa 1 sigue siendo la primera y la única con
+riesgo alto.
+
+| Etapa | Apartado | Qué | Depende de | Riesgo | Esfuerzo |
+| --- | --- | --- | --- | --- | --- |
+| **1** | 3.A | geometría en centímetros (§11) | — | medio | ~1 |
+| **2** | 3.B | medidas declaradas y su campo | 1 | bajo | ~1 |
+| **3** | 3.C | ajuste global con mediana | 1, 2 | bajo | ~0,5 |
+| **4** | 3.E | escala física, SVG en mm, barra gráfica | 1 | bajo | ~0,5 |
+| **5** | 3.D | ajuste de planos importados | 3 | bajo | ~0,5 |
+| **6** | 3.F | edificios y áreas | 1 | **alto** | ~2 |
+| **7** | 3.G | tres cifras de ocupación | 6 | medio | ~1 |
+| **8** | 3.H | escenarios e histórico | 7 | medio | ~1 |
+| **9** | 3.I | comprobaciones cruzadas | 2, 6, 7, 8 | medio | ~1 |
+| **10** | 3.J | cierre: compatibilidad y pruebas | todas | bajo | ~1 |
+
+Por qué este orden y no otro:
+
+- **3.E antes de 3.F**: las áreas se dibujan sobre el plano y su superficie
+  impresa depende de la escala física. Hacerlo al revés obliga a rehacer el
+  exportador con áreas dentro.
+- **3.D después de 3.C**: es el mismo motor; construirlo dos veces sería el
+  defecto que este documento quiere evitar.
+- **3.F es la etapa cara**: tablas nuevas, migración, índice materializado y una
+  entidad que aparece en la interfaz. Es la única con riesgo alto.
+- **3.I al final** porque es cableado: cuando las piezas existen, unirlas es
+  barato; antes, es inventar interfaz para datos que no hay.
+
+---
+
+## 24. Decisiones pendientes (DEC-7 a DEC-12)
+
+Ninguna de estas seis está aprobada. Las anteriores, DEC-1 a DEC-6, sí (§10.2).
+
+**DEC-7 · No crear el tipo «ventana» todavía.**
+Recomendación: **sí**, la ventana se dibuja como muro con rótulo hasta que haya un
+uso real (un pliego de ventanas). Alternativa: crear `window` ahora con `format: 6`
+— más completo sobre el papel y sin consumidor que lo justifique.
+
+**DEC-8 · La escala de impresión se elige al exportar, no en el documento.**
+Recomendación: **sí**: `canvas.scale` queda como sugerencia y la exportación
+propone 1:50, 1:100, 1:200 y 1:500. Alternativa: guardar la escala de impresión en
+el documento — la vuelve un estado que se queda viejo cada vez que cambia el
+tamaño del plano.
+
+**DEC-9 · `canvas.occupancy` pasa a ser «máximo declarado del piso», con fuente.**
+Recomendación: **sí**, conservando el número y añadiendo la fuente en
+`occupancy_records`. Alternativa: dejarlo como está — mantiene la ambigüedad que
+3.G quiere quitar.
+
+**DEC-10 · Edificios como tabla nueva, con relleno de un edificio por proyecto.**
+Recomendación: **sí**. Alternativa: seguir usando `floors.level` como texto — no
+permite agrupar dos torres sin trucos en el nombre.
+
+**DEC-11 · Los escenarios guardan la versión del plano con la que se calcularon.**
+Recomendación: **sí** (`floor_version_id`). Alternativa: guardar solo la fecha — la
+historia deja de ser verificable si el plano cambia.
+
+**DEC-12 · Una sola migración para todas las tablas nuevas (`user_version` 8).**
+Recomendación: **sí**, con respaldo previo y prueba de restauración. Alternativa:
+una migración por etapa — más granular y multiplica los estados intermedios que
+hay que probar.
+
+---
+
+## 25. Lo que no pude verificar
+
+1. **No implementé nada.** Todo lo que dice «debe» es diseño; ni una línea de
+   código ni una tabla creada. `user_version` sigue en 7.
+2. **No sé cuántos documentos hay en `mm` o `m`.** La consulta de §3.4 lo responde.
+3. **No medí el coste real de tocar los consumidores.** Estimo por número de
+   sitios, no por dificultad.
+4. **No probé la ergonomía del campo de medida al dibujar.** Es la pieza con más
+   riesgo de interacción y necesita verse en pantalla.
+5. **No verifiqué la impresión física.** El SVG en milímetros es aritmética
+   comprobable; que una impresora concreta respete el tamaño al 100 % depende del
+   controlador y no lo he medido con regla en la mano.
+6. **No sé si el navegador del usuario respeta `width` en mm** en todos los casos
+   (Safari y Chrome lo hacen; no lo probé en dispositivo real).
+7. **No comprobé el rendimiento con muchas áreas y escenarios** — por ejemplo
+   30 pisos × 12 áreas × 20 escenarios — ni con 1 200 elementos.
+8. **No sé qué herramienta usará el usuario para dibujar los polígonos de área**:
+   el diseño asume que se reutiliza la de líneas y se cierra el contorno; falta
+   confirmarlo con él antes de la etapa 6.
+9. **La exactitud normativa del auditor, los extintores y las redes no la he
+   auditado**: sigo tratando sus umbrales como referencias configurables, no como
+   norma.
+10. **No hay iOS instalable** y esta misión no lo cambia.

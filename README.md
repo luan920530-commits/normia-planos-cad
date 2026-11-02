@@ -1061,10 +1061,14 @@ escribe, y cada objeto puede llevar su medida real declarada. Sustituye a la
 calibración de [docs/NORMIA-005-CALIBRACION-DIMENSIONAL.md](docs/NORMIA-005-CALIBRACION-DIMENSIONAL.md),
 que se conserva como registro y no se implementa.
 
-Las seis decisiones del diseño (DEC-1 a DEC-6) quedaron **aprobadas el 2026-11-02**.
-La etapa 1 —geometría en centímetros— está desbloqueada pero **no ejecutada**: no
-hay código nuevo en el repositorio. Falta el resto del alcance de la misión
-(puntos 3.B y siguientes) para cerrar el documento.
+El alcance completo de la misión —**3.A a 3.J**, nueve apartados— está diseñado en
+el mismo documento (§1 a §12 el núcleo; §13 a §25 edificios, áreas, aforo,
+escenarios, escala física, importados y compatibilidad).
+
+Las seis primeras decisiones (DEC-1 a DEC-6) quedaron **aprobadas el 2026-11-02**;
+las seis siguientes (DEC-7 a DEC-12) están **pendientes**. Ninguna etapa se ha
+ejecutado: no hay código ni tablas nuevas en el repositorio, y `user_version` sigue
+en 7.
 
 ## Cambios de la versión 1.18.0
 
