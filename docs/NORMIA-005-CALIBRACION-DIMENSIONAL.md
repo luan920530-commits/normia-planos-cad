@@ -14,6 +14,13 @@ valida, qué pasa al cambiar de unidad y qué consumidores tienen que pasar a us
 | Antecedente | [`NORMIA-004-ARQUITECTURA-DIMENSIONAL.md`](NORMIA-004-ARQUITECTURA-DIMENSIONAL.md) §4, DEC-3 y DEC-4 |
 | Continúa | [`DIMENSIONAL.md`](DIMENSIONAL.md) · [`MISION-002-CIERRE-ETAPA-0.md`](MISION-002-CIERRE-ETAPA-0.md) |
 
+> **Revisión posterior (MISIÓN 004).** El diagnóstico de §2 sigue vigente y es la
+> base del rediseño, pero el **procedimiento** que proponía este documento quedó
+> superado: la misión de dimensiones simples sustituye la calibración por una
+> medida declarada en cada objeto. Lo que se cae y por qué está en
+> [`NORMIA-006-DIMENSIONES-SIMPLES.md`](NORMIA-006-DIMENSIONES-SIMPLES.md) §8. Este
+> archivo se conserva como registro de la decisión y de sus motivos.
+
 ---
 
 ## 0. Cómo leer este documento

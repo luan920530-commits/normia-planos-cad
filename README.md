@@ -1054,10 +1054,12 @@ en PHP y `window.Normia.Units` en el editor— y el resto del código delega.
 
 El detalle y los límites están en [docs/DIMENSIONAL.md](docs/DIMENSIONAL.md).
 
-La **calibración dimensional** —anclar el plano a una distancia real medida— está
-diseñada y **no implementada**: [docs/NORMIA-005-CALIBRACION-DIMENSIONAL.md](docs/NORMIA-005-CALIBRACION-DIMENSIONAL.md)
-recoge la propuesta, el modelo de persistencia, las pruebas previstas y las siete
-decisiones que faltan por aprobar.
+El **sistema de dimensiones** está diseñado y **no implementado**. La propuesta
+vigente es [docs/NORMIA-006-DIMENSIONES-SIMPLES.md](docs/NORMIA-006-DIMENSIONES-SIMPLES.md):
+la geometría se guarda en centímetros, la unidad del plano es solo cómo se lee y se
+escribe, y cada objeto puede llevar su medida real declarada. Sustituye a la
+calibración de [docs/NORMIA-005-CALIBRACION-DIMENSIONAL.md](docs/NORMIA-005-CALIBRACION-DIMENSIONAL.md),
+que se conserva como registro y no se implementa.
 
 ## Cambios de la versión 1.18.0
 
