@@ -6484,6 +6484,26 @@
       "arcoMetrosMep": 6.283185307179586,
       "arcoUnidadesPath": 628.3185307179587,
       "arcoMetrosPath": 6.283185307179586
+    },
+    "unidades": {
+      "mm": {
+        "rectaMetros": 0.4,
+        "arcoMetros": 0.6283185307179586,
+        "areaM2": 0.96,
+        "toleranciaUnidades": 5
+      },
+      "cm": {
+        "rectaMetros": 4,
+        "arcoMetros": 6.283185307179586,
+        "areaM2": 96,
+        "toleranciaUnidades": 0.5
+      },
+      "m": {
+        "rectaMetros": 400,
+        "arcoMetros": 628.3185307179587,
+        "areaM2": 960000,
+        "toleranciaUnidades": 0.005
+      }
     }
   }
 }

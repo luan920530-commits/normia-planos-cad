@@ -167,6 +167,21 @@ $out['synthetic']['tuberia'] = [
     'arcoMetrosPath' => App\\Core\\Units::toMeters(App\\Services\\PathGeometry::length($arco['points'], $curvas), 'cm'),
 ];
 
+/* La misma geometría declarada en las tres unidades: fija que un plano antiguo
+ * en milímetros o en metros se mide con el mismo criterio que uno en
+ * centímetros. Si alguien escribe un factor a mano, este bloque lo delata. */
+$out['synthetic']['unidades'] = [];
+foreach (['mm', 'cm', 'm'] as $unidad) {
+    $caja = $synthetic['canvas'];
+    $caja['unit'] = $unidad;
+    $out['synthetic']['unidades'][$unidad] = [
+        'rectaMetros' => App\\Services\\MepCalculator::lengthMeters($porId['el_recta'], $caja),
+        'arcoMetros' => App\\Services\\MepCalculator::lengthMeters($arco, $caja),
+        'areaM2' => App\\Core\\Units::squareMeters((float) $caja['width'] * (float) $caja['height'], $unidad),
+        'toleranciaUnidades' => App\\Core\\Units::tolerance($unidad),
+    ];
+}
+
 echo json_encode($out, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 `;
 
@@ -251,6 +266,24 @@ for (const [name, floor] of Object.entries(expected.floors)) {
 const syntheticProblems = diffMaps('synthetic.tuberia', expected.synthetic.tuberia, payload.synthetic.tuberia);
 problems.push(...syntheticProblems);
 
+/* Un plano antiguo puede declarar milímetros o metros: la misma geometría tiene
+ * que medirse con el mismo criterio en las tres unidades. */
+const unidadesProblems = [];
+const unidadesEsperadas = expected.synthetic.unidades ?? {};
+const unidadesActuales = payload.synthetic?.unidades ?? {};
+for (const unidad of Object.keys(unidadesEsperadas)) {
+  const antes = unidadesEsperadas[unidad];
+  const ahora = unidadesActuales[unidad];
+  if (!ahora) {
+    unidadesProblems.push(`desapareció la unidad ${unidad}`);
+    continue;
+  }
+  for (const campo of Object.keys(antes)) {
+    if (antes[campo] !== ahora[campo]) unidadesProblems.push(`${unidad}.${campo}: ${antes[campo]} → ${ahora[campo]}`);
+  }
+}
+problems.push(...unidadesProblems);
+
 report.check('Los cuatro pisos de la demo están cubiertos',
   Object.keys(expected.floors).length === 4 && Object.keys(payload.floors).length === 4,
   `${Object.keys(payload.floors).length} pisos`);
@@ -279,6 +312,17 @@ report.check('La tubería curva se mide por su arco, como en el editor',
 report.check('MepCalculator y PathGeometry dan la misma longitud',
   curva.arcoUnidadesMep === curva.arcoUnidadesPath && curva.arcoMetrosMep === curva.arcoMetrosPath,
   `Mep ${curva.arcoMetrosMep} m · PathGeometry ${curva.arcoMetrosPath} m`);
+const unidades = payload?.synthetic?.unidades ?? {};
+const factor = { mm: 0.1, cm: 1, m: 100 };
+const tresUnidades = ['mm', 'cm', 'm'].every((unidad) => {
+  const fila = unidades[unidad];
+  if (!fila) return false;
+  const esperado = 400 * factor[unidad] / 100;
+  return fila.rectaMetros === esperado
+    && Math.abs(fila.arcoMetros - fila.rectaMetros * Math.PI / 2) < 1e-9;
+});
+report.check('La misma geometría se mide igual en milímetros, centímetros y metros', tresUnidades,
+  ['mm', 'cm', 'm'].map((u) => `${u}: ${unidades[u]?.arcoMetros} m`).join(' · '));
 report.check('El golden coincide por completo con la referencia', problems.length === 0,
   problems.length === 0 ? `${totalValues} valores · 4 SVG` : problems.slice(0, 5).join(' · '));
 

@@ -79,6 +79,23 @@ foreach ($fixture['lengths'] as $case) {
     $add($case['label'], $ok, $fmt((float) $case['value']) . ' ' . $unit . ' → ' . $fmt($meters) . ' m');
 }
 
+/* ------------------- metros → unidades: identidad exacta ------------------- */
+// Se compara con igualdad estricta, no con tolerancia: el fixture lo generó la fórmula
+// canónica y las dos implementaciones (PHP y JS) tienen que devolver el mismo
+// bit. Es lo que impide que PHP y JS midan distinto un ancho de vía.
+$fromOk = true;
+$fromDetail = [];
+foreach ($fixture['fromMeters'] as $case) {
+    $unit = (string) $case['unit'];
+    $value = \\App\\Core\\Units::fromMeters((float) $case['meters'], $unit);
+    if ($value !== (float) $case['units']) {
+        $fromOk = false;
+        $fromDetail[] = $fmt((float) $case['meters']) . ' m en ' . $unit . ': ' . var_export($value, true);
+    }
+}
+$add('Metros → unidades coincide bit a bit con la tabla compartida', $fromOk,
+    $fromOk ? count($fixture['fromMeters']) . ' casos en mm, cm y m' : implode(' · ', $fromDetail));
+
 /* ------------------------------ superficies ------------------------------ */
 foreach ($fixture['areas'] as $case) {
     $area = \\App\\Core\\Units::squareMeters((float) $case['value'], $case['unit']);

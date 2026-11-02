@@ -1421,13 +1421,31 @@ Estimación de esfuerzo relativo (no fechas): etapa 0 ≈ 1 unidad; 1 ≈ 2; 2 �
 
 ### Etapa 0 · Unidades
 
-- [ ] Existe una única función de conversión en PHP y una en JS; `grep` no encuentra
-      divisiones por 100 sueltas fuera de ellas.
+Estado al cerrar la etapa 0 (PR #56). El detalle está en
+[MISION-002-CIERRE-ETAPA-0.md](MISION-002-CIERRE-ETAPA-0.md).
+
+- [x] Existe una única función de conversión en PHP y una en JS; `grep` no encuentra
+      divisiones por 100 sueltas fuera de ellas. — Las seis divisiones por 100 que quedan en
+      `app/` fuera de `Units.php` convierten constantes de criterio declaradas en
+      centímetros (radio de señal, ancho mínimo de vano) o, en las vistas, las
+      muestran en metros; ninguna convierte la unidad del plano (DIMENSIONAL §3).
 - [ ] `cm→m→cm` devuelve el mismo documento (tolerancia 0,01 u) en un plano con
-      muros curvos, vías y redes.
-- [ ] Cambiar de unidad con elementos exige confirmación que muestra las cifras.
-- [ ] Todos los planos de la demo y los históricos dan **los mismos** números de
-      auditor, extintores y redes que la 1.18.0.
+      muros curvos, vías y redes. — **Pendiente por decisión**: la reconversión al
+      cambiar de unidad no formaba parte de esta etapa (hallazgo P-01). Lo que sí
+      está probado es que un plano guardado en `mm`, `cm` o `m` se abre con su
+      unidad intacta y se mide igual.
+- [ ] Cambiar de unidad con elementos exige confirmación que muestra las cifras. —
+      **Pendiente**, junto con la reconversión.
+- [x] Todos los planos de la demo y los históricos dan **los mismos** números de
+      auditor, extintores y redes que la 1.18.0. — 6 405 valores y 4 SVG idénticos,
+      con una excepción **autorizada y anunciada**: los tramos con arco pasan a
+      medirse por la longitud del arco, no por la cuerda.
+- [x] Unidad declarada: se conserva sin reinterpretar; una unidad fuera de `mm`,
+      `cm` y `m` se rechaza en la puerta del documento en vez de caer a `cm`.
+- [x] PHP y JavaScript convierten con la misma fórmula y la misma cifra: 18 casos de
+      la tabla compartida comparados con igualdad estricta en las dos suites.
+- [x] Golden de regresión capturado **antes** y **después** de consolidar los
+      conversores, y regenerable con `node tests/php/golden.mjs 8.3 --write`.
 
 ### Etapa 1 · Dimensión real
 
@@ -1498,7 +1516,8 @@ Estimación de esfuerzo relativo (no fechas): etapa 0 ≈ 1 unidad; 1 ≈ 2; 2 �
 
 Para que no se lea como certeza:
 
-1. **Exactitud de los cálculos existentes.** No verifiqué numéricamente
+1. **Exactitud de los cálculos existentes.** El golden de la etapa 0 fija que las
+   cifras **no cambien**, no que sean correctas. No verifiqué numéricamente
    `PlanAudit`, `ExtinguisherCoverage` ni `MepCalculator` contra casos de
    referencia; solo leí su lógica. La propuesta **no** depende de que sean exactos,
    pero si tienen errores, el aforo heredará el error de medición de áreas.

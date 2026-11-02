@@ -117,6 +117,21 @@ const exact = U.metersPerUnit('cm') === legacy
 report.check('La ruta «cm» es idéntica bit a bit al cálculo anterior', exact,
   `metersPerUnit=${U.metersPerUnit('cm')} · toMeters(1200)=${U.toMeters(1200, 'cm')}`);
 
+/* ------------------- metros → unidades: identidad exacta -------------------
+ * Misma tabla que la suite de PHP. Se compara con igualdad estricta: si JS
+ * dividiera por los metros por unidad en vez de multiplicar por 100 y dividir
+ * por los centímetros por unidad, un ancho de vía saldría un bit distinto que
+ * en el servidor, y el SVG del navegador no coincidiría con el exportado.
+ */
+
+const fromFailures = [];
+for (const item of fixture.fromMeters) {
+  const value = U.fromMeters(item.meters, item.unit);
+  if (value !== item.units) fromFailures.push(`${item.meters} m en ${item.unit}: ${value} ≠ ${item.units}`);
+}
+report.check('Metros → unidades coincide bit a bit con la tabla compartida', fromFailures.length === 0,
+  fromFailures.length === 0 ? `${fixture.fromMeters.length} casos en mm, cm y m` : fromFailures.join(' · '));
+
 /* ---------------------------- invariancias ---------------------------- */
 
 const invariant = U.SUPPORTED.every((unit) => {
@@ -166,6 +181,27 @@ report.check('El servidor mide lo mismo que el editor (referencia del golden PHP
 report.check('Un trazo recto no se mueve al medir con arcos',
   near(Mep?.elementLengthMeters?.({ points: [{ x: 0, y: 0 }, { x: 400, y: 0 }] }, canvasCm), 4, 1e-12),
   'recta de 400 unidades = 4 m');
+
+/* --------------------- paridad con el golden que escribe PHP ---------------------
+ * El golden (tests/fixtures/golden/numeric.json) lo produce PHP. Aquí se lee y
+ * se comprueba que el editor calcula exactamente la misma cifra para la misma
+ * geometría: es la prueba cruzada de que PHP y JS no se separan sin que falle
+ * una suite, sin necesidad de un tercer valor de referencia.
+ */
+
+const goldenPath = path.join(repoRoot, 'tests/fixtures/golden/numeric.json');
+if (fs.existsSync(goldenPath)) {
+  const golden = JSON.parse(fs.readFileSync(goldenPath, 'utf8'));
+  const tuberia = golden?.synthetic?.tuberia ?? {};
+  const recta = { points: [{ x: 0, y: 0 }, { x: 400, y: 0 }] };
+  const jsRecta = Mep?.elementLengthMeters?.(recta, canvasCm);
+  report.check('El golden de PHP trae la medición del arco de referencia',
+    typeof tuberia.arcoMetrosMep === 'number' && typeof tuberia.rectaMetros === 'number',
+    `arco ${tuberia.arcoMetrosMep} m · recta ${tuberia.rectaMetros} m`);
+  report.check('El editor coincide exactamente con el golden de PHP',
+    jsMeters === tuberia.arcoMetrosMep && jsRecta === tuberia.rectaMetros,
+    `JS arco ${jsMeters} · PHP ${tuberia.arcoMetrosMep}`);
+}
 
 /* ------------------------------ pureza ------------------------------ */
 

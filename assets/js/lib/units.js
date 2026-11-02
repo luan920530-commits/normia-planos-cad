@@ -25,7 +25,14 @@
   const metersPerUnit = (unit) => cmPerUnit(unit) / 100;
   const unitsPerMeter = (unit) => 100 / cmPerUnit(unit);
   const toMeters = (value, unit) => Number(value) * metersPerUnit(unit);
-  const fromMeters = (meters, unit) => Number(meters) / metersPerUnit(unit);
+  /*
+   * Metros → unidades del lienzo. Multiplica por 100 y divide por los
+   * centímetros por unidad, igual que `Units::fromMeters()` en PHP, y no divide
+   * por los metros por unidad: las dos formas son iguales en matemáticas pero
+   * difieren en el último bit, y el plano se dibuja con las dos. Así PHP y JS
+   * devuelven exactamente el mismo número para cualquier entrada.
+   */
+  const fromMeters = (meters, unit) => Number(meters) * 100 / cmPerUnit(unit);
   const toCm = (value, unit) => Number(value) * cmPerUnit(unit);
   const fromCm = (cm, unit) => Number(cm) / cmPerUnit(unit);
 

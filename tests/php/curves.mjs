@@ -162,6 +162,56 @@ $add('El rótulo del SVG de una recta no cambia',
     str_contains($svgRecta, '4,0 m'),
     'recta rotulada 4,0 m');
 
+// El mismo dibujo declarado en milímetros: la cifra cambia de unidad, no de
+// criterio. Si el exportador midiera la cuerda, aquí diría 0,4 m.
+$enMilimetros = $consulta;
+$enMilimetros['canvas']['unit'] = 'mm';
+$enMilimetros['elements'] = [$arco];
+$svgMilimetros = \\App\\Services\\SvgExporter::render($enMilimetros, [], false);
+$add('El rótulo del SVG sigue el arco también en milímetros',
+    str_contains($svgMilimetros, '0,6 m') && !str_contains($svgMilimetros, '0,4 m'),
+    'arco en mm rotulado 0,6 m');
+
+/* --------------------- compatibilidad con planos antiguos ---------------------
+ * El validador es estricto a propósito: un plano que declara una unidad que el
+ * formato no contempla se rechaza en vez de reinterpretarse en silencio. El
+ * respaldo a centímetros vive en los conversores, para los puntos del código que
+ * reciben una cadena arbitraria, no en la puerta de entrada del documento.
+ */
+$aceptadas = true;
+$detalleAceptadas = [];
+foreach (['mm', 'cm', 'm'] as $unidadPlano) {
+    $variante = $consulta;
+    $variante['canvas']['unit'] = $unidadPlano;
+    try {
+        $devuelta = \\App\\Services\\DesignValidator::normalizeArray($variante)['canvas']['unit'];
+        if ($devuelta !== $unidadPlano) {
+            $aceptadas = false;
+            $detalleAceptadas[] = $unidadPlano . ' volvió como ' . $devuelta;
+        }
+    } catch (\\Throwable $error) {
+        $aceptadas = false;
+        $detalleAceptadas[] = $unidadPlano . ': ' . $error->getMessage();
+    }
+}
+$add('El plano acepta mm, cm y m como unidad declarada', $aceptadas,
+    $aceptadas ? 'las tres se conservan sin reinterpretarse' : implode(' · ', $detalleAceptadas));
+
+$rechazadas = 0;
+$detalleRechazo = [];
+foreach (['M', 'pulgada', ''] as $unidadRara) {
+    $variante = $consulta;
+    $variante['canvas']['unit'] = $unidadRara;
+    try {
+        \App\Services\DesignValidator::normalizeArray($variante);
+        $detalleRechazo[] = json_encode($unidadRara) . ' se aceptó';
+    } catch (\Throwable $error) {
+        $rechazadas++;
+    }
+}
+$add('Una unidad inválida se rechaza en vez de reinterpretarse', $rechazadas === 3,
+    $rechazadas === 3 ? 'M, pulgada y cadena vacía rechazadas' : implode(' · ', $detalleRechazo));
+
 /* ----------------------------- una sola definición ----------------------------- */
 $fuente = (string) file_get_contents(BASE_PATH . '/app/Services/MepCalculator.php');
 $add('MepCalculator no vuelve a sumar hypot por su cuenta',

@@ -33,5 +33,25 @@
     { "scale": "0:100", "denominator": null },
     { "scale": "", "denominator": null },
     { "scale": null, "denominator": null }
+  ],
+  "fromMeters": [
+    {"unit": "mm", "meters": 0.8, "units": 800.0},
+    {"unit": "mm", "meters": 2.4, "units": 2400.0},
+    {"unit": "mm", "meters": 6.0, "units": 6000.0},
+    {"unit": "mm", "meters": 0.00037, "units": 0.36999999999999994},
+    {"unit": "mm", "meters": 0.6283185307179586, "units": 628.3185307179585},
+    {"unit": "mm", "meters": 12.0, "units": 12000.0},
+    {"unit": "cm", "meters": 0.8, "units": 80.0},
+    {"unit": "cm", "meters": 2.4, "units": 240.0},
+    {"unit": "cm", "meters": 6.0, "units": 600.0},
+    {"unit": "cm", "meters": 0.00037, "units": 0.037},
+    {"unit": "cm", "meters": 0.6283185307179586, "units": 62.83185307179586},
+    {"unit": "cm", "meters": 12.0, "units": 1200.0},
+    {"unit": "m", "meters": 0.8, "units": 0.8},
+    {"unit": "m", "meters": 2.4, "units": 2.4},
+    {"unit": "m", "meters": 6.0, "units": 6.0},
+    {"unit": "m", "meters": 0.00037, "units": 0.00037},
+    {"unit": "m", "meters": 0.6283185307179586, "units": 0.6283185307179586},
+    {"unit": "m", "meters": 12.0, "units": 12.0}
   ]
 }
