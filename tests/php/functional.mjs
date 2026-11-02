@@ -577,12 +577,15 @@ try {
     && sinEncuentro.drill.routes.length === 1 && sinEncuentro.drill.routes[0].meetingM === null
     && (sinEncuentro.findings || []).some((finding) => finding.code === 'no_meeting_point'),
     `encuentro ${sinEncuentro.drill?.meeting?.found} · objetivo ${sinEncuentro.drill?.targetS}`);
-  report.check('El tiempo objetivo suma reacción y camino de la ruta',
+  const rutaSim = sinEncuentro.drill?.routes?.[0] || {};
+  report.check('El tiempo objetivo suma reacción y camino caminable de la ruta',
     sinEncuentro.drill?.reactionS === 30
-    && Math.abs((sinEncuentro.drill.routes[0].walkS || 0) - 4) < 0.1
-    && Math.abs((sinEncuentro.drill.targetS || 0) - 34) < 0.2
-    && sinEncuentro.drill.routes[0].targetSource === 'exit',
-    `reacción ${sinEncuentro.drill?.reactionS} s + camino ${sinEncuentro.drill?.routes?.[0]?.walkS} s = ${sinEncuentro.drill?.targetS} s`);
+    && Math.abs((rutaSim.pathM || 0) - 4.7) < 0.4
+    && Math.abs((rutaSim.walkS || 0) - rutaSim.pathM) < 0.2
+    && Math.abs((sinEncuentro.drill.targetS || 0) - (30 + (rutaSim.pathM || 0))) < 0.3
+    && rutaSim.targetSource === 'exit'
+    && Array.isArray(rutaSim.path) && rutaSim.path.length >= 2,
+    `reacción ${sinEncuentro.drill?.reactionS} s + camino ${rutaSim.pathM} m = ${sinEncuentro.drill?.targetS} s · ${rutaSim.path?.length} puntos`);
 
   const conEncuentro = JSON.parse(JSON.stringify(simulacro));
   conEncuentro.elements.push({
@@ -597,6 +600,59 @@ try {
     && conPunto.drill.targetS > sinEncuentro.drill.targetS
     && !(conPunto.findings || []).some((finding) => finding.code === 'no_meeting_point'),
     `encuentro a ${conPunto.drill?.routes?.[0]?.meetingM} m · objetivo ${conPunto.drill?.targetS} s`);
+
+  /* El camino no es una línea recta: se calcula sobre el espacio libre. Un muro
+     entre el inicio de la ruta y la salida obliga a rodearlo, y un recinto cerrado
+     sin vano deja la ruta sin camino. */
+  const conMuro = JSON.parse(JSON.stringify(escBase));
+  conMuro.canvas = { ...conMuro.canvas, width: 1200, height: 900, occupancy: 20, drill: { reactionS: 30 } };
+  conMuro.elements = [{
+    id: 'ruta_muro', type: 'route', layerId: extLayer, x: 200, y: 300, w: 100, h: 2,
+    rotation: 0, color: '#237f52', stroke: 3, opacity: 1, label: 'Ruta con muro', locked: false,
+    points: [{ x: 0, y: 0 }, { x: 100, y: 0 }],
+  }, {
+    id: 'muro_medio', type: 'wall', layerId: extLayer, x: 500, y: 100, w: 12, h: 550,
+    rotation: 0, color: '#0f172a', stroke: 12, opacity: 1, label: '', locked: false,
+    points: [{ x: 0, y: 0 }, { x: 0, y: 550 }],
+  }, {
+    id: 'salida_muro', type: 'door', layerId: extLayer, x: 800, y: 294, w: 90, h: 16,
+    rotation: 0, color: '#0f172a', stroke: 2, opacity: 1, label: 'Salida', locked: false, isExit: true,
+  }];
+  res = await client.postJson(`api/floors/${extFloorId}/save`, { design: conMuro, expected_version: (await json(`api/floors/${extFloorId}`)).body.floor.version, note: 'Simulacro con muro' });
+  const conMuroAudit = (await json(`api/floors/${extFloorId}/audit`)).body.report || {};
+  const rutaMuro = conMuroAudit.drill?.routes?.[0] || {};
+  const recta = Math.hypot(845 - 200, 302 - 300) / 100;
+  report.check('El camino rodea el muro en lugar de atravesarlo',
+    res.status === 200 && rutaMuro.pathM > recta * 1.2
+    && (rutaMuro.path || []).length >= 3 && rutaMuro.walkS > recta,
+    `camino ${rutaMuro.pathM} m frente a ${Math.round(recta * 100) / 100} m en línea recta · ${rutaMuro.path?.length} puntos`);
+
+  const encerrado = JSON.parse(JSON.stringify(conMuro));
+  encerrado.elements = [conMuro.elements[0], {
+    id: 'caja_n', type: 'wall', layerId: extLayer, x: 100, y: 200, w: 300, h: 12,
+    rotation: 0, color: '#0f172a', stroke: 12, opacity: 1, label: '', locked: false,
+    points: [{ x: 0, y: 0 }, { x: 300, y: 0 }],
+  }, {
+    id: 'caja_s', type: 'wall', layerId: extLayer, x: 100, y: 400, w: 300, h: 12,
+    rotation: 0, color: '#0f172a', stroke: 12, opacity: 1, label: '', locked: false,
+    points: [{ x: 0, y: 0 }, { x: 300, y: 0 }],
+  }, {
+    id: 'caja_o', type: 'wall', layerId: extLayer, x: 100, y: 200, w: 12, h: 212,
+    rotation: 0, color: '#0f172a', stroke: 12, opacity: 1, label: '', locked: false,
+    points: [{ x: 0, y: 0 }, { x: 0, y: 212 }],
+  }, {
+    id: 'caja_e', type: 'wall', layerId: extLayer, x: 388, y: 200, w: 12, h: 212,
+    rotation: 0, color: '#0f172a', stroke: 12, opacity: 1, label: '', locked: false,
+    points: [{ x: 0, y: 0 }, { x: 0, y: 212 }],
+  }, conMuro.elements[2]];
+  res = await client.postJson(`api/floors/${extFloorId}/save`, { design: encerrado, expected_version: (await json(`api/floors/${extFloorId}`)).body.floor.version, note: 'Ruta encerrada' });
+  const encerradoAudit = (await json(`api/floors/${extFloorId}/audit`)).body.report || {};
+  const rutaEncerrada = encerradoAudit.drill?.routes?.[0] || {};
+  report.check('Una ruta encerrada sin vano se queda sin camino y lo dice',
+    res.status === 200
+    && (encerradoAudit.findings || []).some((finding) => finding.code === 'drill_route_blocked')
+    && rutaEncerrada.pathM === null && rutaEncerrada.walkS === null && rutaEncerrada.arrivalS === null,
+    `camino ${JSON.stringify(rutaEncerrada.pathM)} · ${(encerradoAudit.findings || []).map((finding) => finding.code).join(',')}`);
 
   const conReaccion = JSON.parse(JSON.stringify(conEncuentro));
   conReaccion.canvas.drill = { reactionS: 90 };

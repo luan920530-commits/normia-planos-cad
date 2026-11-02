@@ -2573,37 +2573,64 @@ async function main() {
       /No mide un simulacro real/.test(q(window, '[data-present-panel]')?.textContent || ''));
     app.present.stepDrill(0);
     const figuras = qa(window, '#plan-canvas .drill-figure');
-    const inicio = figuras[0]?.getAttribute('transform') || '';
-    report.check('El simulacro dibuja una figura por ruta sobre el lienzo',
-      figuras.length === app.present.drillFigures.length && figuras.length >= 1
-      && figuras.every((node) => node.classList.contains('is-waiting')),
-      `${figuras.length} figuras · ${app.present.drillFigures.length} rutas`);
+    const rutas = drillReport?.routes || [];
+    report.check('El simulacro dibuja figuras sobre el camino de cada ruta',
+      figuras.length === app.present.drillFigures.length && figuras.length >= rutas.length
+      && rutas.every((ruta) => app.present.drillFigures.some((figure) => figure.routeId === ruta.id)),
+      `${figuras.length} figuras · ${rutas.length} rutas`);
+    /* El camino sale del servidor: las figuras lo recorren, no van en línea recta. */
+    /* Distancia de un punto al camino: cero significa que va por él. */
+    const sobreCamino = (point, path) => path.reduce((best, vertex, index) => {
+      if (index === 0) return best;
+      const a = path[index - 1];
+      const dx = vertex.x - a.x;
+      const dy = vertex.y - a.y;
+      const length = dx * dx + dy * dy;
+      const ratio = length > 0 ? Math.max(0, Math.min(1, ((point.x - a.x) * dx + (point.y - a.y) * dy) / length)) : 0;
+      return Math.min(best, Math.hypot(point.x - (a.x + dx * ratio), point.y - (a.y + dy * ratio)));
+    }, Infinity);
+    const sobreElCamino = app.present.drillFigures.every((figure) => {
+      const ruta = rutas.find((item) => item.id === figure.routeId);
+      if (!ruta || !Array.isArray(ruta.path)) return false;
+      const ultimo = ruta.path[ruta.path.length - 1];
+      const fin = figure.points[figure.points.length - 1];
+      return sobreCamino(figure.points[0], ruta.path) < 0.5
+        && Math.hypot(fin.x - ultimo.x, fin.y - ultimo.y) < 0.5
+        && figure.points.every((point) => sobreCamino(point, ruta.path) < 0.5);
+    });
+    report.check('Las figuras arrancan y terminan sobre el camino calculado del plano',
+      sobreElCamino && rutas.every((ruta) => Array.isArray(ruta.path) && ruta.path.length >= 2 && ruta.pathM > 0),
+      rutas.map((ruta) => `${ruta.id}: ${ruta.path?.length} puntos · ${ruta.pathM} m`).join(' · '));
+    const inicioTransform = figuras.map((node) => node.getAttribute('transform')).join('|');
+    report.check('El simulacro empieza con todas las figuras esperando la alarma',
+      figuras.every((node) => node.classList.contains('is-waiting')),
+      figuras[0]?.getAttribute('transform') || 'sin figura');
     const reaccionPanel = q(window, '[data-drill-reaction]');
-    reaccionPanel.value = '10';
-    reaccionPanel.dispatchEvent(new window.Event('change', { bubbles: true }));
+    const reaccionActual = Number(reaccionPanel.value);
     report.check('Cambiar la reacción desde el panel reinicia el simulacro',
-      app.present.drill.reactionS === 10 && app.present.drill.t === 0
-      && q(window, '[data-drill-reaction]')?.value === '10');
-    app.present.stepDrill(9);
-    const esperando = q(window, '#plan-canvas .drill-figure');
+      app.present.drill.reactionS === reaccionActual && app.present.drill.t === 0
+      && q(window, '[data-drill-clock]')?.textContent === '0 s');
+    const totalFiguras = Math.max(...app.present.drillFigures.map((figure) => figure.arrivalS), 0);
+    app.present.stepDrill(Math.max(1, reaccionActual - 1));
+    const antesDeArrancar = qa(window, '#plan-canvas .drill-figure').map((node) => node.getAttribute('transform')).join('|');
     report.check('Antes de la reacción las figuras siguen en su sitio',
-      esperando?.classList.contains('is-waiting')
-      && esperando.getAttribute('transform') === inicio,
-      esperando?.getAttribute('transform') || 'sin figura');
-    app.present.stepDrill(drillReport.reactionS + 2);
-    const caminando = q(window, '#plan-canvas .drill-figure');
-    report.check('Pasada la reacción las figuras caminan por la ruta',
-      caminoCambio(caminando, inicio) && /caminando|hacia el punto|en la salida|llegó/.test(q(window, '[data-drill-state]')?.textContent || ''),
-      `${inicio} → ${caminando?.getAttribute('transform')} · ${q(window, '[data-drill-state]')?.textContent}`);
-    app.present.stepDrill(drillReport.targetS + 1);
+      antesDeArrancar === inicioTransform);
+    app.present.stepDrill(reaccionActual + Math.max(0.5, totalFiguras * 0.05));
+    const enCamino = app.present.drillFigures.filter((figure) => figure.phase === 'walking').length;
+    const despues = qa(window, '#plan-canvas .drill-figure').map((node) => node.getAttribute('transform')).join('|');
+    report.check('Pasada la reacción las figuras caminan por su camino',
+      enCamino >= 1 && despues !== inicioTransform
+      && /en camino|esperando|llegaron/.test(q(window, '[data-drill-state]')?.textContent || ''),
+      `${enCamino} en camino · ${q(window, '[data-drill-state]')?.textContent}`);
+    app.present.stepDrill(totalFiguras + 0.5);
     report.check('Al final del tiempo objetivo todas las figuras llegan',
       qa(window, '#plan-canvas .drill-figure.is-arrived').length === app.present.drillFigures.length
-      && /llegó/.test(q(window, '[data-drill-state]')?.textContent || '')
-      && /completo|llegó|en el punto/i.test(q(window, '[data-drill-clock]')?.textContent || ''),
+      && /completo/.test(q(window, '[data-drill-clock]')?.textContent || ''),
       `${qa(window, '.drill-figure.is-arrived').length} de ${app.present.drillFigures.length} · reloj ${q(window, '[data-drill-clock]')?.textContent}`);
     q(window, '[data-drill-reset]').click();
     report.check('Reiniciar devuelve las figuras al inicio y el reloj a cero',
-      app.present.drill.t === 0 && q(window, '[data-drill-clock]')?.textContent === '0 s',
+      app.present.drill.t === 0 && q(window, '[data-drill-clock]')?.textContent === '0 s'
+      && qa(window, '#plan-canvas .drill-figure.is-arrived').length === 0,
       q(window, '[data-drill-clock]')?.textContent);
     q(window, '[data-present-exit]').click();
     report.check('Salir de la presentación retira el simulacro del lienzo',

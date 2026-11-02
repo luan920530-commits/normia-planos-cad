@@ -435,11 +435,23 @@
             <span data-drill-target>Objetivo ${this.drillClock(target)}</span>
           </div>
           <ul class="drill-list">${rows || '<li class="drill-empty">El piso no tiene rutas de evacuación dibujadas.</li>'}</ul>
-          <p class="present-note">Figuras simuladas con las rutas del plano, la velocidad de referencia (${Number(drill.speedMps || DEFAULT_SPEED_MPS).toLocaleString('es-CO', { maximumFractionDigits: 2 })} m/s) y el tiempo de reacción declarado. ${drill.meeting?.found ? 'El recorrido termina en el punto de encuentro declarado.' : 'Sin punto de encuentro declarado: el recorrido termina en la salida.'} No mide un simulacro real ni cuenta participantes: eso se cronometra en sitio.</p>
+          <p class="present-note">Figuras que recorren el <strong>camino libre</strong> calculado sobre el plano (los muros no se atraviesan y el tramo final rodea la edificación), a la velocidad de referencia (${Number(drill.speedMps || DEFAULT_SPEED_MPS).toLocaleString('es-CO', { maximumFractionDigits: 2 })} m/s) y el tiempo de reacción declarado. ${drill.meeting?.found ? 'El recorrido termina en el punto de encuentro declarado.' : 'Sin punto de encuentro declarado: el recorrido termina en la salida.'} No mide un simulacro real ni cuenta participantes: eso se cronometra en sitio.</p>
         ` : ''}`);
     }
 
-    /** Arma una figura por ruta con la geometría del plano y los tiempos del informe. */
+    /**
+     * Figuras del simulacro: una o varias por ruta, **sobre el camino** que
+     * calculó el servidor (`report.drill.routes[].path`).
+     *
+     * El camino se traza sobre el espacio libre del plano: los muros no se
+     * atraviesan y el tramo de la salida al punto de encuentro rodea la
+     * edificación. Aquí no se inventa geometría: se usa la que devolvió el
+     * auditor y, si faltara, el trazo de la ruta como respaldo.
+     *
+     * La cantidad de figuras sale del largo del camino: una por cada 4 m, con un
+     * mínimo de una y un máximo de cuatro por ruta, para que se vea el tramo
+     * cubierto sin llenar el plano de puntos.
+     */
     buildDrillFigures() {
       this.clearDrillLayer();
       const report = this.drill?.report || null;
@@ -451,75 +463,99 @@
       const reactionS = Math.max(0, Math.round(Number(this.drill?.reactionS ?? drill.reactionS ?? 30)));
       const speed = Math.max(0.1, Number(drill.speedMps) || DEFAULT_SPEED_MPS);
       const unitsPerSecond = speed * 100; // geometría en centímetros
-      const meeting = drill.meeting?.found ? drill.meeting.position : null;
-      const exits = new Map((report?.exits?.items || []).map((exit) => [exit.id, exit]));
       const figures = [];
       (drill.routes || []).forEach((route, index) => {
         const element = this.model.design.elements.find((item) => item.id === route.id);
-        if (!element) return;
-        const points = this.routePath(element);
-        if (points.length < 2) return;
+        const path = Array.isArray(route.path) && route.path.length >= 2
+          ? route.path.map((point) => ({ x: Number(point.x) || 0, y: Number(point.y) || 0 }))
+          : (element ? this.routePath(element) : []);
+        if (path.length < 2) return;
         const lengths = [];
         let totalLen = 0;
-        for (let cursor = 1; cursor < points.length; cursor += 1) {
-          const length = Math.hypot(points[cursor].x - points[cursor - 1].x, points[cursor].y - points[cursor - 1].y);
+        for (let cursor = 1; cursor < path.length; cursor += 1) {
+          const length = Math.hypot(path[cursor].x - path[cursor - 1].x, path[cursor].y - path[cursor - 1].y);
           lengths.push(length);
           totalLen += length;
         }
-        const exitElement = this.model.design.elements.find((item) => item.id === route.exitId);
-        const exitExit = exits.get(route.exitId) || null;
-        const exitCenter = exitElement
-          ? { x: (Number(exitElement.x) || 0) + (Number(exitElement.w) || 0) / 2, y: (Number(exitElement.y) || 0) + (Number(exitElement.h) || 0) / 2 }
-          : (exitExit ? { x: points[points.length - 1].x, y: points[points.length - 1].y } : null);
-        const transferLen = (exitCenter && meeting) ? Math.hypot(meeting.x - exitCenter.x, meeting.y - exitCenter.y) : 0;
-        figures.push({
-          id: route.id,
-          label: route.label || `Ruta ${index + 1}`,
-          points,
-          lengths,
-          totalLen,
-          unitsPerSecond,
-          exitCenter,
-          meeting,
-          transferLen,
-          walkS: Number(route.walkS) || 0,
-          transferS: route.transferS === null || route.transferS === undefined ? null : Number(route.transferS),
-          arrivalS: route.arrivalS === null || route.arrivalS === undefined ? null : Number(route.arrivalS),
-          reactionS,
-          node: null,
-          arrived: false,
-        });
+        if (totalLen <= 0) return;
+        const meters = totalLen / 100;
+        const count = Math.max(1, Math.min(4, Math.round(meters / 4) || 1));
+        for (let slot = 0; slot < count; slot += 1) {
+          const startFraction = count === 1 ? 0 : slot / count;
+          const sub = this.slicePath(path, lengths, totalLen * startFraction);
+          if (!sub || sub.points.length < 2) continue;
+          figures.push({
+            id: `${route.id}#${slot + 1}`,
+            routeId: route.id,
+            label: route.label || `Ruta ${index + 1}`,
+            points: sub.points,
+            lengths: sub.lengths,
+            totalLen: sub.totalLen,
+            unitsPerSecond,
+            walkS: sub.totalLen / unitsPerSecond,
+            arrivalS: reactionS + sub.totalLen / unitsPerSecond,
+            reactionS,
+            targetS: route.arrivalS === null || route.arrivalS === undefined ? null : Number(route.arrivalS),
+            node: null,
+            labelNode: null,
+            phase: 'waiting',
+          });
+        }
       });
       this.drillFigures = figures;
     }
 
-    /** Posición de una figura en el segundo simulado dado. */
+    /** Recorta el camino a partir de una distancia: la figura arranca ahí. */
+    slicePath(points, lengths, startDistance) {
+      if (startDistance <= 0.01) {
+        return { points: points.map((point) => ({ ...point })), lengths: [...lengths], totalLen: lengths.reduce((total, value) => total + value, 0) };
+      }
+      let remaining = startDistance;
+      for (let cursor = 0; cursor < lengths.length; cursor += 1) {
+        const length = lengths[cursor];
+        if (remaining > length) {
+          remaining -= length;
+          continue;
+        }
+        const ratio = length > 0 ? remaining / length : 0;
+        const a = points[cursor];
+        const b = points[cursor + 1];
+        const start = { x: a.x + (b.x - a.x) * ratio, y: a.y + (b.y - a.y) * ratio };
+        const tail = [start, ...points.slice(cursor + 1).map((point) => ({ ...point }))];
+        const tailLengths = [];
+        let total = 0;
+        for (let index = 1; index < tail.length; index += 1) {
+          const value = Math.hypot(tail[index].x - tail[index - 1].x, tail[index].y - tail[index - 1].y);
+          tailLengths.push(value);
+          total += value;
+        }
+        return { points: tail, lengths: tailLengths, totalLen: total };
+      }
+      return null;
+    }
+
+    /** Posición de una figura en el segundo simulado dado, sobre su camino. */
     drillPosition(figure, seconds) {
       const start = figure.points[0];
       if (seconds <= figure.reactionS) return { ...start, phase: 'waiting' };
       const walked = (seconds - figure.reactionS) * figure.unitsPerSecond;
-      if (walked < figure.totalLen - 0.01) {
-        let remaining = walked;
-        for (let cursor = 0; cursor < figure.lengths.length; cursor += 1) {
-          const length = figure.lengths[cursor];
-          if (remaining <= length || cursor === figure.lengths.length - 1) {
-            const ratio = length > 0 ? Math.min(1, remaining / length) : 0;
-            const a = figure.points[cursor];
-            const b = figure.points[cursor + 1];
-            return { x: a.x + (b.x - a.x) * ratio, y: a.y + (b.y - a.y) * ratio, phase: 'walking' };
-          }
-          remaining -= length;
-        }
+      if (walked >= figure.totalLen - 0.01) {
+        const end = figure.points[figure.points.length - 1];
+        return { ...end, phase: 'arrived' };
       }
-      const exit = figure.exitCenter || figure.points[figure.points.length - 1];
-      if (!figure.meeting || figure.transferLen <= 0) return { ...exit, phase: 'at-exit' };
-      const transferWalked = Math.max(0, walked - figure.totalLen);
-      const ratio = Math.min(1, transferWalked / figure.transferLen);
-      return {
-        x: exit.x + (figure.meeting.x - exit.x) * ratio,
-        y: exit.y + (figure.meeting.y - exit.y) * ratio,
-        phase: ratio >= 1 ? 'arrived' : 'transfer',
-      };
+      let remaining = walked;
+      for (let cursor = 0; cursor < figure.lengths.length; cursor += 1) {
+        const length = figure.lengths[cursor];
+        if (remaining <= length || cursor === figure.lengths.length - 1) {
+          const ratio = length > 0 ? Math.min(1, remaining / length) : 0;
+          const a = figure.points[cursor];
+          const b = figure.points[cursor + 1];
+          return { x: a.x + (b.x - a.x) * ratio, y: a.y + (b.y - a.y) * ratio, phase: 'walking' };
+        }
+        remaining -= length;
+      }
+      const end = figure.points[figure.points.length - 1];
+      return { ...end, phase: 'arrived' };
     }
 
     /**
@@ -616,14 +652,24 @@
           ? `${this.drillClock(t)} · completo`
           : this.drillClock(t);
       }
+      /* Una fila por ruta: se resume lo que hacen sus figuras. */
+      const routes = new Map();
       this.drillFigures.forEach((figure) => {
-        const row = q(`[data-drill-row="${figure.id}"]`, this.root);
+        const entry = routes.get(figure.routeId) || { total: 0, arrived: 0, walking: 0 };
+        entry.total += 1;
+        if (figure.phase === 'arrived') entry.arrived += 1;
+        else if (figure.phase === 'walking') entry.walking += 1;
+        routes.set(figure.routeId, entry);
+      });
+      routes.forEach((entry, routeId) => {
+        const row = q(`[data-drill-row="${routeId}"]`, this.root);
         if (!row) return;
         const state = q('[data-drill-state]', row);
         if (!state) return;
-        const labels = { waiting: 'esperando la alarma', walking: 'caminando', transfer: 'hacia el punto de encuentro', 'at-exit': 'llegó a la salida', arrived: 'llegó al punto de encuentro' };
-        state.textContent = labels[figure.phase] || 'esperando';
-        row.classList.toggle('is-arrived', figure.phase === 'arrived');
+        if (entry.arrived === entry.total) state.textContent = `llegaron ${entry.arrived} de ${entry.total}`;
+        else if (entry.walking > 0) state.textContent = `${entry.walking} en camino · ${entry.arrived} de ${entry.total} llegaron`;
+        else state.textContent = `esperando la alarma · ${entry.total} ${entry.total === 1 ? 'figura' : 'figuras'}`;
+        row.classList.toggle('is-arrived', entry.arrived === entry.total);
       });
     }
 

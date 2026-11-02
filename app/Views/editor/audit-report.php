@@ -257,14 +257,15 @@ $severityLabels = ['high' => 'Críticos', 'medium' => 'Importantes', 'low' => 'M
     <article>
       <span>Personas del cálculo</span>
       <strong><?= (int) ($drill['people'] ?? 0) ?> pers.</strong>
-      <small>Velocidad de referencia <?= $formatNumber((float) ($drill['speedMps'] ?? 1), 1) ?> m/s</small>
+      <small>Velocidad de referencia <?= $formatNumber((float) ($drill['speedMps'] ?? 1), 1) ?> m/s · el camino se mide por el espacio libre</small>
     </article>
   </div>
   <table class="print-table audit-table audit-drill">
     <thead>
       <tr>
         <th scope="col">Ruta</th>
-        <th scope="col">Longitud</th>
+        <th scope="col">Trazo</th>
+        <th scope="col">Camino libre</th>
         <th scope="col">Salida</th>
         <th scope="col">Al punto de encuentro</th>
         <th scope="col">Reacción</th>
@@ -276,6 +277,7 @@ $severityLabels = ['high' => 'Críticos', 'medium' => 'Importantes', 'low' => 'M
         <tr>
           <th scope="row"><?= e(($ruta['label'] ?? '') !== '' ? $ruta['label'] : 'Ruta ' . ($index + 1)) ?></th>
           <td><?= $formatNumber((float) $ruta['lengthM'], 1) ?> m</td>
+          <td><?= ($ruta['pathM'] ?? null) === null ? 'Sin camino' : $formatNumber((float) $ruta['pathM'], 1) . ' m' ?></td>
           <td><?= $ruta['exitId'] === null ? 'Sin salida' : ($ruta['endsAtExit'] ? 'Sí' : 'No termina en ella') ?></td>
           <td><?= $ruta['meetingM'] === null ? '—' : $formatNumber((float) $ruta['meetingM'], 1) . ' m' ?></td>
           <td><?= e($formatTime((float) $ruta['reactionS'])) ?></td>

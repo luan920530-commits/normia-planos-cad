@@ -212,7 +212,7 @@
             <div><dt>Rejilla de cálculo</dt><dd>${number(travel.cellM, 2)} m</dd></div>
             <div><dt>Rutas dibujadas</dt><dd>${(report.routes || []).length}</dd></div>
             ${drill && (drill.routes || []).length ? `
-            <div><dt>Simulacro (objetivo)</dt><dd>${esc(drillClock(drill.targetS))} <small>reacción ${esc(drillClock(drill.reactionS))} + ${number(drill.speedMps, 1)} m/s de referencia</small></dd></div>
+            <div><dt>Simulacro (objetivo)</dt><dd>${esc(drillClock(drill.targetS))} <small>reacción ${esc(drillClock(drill.reactionS))} + camino libre ${number((drill.routes || []).reduce((total, route) => Math.max(total, Number(route.pathM) || 0), 0), 1)} m a ${number(drill.speedMps, 1)} m/s</small></dd></div>
             <div><dt>Punto de encuentro</dt><dd>${drill.meeting?.found ? 'Declarado' : 'Sin declarar'} <small>${drill.meeting?.source === 'object' ? 'objeto en el plano' : (drill.meeting?.source === 'sign' ? 'solo la señal E007' : 'el recorrido termina en la salida')}</small></dd></div>
             <div><dt>Tiempo medido</dt><dd>${drill.measuredS ? esc(drillClock(drill.measuredS)) : 'Sin registrar'} <small>${drill.measuredS && drill.differenceS !== null ? (drill.differenceS > 0 ? `+${esc(drillClock(drill.differenceS))} sobre el objetivo` : `${esc(drillClock(Math.abs(drill.differenceS)))} por debajo`) : 'se anota tras cronometrar el simulacro'}</small></dd></div>` : ''}
             ${scenarios && scenarios.count > 0 ? `

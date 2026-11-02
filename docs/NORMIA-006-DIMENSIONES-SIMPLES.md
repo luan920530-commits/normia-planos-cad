@@ -2057,3 +2057,66 @@ se retira al salir), páginas **54**, golden **8/8** con **7 514 valores**. El
 golden crece por el bloque `drill` y porque la demo gana dos hallazgos menores: el
 simulacro medido en la planta baja y la falta de punto de encuentro en los otros
 tres pisos, que es justo lo que el cálculo tiene que decir.
+
+## 33. El simulacro se mueve por el espacio libre (1.26.0)
+
+La primera animación del simulacro caminaba en línea recta sobre el trazo y, en el
+tramo final, atravesaba la pared de la edificación. Bonito de mirar y falso: nadie
+sale del edificio en línea recta por el muro. Esta entrega corrige la geometría y
+deja el movimiento **restringido al espacio libre del plano**.
+
+### 33.1 El camino se calcula, no se dibuja
+
+`PlanGrid::path()` resuelve el recorrido sobre la **misma rejilla del auditor**:
+
+| Pieza | Cómo funciona |
+| --- | --- |
+| Rejilla | celdas de 20 cm; los muros quedan bloqueados con su holgura y los vanos abiertos |
+| Búsqueda | Dijkstra de ocho vecinos sobre celdas libres, con la diagonal sin cortar esquinas |
+| Simplificación | línea de vista: se conservan las esquinas y se descartan los escalones de la rejilla |
+| Interior | solo celdas del piso (el exterior no vale para el tramo de dentro) |
+| Exterior | se permite salir del piso para ir de la salida al punto de encuentro: la gente **rodea** la edificación |
+
+El tramo interior va del inicio del trazo al **centro del vano** de la salida (no al
+centro de la caja de la puerta). El tramo exterior va de ese vano al punto de
+encuentro. La suma de los dos es `pathM`, y `walkS` es `pathM ÷ velocidad`.
+
+### 33.2 Qué se ve ahora
+
+- **Una o varias figuras por ruta**, repartidas sobre el camino: una por cada 4 m,
+  mínimo una y máximo cuatro. Cada figura arranca en un punto distinto del mismo
+  camino y llega cuando le toca, de modo que se ve el tramo cubierto y no una fila
+  india de puntos en el arranque.
+- **Ninguna figura cruza un muro** ni pisa fuera del piso en el tramo interior: si
+  el camino no existe, no hay figura.
+- **El tramo final rodea la edificación** y termina en el punto de encuentro.
+- El panel sigue mostrando reloj, estado por ruta («2 en camino · 1 de 3 llegaron»)
+  y la nota de alcance.
+
+### 33.3 Hallazgo nuevo
+
+| Código | Severidad | Cuándo |
+| --- | --- | --- |
+| `drill_route_blocked` | importante | hay una salida marcada y el inicio del trazo no se puede conectar con ella sin cruzar un muro |
+
+Sin salidas marcadas no aparece: el auditor ya lo dice con `no_exit` y repetirlo por
+cada ruta sería ruido.
+
+### 33.4 Un número que cambia, y se anuncia
+
+El tiempo objetivo ya no usa la longitud del trazo: usa el **camino caminable**, que
+puede ser más largo cuando hay que rodear un tabique. En la demo, la ruta de la
+planta baja pasa de 14,68 m de trazo a **15,56 m de camino** y el objetivo de 47,9 s
+a **45,6 s** (el cambio viene también de que el tramo final ahora se mide por fuera,
+rodeando la esquina). Es un cambio de cifra **a propósito** y queda dicho aquí y en
+el changelog: el número anterior era una línea recta, el nuevo es el recorrido.
+
+### 33.5 Pruebas
+
+Funcional **386** (el camino rodea un muro de 5,5 m y crece de 6,45 m en línea recta
+a 8,11 m; una ruta encerrada sin vano se queda sin `pathM`, sin `walkS` y con
+`drill_route_blocked`; el objetivo sigue siendo reacción + camino), interfaz **426**
+(las figuras arrancan y terminan sobre el camino que devolvió el servidor, esperan la
+reacción, caminan, llegan y se reinician), páginas **54**, golden **8/8** con
+**7 552 valores**. En el golden solo se añaden las claves nuevas del camino: ningún
+recuento de hallazgos se mueve.
