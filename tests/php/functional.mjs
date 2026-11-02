@@ -282,7 +282,7 @@ try {
   const designMatch = /<textarea id="editor-design" hidden>([\s\S]*?)<\/textarea>/.exec(editorHtml);
   let design = null;
   try { design = JSON.parse(decodeEntities(designMatch?.[1] || '')); } catch { design = null; }
-  report.check('Editor recibe el diseño guardado', design?.format === 2 && design?.elements?.length === 93, `${design?.elements?.length} elementos`);
+  report.check('Editor recibe el diseño guardado', design?.format === 2 && design?.elements?.length === 96, `${design?.elements?.length} elementos`);
   report.check('La demo trae dos salidas marcadas y la ocupación declarada',
     (design?.elements || []).filter((element) => element.isExit === true).length === 2 && design?.canvas?.occupancy === 30,
     `${(design?.elements || []).filter((element) => element.isExit === true).length} salidas · ${design?.canvas?.occupancy} personas`);
@@ -378,6 +378,83 @@ try {
     Boolean(extUnit) && extUnit.hazard === 'extra' && extUnit.areaLimitM2 > 0 && extUnit.areaLimitM2 < 557.6,
     extUnit ? `${extUnit.areaLimitM2} m² · ${extUnit.rating}` : 'sin unidad');
 
+  /* ------------------ recursos de primeros auxilios (1.23.0) ------------------
+   * Botiquín, camilla y DEA sobre el mismo piso de prueba: primero sin nada, y
+   * después con los tres recursos para ver cómo cambia el cálculo.
+   */
+  const sinRecursos = JSON.parse(JSON.stringify(extDesign));
+  sinRecursos.canvas.occupancy = 40;
+  sinRecursos.elements = [];
+  res = await client.postJson(`api/floors/${extFloorId}/save`, { design: sinRecursos, expected_version: (await json(`api/floors/${extFloorId}`)).body.floor.version, note: 'Sin primeros auxilios' });
+  const sinRecursosAudit = (await json(`api/floors/${extFloorId}/audit`)).body.report || {};
+  const sinRecursosCodes = (sinRecursosAudit.findings || []).map((finding) => finding.code);
+  report.check('Sin botiquín, camilla ni DEA el auditor lo dice',
+    res.status === 200 && sinRecursosCodes.includes('no_first_aid_kit')
+    && sinRecursosCodes.includes('no_stretcher') && sinRecursosCodes.includes('no_aed')
+    && sinRecursosAudit.firstAid?.kits?.count === 0,
+    sinRecursosCodes.filter((code) => code.startsWith('no_') || code.includes('first_aid')).join(','));
+  report.check('El DEA no se declara obligatorio por debajo del umbral de referencia',
+    (sinRecursosAudit.findings || []).find((finding) => finding.code === 'no_aed')?.severity === 'low'
+    && sinRecursosAudit.firstAid?.criteria?.aedMinPersons === 500,
+    `severidad ${(sinRecursosAudit.findings || []).find((finding) => finding.code === 'no_aed')?.severity}`);
+
+  const conRecursos = JSON.parse(JSON.stringify(sinRecursos));
+  const recurso = (id, type, x, y) => ({
+    id, type, layerId: extLayer, x, y, w: 48, h: 48,
+    rotation: 0, color: '#b91c1c', stroke: 2, opacity: 1, label: '', locked: false,
+  });
+  conRecursos.elements = [recurso('kit_central', 'cad_emg_firstaid', 60, 60), recurso('camilla_piso', 'cad_emg_stretcher', 120, 60)];
+  res = await client.postJson(`api/floors/${extFloorId}/save`, { design: conRecursos, expected_version: (await json(`api/floors/${extFloorId}`)).body.floor.version, note: 'Con botiquín y camilla' });
+  const conRecursosAudit = (await json(`api/floors/${extFloorId}/audit`)).body.report || {};
+  const conRecursosCodes = (conRecursosAudit.findings || []).map((finding) => finding.code);
+  report.check('Un botiquín y una camilla dibujados apagan sus hallazgos',
+    res.status === 200 && conRecursosAudit.firstAid?.kits?.count === 1
+    && conRecursosAudit.firstAid?.stretchers?.count === 1
+    && !conRecursosCodes.includes('no_first_aid_kit') && !conRecursosCodes.includes('no_stretcher'),
+    `botiquines ${conRecursosAudit.firstAid?.kits?.count} · camillas ${conRecursosAudit.firstAid?.stretchers?.count}`);
+  report.check('El cálculo mide hasta dónde llega el botiquín',
+    typeof conRecursosAudit.firstAid?.coverage?.kitMaxM === 'number'
+    && conRecursosAudit.firstAid.coverage.kitMaxM > 0
+    && conRecursosAudit.firstAid.coverage.cells > 0
+    && conRecursosAudit.firstAid.coverage.kitMaxM <= conRecursosAudit.firstAid.criteria.kitTravelM,
+    `${conRecursosAudit.firstAid?.coverage?.kitMaxM} m · límite ${conRecursosAudit.firstAid?.criteria?.kitTravelM} m`);
+
+  /* Lienzo grande (38 × 28 m) con el botiquín en una esquina: el punto más
+     lejano queda a más de los 30 m de referencia. */
+  const kitLejos = JSON.parse(JSON.stringify(conRecursos));
+  kitLejos.canvas = { ...kitLejos.canvas, width: 3800, height: 2800 };
+  kitLejos.elements = [recurso('kit_lejos', 'cad_emg_firstaid', 40, 40), recurso('camilla_piso2', 'cad_emg_stretcher', 120, 60)];
+  res = await client.postJson(`api/floors/${extFloorId}/save`, { design: kitLejos, expected_version: (await json(`api/floors/${extFloorId}`)).body.floor.version, note: 'Botiquín lejos' });
+  const lejosAudit = (await json(`api/floors/${extFloorId}/audit`)).body.report || {};
+  report.check('Un botiquín que no alcanza el punto más lejano se marca',
+    (lejosAudit.findings || []).some((finding) => finding.code === 'first_aid_kit_far')
+    && lejosAudit.firstAid.coverage.kitMaxM > lejosAudit.firstAid.criteria.kitTravelM,
+    `${lejosAudit.firstAid?.coverage?.kitMaxM} m frente a ${lejosAudit.firstAid?.criteria?.kitTravelM} m`);
+
+  /* Con el aforo por encima del umbral, el DEA deja de ser informativo. */
+  const conAfluencia = JSON.parse(JSON.stringify(conRecursos));
+  conAfluencia.canvas = { ...conAfluencia.canvas, width: 3800, height: 2800, occupancy: 900 };
+  conAfluencia.elements = [recurso('kit_grande', 'cad_emg_firstaid', 200, 200), recurso('camilla_grande', 'cad_emg_stretcher', 300, 200)];
+  res = await client.postJson(`api/floors/${extFloorId}/save`, { design: conAfluencia, expected_version: (await json(`api/floors/${extFloorId}`)).body.floor.version, note: 'Afluencia alta' });
+  const afluenciaAudit = (await json(`api/floors/${extFloorId}/audit`)).body.report || {};
+  report.check('Con afluencia por encima del umbral el DEA pasa a importante',
+    (afluenciaAudit.findings || []).find((finding) => finding.code === 'no_aed')?.severity === 'medium'
+    && afluenciaAudit.firstAid?.aeds?.count === 0,
+    `${afluenciaAudit.firstAid?.people} personas · umbral ${afluenciaAudit.firstAid?.criteria?.aedMinPersons}`);
+
+  const informeRecursos = await client.get(`projects/${extProjectId}/floors/${extFloorId}/audit`);
+  report.check('El informe imprimible trae la sección de primeros auxilios',
+    informeRecursos.status === 200 && informeRecursos.text.includes('Recursos de primeros auxilios')
+    && informeRecursos.text.includes('Botiquín') && informeRecursos.text.includes('Camilla')
+    && /desfibrilador/i.test(informeRecursos.text)
+    && /no comprueba contenido|No comprueba contenido/i.test(informeRecursos.text),
+    `${informeRecursos.status} · ${(informeRecursos.text.match(/Recursos de primeros auxilios/g) || []).length} sección`);
+  const catalogoBotiquin = await json('catalogs/cad');
+  report.check('El catálogo trae el botiquín como objeto propio',
+    catalogoBotiquin.body.objects?.cad_emg_firstaid?.name === 'Botiquín de primeros auxilios'
+    && /^<svg/.test(catalogoBotiquin.body.objects?.cad_emg_firstaid?.svg || ''),
+    catalogoBotiquin.body.objects?.cad_emg_firstaid?.name || 'sin botiquín');
+
   res = await client.get('/assets/js/editor.js');
   report.check('JS del editor se sirve completo', res.status === 200 && res.text.length > 20000, `${res.text.length} bytes`);
   for (const asset of ['/assets/css/app.css', '/assets/css/editor.css', '/assets/css/print.css', '/assets/js/ui.js', '/assets/js/app.js', '/assets/js/lib/model.js', '/assets/js/lib/geometry.js', '/assets/js/lib/renderer.js', '/assets/img/favicon.svg']) {
@@ -407,7 +484,7 @@ try {
     Object.keys(catalog.categories || {}).join(','));
   report.check('Alias heredados disponibles', catalog.legacyTools?.extinguisher === 'F001' && catalog.legacyTools?.exit === 'E002');
   ({ response: catalogResponse, body: catalog } = await json('catalogs/cad'));
-  report.check('Catálogo CAD con 420 objetos', catalogResponse.status === 200 && catalog.count === 420 && Object.keys(catalog.objects || {}).length === 420);
+  report.check('Catálogo CAD con 421 objetos', catalogResponse.status === 200 && catalog.count === 421 && Object.keys(catalog.objects || {}).length === 421);
   report.check('Catálogo CAD con 31 familias sectoriales', Object.keys(catalog.categories || {}).length === 31
     && ['restaurant', 'warehouse', 'retail', 'hospital', 'textile', 'grill', 'supermarket', 'residential', 'sports', 'outdoor', 'electrico', 'hidraulico', 'eds', 'drogueria', 'gimnasio', 'colegio', 'cafeteria'].every((key) => catalog.categories?.[key]?.label),
     Object.keys(catalog.categories || {}).join(','));
@@ -437,7 +514,7 @@ try {
   /* ---------------------------- guardado y versiones ---------------------------- */
   ({ body: catalog } = await json(`api/floors/${floorId}`));
   let floor = catalog;
-  report.check('API del piso devuelve diseño y versión', floor.floor?.version === 1 && floor.design?.elements?.length === 93, `v${floor.floor?.version}`);
+  report.check('API del piso devuelve diseño y versión', floor.floor?.version === 1 && floor.design?.elements?.length === 96, `v${floor.floor?.version}`);
   const original = floor.design;
   const changed = JSON.parse(JSON.stringify(original));
   changed.elements[0].label = 'Prueba funcional';
@@ -1721,7 +1798,7 @@ echo '|SVC=' . ($repo::codeForType('sig_wc_men') ?? 'NULL');
   });
   const cadCatalog = await json('catalogs/cad');
   report.check('Instalar un .zip con SVG al lado añade los equipos',
-    [302, 303].includes(res.status) && cadCatalog.body.count === 422
+    [302, 303].includes(res.status) && cadCatalog.body.count === 423
     && Boolean(cadCatalog.body.objects?.cad_labo_equipos_tanque_agua)
     && /^<svg/.test(cadCatalog.body.objects?.cad_labo_equipos_tanque_agua?.svg || ''),
     `${cadCatalog.body.count} · ${Object.keys(cadCatalog.body.objects || {}).filter((key) => key.startsWith('cad_labo')).join(',')}`);
@@ -1743,7 +1820,7 @@ $manager = implode(chr(92), ['App', 'Services', 'PluginManager']);
 echo is_dir($manager::directory() . '/labo-equipos') ? 'QUEDA' : 'BORRADO';
 `);
   report.check('Eliminar un complemento borra su carpeta y sus equipos',
-    [302, 303].includes(res.status) && cadTrasBorrar.body.count === 420 && /BORRADO/.test(resto.text || ''),
+    [302, 303].includes(res.status) && cadTrasBorrar.body.count === 421 && /BORRADO/.test(resto.text || ''),
     `${cadTrasBorrar.body.count} · ${(resto.text || '').trim()}`);
 
   res = await client.postForm('plugins/acme-senalizacion/delete', { _token: homeToken });

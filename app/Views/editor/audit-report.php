@@ -3,6 +3,7 @@
 $counts = $report['counts'];
 $travel = $report['travel'];
 $occupancy = $report['occupancy'];
+$firstAid = $report['firstAid'] ?? null;
 $egress = $report['egress'];
 $exits = $report['exits'];
 $labels = \App\Services\PlanAudit::SEVERITY_LABELS;
@@ -127,6 +128,48 @@ $severityLabels = ['high' => 'Críticos', 'medium' => 'Importantes', 'low' => 'M
   </div>
   <p class="audit-note audit-aforo-note">El aforo máximo es una <strong>capacidad calculada</strong> con la superficie útil libre del plano y la densidad de referencia; no sustituye el aforo que fije la autoridad competente ni la revisión de la ocupación real del recinto. Con la ocupación declarada por encima del máximo, el tiempo de salida se calcula con las personas declaradas para no dar un resultado optimista.</p>
 
+  <?php if (is_array($firstAid)): ?>
+  <?php
+  $kitMax = $firstAid['coverage']['kitMaxM'] ?? null;
+  $aedMax = $firstAid['coverage']['aedMaxM'] ?? null;
+  $kitLimit = (float) ($firstAid['criteria']['kitTravelM'] ?? 30);
+  $aedLimit = (float) ($firstAid['criteria']['aedTravelM'] ?? 100);
+  $formatDistance = static fn ($value): string => $value === null ? 'sin medición' : $formatNumber((float) $value, 1) . ' m';
+  ?>
+  <h2 class="audit-h2">Recursos de primeros auxilios</h2>
+  <div class="audit-metrics">
+    <article>
+      <span>Botiquines</span>
+      <strong><?= (int) $firstAid['kits']['count'] ?></strong>
+      <small><?= (int) $firstAid['kits']['count'] === 0
+        ? 'Ninguno ubicado en el plano'
+        : 'Punto más lejano: ' . $formatDistance($kitMax) . ' · referencia ' . $formatNumber($kitLimit, 1) . ' m' ?></small>
+    </article>
+    <article>
+      <span>Camillas</span>
+      <strong><?= (int) $firstAid['stretchers']['count'] ?></strong>
+      <small><?= (int) $firstAid['stretchers']['count'] === 0
+        ? 'Ninguna ubicada en el piso'
+        : 'Ubicadas en el plano · verifica su estado en sitio' ?></small>
+    </article>
+    <article>
+      <span>Desfibrilador (DEA)</span>
+      <strong><?= (int) $firstAid['aeds']['count'] ?></strong>
+      <small><?php if ((int) $firstAid['aeds']['count'] === 0): ?>
+        <?= (int) $firstAid['people'] >= (int) $firstAid['criteria']['aedMinPersons']
+          ? 'Afluencia por encima de ' . (int) $firstAid['criteria']['aedMinPersons'] . ' personas: revisa si aplica'
+          : 'No exigible por debajo de ' . (int) $firstAid['criteria']['aedMinPersons'] . ' personas' ?>
+      <?php else: ?>Punto más lejano: <?= $formatDistance($aedMax) ?> · referencia <?= $formatNumber($aedLimit, 1) ?> m<?php endif; ?></small>
+    </article>
+    <article>
+      <span>Personas en el cálculo</span>
+      <strong><?= (int) $firstAid['people'] ?> pers.</strong>
+      <small><?= ($firstAid['source'] ?? 'estimated') === 'declared' ? 'Ocupación declarada del piso' : 'Capacidad calculada: no hay ocupación declarada' ?></small>
+    </article>
+  </div>
+  <p class="audit-note audit-firstaid-note">El auditor cuenta los recursos <strong>dibujados en el plano</strong> y mide su alcance en línea recta hasta el punto más lejano del espacio libre. <strong>No comprueba contenido, dotación, vigencia, carga ni mantenimiento</strong>: eso se verifica en sitio. Los umbrales son criterios de referencia de la aplicación, no exigencias normativas<?= ($firstAid['criteria']['reference'] ?? '') !== '' ? '; la norma aplicable (' . e((string) $firstAid['criteria']['reference']) . ') depende del establecimiento y de la afluencia de público' : '' ?>.</p>
+  <?php endif; ?>
+
   <h2 class="audit-h2">Hallazgos</h2>
   <?php if ($findings === []): ?>
     <p class="audit-clean">No se detectaron hallazgos con los criterios de referencia configurados. Aun así, verifica el plano en sitio antes de usarlo.</p>
@@ -189,6 +232,11 @@ $severityLabels = ['high' => 'Críticos', 'medium' => 'Importantes', 'low' => 'M
       <tr><th scope="row">Velocidad de marcha</th><td><?= $formatNumber((float) $criteria['egress']['travelSpeedMps'], 2) ?> m/s</td></tr>
       <tr><th scope="row">Señal de salida junto al vano</th><td>≤ <?= $formatNumber(((float) $criteria['signs']['exitSignRadiusCm']) / 100, 1) ?> m</td></tr>
       <tr><th scope="row">Rejilla de cálculo</th><td><?= (int) $criteria['grid']['cellCm'] ?> cm</td></tr>
+      <?php if (is_array($firstAid)): ?>
+      <tr><th scope="row">Alcance del botiquín</th><td>≤ <?= $formatNumber((float) $firstAid['criteria']['kitTravelM'], 1) ?> m</td></tr>
+      <tr><th scope="row">Alcance del DEA</th><td>≤ <?= $formatNumber((float) $firstAid['criteria']['aedTravelM'], 1) ?> m</td></tr>
+      <tr><th scope="row">Umbral de afluencia para el DEA</th><td><?= (int) $firstAid['criteria']['aedMinPersons'] ?> personas</td></tr>
+      <?php endif; ?>
     </tbody>
   </table>
 

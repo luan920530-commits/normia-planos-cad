@@ -145,14 +145,14 @@ async function main() {
     report.check('Señales de baño disponibles', ['SVC_WC_MEN', 'SVC_WC_WOMEN', 'SVC_WC_MIXED', 'SVC_WC_ACCESSIBLE', 'SVC_BABY'].every((code) => app.catalogs.signs[code]?.name),
       ['SVC_WC_MEN', 'SVC_WC_WOMEN', 'SVC_WC_MIXED', 'SVC_WC_ACCESSIBLE', 'SVC_BABY'].filter((code) => !app.catalogs.signs[code]).join(',') || 'todas');
     report.check('La familia de servicios está disponible', app.catalogs.signCategories.services?.label === 'Orientación y servicios', app.catalogs.signCategories.services?.label);
-    report.check('Catálogo CAD ampliado a 420 objetos', Object.keys(app.catalogs.cad).length === 420, String(Object.keys(app.catalogs.cad).length));
+    report.check('Catálogo CAD ampliado a 421 objetos', Object.keys(app.catalogs.cad).length === 421, String(Object.keys(app.catalogs.cad).length));
     report.check('Familias CAD ampliadas a 31', Object.keys(app.catalogs.cadCategories).length === 31, Object.keys(app.catalogs.cadCategories).join(','));
     const expectedFamilies = ['restaurant', 'warehouse', 'retail', 'hospital', 'textile', 'grill', 'supermarket', 'residential', 'sports', 'outdoor', 'electrico', 'hidraulico', 'eds', 'drogueria', 'gimnasio', 'colegio', 'cafeteria'];
     report.check('Nuevas familias sectoriales disponibles', expectedFamilies.every((key) => app.catalogs.cadCategories[key]?.label), expectedFamilies.filter((key) => !app.catalogs.cadCategories[key]).join(',') || 'todas');
     const nuevasFamilias = ['fire', 'emergency', 'technic', 'access', 'security'];
     report.check('Cinco familias nuevas de emergencia y seguridad',
       nuevasFamilias.every((key) => app.catalogs.cadCategories[key]?.label)
-      && nuevasFamilias.reduce((total, key) => total + Object.values(app.catalogs.cad).filter((object) => object.category === key).length, 0) === 44,
+      && nuevasFamilias.reduce((total, key) => total + Object.values(app.catalogs.cad).filter((object) => object.category === key).length, 0) === 45,
       nuevasFamilias.map((key) => `${key}:${Object.values(app.catalogs.cad).filter((object) => object.category === key).length}`).join(' · '));
     report.check('Las señales de brigada están disponibles',
       ['SVC_EVAC_ROUTE', 'SVC_EXIT_TEXT', 'SVC_HYDRANT', 'SVC_COMMAND_POST', 'SVC_GAS_SHUTOFF', 'SVC_POWER_SHUTOFF'].every((code) => app.catalogs.signs[code]?.category === 'brigade' && app.catalogs.signs[code]?.aliases?.length > 0)
@@ -165,7 +165,7 @@ async function main() {
     report.check('Nombres de equipos sin duplicados', new Set(nombresCad).size === nombresCad.length,
       `${nombresCad.length - new Set(nombresCad).size} repetidos`);
     report.check('Paleta de colores expuesta', window.Normia.COLORS.length === 34, String(window.Normia.COLORS.length));
-    report.check('La barra lateral cuenta los equipos del catálogo', q(window, '[data-cad-count]')?.textContent === '420', q(window, '[data-cad-count]')?.textContent);
+    report.check('La barra lateral cuenta los equipos del catálogo', q(window, '[data-cad-count]')?.textContent === '421', q(window, '[data-cad-count]')?.textContent);
     report.check('La barra lateral cuenta las señales del catálogo', q(window, '[data-sign-count]')?.textContent === '395', q(window, '[data-sign-count]')?.textContent);
     report.check('Lienzo con el preset A4 horizontal', app.model.design.canvas.width === 1123 && app.model.design.canvas.height === 794, `${app.model.design.canvas.width}×${app.model.design.canvas.height}`);
     report.check('Barra de estado muestra el tamaño', q(window, '[data-canvas-size]').textContent.includes('794'), q(window, '[data-canvas-size]').textContent);
@@ -1894,7 +1894,7 @@ async function main() {
         assetFailures.push(`${key}: ${error.message}`);
       }
     }
-    report.check('Los 395 pictogramas y 420 equipos se instancian sin errores', assetsOk === 815 && assetFailures.length === 0,
+    report.check('Los 395 pictogramas y 421 equipos se instancian sin errores', assetsOk === 816 && assetFailures.length === 0,
       `${assetsOk}/500 · ${assetFailures.slice(0, 3).join(', ')}`);
 
     const xlink = new window.DOMParser().parseFromString(

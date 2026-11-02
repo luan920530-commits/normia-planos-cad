@@ -10,7 +10,7 @@ pueda dibujar, anotar medidas y recibir cálculos sin aprender metrología.
 | Base | `bddc2dc` (NORMIA-005 entregado, PR #56 abierto) |
 | Reemplaza en parte | [`NORMIA-005-CALIBRACION-DIMENSIONAL.md`](NORMIA-005-CALIBRACION-DIMENSIONAL.md) — §8 de trazabilidad |
 | Alcance | **3.A a 3.J** — los nueve apartados, recibidos el 2026-11-02 |
-| Estado | **diseño completo**; DEC-1, DEC-2, DEC-5 y DEC-6 implementadas en la 1.19.0 (§26); **aforo calculado y publicado** en la 1.20.0 (§27); **ajuste global por mediana** en la 1.21.0 (§28); **escala física al exportar (DEC-8)** en la 1.22.0 (§29); DEC-7 y DEC-9 a DEC-12 pendientes |
+| Estado | **diseño completo**; DEC-1, DEC-2, DEC-5 y DEC-6 implementadas en la 1.19.0 (§26); **aforo calculado y publicado** en la 1.20.0 (§27); **ajuste global por mediana** en la 1.21.0 (§28); **escala física al exportar (DEC-8)** en la 1.22.0 (§29); **recursos de primeros auxilios en el cálculo** en la 1.23.0 (§30); DEC-7 y DEC-9 a DEC-12 pendientes |
 
 ---
 
@@ -1790,3 +1790,79 @@ cobertura ni de las redes se mueve.
 
 Sin verificar: la medida con regla sobre papel real —aquí no hay impresora— y el
 diálogo de impresión de cada navegador.
+
+## 30. Recursos de primeros auxilios en el cálculo (1.23.0)
+
+Lo que el auditor miraba era la evacuación y la extinción. Faltaba lo que se usa
+**cuando alguien se hace daño**: botiquín, camilla y desfibrilador. Ya están en el
+cálculo, con tres cifras y tres hallazgos, y sin pedir nada nuevo al usuario.
+
+### 30.1 Qué se cuenta
+
+| Recurso | Objetos que lo representan | Qué se mide |
+| --- | --- | --- |
+| Botiquín | `cad_emg_firstaid` (nuevo en el catálogo) | cuántos hay y la distancia en línea recta del punto más lejano del espacio libre al más cercano |
+| Camilla | `cad_emg_stretcher`, `cad_hosp_stretcher` | cuántas hay en el piso |
+| DEA | `cad_emg_aed` | cuántos hay, su alcance y si la afluencia calculada pasa del umbral |
+
+Los recursos de una capa oculta no cuentan: si no se ve en el plano, no está en el
+plano.
+
+### 30.2 Los umbrales, y por qué son «de referencia»
+
+`resources/audit-criteria.json` gana un bloque `firstAid`:
+
+| Clave | Valor por defecto | Qué significa |
+| --- | --- | --- |
+| `kitTravelM` | 30 | distancia máxima del punto más lejano al botiquín |
+| `stretcherPerFloor` | `true` | se espera una camilla por piso |
+| `aedMinPersons` | 500 | afluencia a partir de la cual el DEA deja de ser informativo |
+| `aedTravelM` | 100 | distancia máxima al DEA |
+
+Los números son **criterios de la aplicación**, no exigencias normativas: la norma
+aplicable depende del establecimiento, del riesgo y de la afluencia, y la revisa un
+profesional. La referencia que se cita en el informe es el Decreto 1072 de 2015
+(atención oportuna de primeros auxilios), la Resolución 0312 de 2019 (recursos para
+la respuesta ante emergencias) y, para el DEA, la Ley 1831 de 2017 y la Resolución
+3316 de 2019.
+
+### 30.3 Los hallazgos
+
+| Código | Severidad | Cuándo |
+| --- | --- | --- |
+| `no_first_aid_kit` | importante | no hay ningún botiquín dibujado |
+| `first_aid_kit_far` | importante | el punto más lejano queda fuera del alcance de referencia |
+| `no_stretcher` | importante | no hay camilla en el piso |
+| `no_aed` | menor / **importante** | no hay DEA; sube a importante si la afluencia calculada pasa del umbral |
+| `aed_far` | menor | el DEA queda fuera del alcance de referencia |
+
+**El DEA no se declara obligatorio.** Por debajo del umbral el hallazgo es
+informativo y dice textualmente que no se exige: lo contrario sería afirmar algo
+sobre la norma que el programa no puede saber.
+
+### 30.4 Dónde se ve
+
+| Superficie | Qué muestra |
+| --- | --- |
+| Informe imprimible (`…/audit`) | sección **Recursos de primeros auxilios**: botiquines, camillas, DEA y personas del cálculo, con el alcance medido |
+| Cajón Revisión del editor | filas de botiquines, camillas y DEA dentro de la medición |
+| API (`api/floors/{id}/audit`) | `report.firstAid` con `kits`, `stretchers`, `aeds`, `coverage`, `people` y `criteria` |
+| Catálogo | el botiquín como objeto propio, familia *Emergencia* |
+
+### 30.5 Lo que no comprueba
+
+Contenido del botiquín, dotación, vencimientos, carga del DEA, parches ni
+mantenimiento. El informe lo dice con esas palabras: el plano deja constancia de
+**dónde está**, no de **cómo está**. Eso se verifica en sitio y es lo que ya hace la
+lista de verificación física del producto.
+
+### 30.6 Pruebas
+
+Funcional **361** (sin recursos aparecen los tres hallazgos; el DEA queda en *menor*
+bajo el umbral y pasa a *importante* con 900 personas; botiquín y camilla dibujados
+apagan sus hallazgos; el alcance del botiquín se mide —9,52 m en el piso de prueba y
+46,17 m cuando se aleja—; la sección del informe y el botiquín del catálogo),
+interfaz **406**, páginas **54**, golden **8/8** con **6 974 valores**. El golden
+crece porque el informe gana el bloque `firstAid` y porque la demo incorpora los tres
+recursos en la planta baja: los otros pisos muestran lo que falta, que es justo lo
+que el cálculo tiene que decir.

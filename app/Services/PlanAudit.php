@@ -64,6 +64,14 @@ final class PlanAudit
                 'fireSignCodes' => ['F001', 'F002', 'F005'],
                 'youAreHereCode' => 'SVC_AQUI',
             ],
+            'firstAid' => [
+                'notice' => 'Recursos de primeros auxilios con umbrales de referencia configurables.',
+                'reference' => 'Decreto 1072 de 2015 · Resolución 0312 de 2019 · Ley 1831 de 2017 y Resolución 3316 de 2019 (DEA)',
+                'kitTravelM' => 30,
+                'stretcherPerFloor' => true,
+                'aedMinPersons' => 500,
+                'aedTravelM' => 100,
+            ],
         ];
         if (!is_file($path)) {
             return self::$criteria = $defaults;
@@ -77,7 +85,7 @@ final class PlanAudit
             return self::$criteria = $defaults;
         }
         $merged = $defaults;
-        foreach (['grid', 'egress', 'occupancy', 'signs'] as $block) {
+        foreach (['grid', 'egress', 'occupancy', 'signs', 'firstAid'] as $block) {
             if (isset($raw[$block]) && is_array($raw[$block])) {
                 $merged[$block] = array_merge($defaults[$block], $raw[$block]);
             }
@@ -588,6 +596,14 @@ final class PlanAudit
             $findings[] = $finding;
         }
 
+        /* --------------------- primeros auxilios (1.23.0) ---------------------
+         * Botiquín, camilla y DEA. La ocupación que se pasa es la declarada; si
+         * no hay, el propio inventario usa la capacidad calculada. */
+        $firstAid = FirstAidInventory::analyze($design, $declared);
+        foreach ($firstAid['findings'] as $finding) {
+            $findings[] = $finding;
+        }
+
         /* ------------------------------ orden ------------------------------ */
         usort($findings, static function (array $a, array $b): int {
             $order = array_flip(self::SEVERITIES);
@@ -648,6 +664,7 @@ final class PlanAudit
                 'speedMps' => $speed,
             ],
             'extinguishers' => $extinguishers,
+            'firstAid' => $firstAid,
             'routes' => $routesReport,
             'signs' => [
                 'youAreHere' => $hasYouAreHere,

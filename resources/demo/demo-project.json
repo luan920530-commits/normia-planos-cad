@@ -1798,6 +1798,51 @@
             "opacity": 1,
             "label": "",
             "locked": false
+          },
+          {
+            "id": "demo_botiquin",
+            "type": "cad_emg_firstaid",
+            "layerId": "capa_equipos",
+            "x": 86,
+            "y": 666,
+            "w": 48,
+            "h": 48,
+            "rotation": 0,
+            "color": "#b91c1c",
+            "stroke": 2,
+            "opacity": 1,
+            "label": "Botiquín",
+            "locked": false
+          },
+          {
+            "id": "demo_camilla",
+            "type": "cad_emg_stretcher",
+            "layerId": "capa_equipos",
+            "x": 222,
+            "y": 726,
+            "w": 96,
+            "h": 48,
+            "rotation": 0,
+            "color": "#c2410c",
+            "stroke": 2,
+            "opacity": 1,
+            "label": "Camilla",
+            "locked": false
+          },
+          {
+            "id": "demo_dea",
+            "type": "cad_emg_aed",
+            "layerId": "capa_equipos",
+            "x": 1446,
+            "y": 686,
+            "w": 48,
+            "h": 48,
+            "rotation": 0,
+            "color": "#b91c1c",
+            "stroke": 2,
+            "opacity": 1,
+            "label": "DEA",
+            "locked": false
           }
         ],
         "groups": [

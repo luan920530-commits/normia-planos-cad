@@ -157,6 +157,9 @@
       }).join('');
 
       const clean = (report.findings || []).length === 0;
+      /* Recursos de primeros auxilios (NORMIA-006 §30). Tres cifras que el
+         plano guardado ya conoce: cuántos hay y hasta dónde llegan. */
+      const firstAid = report.firstAid || null;
 
       this.host.innerHTML = `
         <section class="audit-score-row">
@@ -200,6 +203,10 @@
             <div><dt>Sin salida alcanzable</dt><dd>${number(travel.unreachableAreaM2)} m²</dd></div>
             <div><dt>Rejilla de cálculo</dt><dd>${number(travel.cellM, 2)} m</dd></div>
             <div><dt>Rutas dibujadas</dt><dd>${(report.routes || []).length}</dd></div>
+            ${firstAid ? `
+            <div><dt>Botiquines</dt><dd>${number(firstAid.kits.count, 0)} <small>${firstAid.coverage?.kitMaxM === null || firstAid.coverage?.kitMaxM === undefined ? 'sin medición' : `punto más lejano ${number(firstAid.coverage.kitMaxM)} m · referencia ${number(firstAid.criteria.kitTravelM, 1)} m`}</small></dd></div>
+            <div><dt>Camillas</dt><dd>${number(firstAid.stretchers.count, 0)} <small>${firstAid.stretchers.count === 0 ? 'ninguna ubicada' : 'ubicadas en el plano'}</small></dd></div>
+            <div><dt>Desfibrilador (DEA)</dt><dd>${number(firstAid.aeds.count, 0)} <small>${firstAid.aeds.count === 0 ? (firstAid.people >= firstAid.criteria.aedMinPersons ? `afluencia sobre ${number(firstAid.criteria.aedMinPersons, 0)}: revisa si aplica` : `no exigible bajo ${number(firstAid.criteria.aedMinPersons, 0)} personas`) : `punto más lejano ${number(firstAid.coverage.aedMaxM)} m`}</small></dd></div>` : ''}
           </dl>
           ${(report.routes || []).length ? `<ul class="audit-routes">${report.routes.map((route, index) => `
             <li>
