@@ -40,6 +40,28 @@ final class Response
         exit;
     }
 
+    /**
+     * Envía un archivo del disco en streaming (sin cargarlo en memoria), útil
+     * para respaldos con fotografías que pueden pesar decenas de MB.
+     */
+    public static function file(string $path, string $filename, string $contentType): never
+    {
+        if (!is_file($path) || !is_readable($path)) {
+            self::status(404);
+            header('Content-Type: text/plain; charset=UTF-8');
+            echo 'No se encontró el archivo.';
+            exit;
+        }
+        $filename = preg_replace('/[^A-Za-z0-9._-]+/', '-', $filename) ?: 'archivo';
+        header('Content-Type: ' . $contentType);
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Content-Length: ' . (string) filesize($path));
+        header('Cache-Control: no-store');
+        header('X-Content-Type-Options: nosniff');
+        readfile($path);
+        exit;
+    }
+
     public static function download(string $filename, string $contents, string $contentType): never
     {
         $filename = preg_replace('/[^A-Za-z0-9._-]+/', '-', $filename) ?: 'plano';

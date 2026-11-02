@@ -158,7 +158,18 @@ final class FloorApiController extends BaseController
 
     public function restore(int $floorId, int $versionId): void
     {
-        $result = Floor::restoreVersion($floorId, $versionId, (int) $this->user()['id']);
+        try {
+            $result = Floor::restoreVersion($floorId, $versionId, (int) $this->user()['id']);
+        } catch (VersionConflictException $exception) {
+            // Otra persona guardó o restauró mientras esta restauración iba en
+            // camino: no se tocó nada y se devuelve la versión real.
+            Response::json([
+                'ok' => false,
+                'code' => 'version_conflict',
+                'message' => $exception->getMessage(),
+                'current_version' => $exception->currentVersion(),
+            ], 409);
+        }
         Response::json([
             'ok' => true,
             'message' => 'Versión restaurada como ' . version_label((int) $result['version']) . '.',

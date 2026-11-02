@@ -5,6 +5,7 @@ namespace App\Core;
 
 use App\Controllers\AccountController;
 use App\Controllers\AuthController;
+use App\Controllers\BackupController;
 use App\Controllers\BrigadeController;
 use App\Controllers\VerificationController;
 use App\Controllers\DashboardController;
@@ -17,6 +18,7 @@ use App\Controllers\LibraryController;
 use App\Controllers\OrganizationController;
 use App\Controllers\PluginController;
 use App\Controllers\ProjectController;
+use App\Controllers\RetentionController;
 use Throwable;
 
 final class Application
@@ -74,6 +76,17 @@ final class Application
             }
 
             self::dispatch($request, $route);
+        } catch (HttpException $exception) {
+            // Cuerpo vacío, JSON ilegible o demasiado grande: cada uno con su
+            // estado, para que el editor pueda decir qué pasó de verdad.
+            if ($isApi || $request->wantsJson()) {
+                Response::json([
+                    'ok' => false,
+                    'message' => $exception->getMessage(),
+                    'code' => $exception->errorCode(),
+                ], $exception->status());
+            }
+            self::renderError($exception->status(), $exception->getMessage());
         } catch (ValidationException $exception) {
             if ($isApi || $request->wantsJson()) {
                 Response::json(['ok' => false, 'message' => $exception->getMessage(), 'errors' => $exception->errors(), 'code' => 'validation'], 422);
@@ -183,6 +196,11 @@ final class Application
         $router->post('projects/{id}/floors/{floorId}/verifications/settings', static fn (array $p) => (new VerificationController())->settings($p['id'], $p['floorId']));
         $router->get('projects/{id}/floors/{floorId}/verifications/{checkId}/photo', static fn (array $p) => (new VerificationController())->photo($p['id'], $p['floorId'], $p['checkId']));
 
+        // Historial y conservación de versiones (borrado manual, con respaldo).
+        $router->get('projects/{id}/floors/{floorId}/versiones', static fn (array $p) => (new RetentionController())->show($p['id'], $p['floorId']));
+        $router->post('projects/{id}/floors/{floorId}/versiones/podar', static fn (array $p) => (new RetentionController())->prune($p['id'], $p['floorId']));
+        $router->post('projects/{id}/floors/{floorId}/versiones/{versionId}/fijar', static fn (array $p) => (new RetentionController())->pin($p['id'], $p['floorId'], $p['versionId']));
+
         // Modo brigadista: enlace público de solo lectura (sin sesión).
         $router->get('b/{token}', static fn (array $p) => (new BrigadeController())->publicPage($p['token']));
         $router->get('b/{token}/plan.json', static fn (array $p) => (new BrigadeController())->publicData($p['token']));
@@ -197,6 +215,14 @@ final class Application
         $router->post('plugins/{id:slug}/delete', static fn (array $p) => (new PluginController())->destroy((string) $p['id']));
         $router->get('plugins/manual', static fn () => (new PluginController())->manual());
         $router->get('plugins/plantilla/{tipo:word}', static fn (array $p) => (new PluginController())->template((string) $p['tipo']));
+
+        // Respaldos: solo la cuenta que instaló la aplicación.
+        $router->get('respaldo', static fn () => (new BackupController())->index());
+        $router->post('respaldo', static fn () => (new BackupController())->create());
+        $router->get('respaldo/base', static fn () => (new BackupController())->snapshot());
+        $router->get('respaldo/{archivo:slug}', static fn (array $p) => (new BackupController())->download((string) $p['archivo']));
+        $router->get('respaldo/{archivo:slug}/verificar', static fn (array $p) => (new BackupController())->verify((string) $p['archivo']));
+        $router->post('respaldo/{archivo:slug}/fijar', static fn (array $p) => (new BackupController())->pin((string) $p['archivo']));
 
         // Cuenta
         $router->get('account/password', static fn () => (new AccountController())->show());

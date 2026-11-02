@@ -115,9 +115,12 @@ verification_rounds (id, floor_id → floors, status, note, started_by, started_
 element_checks (id, floor_id → floors, round_id → verification_rounds, element_id,
                 element_type, sector, status, note, photo, photo_type, photo_name,
                 checked_by, checked_at)
+plugins (id, plugin_id UNIQUE, name, version, enabled, manifest_json, installed_at)
+schema_migrations (version PRIMARY KEY, name, checksum, duration_ms, applied_at)
 ```
 
-- **Esquema versionado.** `resources/schema.sql` crea todo en instalaciones nuevas con `PRAGMA user_version = 6`. En instalaciones anteriores, `Database::migrate()` aplica los pasos que falten al arrancar (2 → 3 → 4 → 5 → 6: enlace brigadista, verificación, `floors.check_days`, la tabla `plugins` y las empresas con membresías), comprueba la columna con `PRAGMA table_info` y no vuelve a ejecutarse dentro de la misma petición.
+- **Esquema versionado.** `resources/schema.sql` crea todo en instalaciones nuevas con `PRAGMA user_version = 7`. En instalaciones anteriores, `Migrations::run()` aplica los pasos que falten al arrancar (2 → 7: enlace brigadista, verificación, `floors.check_days`, la tabla `plugins`, las empresas con membresías y `floor_versions.pinned`), comprueba la columna con `PRAGMA table_info` y no vuelve a ejecutarse dentro de la misma petición.
+- **Migraciones con bitácora.** `app/Core/Migrations.php` centraliza los pasos: cada uno corre en su propia transacción y solo sube `PRAGMA user_version` si terminó bien; al terminar, deja su fila en `schema_migrations` (nombre, suma de comprobación, duración, fecha) y anota el resultado en `storage/logs/migraciones.log`. `bootstrap()` registra los pasos ya incluidos en `schema.sql`, para que una instalación nueva tenga la bitácora completa y no solo el último número. Si un paso falla, se revierte, la versión no avanza y la petición se detiene con `SchemaException`.
 - **Paso 6 (empresas) sin pérdida de datos.** SQLite no permite añadir una columna `NOT NULL` con clave foránea, así que el paso reconstruye `projects` en una transacción: copia cada fila a una tabla nueva, resuelve la empresa a partir de la membresía de su antiguo `user_id`, comprueba que no quede ningún proyecto huérfano y solo entonces reemplaza la tabla. Si algo falla se revierte y se lanza `SchemaException`, que **detiene la petición con una página de error accionable** en lugar de dejar la aplicación trabajando sobre un esquema a medias. Al terminar se verifica con `PRAGMA foreign_key_check`.
 - **Fotos de evidencia.** Se guardan en la tabla como base64 (512 KB como máximo) porque algunos controladores SQLite empaquetados truncan los binarios con bytes de control; el tipo se detecta por la firma del archivo, sin depender de GD. Solo se sirven a la cuenta dueña del plano.
 
@@ -357,6 +360,14 @@ La versión 1.17.0 introduce la tenencia. Antes, un proyecto pertenecía a una c
 - **Eliminar una empresa** borra en cascada sus proyectos, pisos, versiones, enlaces de brigada, rondas y verificaciones. Las cuentas de las personas sobreviven.
 - **Límites conocidos.** El rol se guarda como texto y la comprobación se hace en cada consulta; no hay permisos por proyecto, ni invitaciones con caducidad, ni bitácora de cambios de rol, ni segundo factor.
 
+## Respaldo, verificación y conservación
+
+- **`app/Services/ZipWriter.php`** escribe un ZIP «store» (sin compresión) en PHP puro. El PHP de escritorio y el del APK no siempre traen `ZipArchive` ni `zlib`, y el respaldo no puede depender de eso. Cada entrada guarda su nombre; límite declarado de 4 GB, sin ZIP64.
+- **`app/Services/Backup.php`** crea la copia con `VACUUM INTO` —consistente con el `-wal` y sin detener el servicio—, con alternativa de punto de control más copia si el motor no lo admite. El ZIP lleva la base, `config/config.php`, los complementos, un manifiesto con conteos y SHA-256 y un `LEEME-RESTAURACION.txt`. La verificación comprueba `integrity_check`, `foreign_key_check`, la presencia de las tablas esperadas, las empresas sin propietario y los proyectos o pisos huérfanos; sobre una copia guardada, abre la base extraída en una conexión aparte y en solo lectura. Rotación de 10 copias, con las fijadas fuera de la rotación, y salud de la base con `quick_check` cacheado un día en `storage/cache/salud-base.json`.
+- **`app/Services/VersionRetention.php`** decide qué historial se conserva: todo lo de los últimos 30 días, una versión diaria hasta 180 y una mensual después; la vigente, la inicial, la última y las fijadas nunca son candidatas. `plan()` no borra; `prune()` recalcula el plan y solo elimina los ids que siguen siendo candidatos, previo respaldo obligatorio desde el controlador.
+- **Permisos.** El panel de respaldo exige la cuenta que instaló la aplicación (`users.is_admin`), porque una copia completa contiene los datos de **todas** las empresas; la poda de versiones exige capacidad `manage` sobre el proyecto y un respaldo correcto antes de borrar.
+- **`app/Core/HttpException.php`** separa los errores de petición (estado HTTP + código de máquina) de las validaciones de dominio, para que un cuerpo vacío, uno ilegible y uno enorme no acaben en el mismo 422.
+
 ## Seguridad
 
 | Amenaza | Mitigación |
@@ -379,6 +390,7 @@ La suite es parte del repositorio y no del paquete de producción:
 - `tests/php/harness.mjs` copia el repositorio a un directorio temporal (excluye configuración, bases, sesiones, logs y `node_modules`), levanta PHP compilado a WebAssembly con `@php-wasm/node` y expone un cliente HTTP con cookies, formularios y JSON.
 - `tests/php/lint.mjs` ejecuta `php -l` sobre los archivos de la aplicación.
 - `tests/php/functional.mjs` recorre instalación, autenticación, autorización, proyectos, pisos, editor, guardado, versiones, borradores, conflictos, validaciones, importación, exportación, **auditor y medición de evacuación** e informe imprimible.
+- `tests/php/stability.mjs` cubre la Fase 0: respaldo real descargado y verificado, fotografía dentro de la copia, rotación con copia fijada, reserva del panel a la cuenta que instaló, migración forzada a fallar sin tocar la versión ni los datos, conflicto de restauración, los cuatro casos de cuerpo JSON y la poda sobre 40 versiones.
 - `tests/js/boot.mjs` crea un JSDOM con el HTML real del editor, conecta `window.fetch` al cliente PHP y suple lo que JSDOM no implementa (medidas del SVG, Canvas, descargas, `window.open`).
 - `tests/js/editor.mjs` ejecuta el editor real y comprueba interacciones de puntero, teclado, bibliotecas, guardado, reapertura, exportaciones y saneado.
 - `tests/js/pages.mjs` abre *Mis planos* y la ficha del proyecto reales, y comprueba los menús de acciones (capa fija, colocación, teclado, un solo menú), la confirmación y el borrado de pisos y proyectos.
@@ -395,7 +407,7 @@ Cada prueba corre en PHP 8.1 y 8.3 (la de paquetes en 8.3), sin instalar PHP en 
 - Sin DWG/DXF: fuera de alcance; se documenta explícitamente para no prometer compatibilidad inexistente.
 - Sin colaboración en tiempo real: el bloqueo optimista por versión evita pérdidas silenciosas, pero la coordinación es humana.
 - **Empresas y roles en la interfaz (1.17.0).** Cada cuenta estrena su propia empresa como propietaria; desde *Empresas* el propietario o un administrador da acceso por correo, crea la cuenta si no existe (con contraseña temporal entregada en mano) y asigna rol `owner`, `admin`, `editor` o `viewer`. Una persona puede pertenecer a varias empresas y ve los planos de todas. El sistema impide dejar una empresa sin propietario y no permite administrar a alguien con un rol igual o superior al propio. **No se envían correos**: no hay SMTP, la entrega de credenciales es humana.
-- Migraciones automáticas y repetibles por `PRAGMA user_version` (hoy 6). Cada paso crea solo lo que falta; las instalaciones nuevas ya traen el esquema completo en `resources/schema.sql`. El paso que reescribe datos (empresas) va en transacción y, si falla, detiene la aplicación con un mensaje en vez de continuar.
+- Migraciones automáticas y repetibles por `PRAGMA user_version` (hoy 7). Cada paso crea solo lo que falta; las instalaciones nuevas ya traen el esquema completo en `resources/schema.sql`. El paso que reescribe datos (empresas) va en transacción y, si falla, detiene la aplicación con un mensaje en vez de continuar.
 - La escala es una **referencia declarada**: el editor no mide el mundo real ni convierte unidades físicas a píxeles de impresión.
 
 

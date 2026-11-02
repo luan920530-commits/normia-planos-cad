@@ -39,31 +39,33 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 21. [Edición Electron](#edición-electron)
 22. [Guía de primeros pasos](#guía-de-primeros-pasos)
 23. [Complementos](#complementos)
-24. [Cambios de la versión 1.17.0](#cambios-de-la-versión-1170)
-25. [Cambios de la versión 1.16.0](#cambios-de-la-versión-1160)
-26. [Cambios de la versión 1.15.9](#cambios-de-la-versión-1159)
-27. [Cambios de la versión 1.15.8](#cambios-de-la-versión-1158)
-28. [Cambios de la versión 1.15.7](#cambios-de-la-versión-1157)
-29. [Cambios de la versión 1.15.6](#cambios-de-la-versión-1156)
-30. [Cambios de la versión 1.15.5](#cambios-de-la-versión-1155)
-31. [Cambios de la versión 1.15.4](#cambios-de-la-versión-1154)
-32. [Cambios de la versión 1.15.3](#cambios-de-la-versión-1153)
-33. [Cambios de la versión 1.15.2](#cambios-de-la-versión-1152)
-34. [Cambios de la versión 1.15.1](#cambios-de-la-versión-1151)
-35. [Cambios de la versión 1.15.0](#cambios-de-la-versión-1150)
-36. [Cambios de la versión 1.14.2](#cambios-de-la-versión-1142)
-37. [Cambios de la versión 1.14.1](#cambios-de-la-versión-1141)
-38. [Cambios de la versión 1.14.0](#cambios-de-la-versión-1140)
-39. [Cambios de la versión 1.13.0](#cambios-de-la-versión-1130)
-40. [Cambios de la versión 1.12.0](#cambios-de-la-versión-1120)
-41. [Cambios de la versión 1.11.1](#cambios-de-la-versión-1111)
-42. [Cambios de la versión 1.11.0](#cambios-de-la-versión-1110)
-43. [Cambios de la versión 1.10.0](#cambios-de-la-versión-1100)
-44. [Cambios de la versión 1.9.0](#cambios-de-la-versión-190)
-45. [Cambios de la versión 1.8.0](#cambios-de-la-versión-180)
-46. [Paquetes y verificación](#paquetes-y-verificación)
-47. [Limitaciones](#limitaciones)
-48. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
+24. [Datos y respaldo](#datos-y-respaldo)
+25. [Cambios de la versión 1.18.0](#cambios-de-la-versión-1180)
+26. [Cambios de la versión 1.17.0](#cambios-de-la-versión-1170)
+27. [Cambios de la versión 1.16.0](#cambios-de-la-versión-1160)
+28. [Cambios de la versión 1.15.9](#cambios-de-la-versión-1159)
+29. [Cambios de la versión 1.15.8](#cambios-de-la-versión-1158)
+30. [Cambios de la versión 1.15.7](#cambios-de-la-versión-1157)
+31. [Cambios de la versión 1.15.6](#cambios-de-la-versión-1156)
+32. [Cambios de la versión 1.15.5](#cambios-de-la-versión-1155)
+33. [Cambios de la versión 1.15.4](#cambios-de-la-versión-1154)
+34. [Cambios de la versión 1.15.3](#cambios-de-la-versión-1153)
+35. [Cambios de la versión 1.15.2](#cambios-de-la-versión-1152)
+36. [Cambios de la versión 1.15.1](#cambios-de-la-versión-1151)
+37. [Cambios de la versión 1.15.0](#cambios-de-la-versión-1150)
+38. [Cambios de la versión 1.14.2](#cambios-de-la-versión-1142)
+39. [Cambios de la versión 1.14.1](#cambios-de-la-versión-1141)
+40. [Cambios de la versión 1.14.0](#cambios-de-la-versión-1140)
+41. [Cambios de la versión 1.13.0](#cambios-de-la-versión-1130)
+42. [Cambios de la versión 1.12.0](#cambios-de-la-versión-1120)
+43. [Cambios de la versión 1.11.1](#cambios-de-la-versión-1111)
+44. [Cambios de la versión 1.11.0](#cambios-de-la-versión-1110)
+45. [Cambios de la versión 1.10.0](#cambios-de-la-versión-1100)
+46. [Cambios de la versión 1.9.0](#cambios-de-la-versión-190)
+47. [Cambios de la versión 1.8.0](#cambios-de-la-versión-180)
+48. [Paquetes y verificación](#paquetes-y-verificación)
+49. [Limitaciones](#limitaciones)
+50. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
 
 ---
 
@@ -593,6 +595,44 @@ API interna del editor (todas las peticiones POST requieren `X-CSRF-Token` o `_t
 
 ---
 
+## Datos y respaldo
+
+Todo lo que no se puede reconstruir —empresas, membresías, proyectos, pisos,
+historial de versiones y las **fotografías** de verificación— vive en la base
+SQLite; los complementos en `storage/plugins/` y la configuración en
+`config/config.php`.
+
+- **Panel *Datos y respaldo*** (menú del rail, solo la cuenta que instaló la
+  aplicación): cifras de la base, fecha de la última copia, integridad
+  (`PRAGMA quick_check`, cacheada un día) y verificación de una copia guardada.
+- **Crear respaldo**: ZIP con la base, `config/config.php`, los complementos y un
+  manifiesto con conteos y SHA-256. La copia se hace con `VACUUM INTO`, así que
+  incluye lo que hay en el `-wal` y no depende de detener el servicio.
+- **Verificar**: abre la base del ZIP en una conexión aparte y en solo lectura;
+  comprueba integridad, claves foráneas, tablas esperadas, empresas sin
+  propietario y proyectos o pisos huérfanos. No toca la instalación en uso.
+- **Descargar**: el ZIP completo o la base sola (`application/vnd.sqlite3`) para
+  una revisión rápida.
+- **Rotación**: se conservan las **10** copias más recientes; una copia
+  **fijada** no se borra nunca. El panel avisa si no hay copias o si la última
+  tiene más de 30 días.
+- **Historial y conservación** (menú del piso): simulación de qué se conservaría
+  y qué se podría retirar —todo lo de los últimos 30 días, una versión diaria
+  hasta 180 y una mensual después—, con la vigente, la inicial, la última y las
+  fijadas a mano siempre protegidas. La poda es **manual**, crea un respaldo
+  antes de borrar y solo elimina lo que siga siendo candidato.
+
+La restauración **no** se hace desde la interfaz: reemplazar la base con el
+servidor abierto puede corromperla. El procedimiento completo, con verificación
+previa y vuelta atrás, está en
+[docs/ESTABILIDAD.md](docs/ESTABILIDAD.md).
+
+> Las copias viven en `storage/backups/`, que no se sirve por HTTP (el
+> `.htaccess` lo niega). **Descárgalas y guárdalas fuera del equipo**: si el disco
+> se pierde, las copias se pierden con él.
+
+---
+
 ## Exportaciones
 
 | Formato | Cómo | Contenido |
@@ -701,7 +741,7 @@ Detalle ampliado en [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md).
 
 ### Base de datos
 
-SQLite con `PRAGMA foreign_keys = ON` y consultas preparadas. Tablas: `users`, `projects` (FK a usuarios, `ON DELETE CASCADE`), `floors` (FK a proyectos, diseño, versión y borrador) y `floor_versions` (FK a pisos y usuarios, única por `floor_id + version`). Los nombres de archivo de la base y la clave de aplicación son aleatorios en cada instalación.
+SQLite con `PRAGMA foreign_keys = ON` y consultas preparadas. Tablas: `users`, `organizations`, `memberships` (FK a empresas y usuarios, única por pareja, con rol), `projects` (FK a empresa, `ON DELETE CASCADE`), `floors` (FK a proyectos, diseño, versión y borrador), `floor_versions` (FK a pisos y usuarios, única por `floor_id + version`, con `pinned` para protegerla de la poda), las tablas de verificación, brigadas y complementos, y `schema_migrations` como bitácora de los pasos aplicados. La versión del esquema vive en `PRAGMA user_version` (hoy `7`). Los nombres de archivo de la base y la clave de aplicación son aleatorios en cada instalación.
 
 ---
 
@@ -716,6 +756,7 @@ SQLite con `PRAGMA foreign_keys = ON` y consultas preparadas. Tablas: `users`, `
 - `.htaccess` raíz niega `app/`, `config/`, `resources/`, `storage/`, `tests/`, `tools/` y `docs/`, y las carpetas `storage/*` y `config/` traen su propio `.htaccess`.
 - Cabeceras: `X-Content-Type-Options`, `X-Frame-Options: DENY`, `Referrer-Policy: same-origin`.
 - Subidas acotadas a 2.5 MB y validadas antes de tocar la base (solo JSON de diseño).
+- Las copias de respaldo viven en `storage/backups/`, fuera del alcance del servidor web (`Require all denied`), y la descarga exige sesión de la cuenta que instaló la aplicación. El ZIP **no** va cifrado: contiene datos personales y fotografías, así que se guarda en un lugar protegido.
 - Los errores inesperados se registran en `storage/last-error.log` y en el log del servidor; nunca se muestran trazas al usuario. Este archivo está ignorado por Git y excluido de los paquetes.
 
 ---
@@ -726,10 +767,11 @@ La suite usa **php-wasm** (PHP compilado a WebAssembly) y **JSDOM**, de modo que
 
 ```bash
 npm install            # solo desarrollo: @php-wasm/node y jsdom
-npm test               # suite completa (15 pasos)
+npm test               # suite completa (17 pasos)
 npm run test:quick     # sin construir/validar paquetes
 npm run test:php:81    # suite funcional en PHP 8.1
 npm run test:php:83    # suite funcional en PHP 8.3
+npm run test:stability # respaldo, migraciones, conflicto y poda en 8.1 y 8.3
 npm run test:js        # editor real en JSDOM (PHP 8.3)
 npm run test:package   # construye los ZIP y hace la instalación limpia de la demo
 npm run lint:php       # sintaxis de todos los archivos PHP en 8.1 y 8.3
@@ -761,6 +803,7 @@ Lo único que no funciona sin red es la **vista previa de desarrollo** (`npm run
 | --- | --- |
 | `tests/php/lint.mjs` | `php -l` sobre todo `app/`, `bootstrap.php` e `index.php` en 8.1 y 8.3. |
 | `tests/php/functional.mjs` | 327 comprobaciones: instalador, requisitos, contraseñas débiles, CSRF, sesión, autorización entre cuentas, CRUD de proyectos/pisos, duplicados, importación v1/v2, catálogos (395 señales y 420 objetos), catálogo y guardado de redes, señales de baño y de servicios (guardado, color de familia y exportación SVG), **auditor y medición de evacuación** (salidas, recorrido máximo, zonas inalcanzables, rutas que cruzan muros o no llegan a la salida, ocupación declarada y estimada, señalización, validación de `isExit`, informe imprimible y demo coherente), **muros curvos y vías** (guardado en formato 3, auditor con el muro curvo separando recintos, arco `A` en el SVG, vía que no bloquea frente a muro que sí, `422` para curvas desalineadas, `kind` desconocido, curvas en una puerta y formato desconocido), **sección tipo y glorieta** (formato 4 con ancho derivado, SVG con calzada, andenes, anillo e isla, y `422` para una medida fuera de rango, una clave desconocida, una glorieta sin sección y un cruce desconocido), **modo brigadista** (panel, token de 32 caracteres, página pública sin sesión ni scripts inline, API del plan, service worker, regeneración y desactivación del enlace), **complementos** (pantalla, manual, descarga de las dos plantillas, instalación desde `plugin.json` y desde `.zip` con SVG al lado, familia y color propios en el catálogo, sinónimos en el buscador, activar/desactivar, borrado, rechazo de un manifiesto inválido y de un `.zip` sin su SVG), **verificación física** (lista sin trazos, tres estados, novedad sin nota rechazada, rondas e historial, cobertura, aviso de días y foto servida solo a la cuenta dueña) y **empresas y roles** (alta de empresa, acceso compartido, lector que no guarda ni borra, editor que no administra, último propietario protegido, aislamiento entre empresas y migración real desde una base `user_version = 5`), puertas y portones (geometría, sentidos de apertura, exportación con trazo), validaciones de la API, guardado/versiones/borradores/conflictos, exportaciones, ciclo de vida y logout. |
+| `tests/php/stability.mjs` | 45 comprobaciones de la Fase 0: panel de respaldo, creación de la copia, descarga del ZIP y de la base, verificación aislada y detección de un archivo corrupto, la fotografía dentro de la copia, rotación con copia fijada, reserva del respaldo a la cuenta que instaló, bitácora de migraciones completa, **migración que falla sin tocar la versión ni los datos**, restauración de versión y **conflicto de carrera sin insertar filas**, los cuatro casos de cuerpo JSON (`empty_body`, `invalid_json`, `payload_too_large` y estructura incompleta) y la conservación del historial (protección de vigente, inicial y fijadas, y poda que solo borra lo seleccionado). |
 | `tests/js/plugins.mjs` | 20 comprobaciones de los complementos en el editor: traducción `plg_…` ↔ `PLG_…`, color y tamaño de la familia propia, búsqueda por sinónimos, filtro por familia, inserción, guardado y reapertura del elemento. |
 | `tests/js/editor.mjs` | 383 comprobaciones de interfaz sobre la app real: arranque, 395 señales y 420 objetos, **muros curvos** (rombo del tramo, arco de tres puntos, radio y flecha en el inspector, enderezar, doble clic que parte el arco, caja analítica, puerta sobre el arco, formato 3 y degradación a v2, marcado idéntico sin curvas), **vías y andenes** (banda de 6 m con carriles, cambio de ancho y carriles, parqueadero contado en la etiqueta, franjas del paso cebra y rótulo del lindero), **sección tipo y cruces** (avenida de 20 m en formato 4, perfil transversal en el inspector, cambio de andén que recalcula el ancho, glorieta de cinco accesos, vuelta a vía normal, corredor de ejemplo en una acción y sinónimos «carro», «bici» y «semáforo»), **trazado de tuberías y circuitos, inspector de red y panel de redes**, **mano y paneo, selección de superpuestos, inspector plegable y paleta de herramientas**, **guía de primeros pasos** (apertura en el primer uso, siete pasos, progreso tomado del plano, salto a la herramienta con la baldosa resaltada, reinicio y desactivación), **buscador con sinónimos y sin tildes** (calle → vía, anden → andén, parqueo → parqueadero), **baldosa propia de vías y andenes**, puertas dobles y portones, **vértices de ruta editables (arrastrar, doble clic, Alt+clic)**, **señal de baño insertada desde la biblioteca**, **posiciones reales del trazo**, **clic sobre muros finos, pictogramas y equipos**, **cambio de señal y de equipo desde el inspector**, **auditor de planos** (interruptor de salida, ocupación declarada, cajón de revisión, contador, filtros, «Ver en el plano», cierre sin dejar el fondo bloqueado), **pliego de señalización** (conteo, tamaño sugerido, CSV, precios y consistencia), **medición de rutas internas** (ruta que rodea muros, tramos, guardado en capa y comparación), **modo presentación** (pantalla limpia, láser, spotlight, rutas animadas, capas, quiz y salida sin perder el estado), **rotación**, **rutas cerradas**, **arrastrar y soltar desde la biblioteca sin que el cajón lo bloquee**, reglas, herramientas, inserción con puntero, selección, mover, escalar, rotar, color, cambio de tipo, deshacer/rehacer, duplicar, agrupar, bloquear, desplazar, texto y saneado, guardar, reabrir, borradores, conflictos, exportación SVG/JSON/PNG, tooltips sin acumulación, capas, versiones y límites. |
 | `tests/js/pages.mjs` | 50 comprobaciones de las páginas fuera del editor y de la portada pública: menú de acciones de proyectos y pisos (capa fija, colocación, teclado, un solo menú), confirmación de borrado y borrado real de piso y proyecto, con la protección del último piso, la **portada pública** (cinco capturas con texto alternativo, flechas de la galería y token del formulario) y **la página pública del modo brigadista** ejecutando su JavaScript: acciones rápidas, atenuado del plano, alto contraste recordado, zoom y borrado de la copia local. |
@@ -773,13 +816,15 @@ Lo único que no funciona sin red es la **vista previa de desarrollo** (`npm run
 Resultados esperados de la última ejecución completa:
 
 ```text
-✓ Sintaxis PHP 8.1 · 80 archivos, sin errores
-✓ Sintaxis PHP 8.3 · 80 archivos, sin errores
+✓ Sintaxis PHP 8.1 · 96 archivos, sin errores
+✓ Sintaxis PHP 8.3 · 96 archivos, sin errores
 ✓ Sintaxis JavaScript · 61 archivos, sin errores
 ✓ Complementos (JS) · 20/20
 ✓ Funcionamiento sin conexión · 124 archivos, sin referencias externas
 ✓ Funcional PHP 8.1 · 327/327
 ✓ Funcional PHP 8.3 · 327/327
+✓ Estabilidad PHP 8.1 · 45/45
+✓ Estabilidad PHP 8.3 · 45/45
 ✓ Interfaz (JSDOM) PHP 8.1 · 383/383
 ✓ Interfaz (JSDOM) PHP 8.3 · 383/383
 ✓ Páginas y menús PHP 8.1 · 50/50
@@ -788,7 +833,7 @@ Resultados esperados de la última ejecución completa:
 ✓ Android (APK) · 52/52
 ✓ Escritorio (Electron) · 40/40
 ✓ Paquetes y demo · 39/39
-15/15 pasos correctos
+17/17 pasos correctos
 ```
 
 Las pruebas trabajan sobre copias temporales: no escriben configuración ni bases en el repositorio. `node_modules` solo contiene dependencias de desarrollo y se excluye de los paquetes.
@@ -970,6 +1015,44 @@ empaqueta sus pictogramas y sus equipos, los sube y los activa.
 Límites: **4 MB** por archivo, **400 elementos** por complemento, SVG de 40 bytes
 a 400 KB y 12 sinónimos por señal. Un complemento no certifica nada: sus
 elementos son referencias gráficas que se verifican en sitio.
+
+## Cambios de la versión 1.18.0
+
+Fase 0 de estabilización: proteger los datos antes de ampliar el sistema. Las
+empresas y los roles siguen como estaban; cambia cómo se guardan, se migran y se
+recuperan.
+
+- **Respaldo y verificación.** Panel *Datos y respaldo* con creación de copias
+  (ZIP con base, configuración y complementos), verificación aislada de una copia
+  guardada, descarga del ZIP o de la base, rotación de 10 copias, copia fijada
+  que no se rota y aviso cuando no hay respaldo o el último tiene más de 30 días.
+  El ZIP se escribe sin `ZipArchive` —lo que permite respaldar también desde el
+  APK y el escritorio— y con `VACUUM INTO` para no dejar fuera el `-wal`.
+- **Migraciones versionadas con bitácora.** `schema_migrations` registra cada
+  paso con nombre, suma de comprobación, duración y fecha. Cada paso corre en su
+  propia transacción y solo sube `user_version` si terminó bien; si algo falla, la
+  aplicación se detiene con un mensaje accionable y nada queda a medias. Una
+  instalación nueva registra los siete pasos, no solo el último.
+- **Restauración sin carreras.** `restoreVersion` comprueba cuántas filas cambió
+  el `UPDATE`: si otra persona guardó entre la lectura y la escritura, la API
+  responde **409** con `current_version` y no se escribe ni una fila en el
+  historial.
+- **Entrada JSON distinguible.** Cuerpo vacío (`400 empty_body`), JSON ilegible
+  (`400 invalid_json`), más de 2,5 MB (`413 payload_too_large`) y estructura
+  incompleta (`422`) dejan de confundirse en un mismo mensaje. Los formularios
+  normales no pasan por esa puerta.
+- **Conservación del historial.** Política de conservación y poda manual con
+  simulación, respaldo previo obligatorio y registros en
+  `storage/logs/retencion.log`. El historial deja de crecer sin límite y la
+  versión vigente, la inicial, la última y las fijadas nunca se tocan.
+- **Pruebas**: `tests/php/stability.mjs`, 45 comprobaciones en PHP 8.1 y 8.3, con
+  respaldo real descargado y verificado, migración forzada a fallar, conflicto de
+  restauración y poda comprobada sobre 40 versiones.
+
+El formato del plano no cambia; la base sube a `user_version = 7` con
+`schema_migrations` y `floor_versions.pinned`. El procedimiento de respaldo,
+restauración, actualización y reversión está en
+[docs/ESTABILIDAD.md](docs/ESTABILIDAD.md).
 
 ## Cambios de la versión 1.17.0
 

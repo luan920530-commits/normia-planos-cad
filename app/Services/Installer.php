@@ -106,6 +106,7 @@ final class Installer
             Database::connect($databasePath);
             $schema = (string) file_get_contents($this->basePath . '/resources/schema.sql');
             Database::pdo()->exec($schema);
+            \App\Core\Migrations::bootstrap();
             $userId = User::create($name, $email, $password, true);
             // Fase 2: cada cuenta estrena su propia empresa; los proyectos
             // cuelgan de ella y el instalador deja al usuario como propietario.

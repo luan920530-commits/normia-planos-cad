@@ -73,6 +73,8 @@ CREATE TABLE IF NOT EXISTS floor_versions (
     design_json TEXT NOT NULL,
     note TEXT NOT NULL DEFAULT '',
     created_by INTEGER NULL REFERENCES users(id) ON DELETE SET NULL,
+    -- 1 = versión fijada: la política de conservación nunca la borra.
+    pinned INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (floor_id, version)
 );
@@ -132,4 +134,15 @@ CREATE TABLE IF NOT EXISTS plugins (
     installed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-PRAGMA user_version = 6;
+-- Bitácora de migraciones aplicadas. `PRAGMA user_version` sigue siendo la
+-- fuente rápida; esta tabla deja rastro auditable de qué paso se aplicó, cuándo
+-- y con qué huella, incluso en instalaciones que ya venían al día.
+CREATE TABLE IF NOT EXISTS schema_migrations (
+    version INTEGER PRIMARY KEY,
+    name TEXT NOT NULL DEFAULT '',
+    checksum TEXT NOT NULL DEFAULT '',
+    duration_ms REAL NOT NULL DEFAULT 0,
+    applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+PRAGMA user_version = 7;

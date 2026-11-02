@@ -1649,7 +1649,7 @@ echo "ORGS=$orgs MIEMBROS=$miembros PROYECTOS=$proyectos PISOS=$pisos HUERFANOS=
 `);
   const mig = (migracion.text || '').trim();
   report.check('La migración v5 crea una empresa por persona y conserva proyectos y pisos',
-    /ORGS=2 MIEMBROS=2 PROYECTOS=2 PISOS=2 HUERFANOS=0 DUENOS=2 VERSION=6 FK=0/.test(mig), mig);
+    /ORGS=2 MIEMBROS=2 PROYECTOS=2 PISOS=2 HUERFANOS=0 DUENOS=2 VERSION=7 FK=0/.test(mig), mig);
   res = await client.get('');
   report.check('Tras migrar, la sesión sigue viendo sus planos', res.status === 200 && res.text.includes('Espacio de Administrador de prueba'));
 
