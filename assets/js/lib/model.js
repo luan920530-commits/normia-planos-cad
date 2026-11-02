@@ -6,6 +6,14 @@
   const COLORS = ['#0f172a', '#1e293b', '#334155', '#475569', '#64748b', '#94a3b8', '#ffffff', '#f8fafc', '#2563eb', '#1d4ed8', '#005387', '#0f766e', '#15803d', '#16a34a', '#237f52', '#65a30d', '#b71f2e', '#dc2626', '#991b1b', '#ea580c', '#f97316', '#f59e0b', '#f9a800', '#eab308', '#facc15', '#7c3aed', '#be185d', '#0891b2', '#ca8a04', '#0e7490', '#b45309', '#0369a1', '#c2410c', '#b91c1c'];
   const BASIC = ['wall', 'door', 'door_double', 'door_garage', 'route', 'text', 'dimension', 'line', 'rect', 'ellipse', 'pipe', 'conduit', 'road', 'sidewalk', 'crosswalk', 'parking', 'property'];
   const DOOR_TYPES = ['door', 'door_double', 'door_garage'];
+  /* Calidad declarada de una medida (NORMIA-006 §5.3). Tres valores, sin
+     tolerancias: describe cómo se obtuvo la medida, no el plano. */
+  const QUALITIES = ['exacta', 'aproximada', 'estimada'];
+  /* Tipos a los que se les puede declarar una longitud real. */
+  const MEASURABLE_TYPES = [
+    'wall', 'route', 'line', 'pipe', 'conduit', 'road', 'sidewalk', 'property',
+    'crosswalk', 'parking', ...DOOR_TYPES, 'dimension',
+  ];
   /**
    * Vías, andenes y límites: se dibujan en planta como referencia esquemática.
    * No son muros: no bloquean el tránsito ni cierran recintos. El servidor las
@@ -536,13 +544,16 @@
     }
 
     /**
-     * Versión del documento: 3 cuando algún trazo tiene curvas y 2 cuando no.
-     * Un plano sin curvas se guarda igual que en la 1.10.0 y su SVG sale
-     * idéntico byte a byte con las polilíneas de siempre.
+     * Versión del documento: **5** desde la 1.19.0 (NORMIA-006 DEC-5).
+     *
+     * El editor guarda y dibuja siempre en centímetros, y `format: 5` es
+     * justamente la marca de «esta geometría está en centímetros». Dejarlo en 2,
+     * 3 o 4 haría que el servidor volviera a convertir un plano declarado en
+     * metros cada vez que se guarda. El formato 5 incluye lo que ya había:
+     * curvas (3) y sección tipo en las vías (4).
      */
     documentFormat() {
-      if (this.design.elements.some((element) => element.section)) return 4;
-      return this.design.elements.some((element) => G.hasCurves(element.curves)) ? 3 : 2;
+      return 5;
     }
 
     /** Curvas válidas alineadas con los vértices; `null` si no hay ninguna. */
@@ -1503,8 +1514,8 @@
      */
     resizeForJunction(element, junction, section) {
       if (!junction || !section) return;
-      const unit = this.design.canvas.unit;
-      const perMeter = root.Units.unitsPerMeter(unit);
+      // La geometría está en centímetros: los metros se dibujan con 100 por metro.
+      const perMeter = root.Units.unitsPerMeter(root.Units.GEOMETRY_UNIT);
       const pavement = section.lanes * section.laneM + 2 * section.shoulderM;
       const outer = junction.kind === 'roundabout'
         ? 2 * (pavement + junction.islandM + section.bikeM + section.sidewalkM)
@@ -1529,7 +1540,7 @@
     insertCorridorExample() {
       if (!this.canEdit()) return 0;
       const canvas = this.design.canvas;
-      const perMeter = root.Units.unitsPerMeter(canvas.unit);
+      const perMeter = root.Units.unitsPerMeter(root.Units.GEOMETRY_UNIT);
       const margin = Math.max(20, Math.round(Math.min(canvas.width, canvas.height) * 0.04));
       // El anillo necesita alto de papel: todo el corredor se dimensiona con lo
       // que quepa, para que el dibujo y las medidas nunca se contradigan.
@@ -1630,6 +1641,9 @@
         'network', 'diameter', 'material', 'slope', 'pressure', 'circuit', 'voltage', 'gauge', 'phases', 'load',
         'extAgent', 'extCapacityLb', 'extRating', 'extHazard', 'extMountCm',
         'lanes', 'widthM',
+        // Medida declarada por el usuario (NORMIA-006 §5): en metros y con su
+        // etiqueta de confianza. `null` la borra.
+        'measuredM', 'quality',
       ];
       const keys = Object.keys(patch);
       if (!keys.every((key) => allowed.includes(key))) return false;
@@ -1643,6 +1657,28 @@
       }
       return this.apply('style', () => {
         elements.forEach((element) => {
+          // Medida declarada: opcional, en metros, entre 0,01 y 5 000, con tres
+          // decimales. `null` la borra y el objeto vuelve a medir lo dibujado.
+          if (patch.measuredM !== undefined) {
+            if (patch.measuredM === null || patch.measuredM === '') {
+              delete element.measuredM;
+            } else {
+              const value = Number(patch.measuredM);
+              if (!Number.isFinite(value) || value < 0.01 || value > 5000) {
+                throw new Error('La medida real debe estar entre 0,01 y 5 000 m.');
+              }
+              element.measuredM = Math.round(value * 1000) / 1000;
+            }
+          }
+          if (patch.quality !== undefined) {
+            if (patch.quality === '' || patch.quality === null) {
+              delete element.quality;
+            } else if (QUALITIES.includes(patch.quality)) {
+              element.quality = patch.quality;
+            } else {
+              throw new Error('La calidad de la medida no es válida.');
+            }
+          }
           if (patch.color !== undefined && COLORS.includes(patch.color) && !this.signCodeForType(element.type)) element.color = patch.color;
           if (patch.stroke !== undefined) element.stroke = G.clamp(Number(patch.stroke), 0, 40);
           if (patch.opacity !== undefined) element.opacity = G.clamp(Number(patch.opacity), 0.1, 1);
@@ -2071,6 +2107,8 @@
   root.COLORS = COLORS;
   root.BASIC_TYPES = BASIC;
   root.DOOR_TYPES = DOOR_TYPES;
+  root.QUALITIES = QUALITIES;
+  root.MEASURABLE_TYPES = MEASURABLE_TYPES;
   root.PATH_TYPES = PATH_TYPES;
   root.MEP_TYPES = MEP_TYPES;
   root.createModel = (design, catalogs, options) => new Model(design, catalogs, options);

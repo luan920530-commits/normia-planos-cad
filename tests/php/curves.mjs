@@ -69,20 +69,26 @@ $add('La recta sigue midiendo lo mismo, bit a bit', $largoRecta === $manual,
     $fmt($largoRecta) . ' unidades');
 
 /* -------------------------------- tres unidades -------------------------------- */
-$esperado = ['mm' => M_PI * 200.0 / 1000.0, 'cm' => M_PI * 200.0 / 100.0, 'm' => M_PI * 200.0];
+/*
+ * Desde NORMIA-006 §4 la geometría se guarda siempre en centímetros y la
+ * unidad del plano es una etiqueta de lectura. Antes esta prueba esperaba que
+ * la misma cifra midiera distinto en mm, cm y m; ahora el acuerdo es el
+ * contrario y es el que protege al usuario: cambiar de unidad no altera nada.
+ */
+$esperado = M_PI * 200.0 / 100.0;
 $unidadesOk = true;
 $detalle = [];
-foreach ($esperado as $unit => $metros) {
+foreach (['mm', 'cm', 'm'] as $unit) {
     $canvas = ['unit' => $unit, 'scale' => '1:100'];
     $medido = \\App\\Services\\MepCalculator::lengthMeters($arco, $canvas);
-    $coherente = \\App\\Services\\MepCalculator::lengthMeters($recta, $canvas) === ($manual * \\App\\Core\\Units::metersPerUnit($unit));
-    if (!$near($medido, $metros, 1e-9) || !$coherente) {
+    $coherente = \\App\\Services\\MepCalculator::lengthMeters($recta, $canvas) === ($manual / 100.0);
+    if (!$near($medido, $esperado, 1e-12) || !$coherente) {
         $unidadesOk = false;
-        $detalle[] = $unit . ': ' . $fmt($medido) . ' (esperado ' . $fmt($metros) . ')';
+        $detalle[] = $unit . ': ' . $fmt($medido) . ' (esperado ' . $fmt($esperado) . ')';
     }
 }
-$add('La conversión a metros del arco es correcta en mm, cm y m', $unidadesOk,
-    $unidadesOk ? 'mm ' . $fmt($esperado['mm']) . ' · cm ' . $fmt($esperado['cm']) . ' · m ' . $fmt($esperado['m']) : implode(' · ', $detalle));
+$add('La longitud del arco no depende de la unidad declarada del plano', $unidadesOk,
+    $unidadesOk ? 'mm, cm y m dan ' . $fmt($esperado) . ' m' : implode(' · ', $detalle));
 
 /* --------------------------- escala e independencia --------------------------- */
 $escala = \\App\\Services\\MepCalculator::lengthMeters($arco, ['unit' => 'cm', 'scale' => '1:50']);
@@ -173,29 +179,48 @@ $add('El rótulo del SVG sigue el arco también en milímetros',
     'arco en mm rotulado 0,6 m');
 
 /* --------------------- compatibilidad con planos antiguos ---------------------
- * El validador es estricto a propósito: un plano que declara una unidad que el
- * formato no contempla se rechaza en vez de reinterpretarse en silencio. El
- * respaldo a centímetros vive en los conversores, para los puntos del código que
- * reciben una cadena arbitraria, no en la puerta de entrada del documento.
+ * Un plano anterior al formato 5 declara sus números en la unidad del lienzo.
+ * Al entrar se convierten una sola vez a centímetros y la etiqueta se conserva,
+ * de modo que un plano de 12 m sigue midiendo 12 m y se sigue leyendo en metros.
+ * El validador sigue siendo estricto con lo que no entiende.
  */
 $aceptadas = true;
 $detalleAceptadas = [];
-foreach (['mm', 'cm', 'm'] as $unidadPlano) {
+// Milímetros, centímetros y metros del mismo plano. La cuadrícula se declara
+// como entero en su unidad porque el lienzo la exige entera (5–100 cm).
+$planos = [
+    'mm' => ['factor' => 0.1, 'grid' => 200],
+    'cm' => ['factor' => 1.0, 'grid' => 20],
+    'm' => ['factor' => 100.0, 'grid' => 0.2],
+];
+foreach ($planos as $unidadPlano => $plano) {
+    $factor = $plano['factor'];
     $variante = $consulta;
     $variante['canvas']['unit'] = $unidadPlano;
+    // El mismo plano físico, escrito en la unidad que declara.
+    $variante['canvas']['width'] = (int) round(1200 / $factor);
+    $variante['canvas']['height'] = (int) round(800 / $factor);
+    $variante['canvas']['grid'] = $plano['grid'];
+    $variante['elements'] = [$elemento([
+        'network' => 'agua_fria',
+        'x' => 100 / $factor, 'y' => 100 / $factor, 'w' => 400 / $factor, 'h' => 200 / $factor,
+        'points' => [['x' => 0.0, 'y' => 0.0], ['x' => 400 / $factor, 'y' => 0.0]],
+    ])];
     try {
-        $devuelta = \\App\\Services\\DesignValidator::normalizeArray($variante)['canvas']['unit'];
-        if ($devuelta !== $unidadPlano) {
+        $devuelto = \\App\\Services\\DesignValidator::normalizeArray($variante);
+        $ancho = (int) $devuelto['canvas']['width'];
+        $largo = \\App\\Services\\MepCalculator::length($devuelto['elements'][0]);
+        if ($devuelto['canvas']['unit'] !== $unidadPlano || $ancho !== 1200 || $near($largo, 400.0) === false) {
             $aceptadas = false;
-            $detalleAceptadas[] = $unidadPlano . ' volvió como ' . $devuelta;
+            $detalleAceptadas[] = $unidadPlano . ': ' . $ancho . ' cm · ' . $fmt($largo) . ' cm';
         }
     } catch (\\Throwable $error) {
         $aceptadas = false;
         $detalleAceptadas[] = $unidadPlano . ': ' . $error->getMessage();
     }
 }
-$add('El plano acepta mm, cm y m como unidad declarada', $aceptadas,
-    $aceptadas ? 'las tres se conservan sin reinterpretarse' : implode(' · ', $detalleAceptadas));
+$add('Un plano en mm o m entra convertido a centímetros y conserva su etiqueta', $aceptadas,
+    $aceptadas ? '1 200 cm y 400 cm en las tres unidades' : implode(' · ', $detalleAceptadas));
 
 $rechazadas = 0;
 $detalleRechazo = [];

@@ -313,15 +313,19 @@ report.check('MepCalculator y PathGeometry dan la misma longitud',
   curva.arcoUnidadesMep === curva.arcoUnidadesPath && curva.arcoMetrosMep === curva.arcoMetrosPath,
   `Mep ${curva.arcoMetrosMep} m · PathGeometry ${curva.arcoMetrosPath} m`);
 const unidades = payload?.synthetic?.unidades ?? {};
-const factor = { mm: 0.1, cm: 1, m: 100 };
+/*
+ * Desde NORMIA-006 §3 la geometría está siempre en centímetros y `canvas.unit`
+ * solo dice cómo se leen las cifras: la misma geometría de 400 unidades mide
+ * 4 m en las tres unidades. Antes medía 0,4 / 4 / 400 m, que era justo el
+ * defecto que el rediseño corrige (cambiar la etiqueta movía el plano).
+ */
 const tresUnidades = ['mm', 'cm', 'm'].every((unidad) => {
   const fila = unidades[unidad];
   if (!fila) return false;
-  const esperado = 400 * factor[unidad] / 100;
-  return fila.rectaMetros === esperado
+  return fila.rectaMetros === 4
     && Math.abs(fila.arcoMetros - fila.rectaMetros * Math.PI / 2) < 1e-9;
 });
-report.check('La misma geometría se mide igual en milímetros, centímetros y metros', tresUnidades,
+report.check('La misma geometría mide lo mismo con la etiqueta en mm, cm y m', tresUnidades,
   ['mm', 'cm', 'm'].map((u) => `${u}: ${unidades[u]?.arcoMetros} m`).join(' · '));
 report.check('El golden coincide por completo con la referencia', problems.length === 0,
   problems.length === 0 ? `${totalValues} valores · 4 SVG` : problems.slice(0, 5).join(' · '));

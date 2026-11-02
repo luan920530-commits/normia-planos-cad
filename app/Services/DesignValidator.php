@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Core\Units;
 use DomainException;
 use JsonException;
 
@@ -36,6 +37,9 @@ final class DesignValidator
     private const CURVE_TYPES = ['wall', 'route', 'line', 'pipe', 'conduit', 'road', 'sidewalk', 'property'];
     private const MEP_TYPES = ['pipe', 'conduit'];
     public const MAX_POINTS = 40;
+
+    /** Calidad declarada de una medida (NORMIA-006 §5.3). Sin tolerancias. */
+    public const QUALITIES = ['exacta', 'aproximada', 'estimada'];
     private const UNITS = ['cm', 'm', 'mm'];
 
     public static function normalizeJson(string $json): array
@@ -66,9 +70,17 @@ final class DesignValidator
         // `curves` alineado con `points`. Formato 4: la vía lleva `section`
         // (sección tipo). Un plano anterior se sigue abriendo igual.
         $format = $design['format'] ?? null;
-        if (!in_array($format, [2, 3, 4], true)) {
+        if (!in_array($format, [2, 3, 4, 5], true)) {
             throw new DomainException('La versión del formato del diseño no es compatible.');
         }
+        /* Formatos 2 a 4: la geometría está en la unidad declarada. Formato 5
+           (NORMIA-006 §7.2): la geometría está siempre en centímetros y
+           `canvas.unit` es solo cómo se leen y escriben las cifras. Aquí se
+           convierte una sola vez el documento antiguo y se le pone la marca. */
+        $design = self::geometryToCentimetres($design, (int) $format);
+        // Si se convirtió, el documento ya lleva la marca 5: leerla del diseño y
+        // no de la variable evita convertirlo otra vez al guardarlo.
+        $format = (int) ($design['format'] ?? $format);
         $canvas = self::normalizeCanvas($design['canvas'] ?? null);
         $layers = self::normalizeLayers($design['layers'] ?? null);
         $layerIds = array_column($layers, 'id');
@@ -78,6 +90,7 @@ final class DesignValidator
 
         $hasCurves = false;
         $hasSection = false;
+        $hasMeasure = false;
         foreach ($elements as $element) {
             if (isset($element['curves']) && is_array($element['curves']) && $element['curves'] !== []) {
                 $hasCurves = true;
@@ -85,10 +98,16 @@ final class DesignValidator
             if (isset($element['section'])) {
                 $hasSection = true;
             }
+            if (isset($element['measuredM']) || isset($element['quality'])) {
+                $hasMeasure = true;
+            }
         }
 
+        /* El formato se deduce del contenido y nunca baja: un documento que ya
+           venía en 5 (geometría en centímetros) sigue en 5 aunque no tenga
+           medidas, porque la marca es lo que impide reconvertirlo dos veces. */
         return [
-            'format' => $hasSection ? 4 : ($hasCurves ? 3 : 2),
+            'format' => ($hasMeasure || (int) $format >= 5) ? 5 : ($hasSection ? 4 : ($hasCurves ? 3 : 2)),
             'canvas' => $canvas,
             'layers' => $layers,
             'elements' => $elements,
@@ -267,6 +286,117 @@ final class DesignValidator
         ];
     }
 
+    /**
+     * Normaliza la geometría de un documento antiguo a centímetros.
+     *
+     * Hasta el formato 4, `canvas.unit` era a la vez etiqueta y unidad de la
+     * geometría: un plano en `mm` con ancho 4 186 medía 4 186 mm. Desde el
+     * formato 5 la geometría está siempre en centímetros y la unidad solo dice
+     * cómo se lee, así que un documento antiguo se convierte **una vez** al
+     * abrirlo y se marca con `format: 5` para que nadie lo convierta dos veces.
+     *
+     * La unidad declarada **no cambia**: el plano sigue leyéndose en milímetros
+     * o en metros, que es lo que el usuario tenía delante. Lo que cambia es el
+     * número guardado, no lo que mide.
+     *
+     * - `stroke` y `fontSize` no se tocan: son unidades de dibujo, no medidas.
+     * - `width` y `height` del lienzo se redondean al centímetro, porque el
+     *   validador los exige enteros; es un error máximo de medio centímetro en
+     *   el borde del lienzo, no en las distancias.
+     *
+     * @param array<string,mixed> $design
+     * @return array<string,mixed>
+     */
+    private static function geometryToCentimetres(array $design, int $format): array
+    {
+        $unit = $design['canvas']['unit'] ?? null;
+        if ($format >= 5 || !is_string($unit) || $unit === Units::GEOMETRY_UNIT || !Units::isSupported($unit)) {
+            return $design;
+        }
+        $factor = Units::cmPerUnit($unit);
+        $scale = static fn (mixed $value): mixed => is_int($value) || is_float($value)
+            ? round((float) $value * $factor, 4)
+            : $value;
+
+        $canvas = $design['canvas'];
+        foreach (['width', 'height', 'grid'] as $key) {
+            if (isset($canvas[$key]) && (is_int($canvas[$key]) || is_float($canvas[$key]))) {
+                $canvas[$key] = (int) round((float) $canvas[$key] * $factor);
+            }
+        }
+        $design['canvas'] = $canvas;
+
+        foreach ($design['elements'] ?? [] as $index => $element) {
+            if (!is_array($element)) {
+                continue;
+            }
+            foreach (['x', 'y', 'w', 'h'] as $key) {
+                if (array_key_exists($key, $element)) {
+                    $element[$key] = $scale($element[$key]);
+                }
+            }
+            if (is_array($element['points'] ?? null)) {
+                foreach ($element['points'] as $pointIndex => $point) {
+                    if (!is_array($point)) {
+                        continue;
+                    }
+                    foreach (['x', 'y'] as $key) {
+                        if (array_key_exists($key, $point)) {
+                            $point[$key] = $scale($point[$key]);
+                        }
+                    }
+                    $element['points'][$pointIndex] = $point;
+                }
+            }
+            foreach (['curves', 'section', 'junction'] as $key) {
+                if (is_array($element[$key] ?? null)) {
+                    $element[$key] = self::scaleDeep($element[$key], $factor);
+                }
+            }
+            $design['elements'][$index] = $element;
+        }
+
+        $design['format'] = 5;
+        return $design;
+    }
+
+    /**
+     * Escala en profundidad los números de una estructura anidada.
+     *
+     * Se usa con `curves`, `section` y `junction`, que son coordenadas en
+     * unidades del lienzo. **No** se usa con los campos que ya están en metros
+     * (`widthM`, `laneM`, `extMountCm`…): esos no dependen de la unidad del
+     * plano y convertirlos los estropearía.
+     *
+     * @param array<mixed> $value
+     * @return array<mixed>
+     */
+    private static function scaleDeep(array $value, float $factor): array
+    {
+        $skip = ['widthM', 'laneM', 'medianM', 'shoulderM', 'bikeM', 'sidewalkM', 'islandM', 'extMountCm'];
+        foreach ($value as $key => $item) {
+            if (is_string($key) && in_array($key, $skip, true)) {
+                continue;
+            }
+            if (is_array($item)) {
+                $value[$key] = self::scaleDeep($item, $factor);
+            } elseif (is_int($item) || is_float($item)) {
+                // Los enteros pequeños son conteos (carriles, accesos): no se tocan.
+                if (is_int($item) && abs($item) < 100 && !self::looksLikeCoordinate($key)) {
+                    continue;
+                }
+                $value[$key] = round((float) $item * $factor, 4);
+            }
+        }
+        return $value;
+    }
+
+    /** ¿La clave de una estructura anidada contiene coordenadas? */
+    private static function looksLikeCoordinate(mixed $key): bool
+    {
+        return is_string($key) && in_array($key, ['x', 'y', 'w', 'h', 'cx', 'cy', 'r', 'rx', 'ry', 't'], true);
+    }
+
     private static function normalizeCanvas(mixed $canvas): array
     {
         if (!is_array($canvas)) {
@@ -428,6 +558,8 @@ final class DesignValidator
             'label', 'fontSize', 'points', 'curves', 'flipX', 'flipY', 'isExit', 'locked',
             // Ancho de banda de vías y andenes, carriles y sección tipo (v4).
             'widthM', 'lanes', 'section', 'junction',
+            // Medida declarada por el usuario (NORMIA-006 §5): opcional, en metros.
+            'measuredM', 'quality',
         ];
         foreach ($elements as $element) {
             if (!is_array($element)) {
@@ -618,6 +750,24 @@ final class DesignValidator
             ];
             if ($type === 'text' || $type === 'dimension') {
                 $normalized['fontSize'] = round($fontSize, 2);
+            }
+            /* Medida declarada: qué mide de verdad esta pieza. Es opcional y no
+               cambia la geometría; gobierna el cálculo y el informe de ese
+               objeto, y su etiqueta dice cuánto se fía el usuario de ella.
+               Se redondea a 0,001 m (1 mm): pedir más precisión que un
+               milímetro en un plano de emergencia no significa nada. */
+            if (array_key_exists('measuredM', $element)) {
+                $normalized['measuredM'] = round(
+                    self::number($element['measuredM'], 0.01, 5000, 'medida real'),
+                    3
+                );
+            }
+            if (array_key_exists('quality', $element)) {
+                $quality = $element['quality'];
+                if (!is_string($quality) || !in_array($quality, self::QUALITIES, true)) {
+                    throw new DomainException('La calidad de la medida debe ser exacta, aproximada o estimada.');
+                }
+                $normalized['quality'] = $quality;
             }
             if ($points !== null) {
                 $normalized['points'] = $points;

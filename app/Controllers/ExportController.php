@@ -43,7 +43,9 @@ final class ExportController extends BaseController
         $envelope = [
             'application' => 'normia-planos-cad',
             'format' => 'normia-plan',
-            'schema_version' => 2,
+            // 3 desde NORMIA-006: la geometría va en centímetros y los elementos
+            // pueden llevar `measuredM` y `quality`. El importador acepta 2 y 3.
+            'schema_version' => 3,
             'exported_at' => gmdate('c'),
             'project' => [
                 'name' => $floor['project_name'],

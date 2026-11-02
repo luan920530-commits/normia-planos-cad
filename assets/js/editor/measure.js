@@ -159,7 +159,9 @@
         this.app.toast?.('No hay un paso caminable entre esos dos puntos. Revisa muros, puertas y equipos.', 'error', { duration: 3600 });
         return false;
       }
-      const meters = segment.distance * metersPerUnit(canvas.unit);
+      // La geometría está en centímetros (NORMIA-006 §3): la unidad del plano
+      // es una etiqueta y no cambia lo que se mide.
+      const meters = segment.distance * metersPerUnit(Units.GEOMETRY_UNIT);
       this.legs.push({
         from: origin,
         to: target,

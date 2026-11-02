@@ -436,7 +436,8 @@
       if (element.junction) return this.roadJunctionNode(element, canvas, parts);
       const { color, stroke, zoom, cm, group, font } = parts;
       const section = element.section;
-      const perMeter = root.Units.unitsPerMeter(canvas?.unit || 'cm');
+      // Geometría en centímetros (NORMIA-006 §3): la vía se dibuja con cm.
+      const perMeter = root.Units.unitsPerMeter(root.Units.GEOMETRY_UNIT);
       const median = (Number(section.medianM) || 0);
       const shoulder = (Number(section.shoulderM) || 0);
       const bike = (Number(section.bikeM) || 0);
@@ -562,8 +563,9 @@
      */
     roadJunctionNode(element, canvas, parts) {
       const { color, stroke, zoom, group, font } = parts;
-      const cm = G.cmPerUnit(canvas?.unit || 'cm');
-      const perMeter = root.Units.unitsPerMeter(canvas?.unit || 'cm');
+      const cm = G.cmPerUnit(root.Units.GEOMETRY_UNIT);
+      // Geometría en centímetros (NORMIA-006 §3): la vía se dibuja con cm.
+      const perMeter = root.Units.unitsPerMeter(root.Units.GEOMETRY_UNIT);
       const section = element.section || {};
       const lanes = Math.max(1, Math.round(Number(section.lanes) || 1));
       const laneM = Number(section.laneM) || 3;
@@ -706,7 +708,8 @@
       const color = element.color || '#64748b';
       const stroke = Math.max(0.8, Number(element.stroke) || 1.5);
       const unit = canvas?.unit || 'cm';
-      const cm = G.cmPerUnit(unit);
+      // Para dibujar se usa la unidad de la geometría; `unit` queda para el texto.
+      const cm = G.cmPerUnit(root.Units.GEOMETRY_UNIT);
       const font = "'system-ui', '-apple-system', 'Segoe UI', sans-serif";
       const label = String(element.label || '').split('\n')[0];
       const group = node('g', { class: `outdoor outdoor-${type}` });
@@ -718,7 +721,7 @@
         }));
         if (type === 'crosswalk') {
           // Franjas de 50 cm con junta de 50 cm, como un paso peatonal cebra.
-          const step = Math.max(6, root.Units.fromCm(100, unit));
+          const step = Math.max(6, root.Units.fromCm(100, root.Units.GEOMETRY_UNIT));
           const bar = step / 2;
           const horizontal = element.w >= element.h;
           const span = horizontal ? element.w : element.h;
@@ -1017,7 +1020,12 @@
         group.appendChild(node('line', { x1: a.x, y1: a.y - 6 / zoom, x2: a.x, y2: a.y + 6 / zoom, stroke: color, 'stroke-width': 1 / zoom }));
         group.appendChild(node('line', { x1: b.x, y1: b.y - 6 / zoom, x2: b.x, y2: b.y + 6 / zoom, stroke: color, 'stroke-width': 1 / zoom }));
         const measured = Math.hypot(b.x - a.x, b.y - a.y);
-        const caption = element.label || G.formatMeasurement(measured, canvas.unit);
+        /* Si el usuario declaró la medida, la cota rotula esa (NORMIA-006 §5.1):
+           es la cifra que reconoce. Si no, la distancia dibujada. */
+        const declared = Number(element.measuredM);
+        const caption = element.label || (Number.isFinite(declared) && declared > 0
+          ? G.formatMeasurement(root.Units.fromCm(declared * 100, canvas.unit), canvas.unit)
+          : G.formatMeasurement(measured, canvas.unit));
         group.appendChild(node('text', {
           x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 - 7 / zoom, 'text-anchor': 'middle',
           fill: color, 'font-size': element.fontSize || 12, class: 'element-dimension',

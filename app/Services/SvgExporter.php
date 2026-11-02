@@ -33,7 +33,8 @@ final class SvgExporter
         $title = trim((string) ($meta['floor_name'] ?? 'Plano de emergencia'));
         $project = trim((string) ($meta['project_name'] ?? ''));
         $scale = (string) $canvas['scale'];
-        $unit = (string) $canvas['unit'];
+        // Geometría en centímetros: el SVG dibuja con `cm`, no con la etiqueta.
+        $unit = Units::GEOMETRY_UNIT;
 
         $svg = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
         $svg .= '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="' . self::n($width) . '" height="' . self::n($totalHeight) . '" '
@@ -442,7 +443,7 @@ final class SvgExporter
      */
     private static function roadSectionMarkup(array $element, float $x, float $y, string $color, float $stroke, array $canvas): string
     {
-        $unit = (string) ($canvas['unit'] ?? 'cm');
+        $unit = Units::GEOMETRY_UNIT;
         $section = $element['section'];
         $perMeter = Units::unitsPerMeter($unit);
         $lanes = max(1, (int) ($section['lanes'] ?? 2));
@@ -557,7 +558,7 @@ final class SvgExporter
      */
     private static function roadJunctionMarkup(array $element, float $x, float $y, string $color, float $stroke, array $canvas): string
     {
-        $unit = (string) ($canvas['unit'] ?? 'cm');
+        $unit = Units::GEOMETRY_UNIT;
         $section = $element['section'];
         $junction = $element['junction'];
         $perMeter = Units::unitsPerMeter($unit);
@@ -796,7 +797,7 @@ final class SvgExporter
      */
     private static function flatPointList(array $element, array $canvas): array
     {
-        $unit = (string) ($canvas['unit'] ?? 'cm');
+        $unit = Units::GEOMETRY_UNIT;
         $x = (float) $element['x'];
         $y = (float) $element['y'];
         $points = [];
@@ -814,7 +815,7 @@ final class SvgExporter
     private static function outdoorBand(array $element, float $x, float $y, float $w, float $h, string $color, float $stroke, array $canvas): string
     {
         $type = (string) $element['type'];
-        $unit = (string) ($canvas['unit'] ?? 'cm');
+        $unit = Units::GEOMETRY_UNIT;
         $band = $type === 'property'
             ? 0.0
             : max(2.0, Units::fromMeters((float) ($element['widthM'] ?? 2), $unit));
@@ -852,8 +853,8 @@ final class SvgExporter
     /** Trama de losas del andén: marcas perpendiculares cada 60 cm. */
     private static function sidewalkHatch(array $element, float $x, float $y, string $color, float $stroke, float $band, array $canvas, float $w, float $h): string
     {
-        $unit = (string) ($canvas['unit'] ?? 'cm');
-        $points = PlanGrid::visualPoints($element, (string) ($canvas['unit'] ?? 'cm'));
+        $unit = Units::GEOMETRY_UNIT;
+        $points = PlanGrid::visualPoints($element, $unit);
         if (count($points) < 2) {
             return '';
         }
@@ -888,7 +889,7 @@ final class SvgExporter
     private static function outdoorArea(array $element, float $x, float $y, float $w, float $h, string $color, float $stroke, array $canvas): string
     {
         $type = (string) $element['type'];
-        $unit = (string) ($canvas['unit'] ?? 'cm');
+        $unit = Units::GEOMETRY_UNIT;
         $out = '<rect x="' . self::n($x) . '" y="' . self::n($y) . '" width="' . self::n($w) . '" height="' . self::n($h) . '" rx="2" fill="#f8fafc" stroke="' . self::x($color) . '" stroke-width="' . self::n($stroke) . '"/>' . "\n";
         if ($type === 'crosswalk') {
             $step = max(6.0, Units::fromCm(100, $unit));
@@ -954,8 +955,23 @@ final class SvgExporter
             . ' ' . self::n($rightX) . ',' . self::n($rightY) . '" fill="' . self::x($color) . '"/>' . "\n";
     }
 
+    /**
+     * Rótulo de una cota.
+     *
+     * Si el elemento lleva medida declarada, se rotula esa (NORMIA-006 §5.1):
+     * es la cifra que el usuario reconoce. Si no, la distancia geométrica. En
+     * los dos casos la cifra se lee en la **unidad de trabajo** del plano, no en
+     * la unidad en la que está guardada la geometría.
+     */
     private static function measurement(array $element, array $canvas): string
     {
+        $unit = (string) ($canvas['unit'] ?? 'cm');
+        $measured = ElementMeasure::measuredCm($element);
+        if ($measured !== null) {
+            $value = Units::fromCm($measured, $unit);
+            $decimals = $unit === 'mm' ? 0 : ($unit === 'm' ? 2 : 1);
+            return number_format($value, $decimals, ',', '.') . ' ' . $unit;
+        }
         $points = self::pointList($element);
         if (count($points) < 2) {
             return '';
@@ -963,7 +979,6 @@ final class SvgExporter
         $a = $points[0];
         $b = $points[count($points) - 1];
         $distance = hypot((float) $b['x'] - (float) $a['x'], (float) $b['y'] - (float) $a['y']);
-        $unit = (string) ($canvas['unit'] ?? 'cm');
         return number_format($distance, 1, ',', '.') . ' ' . $unit;
     }
 

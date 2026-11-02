@@ -7,12 +7,21 @@ mide un trazo curvo. Describe el código desde la **etapa 0 de NORMIA-004**.
 
 ## 1. La regla de oro
 
-**Una unidad del lienzo equivale a la unidad declarada del plano.** Si el plano
-dice `cm`, un muro de 400 unidades mide 400 cm = 4 m. Si dice `m`, esas mismas
-400 unidades son 400 m.
+**La geometría se guarda siempre en centímetros; lo que se declara por plano es
+la unidad con la que se lee y se escribe.** Desde la 1.19.0 (NORMIA-006 DEC-1) un
+muro guardado como 400 mide 400 cm = 4 m, se lea en `cm`, en `mm` o en `m`. Antes
+de esa versión la unidad del plano era un factor: las mismas 400 unidades en un
+plano en `m` eran 400 m.
 
-Esa unidad se declara por plano en *Ajustes del piso › Lienzo y escala* y viaja
-en el documento (`canvas.unit`), no en la configuración de la aplicación.
+Esa unidad se elige por plano en *Ajustes del piso › Lienzo y escala* y viaja en el
+documento (`canvas.unit`), no en la configuración de la aplicación. Cambiarla
+reetiqueta las cifras del formulario y **no** toca el tamaño del lienzo, la
+posición de los objetos ni ninguna medida.
+
+Un documento anterior al formato 5 declara sus números en su propia unidad y se
+convierte **una sola vez** al abrirlo (`DesignValidator::geometryToCentimetres`),
+conservando la etiqueta. Un plano histórico de 12 m entra como 1 200 cm y se sigue
+leyendo en metros.
 
 **La escala (`1:100`) no interviene en ninguna medida.** Es una referencia de
 impresión. Sirve para saber a qué tamaño saldría en papel, no para calcular
@@ -127,12 +136,32 @@ componen una unidad a partir de datos que el usuario no controla.
 Consecuencia práctica: un JSON editado a mano con `"unit": "M"` **no se abre**;
 la aplicación pide corregirlo. Los planos que salieron de la aplicación siempre
 declaran `mm`, `cm` o `m`, así que ningún documento histórico se rompe. Está
-fijado en `tests/php/curves.mjs` («el plano acepta mm, cm y m» y «una unidad
-inválida se rechaza en vez de reinterpretarse»).
+fijado en `tests/php/curves.mjs` («un plano en mm o m entra convertido a
+centímetros y conserva su etiqueta» y «una unidad inválida se rechaza en vez de
+reinterpretarse»).
 
 ---
 
-## 6. La escala de impresión
+## 6. La medida declarada por objeto
+
+Un objeto medible puede llevar su **largo real** (`measuredM`, en metros, de 0,01
+a 5 000, tres decimales) y una **calidad** (`exacta`, `aproximada`, `estimada`).
+`App\Services\ElementMeasure` es la única autoridad: `lengthCm()` devuelve la
+cifra y su fuente (`measured` o `geometry`), `geometryCm()` mide el arco y
+`sourceLabel()` traduce la calidad a «medida en sitio», «medida aproximada» o
+«medida estimada».
+
+La medida declarada manda en el informe, la cota y las exportaciones; el dibujo no
+se mueve. Un muro de 418,6 cm dibujados con `measuredM: 4.2` se mide **420,0 cm**
+y se rotula así. Sin medida, se usa el dibujo y la fuente es «del dibujo». Vaciar
+el campo devuelve el objeto al dibujo: nada es obligatorio.
+
+Los 13 tipos que admiten medida están en `ElementMeasure::acceptsMeasure()`. El
+editor los edita en *Inspector › Medida* (`measureBlock()`).
+
+---
+
+## 7. La escala de impresión
 
 `Units::scaleDenominator('1:100')` devuelve `100`. Lee el formato y nada más: **no
 se aplica a ninguna longitud**.
@@ -145,7 +174,7 @@ plano de 12 m a 1:100 se exporta con 1 200 píxeles de ancho (317 mm) en lugar d
 
 ---
 
-## 7. Un trazo curvo se mide por su arco
+## 8. Un trazo curvo se mide por su arco
 
 Un tramo con curva se mide siguiendo el arco, no la cuerda que une sus extremos.
 Da igual dónde se mida: el editor, el informe de redes y el rótulo del SVG
@@ -173,7 +202,7 @@ corregir.
 
 ---
 
-## 8. La corrección de curvas, y por qué llegó después
+## 9. La corrección de curvas, y por qué llegó después
 
 Hasta la etapa 0 el servidor medía la **cuerda**: `MepCalculator::length()` sumaba
 `hypot` entre vértices e ignoraba los arcos, mientras el editor sí los contaba. La
@@ -211,12 +240,13 @@ recta.
 
 ---
 
-## 9. Pruebas de esta materia
+## 10. Pruebas de esta materia
 
 | Suite | Qué fija |
 | --- | --- |
 | `tests/php/units.mjs` | factores, conversiones, superficies, unidad inválida, escala, paridad bit a bit de la ruta `cm` y de `fromMeters` contra la tabla compartida |
-| `tests/js/units.mjs` | lo mismo en JavaScript contra la **misma** tabla compartida, la longitud de arcos (§7) y la comparación exacta con el golden que escribe PHP |
-| `tests/php/curves.mjs` | medición de trazos curvos: arco frente a cuerda, tres unidades, escala, casos degenerados, redes, caída de tensión, rótulo del SVG en `cm` y en `mm`, y la puerta estricta de unidad del documento |
+| `tests/js/units.mjs` | lo mismo en JavaScript contra la **misma** tabla compartida, la longitud de arcos (§8) y la comparación exacta con el golden que escribe PHP |
+| `tests/php/curves.mjs` | medición de trazos curvos: arco frente a cuerda, la misma cifra en las tres unidades, escala, casos degenerados, redes, caída de tensión, rótulo del SVG en `cm` y en `mm`, y la puerta de entrada (un plano en `mm` o `m` entra convertido a centímetros) |
+| `tests/php/units.mjs` · medida declarada | la medida manda sobre el dibujo, el arco frente a la cuerda, las etiquetas de fuente y los tipos que la aceptan (NORMIA-006 §26) |
 | `tests/fixtures/units.json` | la tabla de casos que leen las dos suites |
-| `tests/php/golden.mjs` | 6 405 valores del auditor, extintores, redes y el SVG de los cuatro pisos de la demo, más el plano sintético con arco medido en `mm`, `cm` y `m`: si una cifra se mueve sin querer, falla |
+| `tests/php/golden.mjs` | 6 413 valores del auditor, extintores, redes y el SVG de los cuatro pisos de la demo, más el plano sintético con arco medido en `mm`, `cm` y `m`: si una cifra se mueve sin querer, falla |

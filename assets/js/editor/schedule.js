@@ -144,7 +144,8 @@
       const model = this.app.model;
       const catalogs = this.app.catalogs || {};
       const canvas = model.design.canvas;
-      const unitCm = cmPerUnit(canvas.unit);
+      // Geometría en centímetros: el área del piso no depende de la etiqueta.
+      const unitCm = cmPerUnit(root.Units.GEOMETRY_UNIT);
       this.areaM2 = (Number(canvas.width) * unitCm / 100) * (Number(canvas.height) * unitCm / 100);
       this.size = suggestedSize(this.areaM2);
       const layers = model.layers ? model.layers() : [];

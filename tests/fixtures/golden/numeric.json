@@ -572,6 +572,7 @@
         "routes.0.id": "s:6:f1d96f36b8d8",
         "routes.0.label": "s:0:da39a3ee5e6b",
         "routes.0.lengthM": 14.68,
+        "routes.0.lengthSource": "s:8:ff63fac4076c",
         "routes.0.wallCrossings": 0,
         "signs.exitSigns": 3,
         "signs.fireSigns.0": "s:4:5d093a38d482",
@@ -1156,6 +1157,7 @@
         "routes.0.id": "s:6:f1d96f36b8d8",
         "routes.0.label": "s:0:da39a3ee5e6b",
         "routes.0.lengthM": 14.68,
+        "routes.0.lengthSource": "s:8:ff63fac4076c",
         "routes.0.wallCrossings": 0,
         "signs.exitSigns": 3,
         "signs.fireSigns.0": "s:4:5d093a38d482",
@@ -2092,6 +2094,7 @@
         "routes.0.id": "s:6:a2c7fd3f3df5",
         "routes.0.label": "s:0:da39a3ee5e6b",
         "routes.0.lengthM": 9.1,
+        "routes.0.lengthSource": "s:8:ff63fac4076c",
         "routes.0.wallCrossings": 1,
         "signs.exitSigns": 1,
         "signs.fireSigns.0": "s:4:5d093a38d482",
@@ -2443,6 +2446,7 @@
         "routes.0.id": "s:6:a2c7fd3f3df5",
         "routes.0.label": "s:0:da39a3ee5e6b",
         "routes.0.lengthM": 9.1,
+        "routes.0.lengthSource": "s:8:ff63fac4076c",
         "routes.0.wallCrossings": 1,
         "signs.exitSigns": 1,
         "signs.fireSigns.0": "s:4:5d093a38d482",
@@ -3393,6 +3397,7 @@
         "routes.0.id": "s:6:a26c120cbbd4",
         "routes.0.label": "s:0:da39a3ee5e6b",
         "routes.0.lengthM": 12.08,
+        "routes.0.lengthSource": "s:8:ff63fac4076c",
         "routes.0.wallCrossings": 1,
         "signs.exitSigns": 2,
         "signs.fireSigns.0": "s:4:5d093a38d482",
@@ -4058,6 +4063,7 @@
         "routes.0.id": "s:6:a26c120cbbd4",
         "routes.0.label": "s:0:da39a3ee5e6b",
         "routes.0.lengthM": 12.08,
+        "routes.0.lengthSource": "s:8:ff63fac4076c",
         "routes.0.wallCrossings": 1,
         "signs.exitSigns": 2,
         "signs.fireSigns.0": "s:4:5d093a38d482",
@@ -5329,6 +5335,7 @@
         "routes.0.id": "s:6:10a300cdd7af",
         "routes.0.label": "s:0:da39a3ee5e6b",
         "routes.0.lengthM": 9.03,
+        "routes.0.lengthSource": "s:8:ff63fac4076c",
         "routes.0.wallCrossings": 1,
         "signs.exitSigns": 1,
         "signs.fireSigns.0": "s:4:5d093a38d482",
@@ -5933,6 +5940,7 @@
         "routes.0.id": "s:6:10a300cdd7af",
         "routes.0.label": "s:0:da39a3ee5e6b",
         "routes.0.lengthM": 9.03,
+        "routes.0.lengthSource": "s:8:ff63fac4076c",
         "routes.0.wallCrossings": 1,
         "signs.exitSigns": 1,
         "signs.fireSigns.0": "s:4:5d093a38d482",
@@ -6487,8 +6495,8 @@
     },
     "unidades": {
       "mm": {
-        "rectaMetros": 0.4,
-        "arcoMetros": 0.6283185307179586,
+        "rectaMetros": 4,
+        "arcoMetros": 6.283185307179586,
         "areaM2": 0.96,
         "toleranciaUnidades": 5
       },
@@ -6499,8 +6507,8 @@
         "toleranciaUnidades": 0.5
       },
       "m": {
-        "rectaMetros": 400,
-        "arcoMetros": 628.3185307179587,
+        "rectaMetros": 4,
+        "arcoMetros": 6.283185307179586,
         "areaM2": 960000,
         "toleranciaUnidades": 0.005
       }

@@ -34,6 +34,21 @@ final class Units
     /** Unidad con la que se interpreta un plano que no declara ninguna. */
     public const DEFAULT_UNIT = 'cm';
 
+    /**
+     * Unidad en la que **se guarda toda la geometría**, desde NORMIA-006 §3.
+     *
+     * `canvas.unit` deja de ser un factor de escala y pasa a ser la **unidad de
+     * trabajo**: cómo se leen y cómo se escriben las cifras. La geometría del
+     * documento —`width`, `height`, `grid`, `x`, `y`, `w`, `h`, `points`,
+     * `curves`— está siempre en centímetros, sea cual sea la unidad declarada.
+     *
+     * Para el código que dibuja o mide, la unidad que importa es esta y no
+     * `canvas.unit`; `canvas.unit` solo se usa para componer texto. Un plano en
+     * metros y otro en milímetros con el mismo dibujo producen exactamente las
+     * mismas coordenadas y las mismas cifras.
+     */
+    public const GEOMETRY_UNIT = 'cm';
+
     /** Tolerancia de aplanado de arcos, en centímetros. */
     public const TOLERANCE_CM = 0.5;
 

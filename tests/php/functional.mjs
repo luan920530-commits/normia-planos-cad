@@ -879,7 +879,7 @@ try {
   res = await client.get(`projects/${projectId}/floors/${floorId}/export/json`);
   let exported = {};
   try { exported = JSON.parse(res.text); } catch {}
-  report.check('Exportación JSON con sobre propio', res.status === 200 && exported.application === 'normia-planos-cad' && exported.format === 'normia-plan' && exported.schema_version === 2);
+  report.check('Exportación JSON con sobre propio', res.status === 200 && exported.application === 'normia-planos-cad' && exported.format === 'normia-plan' && exported.schema_version === 3, `esquema ${exported.schema_version}`);
   report.check('JSON exportado incluye proyecto y piso', exported.project?.name?.includes('Bodega') && exported.floor?.name === 'Planta baja ajustada', exported.floor?.name);
   report.check('JSON exportado no incluye el borrador', !JSON.stringify(exported).includes('Prueba funcional'));
   res = await client.get(`projects/${projectId}/floors/${floorId}/print`);
@@ -1149,8 +1149,86 @@ try {
   doorCurve.elements.find((element) => element.id === 'salida_curva').curves = [{ kind: 'arc', through: { x: 1, y: 1 } }];
   res = await client.postJson(`api/floors/${curveFloorId}/save`, { design: doorCurve, expected_version: (await json(`api/floors/${curveFloorId}`)).body.floor.version });
   report.check('Una puerta no admite curvas', res.status === 422, String(res.status));
-  res = await client.postJson(`api/floors/${curveFloorId}/save`, { design: { ...straightRoom, format: 5 }, expected_version: (await json(`api/floors/${curveFloorId}`)).body.floor.version });
+  /* La cota de un elemento medido rotula la medida, no la cuerda dibujada. */
+  const cota = JSON.parse(JSON.stringify(straightRoom));
+  cota.format = 5;
+  cota.elements = [{
+    id: 'cota_prueba', type: 'dimension', layerId: cota.layers[0].id,
+    x: 10, y: 10, w: 200, h: 20, rotation: 0, color: '#334155', stroke: 1, opacity: 1,
+    label: '', locked: false, fontSize: 12,
+    points: [{ x: 0, y: 0 }, { x: 200, y: 0 }],
+    measuredM: 4.2, quality: 'exacta',
+  }];
+  res = await client.postJson(`api/floors/${curveFloorId}/save`, { design: cota, expected_version: (await json(`api/floors/${curveFloorId}`)).body.floor.version });
+  report.check('Se puede guardar un plano con una cota medida', res.status === 200, String(res.status));
+  const svgCm = (await client.get(`projects/${curveProjectId}/floors/${curveFloorId}/export/svg`)).text;
+  report.check('La cota del plano exportado rotula la medida declarada',
+    svgCm.includes('420,0 cm'), (svgCm.match(/element-dimension[^>]*>[^<]*/) || [''])[0].slice(0, 60));
+  cota.canvas.unit = 'm';
+  res = await client.postJson(`api/floors/${curveFloorId}/save`, { design: cota, expected_version: (await json(`api/floors/${curveFloorId}`)).body.floor.version });
+  const svgM = (await client.get(`projects/${curveProjectId}/floors/${curveFloorId}/export/svg`)).text;
+  report.check('La misma cota se lee en la unidad de trabajo sin cambiar de tamaño',
+    res.status === 200 && svgM.includes('4,20 m') && !svgM.includes('420,0 cm'),
+    `m: ${svgM.includes('4,20 m')}`);
+
+  res = await client.postJson(`api/floors/${curveFloorId}/save`, { design: { ...straightRoom, format: 6 }, expected_version: (await json(`api/floors/${curveFloorId}`)).body.floor.version });
   report.check('Un formato de plano desconocido se rechaza', res.status === 422, String(res.status));
+  /* Formato 5 (NORMIA-006): geometría en centímetros y, ahora, medida por objeto. */
+  const medido = JSON.parse(JSON.stringify(straightRoom));
+  medido.elements[0].measuredM = 4.2;
+  medido.elements[0].quality = 'exacta';
+  res = await client.postJson(`api/floors/${curveFloorId}/save`, { design: medido, expected_version: (await json(`api/floors/${curveFloorId}`)).body.floor.version });
+  report.check('Una medida declarada sube el documento a formato 5', res.status === 200, String(res.status));
+  const guardado = (await json(`api/floors/${curveFloorId}`)).body.design;
+  report.check('La medida y su calidad sobreviven al guardado',
+    guardado.format === 5 && guardado.elements[0].measuredM === 4.2 && guardado.elements[0].quality === 'exacta',
+    `formato ${guardado.format} · ${guardado.elements[0].measuredM} · ${guardado.elements[0].quality}`);
+
+  /* Documento histórico dibujado en milímetros (U-06): al abrirlo se convierte
+     una vez a centímetros, conserva lo que mide y no se puede convertir dos veces. */
+  const enMilimetros = JSON.parse(JSON.stringify(straightRoom));
+  enMilimetros.format = 2;
+  enMilimetros.canvas.unit = 'mm';
+  enMilimetros.canvas.width = Math.round(enMilimetros.canvas.width * 10);
+  enMilimetros.canvas.height = Math.round(enMilimetros.canvas.height * 10);
+  enMilimetros.canvas.grid = Math.round(enMilimetros.canvas.grid * 10);
+  enMilimetros.elements.forEach((element) => {
+    element.x *= 10; element.y *= 10; element.w *= 10; element.h *= 10;
+    (element.points || []).forEach((point) => { point.x *= 10; point.y *= 10; });
+  });
+  res = await client.postJson(`api/floors/${curveFloorId}/save`, { design: enMilimetros, expected_version: (await json(`api/floors/${curveFloorId}`)).body.floor.version });
+  report.check('Un plano histórico en milímetros se acepta y se convierte', res.status === 200, String(res.status));
+
+  const convertido = (await json(`api/floors/${curveFloorId}`)).body.design || {};
+  report.check('La conversión deja la geometría en centímetros y la etiqueta intacta',
+    convertido.format === 5 && convertido.canvas.unit === 'mm'
+    && convertido.canvas.width === straightRoom.canvas.width
+    && Math.abs(convertido.elements[0].w - straightRoom.elements[0].w) < 0.5,
+    `formato ${convertido.format} · unidad ${convertido.canvas.unit} · ancho ${convertido.canvas.width}`);
+  const reconvertido = JSON.parse(JSON.stringify(convertido));
+  delete reconvertido.format;
+  reconvertido.format = 5;
+  res = await client.postJson(`api/floors/${curveFloorId}/save`, { design: reconvertido, expected_version: (await json(`api/floors/${curveFloorId}`)).body.floor.version });
+  const dosVeces = (await json(`api/floors/${curveFloorId}`)).body.design;
+  report.check('Un documento en formato 5 no se vuelve a convertir',
+    res.status === 200 && dosVeces.canvas.width === convertido.canvas.width,
+    `ancho ${dosVeces.canvas.width}`);
+
+  /* El editor guarda siempre en formato 5 (geometría en centímetros), también
+     cuando el plano se lee en metros. Guardar dos veces no puede mover nada:
+     era el riesgo real de confundir la unidad de trabajo con un factor. */
+  const enMetros = JSON.parse(JSON.stringify(straightRoom));
+  enMetros.format = 5;
+  enMetros.canvas.unit = 'm';
+  const anchoEnMetros = enMetros.canvas.width;
+  res = await client.postJson(`api/floors/${curveFloorId}/save`, { design: enMetros, expected_version: (await json(`api/floors/${curveFloorId}`)).body.floor.version });
+  const metrosUna = (await json(`api/floors/${curveFloorId}`)).body.design;
+  res = await client.postJson(`api/floors/${curveFloorId}/save`, { design: JSON.parse(JSON.stringify(metrosUna)), expected_version: (await json(`api/floors/${curveFloorId}`)).body.floor.version });
+  const metrosDos = (await json(`api/floors/${curveFloorId}`)).body.design;
+  report.check('Un plano en metros conserva sus dimensiones al guardarlo dos veces',
+    res.status === 200 && metrosDos.canvas.width === anchoEnMetros && metrosDos.canvas.unit === 'm'
+    && Math.abs(metrosDos.elements[0].w - straightRoom.elements[0].w) < 0.01,
+    `ancho ${metrosDos.canvas.width} cm · ${metrosDos.elements[0].w} cm`);
 
   /* ------------------ sección tipo y glorieta (formato 4) ------------------ */
   const avenueSection = { lanes: 2, laneM: 3, medianM: 2, shoulderM: 0.5, bikeM: 1.8, sidewalkM: 1 };

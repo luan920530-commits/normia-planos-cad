@@ -397,6 +397,11 @@
 
       q('[data-floor-settings-form]')?.addEventListener('submit', (event) => this.saveFloorMeta(event));
       q('[data-canvas-form]')?.addEventListener('submit', (event) => this.applyCanvasSettings(event));
+      // Cambiar de unidad solo reetiqueta el formulario: los números se
+      // convierten para que el lienzo mida lo mismo (NORMIA-006 §4.4).
+      q('[data-canvas-form] select[name="unit"]')?.addEventListener('change', (event) => {
+        this.retagCanvasForm(event.target.value);
+      });
       q('[data-autosave-toggle]')?.addEventListener('change', (event) => {
         this.store.autosaveEnabled = event.target.checked;
         this.updateSaveStatus();
@@ -2177,18 +2182,75 @@
       }
     }
 
+    /* --------------------------- formulario del lienzo --------------------------- */
+    /*
+     * El modelo guarda la geometría en centímetros; el formulario trabaja en la
+     * unidad elegida y muestra los mismos límites en esa unidad (NORMIA-006
+     * §4.4). Quien dibuja en metros escribe 16 y no 1 600; cambiar de unidad no
+     * toca los objetos ni el tamaño real del lienzo.
+     */
+    canvasFormUnit() {
+      const form = q('[data-canvas-form]');
+      return form?.dataset.unit || this.model.design.canvas.unit;
+    }
+
+    canvasFormDecimals(unit) {
+      return unit === 'mm' ? 0 : (unit === 'm' ? 3 : 1);
+    }
+
+    /** Rellena el formulario con el lienzo guardado, en la unidad indicada. */
+    fillCanvasForm(unit = this.model.design.canvas.unit) {
+      const form = q('[data-canvas-form]');
+      if (!form) return;
+      const canvas = this.model.design.canvas;
+      const decimals = this.canvasFormDecimals(unit);
+      const fmt = (cm) => String(Number(root.Units.fromCm(Number(cm), unit).toFixed(decimals)));
+      const campos = [['width', canvas.width, 400, 4000], ['height', canvas.height, 300, 3000], ['grid', canvas.grid, 5, 100]];
+      for (const [name, cm, min, max] of campos) {
+        const input = form.elements[name];
+        if (!input) continue;
+        input.value = fmt(cm);
+        input.min = fmt(min);
+        input.max = fmt(max);
+        input.step = String(10 ** -decimals);
+        const label = input.closest('label')?.querySelector('span');
+        if (label) label.textContent = `${label.dataset.base || label.textContent.replace(/\s*\([^)]*\)$/, '')} (${unit})`;
+      }
+      if (form.elements.unit) form.elements.unit.value = unit;
+      form.dataset.unit = unit;
+    }
+
+    /** Cambia la unidad visible del formulario sin mover ni redimensionar nada. */
+    retagCanvasForm(unit) {
+      const form = q('[data-canvas-form]');
+      if (!form || !['cm', 'm', 'mm'].includes(unit)) return;
+      const previa = this.canvasFormUnit();
+      if (previa === unit) return;
+      const factor = root.Units.toCm(1, unit) / root.Units.toCm(1, previa);
+      for (const name of ['width', 'height', 'grid']) {
+        const input = form.elements[name];
+        if (input && input.value !== '') input.value = String(Number((Number(input.value) * factor).toFixed(this.canvasFormDecimals(unit))));
+      }
+      this.fillCanvasForm(unit);
+    }
+
     applyCanvasSettings(event) {
       event.preventDefault();
       const form = event.target;
       try {
+        const unit = form.elements.unit.value;
+        // Los números visibles están en la unidad que muestra el formulario.
+        const visible = form.dataset.unit || this.model.design.canvas.unit;
+        const toCm = (value) => root.Units.toCm(Number(value), visible);
         this.model.setCanvas({
-          width: Number(form.elements.width.value),
-          height: Number(form.elements.height.value),
-          grid: Number(form.elements.grid.value),
-          unit: form.elements.unit.value,
+          width: toCm(form.elements.width.value),
+          height: toCm(form.elements.height.value),
+          grid: toCm(form.elements.grid.value),
+          unit,
           scale: form.elements.scale.value.trim(),
           occupancy: form.elements.occupancy ? Number(form.elements.occupancy.value) || 0 : 0,
         });
+        this.fillCanvasForm(unit);
         this.fit(true);
         this.renderNow();
         this.toast('Lienzo actualizado. Guarda para conservar el cambio.', 'success');
@@ -2421,6 +2483,7 @@
       if (name === 'versions') this.loadVersions();
       if (name === 'layers') this.renderLayers();
       if (name === 'networks') this.renderNetworks();
+      if (name === 'settings') this.fillCanvasForm();
       if (name === 'audit') this.audit?.open();
       if (name === 'extinguishers') this.extinguishers?.open();
       if (name === 'schedule') this.schedule?.open();

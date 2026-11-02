@@ -19,15 +19,18 @@ final class MepCalculator
      * del editor). La escala es una referencia de impresión: no altera las
      * longitudes del plano.
      *
-     * Delega en `Units`, que es la autoridad única. El segundo parámetro se
-     * conserva por compatibilidad con las llamadas existentes y **no se usa**:
-     * está obsoleto y se retirará cuando ningún consumidor lo pase.
+     * Delegaba en `Units` con la unidad del plano; desde NORMIA-006 §3 la
+     * geometría está siempre en centímetros, así que el factor es constante y
+     * los dos parámetros se conservan solo por compatibilidad: **no se usan**.
      *
-     * @deprecated Usa `Units::metersPerUnit($unit)`.
+     * @deprecated Usa `Units::metersPerUnit(Units::GEOMETRY_UNIT)`.
      */
-    public static function unitsToMeters(string $unit, string $scale = '1:100'): float
+    public static function unitsToMeters(string $unit = '', string $scale = '1:100'): float
     {
-        return Units::metersPerUnit($unit);
+        /* La geometría está en centímetros (NORMIA-006 §3), así que el factor ya
+           no depende de la unidad declarada del plano: es siempre el de `cm`.
+           El parámetro se conserva para no romper a quien lo pase; se ignora. */
+        return Units::metersPerUnit(Units::GEOMETRY_UNIT);
     }
 
     /**
@@ -44,9 +47,18 @@ final class MepCalculator
         return PathGeometry::length(self::points($element), $curves);
     }
 
+    /**
+     * Longitud de la red en metros, con la medida declarada si existe.
+     *
+     * Delegar en `ElementMeasure` mantiene la misma jerarquía que el auditor y
+     * que la cota (NORMIA-006 §6.1): medida del usuario primero, geometría
+     * después. Sin medidas —el caso de todos los planos actuales— el resultado
+     * es el mismo número de antes, al milímetro.
+     */
     public static function lengthMeters(array $element, array $canvas): float
     {
-        return self::length($element) * self::unitsToMeters((string) ($canvas['unit'] ?? 'cm'), (string) ($canvas['scale'] ?? '1:100'));
+        [$cm] = ElementMeasure::lengthCm($element);
+        return $cm * self::unitsToMeters();
     }
 
     /** Factor √3 solo en circuitos trifásicos; 220 V monofásico es 1. */

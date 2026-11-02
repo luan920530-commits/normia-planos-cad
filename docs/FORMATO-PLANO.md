@@ -28,10 +28,10 @@ Normia Planos CAD guarda cada piso como un documento JSON normalizado. El mismo 
 
 | Campo | Tipo | Reglas |
 | --- | --- | --- |
-| `format` | entero | `2` cuando ningún trazo lleva curvas (idéntico a la 1.10.0) y `3` cuando al menos uno trae `curves`. Cualquier otro valor se rechaza con `422`. |
+| `format` | entero | `2` sin curvas (idéntico a la 1.10.0), `3` con `curves`, `4` con sección tipo en las vías y `5` desde la 1.19.0: geometría en centímetros y medidas por objeto. Se aceptan 2–5; el resto responde `422`. |
 | `canvas.width` / `canvas.height` | entero | 400–4000 / 300–3000. |
 | `canvas.grid` | entero | 5–100. |
-| `canvas.unit` | texto | `cm`, `m` o `mm`. |
+| `canvas.unit` | texto | `cm`, `m` o `mm`. Desde `format: 5` es la **unidad de trabajo** (cómo se leen las cifras), no un factor: la geometría va siempre en centímetros. |
 | `canvas.scale` | texto | `1:<1–99999>`. Es una referencia declarada. |
 | `canvas.background` | color | `#ffffff` o `#f8fafc`. |
 | `canvas.occupancy` | entero | 0–10 000 personas. `0` (o ausente) = sin declarar: el auditor estima la ocupación por superficie y lo advierte. |
@@ -215,6 +215,19 @@ Los cuatro equipos de extinción del catálogo —`cad_eds_extinguisher`, `cad_d
 
 Los grupos no anidan. Al eliminar miembros, el grupo se disuelve si queda con menos de 2. Al agrupar se expanden los grupos previos para evitar anidamiento.
 
+### Medida declarada por objeto (formato 5)
+
+Cualquier elemento medible puede llevar dos claves opcionales:
+
+| Clave | Tipo | Reglas |
+| --- | --- | --- |
+| `measuredM` | número | Largo real en **metros**, de 0,01 a 5 000, con hasta tres decimales. `null` o ausente = se mide por el dibujo. |
+| `quality` | texto | `exacta`, `aproximada` o `estimada`. Solo acompaña a `measuredM`. |
+
+La medida declarada manda en el informe, la cota y las exportaciones; la
+geometría no se toca. Ver `App\Services\ElementMeasure` y
+[docs/DIMENSIONAL.md](DIMENSIONAL.md) §6.
+
 ## Envoltura de exportación
 
 `GET …/export/json` devuelve:
@@ -223,11 +236,11 @@ Los grupos no anidan. Al eliminar miembros, el grupo se disuelve si queda con me
 {
   "application": "normia-planos-cad",
   "format": "normia-plan",
-  "schema_version": 2,
+  "schema_version": 3,
   "exported_at": "2026-01-01T12:00:00+00:00",
   "project": { "name": "...", "site": "...", "workplace": "...", "responsible": "...", "notes": "..." },
   "floor": { "name": "Planta baja", "level": "Nivel 0" },
-  "design": { "format": 2, "canvas": {}, "layers": [], "elements": [], "groups": [] },
+  "design": { "format": 5, "canvas": {}, "layers": [], "elements": [], "groups": [] },
   "attribution": "Normia Planos CAD · GPL-3.0 · pictogramas ISO 7010 con licencia MIT (ver NOTICE)"
 }
 ```
@@ -276,8 +289,10 @@ Al exportar, los símbolos se incrustan con identificadores únicos por plano y 
 
 ## Compatibilidad
 
-- El editor normaliza siempre al cargar y elige el formato de salida: `4` si alguna vía lleva sección tipo, `3` si algún trazo conserva curvas y `2` si no. Descarta tipos desconocidos y recorta valores fuera de rango.
+- El editor normaliza siempre al cargar y, desde la 1.19.0, **guarda en `format: 5`**: geometría en centímetros y medidas por objeto. Descarta tipos desconocidos y recorta valores fuera de rango.
 - Los planos **v2** se abren sin cambios. Un plano **v3** abierto en la 1.10.0 se ve con los tramos rectos porque esa versión ignora `curves` y normaliza a `format: 2`.
 - Los documentos guardados con el esquema actual no se modifican al exportar; el JSON es una copia íntegra del diseño normalizado.
-- La API acepta `format` 2, 3 y 4; el resto responde `422`. `schema_version: 2` de la envoltura de exportación describe el sobre, no la versión del diseño.
+- La API acepta `format` 2, 3, 4 y 5; el resto responde `422`. `schema_version: 3` de la envoltura de exportación describe el sobre, no la versión del diseño.
+- **Migración a la 1.19.0.** Un diseño anterior al formato 5 se convierte a centímetros al entrar (canvas, coordenadas, cajas y puntos) y se guarda ya en formato 5 sin tocar el dibujo: la misma pared sigue midiendo lo mismo. La etiqueta `canvas.unit` se conserva, así que un plano histórico en `mm` se sigue leyendo en milímetros.
+- El importador acepta `schema_version` 2 y 3.
 - Si en el futuro cambia el esquema, `schema_version` permitirá migraciones explícitas.

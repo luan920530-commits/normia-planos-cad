@@ -5,6 +5,13 @@
 
   const SUPPORTED = ['mm', 'cm', 'm'];
   const DEFAULT_UNIT = 'cm';
+  /*
+   * Unidad en la que se guarda toda la geometría (NORMIA-006 §3). `canvas.unit`
+   * deja de ser un factor y pasa a ser la unidad de trabajo: cómo se leen y
+   * cómo se escriben las cifras. Para dibujar y medir, la unidad que importa es
+   * esta; la del plano solo se usa para componer texto.
+   */
+  const GEOMETRY_UNIT = 'cm';
   const TOLERANCE_CM = 0.5;
 
   /*
@@ -58,6 +65,7 @@
   root.Units = {
     SUPPORTED,
     DEFAULT_UNIT,
+    GEOMETRY_UNIT,
     TOLERANCE_CM,
     isSupported,
     normalize,

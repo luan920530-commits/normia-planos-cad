@@ -33,7 +33,8 @@ final class PlanGrid
         $canvas = $design['canvas'];
         $width = (float) $canvas['width'];
         $height = (float) $canvas['height'];
-        $unit = (string) $canvas['unit'];
+        // Geometría en centímetros (NORMIA-006 §3); la unidad es una etiqueta.
+        $unit = Units::GEOMETRY_UNIT;
         $cmPerUnit = Units::cmPerUnit($unit);
         $cellCm = max(5.0, (float) $criteria['grid']['cellCm']);
         $cell = max(1.0, $cellCm / $cmPerUnit);
@@ -222,7 +223,8 @@ final class PlanGrid
         float $height,
     ): void {
         $types = ['road', 'sidewalk', 'crosswalk', 'parking', 'property'];
-        $cmPerUnit = Units::cmPerUnit($unit);
+        $cmPerUnit = Units::cmPerUnit(Units::GEOMETRY_UNIT);
+        $unit = Units::GEOMETRY_UNIT;
         $index = static fn (int $ix, int $iy): int => $iy * $nx + $ix;
         foreach ($design['elements'] ?? [] as $element) {
             $type = (string) ($element['type'] ?? '');

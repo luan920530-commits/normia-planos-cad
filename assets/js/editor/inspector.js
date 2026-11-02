@@ -145,7 +145,13 @@
           } else if (prop === 'rotation') {
             this.model.setRotation(Number(field.value));
           } else if (['x', 'y', 'w', 'h'].includes(prop)) {
-            this.applyGeometry(prop, Number(field.value));
+            // Se escribe en la unidad de trabajo; el modelo guarda centímetros.
+            this.applyGeometry(prop, root.Units.toCm(Number(field.value), this.model.design.canvas.unit));
+          } else if (prop === 'measuredM') {
+            const raw = String(field.value).trim();
+            this.model.setProps({ measuredM: raw === '' ? null : Number(raw) });
+          } else if (prop === 'quality') {
+            this.model.setProps({ quality: field.value === '' ? null : field.value });
           } else if (prop === 'type') {
             this.model.changeType(field.value);
           }
@@ -370,7 +376,8 @@
       // que no corresponde con sus medidas.
       const road = this.model.selectedElements()[0];
       const unit = this.model.design.canvas.unit;
-      const perMeter = root.Units.unitsPerMeter(unit);
+      // La caja del elemento está en cm; el radio se lee en metros.
+      const perMeter = root.Units.unitsPerMeter(root.Units.GEOMETRY_UNIT);
       const radiusM = road ? Math.min(road.w, road.h) / 2 / perMeter : 0;
       const neededM = junction.islandM + (Number(road?.section?.lanes) || 1) * (Number(road?.section?.laneM) || 3);
       const fits = radiusM === 0 || radiusM >= neededM;
@@ -435,6 +442,35 @@
         </svg>
         <figcaption>Perfil esquemático, no sustituye el diseño geométrico vial.</figcaption>
       </figure>`;
+    }
+
+    /**
+     * «Largo real»: la medida que el usuario conoce, opcional y sin ceremonia.
+     *
+     * No es una calibración (NORMIA-006 §5): gobierna el largo de **este**
+     * objeto en los cálculos y en el informe, y su etiqueta dice cómo se obtuvo.
+     * Si se deja vacío, el objeto mide lo que está dibujado y así se informa.
+     */
+    measureBlock(single, canEdit, unit) {
+      if (!single || !(root.MEASURABLE_TYPES || []).includes(single.type)) return '';
+      const measured = Number(single.measuredM);
+      const hasMeasure = Number.isFinite(measured) && measured > 0;
+      // Longitud dibujada, por el arco cuando lo hay (misma regla que el informe).
+      const drawnCm = root.Mep && root.Mep.elementLength
+        ? root.Mep.elementLength(single)
+        : (Number(single.w) || 0);
+      const drawn = `${root.Geometry.formatNumber(root.Units.fromCm(drawnCm, unit), 2)} ${unit}`;
+      const qualities = root.QUALITIES || ['exacta', 'aproximada', 'estimada'];
+      const options = [`<option value="" ${hasMeasure && single.quality ? '' : 'selected'}>Sin especificar</option>`]
+        .concat(qualities.map((quality) => `<option value="${quality}" ${single.quality === quality ? 'selected' : ''}>${quality[0].toUpperCase()}${quality.slice(1)}</option>`))
+        .join('');
+      const echo = hasMeasure
+        ? `<p class="help-text">Se usa <strong>${root.Geometry.formatNumber(measured, 3)} m</strong> en lugar de los ${drawn} del dibujo.`
+        : `<p class="help-text">Dibujado: <strong>${drawn}</strong>. Si conoces la medida real, escríbela aquí: el cálculo y el informe la usarán para este objeto.`;
+      return `<div class="measure-block">
+          ${this.numberField('Largo real', 'measuredM', hasMeasure ? measured : '', { disabled: !canEdit, unit: 'm', min: 0.01, max: 5000, step: 0.01 })}
+          <label class="num-field"><span class="num-label">Calidad</span><span class="num-control"><select data-prop="quality"${canEdit ? '' : ' disabled'}>${options}</select></span></label>
+        </div>${echo}${hasMeasure ? ' Deja el campo vacío para volver al dibujo.</p>' : ''}`;
     }
 
     numberField(label, prop, value, options = {}) {
@@ -643,12 +679,17 @@
 
       /* ---------------------------- geometría ---------------------------- */
       const rotation = Math.round(frame.rotation || 0);
+      /* La geometría se guarda en centímetros y se edita en la unidad de
+         trabajo: quien trabaja en metros escribe 4,20 y no 420 (NORMIA-006 §4.4).
+         Con el plano en centímetros esto no cambia ningún número. */
+      const toUnit = (cm) => Math.round(root.Units.fromCm(cm, unit) * 1000) / 1000;
       const geometry = `<div class="metric-grid">
-          ${this.numberField('X', 'x', Math.round(frame.x), { disabled: !canEdit, unit })}
-          ${this.numberField('Y', 'y', Math.round(frame.y), { disabled: !canEdit, unit })}
-          ${this.numberField('Ancho', 'w', Math.round(frame.w), { disabled: !canEdit, unit, min: 2 })}
-          ${this.numberField('Alto', 'h', Math.round(frame.h), { disabled: !canEdit, unit, min: 2 })}
+          ${this.numberField('X', 'x', toUnit(frame.x), { disabled: !canEdit, unit, step: 0.01 })}
+          ${this.numberField('Y', 'y', toUnit(frame.y), { disabled: !canEdit, unit, step: 0.01 })}
+          ${this.numberField('Ancho', 'w', toUnit(frame.w), { disabled: !canEdit, unit, min: 0.02, step: 0.01 })}
+          ${this.numberField('Alto', 'h', toUnit(frame.h), { disabled: !canEdit, unit, min: 0.02, step: 0.01 })}
         </div>
+        ${this.measureBlock(single, canEdit, unit)}
         <div class="rotation-row">
           <button class="step-button" type="button" data-action="rotate" data-value="-90" data-tooltip="Girar −90°" aria-label="Girar menos 90 grados"${disabled}><svg class="icon"><use href="#i-rotate-left"></use></svg></button>
           ${this.numberField('Rotación', 'rotation', rotation, { disabled: !canEdit, unit: '°', min: 0, max: 359 })}

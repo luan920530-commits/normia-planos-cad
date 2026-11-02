@@ -170,6 +170,51 @@ foreach (\\App\\Core\\Units::SUPPORTED as $unit) {
 }
 $add('La superficie sale del mismo factor que la longitud', $squares);
 
+/* ---------------- geometría en centímetros y medida declarada ---------------- */
+/*
+ * NORMIA-006 §3 y §6.1: la geometría vive en centímetros y la medida declarada
+ * manda sobre el dibujo. Se prueba en el intérprete real, no con mocks.
+ */
+$trazo = ['type' => 'wall', 'x' => 0, 'y' => 0, 'w' => 418.6, 'h' => 0,
+    'points' => [['x' => 0, 'y' => 0], ['x' => 418.6, 'y' => 0]]];
+[$cm, $fuente] = \\App\\Services\\ElementMeasure::lengthCm($trazo);
+$add('Sin medida declarada, la longitud sale del dibujo en centímetros',
+    abs($cm - 418.6) < 1e-9 && $fuente === \\App\\Services\\ElementMeasure::SOURCE_GEOMETRY,
+    sprintf('%.4f cm · %s', $cm, $fuente));
+
+$trazo['measuredM'] = 4.2;
+[$cm, $fuente] = \\App\\Services\\ElementMeasure::lengthCm($trazo);
+$add('La medida declarada manda sobre la geometría',
+    abs($cm - 420.0) < 1e-9 && $fuente === \\App\\Services\\ElementMeasure::SOURCE_MEASURED,
+    sprintf('%.4f cm · %s', $cm, $fuente));
+$add('La medida declarada no arrastra ruido de coma flotante',
+    $cm === 420.0, var_export($cm, true));
+
+$arco = ['type' => 'pipe', 'w' => 400, 'h' => 400,
+    'points' => [['x' => 0, 'y' => 0], ['x' => 400, 'y' => 0]],
+    'curves' => [['kind' => 'arc', 'through' => ['x' => 200, 'y' => 200]]]];
+[$mArco, ] = \\App\\Services\\ElementMeasure::lengthMeters($arco);
+$add('Un trazo curvo se mide por su arco y no por la cuerda',
+    abs($mArco - 2 * M_PI / 2 * 2) < 0.05 && $mArco > 4.0,
+    sprintf('%.4f m para una semicircunferencia de 2 m de radio', $mArco));
+
+$etiquetas = [
+    \\App\\Services\\ElementMeasure::sourceLabel('geometry') => 'del dibujo',
+    \\App\\Services\\ElementMeasure::sourceLabel('measured', 'exacta') => 'medida en sitio',
+    \\App\\Services\\ElementMeasure::sourceLabel('measured', 'aproximada') => 'medida aproximada',
+    \\App\\Services\\ElementMeasure::sourceLabel('measured', 'estimada') => 'medida estimada',
+];
+$add('Cada cifra puede decir de dónde sale, sin tolerancias',
+    $etiquetas === ['del dibujo' => 'del dibujo', 'medida en sitio' => 'medida en sitio',
+        'medida aproximada' => 'medida aproximada', 'medida estimada' => 'medida estimada'],
+    implode(' · ', array_values($etiquetas)));
+
+$add('Estimar una medida es un valor declarado, nunca un cálculo',
+    \\App\\Services\\ElementMeasure::acceptsMeasure('wall')
+    && \\App\\Services\\ElementMeasure::acceptsMeasure('door')
+    && !\\App\\Services\\ElementMeasure::acceptsMeasure('text'),
+    'muro y puerta sí · texto no');
+
 /* --------------------------- independencia --------------------------- */
 $source = (string) file_get_contents($root . '/app/Core/Units.php');
 $add('Units no depende de la base, la configuración ni otros servicios',

@@ -568,13 +568,26 @@
     <hr class="drawer-divider">
     <form class="form-stack" data-canvas-form>
       <h3>Lienzo y escala</h3>
+      <?php
+        /*
+         * La geometría se guarda en centímetros y el lienzo se **edita** en la
+         * unidad de trabajo (NORMIA-006 §4.4): quien trabaja en metros escribe
+         * 16 y no 1 600. Los límites son los mismos de siempre, expresados en
+         * esa unidad; `applyCanvasSettings()` los devuelve a centímetros.
+         */
+        $canvasUnit = (string) $floor['design']['canvas']['unit'];
+        $enUnidad = static fn (float $cm): string => rtrim(rtrim(number_format(
+          \App\Core\Units::fromCm($cm, $canvasUnit), 3, '.', ''
+        ), '0'), '.');
+        $decimales = $canvasUnit === 'mm' ? 0 : ($canvasUnit === 'm' ? 3 : 1);
+      ?>
       <div class="form-row">
-        <label class="field"><span>Ancho</span><input type="number" name="width" min="400" max="4000" step="1" value="<?= e($floor['design']['canvas']['width']) ?>" required></label>
-        <label class="field"><span>Alto</span><input type="number" name="height" min="300" max="3000" step="1" value="<?= e($floor['design']['canvas']['height']) ?>" required></label>
+        <label class="field"><span>Ancho (<?= e($canvasUnit) ?>)</span><input type="number" name="width" min="<?= e($enUnidad(400)) ?>" max="<?= e($enUnidad(4000)) ?>" step="<?= e((string) (10 ** -$decimales)) ?>" value="<?= e($enUnidad((float) $floor['design']['canvas']['width'])) ?>" required></label>
+        <label class="field"><span>Alto (<?= e($canvasUnit) ?>)</span><input type="number" name="height" min="<?= e($enUnidad(300)) ?>" max="<?= e($enUnidad(3000)) ?>" step="<?= e((string) (10 ** -$decimales)) ?>" value="<?= e($enUnidad((float) $floor['design']['canvas']['height'])) ?>" required></label>
       </div>
       <div class="form-row">
-        <label class="field"><span>Cuadrícula</span><input type="number" name="grid" min="5" max="100" step="1" value="<?= e($floor['design']['canvas']['grid']) ?>" required></label>
-        <label class="field"><span>Unidad</span><select name="unit"><?php foreach (['cm', 'm', 'mm'] as $unit): ?><option value="<?= e($unit) ?>" <?= $floor['design']['canvas']['unit'] === $unit ? 'selected' : '' ?>><?= e($unit) ?></option><?php endforeach; ?></select></label>
+        <label class="field"><span>Cuadrícula (<?= e($canvasUnit) ?>)</span><input type="number" name="grid" min="<?= e($enUnidad(5)) ?>" max="<?= e($enUnidad(100)) ?>" step="<?= e((string) (10 ** -$decimales)) ?>" value="<?= e($enUnidad((float) $floor['design']['canvas']['grid'])) ?>" required></label>
+        <label class="field"><span>Unidad de trabajo</span><select name="unit"><?php foreach (['cm', 'm', 'mm'] as $unit): ?><option value="<?= e($unit) ?>" <?= $canvasUnit === $unit ? 'selected' : '' ?>><?= e($unit) ?></option><?php endforeach; ?></select></label>
       </div>
       <label class="field"><span>Escala de referencia</span><input type="text" name="scale" pattern="1:[0-9]{1,5}" value="<?= e($floor['design']['canvas']['scale']) ?>" required><small>Referencia de impresión; verifica en sitio.</small></label>
       <label class="field"><span>Ocupación declarada (personas)</span><input type="number" name="occupancy" min="0" max="10000" step="1" value="<?= e((string) ($floor['design']['canvas']['occupancy'] ?? 0)) ?>"><small>Con 0 el auditor estima la ocupación por superficie libre y lo advierte en el informe.</small></label>

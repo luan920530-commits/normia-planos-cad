@@ -10,7 +10,7 @@ pueda dibujar, anotar medidas y recibir cálculos sin aprender metrología.
 | Base | `bddc2dc` (NORMIA-005 entregado, PR #56 abierto) |
 | Reemplaza en parte | [`NORMIA-005-CALIBRACION-DIMENSIONAL.md`](NORMIA-005-CALIBRACION-DIMENSIONAL.md) — §8 de trazabilidad |
 | Alcance | **3.A a 3.J** — los nueve apartados, recibidos el 2026-11-02 |
-| Estado | **diseño completo**; DEC-1 a DEC-6 aprobadas, DEC-7 a DEC-12 pendientes. No se tocó código ni datos |
+| Estado | **diseño completo**; DEC-1, DEC-2, DEC-5 y DEC-6 **implementadas en la 1.19.0** (§26); DEC-3 y DEC-7 a DEC-12 pendientes |
 
 ---
 
@@ -648,8 +648,11 @@ aparato construido encima, y cae porque el modelo nuevo lo hace innecesario.
 
 > **Aprobadas el 2026-11-02.** Las seis van como están: no queda ninguna abierta.
 > Lo que falta para cerrar la misión no es una decisión, es el resto del alcance
-> (puntos 3.B y siguientes), que todavía no llegó. La etapa 1 queda desbloqueada;
-> su implementación necesita una orden aparte.
+> (puntos 3.B y siguientes), que todavía no llegó.
+>
+> **Implementadas el 2026-11-02 en la 1.19.0:** DEC-1, DEC-2 y DEC-5 (etapas 1 y 2
+> de §11), y DEC-6 como consecuencia de DEC-1. DEC-3 (etapa 3, ajuste global) sigue
+> sin implementar. Lo ejecutado, con sus contratos y sus pruebas, está en §26.
 
 **DEC-1 · Geometría en centímetros y unidad como etiqueta.**
 Es el corazón del rediseño y lo que hace que cambiar de unidad no sorprenda.
@@ -1484,8 +1487,9 @@ hay que probar.
 
 ## 25. Lo que no pude verificar
 
-1. **No implementé nada.** Todo lo que dice «debe» es diseño; ni una línea de
-   código ni una tabla creada. `user_version` sigue en 7.
+1. **Al escribir el diseño no implementé nada.** Hoy ya existen las etapas 1 y 2
+   (§26); lo que sigue siendo solo diseño es DEC-3 y DEC-7 a DEC-12. Ni una tabla
+   nueva: `user_version` sigue en 7.
 2. **No sé cuántos documentos hay en `mm` o `m`.** La consulta de §3.4 lo responde.
 3. **No medí el coste real de tocar los consumidores.** Estimo por número de
    sitios, no por dificultad.
@@ -1505,3 +1509,83 @@ hay que probar.
    auditado**: sigo tratando sus umbrales como referencias configurables, no como
    norma.
 10. **No hay iOS instalable** y esta misión no lo cambia.
+
+---
+
+## 26. Implementado en la 1.19.0 (2026-11-02)
+
+Esta sección deja de ser diseño y pasa a describir lo que hay en el repositorio.
+Etapas 1 y 2 de §11, con la decisión que las autoriza al lado.
+
+### 26.1 Etapa 1 · geometría en centímetros (DEC-1, DEC-5)
+
+| Pieza | Dónde | Contrato |
+| --- | --- | --- |
+| Unidad de dibujo | `app/Core/Units.php` · `assets/js/lib/units.js` | `GEOMETRY_UNIT = 'cm'`, en los dos lados. Es la única fuente: `cmPerUnit('cm')` es el literal `1` y `unitsPerMeter('cm')` es `100`, sin error de coma flotante |
+| Conversión | `Units::toCm()` / `fromCm()` (PHP y JS) | `canvas.unit` deja de multiplicar. Es la unidad **de trabajo**: cómo se leen y cómo se escriben las cifras |
+| Consumidores | `PlanAudit`, `PlanGrid`, `SvgExporter`, `MepCalculator`, `ExtinguisherCoverage` | todos miden con `GEOMETRY_UNIT`; ninguno vuelve a preguntar por `canvas.unit` |
+| Formato del documento | `DesignValidator` | acepta `format` 2, 3, 4 y 5; un documento anterior se convierte **una vez** en la puerta de entrada y conserva la etiqueta `unit` |
+| Exportación | `ExportController` | `schema_version: 3`; el importador sigue aceptando 2 y 3 |
+| Cambio de unidad en pantalla | `assets/js/editor.js`, `app/Views/editor/index.php` | el formulario del lienzo escribe en la unidad de trabajo y enseña los mismos límites en esa unidad; cambiar la unidad reetiqueta las cifras y **no** redimensiona nada |
+
+**Defecto corregido de paso.** `DesignValidator` convertía el documento a
+centímetros en memoria y después lo validaba con el `format` original: un plano
+heredado en `mm` se normalizaba, pero se rechazaba con «El ancho del lienzo debe
+estar entre 400 y 4000». Ahora se relee el formato después de convertir y ese
+plano entra.
+
+**DEC-6 cayó por su propio peso.** C-06 (`ExtinguisherCoverage` dividiendo entre
+100) ya no es un defecto cuando la geometría está en centímetros: era la unidad la
+que estaba mal, no la división. C-07 (`measure.js`) se corrigió en la etapa 0.
+
+### 26.2 Etapa 2 · medida por objeto (DEC-2)
+
+`app/Services/ElementMeasure.php` es la única autoridad para responder «cuánto
+mide esto»:
+
+| Método | Devuelve |
+| --- | --- |
+| `lengthCm(array $element)` | `[float $cm, 'measured' \| 'geometry']` — la medida declarada manda |
+| `lengthMeters(array $element)` | la misma cifra en metros |
+| `measuredCm(array $element)` | la medida declarada, o `null` |
+| `geometryCm(array $element)` | el arco si hay puntos; si no, el ancho del cajón |
+| `acceptsMeasure(string $type)` | los 13 tipos que admiten medida (muros, rutas, tuberías…) |
+| `sourceLabel(?string $quality)` | «del dibujo», «medida en sitio», «medida aproximada», «medida estimada» |
+
+Reglas de entrada: `measuredM` entre 0,01 y 5 000 m con tres decimales, y
+`quality` en {`exacta`, `aproximada`, `estimada`}. Vaciar el campo devuelve el
+objeto al dibujo.
+
+En el editor, el inspector de cualquier objeto medible ofrece **Largo real** y
+**Calidad de la medida** (`measureBlock()` en `assets/js/editor/inspector.js`). La
+cota y el exportador rotulan la medida declarada, no la cuerda dibujada: un muro
+de 418,6 cm con `measuredM: 4.2` se lee **420,0 cm** en el plano en centímetros y
+**4,20 m** en el plano en metros, sin mover ni un vértice.
+
+### 26.3 Qué cambia en las cifras, y por qué se anuncia
+
+- Los planos guardados en `mm` o `m` se convierten a centímetros **una sola vez**.
+  La misma pared sigue midiendo lo mismo; cambia la cifra interna.
+- Los informes que dividían entre 100 «porque sí» ahora aciertan en cualquier
+  unidad. En el golden se mueven únicamente `synthetic.unidades.{mm,m}`
+  (`rectaMetros`, `arcoMetros`) y aparece `routes.N.lengthSource`. El auditor, los
+  extintores, las redes y los cuatro SVG salen idénticos.
+- `schema_version` pasa de 2 a 3. Un archivo 2 se sigue importando.
+
+### 26.4 Pruebas
+
+`node tests/run-all.mjs` → **24/24** (PHP 8.1 y 8.3). Las cuentas que respaldan
+esta sección: funcional **336**, interfaz **394**, unidades PHP **29**, curvas
+**17**, golden **8/8** con 6 413 valores y 4 SVG, paquete y demo **39**. Entre
+ellas: un documento histórico en `mm` entra y queda en 1 200 cm con etiqueta `mm`;
+un documento en formato 5 no se vuelve a convertir; cambiar el lienzo a metros y
+volver a centímetros deja el mismo ancho y los mismos objetos; la cota del plano
+exportado dice `420,0 cm` en centímetros y `4,20 m` en metros.
+
+### 26.5 Lo que sigue sin hacerse
+
+- **DEC-3 (etapa 3):** el ajuste global por mediana. Sigue sin implementar.
+- **DEC-7 a DEC-12:** edificios, áreas, aforo, escenarios, escala física de
+  impresión e importados. `user_version` sigue en **7**: la 1.19.0 no crea tablas.
+- La ergonomía del campo de medida y la impresión física con regla siguen sin
+  verificarse (§25.4 y §25.5): no hay dispositivo real disponible aquí.

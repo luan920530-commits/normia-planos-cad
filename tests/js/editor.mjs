@@ -665,9 +665,11 @@ async function main() {
     app.renderNow();
     app.model.select([road.id]);
     app.model.clearRoadSection();
-    report.check('Una vía sin sección tipo mantiene el plano en formato 3',
-      !app.model.element(road.id).section && app.model.serialize().format === 3
-      && app.model.documentFormat() === 3,
+    // Desde la 1.19.0 el editor guarda siempre en formato 5: la geometría está
+    // en centímetros y esa marca es la que impide reconvertirla al guardar.
+    report.check('Una vía sin sección tipo se guarda en formato 5 y conserva el trazo',
+      !app.model.element(road.id).section && app.model.serialize().format === 5
+      && app.model.documentFormat() === 5,
       String(app.model.serialize().format));
 
     /* ------------- sección tipo, glorieta e inserción del corredor ------------- */
@@ -679,8 +681,9 @@ async function main() {
       && app.model.element(road.id).section?.lanes === 4
       && app.model.element(road.id).widthM === 20,
       `${app.model.element(road.id).section?.lanes} carriles · ${app.model.element(road.id).widthM} m`);
-    report.check('Una vía con sección tipo cambia el plano a formato 4',
-      app.model.documentFormat() === 4 && app.model.serialize().format === 4,
+    report.check('Una vía con sección tipo se guarda en formato 5 con su sección',
+      app.model.documentFormat() === 5 && app.model.serialize().format === 5
+      && app.model.element(road.id).section?.lanes === 4,
       String(app.model.serialize().format));
     app.renderNow();
     const avenueGroup = app.svg.querySelector(`.plan-element[data-id="${road.id}"]`);
@@ -749,8 +752,8 @@ async function main() {
       && corridor.some((element) => element.junction?.kind === 'roundabout')
       && corridor.every((element) => element.section || element.type !== 'road'),
       `${corridor.length} elementos: ${corridorTypes.join(', ')}`);
-    report.check('El corredor queda seleccionado y en formato 4',
-      app.model.selection.size === 8 && app.model.documentFormat() === 4,
+    report.check('El corredor queda seleccionado y en formato 5',
+      app.model.selection.size === 8 && app.model.documentFormat() === 5,
       `${app.model.selection.size} seleccionados · formato ${app.model.documentFormat()}`);
     report.check('El corredor de ejemplo se dibuja sin valores inválidos',
       corridor.every((element) => !/NaN|Infinity|undefined/.test(app.svg.querySelector(`.plan-element[data-id="${element.id}"]`)?.outerHTML || '')),
@@ -825,9 +828,9 @@ async function main() {
     };
     const importedV3 = new window.Normia.Model(v3Doc, app.catalogs, {});
     const importedV3Wall = importedV3.element('muro_v3');
-    report.check('Un plano v3 con curvas se abre como formato 3 y conserva los arcos',
-      importedV3.documentFormat() === 3 && importedV3.hasCurves(importedV3Wall)
-      && importedV3.serialize().format === 3,
+    report.check('Un plano v3 con curvas se abre y conserva los arcos en formato 5',
+      importedV3.documentFormat() === 5 && importedV3.hasCurves(importedV3Wall)
+      && importedV3.serialize().format === 5,
       `formato ${importedV3.documentFormat()}`);
     report.check('El muro importado mide el arco y no la cuerda',
       importedV3.pathLength(importedV3Wall) > 260,
@@ -837,8 +840,8 @@ async function main() {
     v2Doc.elements[0].id = 'muro_v2';
     delete v2Doc.elements[0].curves;
     const importedV2 = new window.Normia.Model(v2Doc, app.catalogs, {});
-    report.check('Un plano v2 de la 1.10 se abre sin curvas y sigue en formato 2',
-      importedV2.documentFormat() === 2 && !importedV2.hasCurves(importedV2.element('muro_v2'))
+    report.check('Un plano v2 de la 1.10 se abre sin curvas',
+      importedV2.documentFormat() === 5 && !importedV2.hasCurves(importedV2.element('muro_v2'))
       && importedV2.flatPoints(importedV2.element('muro_v2')).length === 2);
     // La 1.10 ignora las claves que no conoce: al abrir un v3 descarta
     // `curves` y dibuja la polilínea recta de los vértices.
@@ -848,7 +851,7 @@ async function main() {
     const legacyWall = legacyView.element('muro_v3');
     report.check('Sin `curves` el muro v3 se ve recto: degradación a la 1.10',
       !legacyView.hasCurves(legacyWall) && legacyView.flatPoints(legacyWall).length === 2
-      && legacyView.documentFormat() === 2);
+      && legacyView.documentFormat() === 5);
 
     // La vía ocupa una banda ancha: se retira junto con el resto de elementos
     // de esta sección para no tapar el muro que usan las pruebas siguientes.
@@ -860,8 +863,8 @@ async function main() {
     app.model.clearSelection();
     app.applyTool('select');
     app.renderNow();
-    report.check('Sin curvas el plano vuelve a serializarse en formato 2',
-      app.model.serialize().format === 2, String(app.model.serialize().format));
+    report.check('Sin curvas el plano se sigue guardando en formato 5',
+      app.model.serialize().format === 5, String(app.model.serialize().format));
     // Deshacer y rehacer reconstruyen los elementos: se refresca la referencia
     // del muro de las pruebas anteriores para no leer un objeto obsoleto.
     wall = app.model.element(wallId);
@@ -1270,7 +1273,9 @@ async function main() {
     report.check('El SVG exportado incluye el contenido del plano', /Ruta de evacuación/.test(svgExport.text) && /<svg/i.test(svgExport.text), `${svgExport.text.length} bytes`);
     const jsonExport = await client.get(routePath(app.boot.exportJsonUrl));
     const exported = JSON.parse(jsonExport.text);
-    report.check('La exportación JSON usa el esquema v2', exported.schema_version === 2 && exported.application === 'normia-planos-cad', String(exported.schema_version));
+    // Esquema 3 desde NORMIA-006: geometría en centímetros y medida por objeto.
+    // El importador sigue aceptando el 2, así que los archivos viejos entran.
+    report.check('La exportación JSON usa el esquema v3', exported.schema_version === 3 && exported.application === 'normia-planos-cad', String(exported.schema_version));
     report.check('El JSON exportado incluye proyecto y piso', exported.project?.name === 'Proyecto UI' && exported.floor?.name, `${exported.project?.name} · ${exported.floor?.name}`);
     report.check('El JSON exportado contiene los elementos guardados', exported.design.elements.length === app.model.design.elements.length, `${exported.design.elements.length}`);
 
@@ -1712,6 +1717,39 @@ async function main() {
     app.closeDrawer();
     window.localStorage.setItem('normia.guia.auto', '0');
 
+    /* ---------------- medida declarada por objeto (NORMIA-006 §5) ---------------- */
+    {
+      const target = elementById(app, wall.id);
+      app.model.select([target.id]);
+      app.renderNow();
+      const panel = app.window.document.querySelector('[data-properties]');
+      const measureField = panel?.querySelector('[data-prop="measuredM"]');
+      report.check('El inspector ofrece «Largo real» en un muro', Boolean(measureField),
+        measureField ? `valor ${measureField.value}` : 'sin campo');
+      const qualityField = panel?.querySelector('[data-prop="quality"]');
+      report.check('La calidad de la medida se elige entre tres valores',
+        Boolean(qualityField) && qualityField.options.length === 4,
+        qualityField ? `${qualityField.options.length} opciones` : 'sin selector');
+
+      app.model.setProps({ measuredM: 4.2, quality: 'exacta' });
+      const medido = elementById(app, wall.id);
+      report.check('La medida se guarda en el modelo y no toca la geometría',
+        medido.measuredM === 4.2 && medido.quality === 'exacta' && medido.x === target.x && medido.w === target.w,
+        `${medido.measuredM} m · ${medido.quality}`);
+
+      let rechazada = false;
+      try {
+        app.model.setProps({ measuredM: 9000 });
+      } catch {
+        rechazada = true;
+      }
+      report.check('Una medida fuera de rango se rechaza con mensaje', rechazada);
+
+      app.model.setProps({ measuredM: null });
+      report.check('Borrar la medida devuelve el objeto al dibujo',
+        elementById(app, wall.id).measuredM === undefined);
+    }
+
     /* ------------------------------ límites/seguridad ------------------------------ */
     const previousTool = app.tool;
     app.model.addElement.bind(app.model);
@@ -2020,6 +2058,33 @@ async function main() {
     app.closeDrawer();
     report.check('La ocupación declarada se guarda en el lienzo', app.model.design.canvas.occupancy === 40,
       String(app.model.design.canvas.occupancy));
+
+    /* El lienzo se edita en la unidad de trabajo sin cambiar el tamaño real. */
+    const canvasForm = q(window, '[data-canvas-form]');
+    const unitSelect = canvasForm?.querySelector('select[name="unit"]');
+    const anchoAntes = app.model.design.canvas.width;
+    const altoAntes = app.model.design.canvas.height;
+    const objetoAntes = { ...elementById(app, rectId) };
+    unitSelect.value = 'm';
+    unitSelect.dispatchEvent(new window.Event('change', { bubbles: true }));
+    const anchoVisible = canvasForm.querySelector('input[name="width"]').value;
+    report.check('Pasar el lienzo a metros reetiqueta las cifras y no lo redimensiona',
+      Number(anchoVisible) === anchoAntes / 100 && app.model.design.canvas.width === anchoAntes,
+      `${anchoVisible} m · ${app.model.design.canvas.width} cm`);
+    canvasForm.dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
+    const objetoDespues = elementById(app, rectId);
+    report.check('Aplicar el lienzo en metros conserva el tamaño y los objetos',
+      app.model.design.canvas.unit === 'm'
+      && Math.round(app.model.design.canvas.width) === anchoAntes
+      && Math.round(app.model.design.canvas.height) === altoAntes
+      && objetoDespues.x === objetoAntes.x && objetoDespues.w === objetoAntes.w,
+      `${Math.round(app.model.design.canvas.width)} × ${Math.round(app.model.design.canvas.height)} cm · objeto ${objetoDespues.w}`);
+    unitSelect.value = 'cm';
+    unitSelect.dispatchEvent(new window.Event('change', { bubbles: true }));
+    canvasForm.dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
+    report.check('Volver a centímetros deja el lienzo como estaba',
+      app.model.design.canvas.unit === 'cm' && Math.round(app.model.design.canvas.width) === anchoAntes,
+      `${app.model.design.canvas.unit} · ${Math.round(app.model.design.canvas.width)} cm`);
 
     await app.saveNow('Plano para revisión', { force: true });
     await sleep(400);

@@ -103,10 +103,13 @@ final class PlanAudit
             $design['elements'],
             static fn (array $element): bool => self::layerVisible($design, (string) $element['layerId'])
         ));
-        $unit = (string) $canvas['unit'];
-        $cmPerUnit = Units::cmPerUnit($unit);
-        $metersPerUnit = Units::metersPerUnit($unit);
-        $toUnits = static fn (float $cm): float => Units::fromCm($cm, $unit);
+        /* La geometría del documento está siempre en centímetros (NORMIA-006
+           §3): `canvas.unit` es solo cómo se leen las cifras. El auditor no
+           pregunta por la unidad del plano, la da por centímetros. */
+        $geometry = Units::GEOMETRY_UNIT;
+        $cmPerUnit = Units::cmPerUnit($geometry);
+        $metersPerUnit = Units::metersPerUnit($geometry);
+        $toUnits = static fn (float $cm): float => Units::fromCm($cm, $geometry);
 
         $exits = [];
         $doors = [];
@@ -116,10 +119,14 @@ final class PlanAudit
         foreach ($elements as $element) {
             $type = (string) $element['type'];
             if (in_array($type, DesignValidator::DOOR_TYPES, true)) {
+                // El ancho del vano manda desde la medida declarada si la hay
+                // (NORMIA-006 §6.1); si no, la geometría en centímetros.
+                [$doorWidthCm, $doorSource] = ElementMeasure::lengthCm($element);
                 $door = [
                     'id' => (string) $element['id'],
                     'type' => $type,
-                    'widthM' => self::round(((float) $element['w']) * $metersPerUnit),
+                    'widthM' => self::round($doorWidthCm * $metersPerUnit),
+                    'widthSource' => $doorSource,
                     'opening' => PlanGrid::doorOpening($element),
                     'center' => [
                         'x' => (float) $element['x'] + (float) $element['w'] / 2,
@@ -136,13 +143,13 @@ final class PlanAudit
             if ($type === 'wall') {
                 $walls[] = [
                     'id' => (string) $element['id'],
-                    'points' => PlanGrid::visualPoints($element, (string) $design['canvas']['unit']),
+                    'points' => PlanGrid::visualPoints($element, Units::GEOMETRY_UNIT),
                     'stroke' => max(1.0, (float) ($element['stroke'] ?? 2)),
                 ];
                 continue;
             }
             if ($type === 'route') {
-                $routes[] = ['id' => (string) $element['id'], 'element' => $element, 'points' => PlanGrid::visualPoints($element, (string) $design['canvas']['unit'])];
+                $routes[] = ['id' => (string) $element['id'], 'element' => $element, 'points' => PlanGrid::visualPoints($element, Units::GEOMETRY_UNIT)];
                 continue;
             }
             $code = LibraryRepository::codeForType($type);
@@ -291,7 +298,9 @@ final class PlanAudit
             for ($index = 0; $index < count($points) - 1; $index += 1) {
                 $lengthU += self::distance($points[$index], $points[$index + 1]);
             }
-            $lengthM = self::round($lengthU * $metersPerUnit);
+            [$measuredCm, $lengthSource] = ElementMeasure::lengthCm($route['element']);
+            // Con medida declarada manda ella; sin ella, el recorrido dibujado.
+            $lengthM = self::round(($lengthSource === ElementMeasure::SOURCE_MEASURED ? $measuredCm : $lengthU) * $metersPerUnit);
             $end = $points[count($points) - 1];
             $nearest = null;
             foreach ($exits as $exit) {
@@ -306,6 +315,7 @@ final class PlanAudit
                 'id' => $route['id'],
                 'label' => trim((string) ($route['element']['label'] ?? '')),
                 'lengthM' => $lengthM,
+                'lengthSource' => $lengthSource,
                 'endsAtExit' => $endsAtExit,
                 'distanceToExitM' => $nearest === null ? null : self::round($nearest * $metersPerUnit),
                 'wallCrossings' => $crossings,
