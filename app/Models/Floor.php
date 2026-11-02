@@ -14,10 +14,14 @@ final class Floor
     {
         return Database::first(
             'SELECT f.*, p.name AS project_name, p.site AS project_site, p.workplace AS project_workplace,
-                    p.responsible AS project_responsible, p.notes AS project_notes, p.user_id
-             FROM floors f JOIN projects p ON p.id = f.project_id
-             WHERE f.id = ? AND p.user_id = ?',
-            [$floorId, $userId]
+                    p.responsible AS project_responsible, p.notes AS project_notes, p.created_by,
+                    p.organization_id, o.name AS organization_name, m.role
+             FROM floors f
+             JOIN projects p ON p.id = f.project_id
+             JOIN organizations o ON o.id = p.organization_id
+             JOIN memberships m ON m.organization_id = p.organization_id AND m.user_id = ?
+             WHERE f.id = ?',
+            [$userId, $floorId]
         );
     }
 
@@ -25,11 +29,28 @@ final class Floor
     {
         return Database::first(
             'SELECT f.*, p.name AS project_name, p.site AS project_site, p.workplace AS project_workplace,
-                    p.responsible AS project_responsible, p.notes AS project_notes, p.user_id
-             FROM floors f JOIN projects p ON p.id = f.project_id
-             WHERE f.id = ? AND f.project_id = ? AND p.user_id = ?',
-            [$floorId, $projectId, $userId]
+                    p.responsible AS project_responsible, p.notes AS project_notes, p.created_by,
+                    p.organization_id, o.name AS organization_name, m.role
+             FROM floors f
+             JOIN projects p ON p.id = f.project_id
+             JOIN organizations o ON o.id = p.organization_id
+             JOIN memberships m ON m.organization_id = p.organization_id AND m.user_id = ?
+             WHERE f.id = ? AND f.project_id = ?',
+            [$userId, $floorId, $projectId]
         );
+    }
+
+    /** Exige permiso de edición sobre el piso; si no lo hay, error con mensaje. */
+    public static function requireWrite(int $floorId, int $userId, string $message): array
+    {
+        $floor = self::findForUser($floorId, $userId);
+        if ($floor === null) {
+            throw new \DomainException('El piso no existe o no tienes acceso.');
+        }
+        if (!\App\Models\Membership::can($floor['role'] ?? null, 'write')) {
+            throw new \DomainException($message);
+        }
+        return $floor;
     }
 
     public static function siblings(int $projectId): array
@@ -65,11 +86,14 @@ final class Floor
         $json = json_encode($normalized, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
         return Database::transaction(static function () use ($floorId, $userId, $json, $normalized, $expectedVersion, $note): array {
             $floor = Database::first(
-                'SELECT f.id, f.version FROM floors f JOIN projects p ON p.id = f.project_id WHERE f.id = ? AND p.user_id = ?',
-                [$floorId, $userId]
+                'SELECT f.id, f.version FROM floors f
+                 JOIN projects p ON p.id = f.project_id
+                 JOIN memberships m ON m.organization_id = p.organization_id AND m.user_id = ?
+                 WHERE f.id = ? AND m.role IN ("owner", "admin", "editor")',
+                [$userId, $floorId]
             );
             if ($floor === null) {
-                throw new \DomainException('El piso no existe o no tienes acceso.');
+                throw new \DomainException('El piso no existe, no tienes acceso o tu rol no permite guardar cambios.');
             }
             if ((int) $floor['version'] !== $expectedVersion) {
                 throw new VersionConflictException((int) $floor['version']);
@@ -108,11 +132,14 @@ final class Floor
         $normalized = DesignValidator::normalizeArray($design);
         $json = json_encode($normalized, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
         $floor = Database::first(
-            'SELECT f.id, f.version FROM floors f JOIN projects p ON p.id = f.project_id WHERE f.id = ? AND p.user_id = ?',
-            [$floorId, $userId]
+            'SELECT f.id, f.version FROM floors f
+             JOIN projects p ON p.id = f.project_id
+             JOIN memberships m ON m.organization_id = p.organization_id AND m.user_id = ?
+             WHERE f.id = ? AND m.role IN ("owner", "admin", "editor")',
+            [$userId, $floorId]
         );
         if ($floor === null) {
-            throw new \DomainException('El piso no existe o no tienes acceso.');
+            throw new \DomainException('El piso no existe, no tienes acceso o tu rol no permite guardar cambios.');
         }
         if ((int) $floor['version'] !== $baseVersion) {
             throw new VersionConflictException((int) $floor['version']);
@@ -133,7 +160,11 @@ final class Floor
     {
         $updated = Database::execute(
             'UPDATE floors SET draft_json = NULL, draft_base_version = NULL, draft_updated_at = NULL
-             WHERE id = ? AND project_id IN (SELECT id FROM projects WHERE user_id = ?)',
+             WHERE id = ? AND project_id IN (
+                 SELECT p.id FROM projects p
+                 JOIN memberships m ON m.organization_id = p.organization_id
+                 WHERE m.user_id = ? AND m.role IN ("owner", "admin", "editor")
+             )',
             [$floorId, $userId]
         );
         if ($updated !== 1) {
@@ -158,16 +189,22 @@ final class Floor
     {
         return Database::transaction(static function () use ($floorId, $versionId, $userId): array {
             $floor = Database::first(
-                'SELECT f.id, f.version FROM floors f JOIN projects p ON p.id = f.project_id WHERE f.id = ? AND p.user_id = ?',
-                [$floorId, $userId]
+                'SELECT f.id, f.version FROM floors f
+                 JOIN projects p ON p.id = f.project_id
+                 JOIN memberships m ON m.organization_id = p.organization_id AND m.user_id = ?
+                 WHERE f.id = ? AND m.role IN ("owner", "admin", "editor")',
+                [$userId, $floorId]
             );
             if ($floor === null) {
-                throw new \DomainException('El piso no existe o no tienes acceso.');
+                throw new \DomainException('El piso no existe, no tienes acceso o tu rol no permite restaurar versiones.');
             }
             $version = Database::first(
-                'SELECT v.* FROM floor_versions v JOIN floors f ON f.id = v.floor_id JOIN projects p ON p.id = f.project_id
-                 WHERE v.id = ? AND v.floor_id = ? AND p.user_id = ?',
-                [$versionId, $floorId, $userId]
+                'SELECT v.* FROM floor_versions v
+                 JOIN floors f ON f.id = v.floor_id
+                 JOIN projects p ON p.id = f.project_id
+                 JOIN memberships m ON m.organization_id = p.organization_id AND m.user_id = ?
+                 WHERE v.id = ? AND v.floor_id = ?',
+                [$userId, $versionId, $floorId]
             );
             if ($version === null) {
                 throw new \DomainException('La versión solicitada no existe.');
@@ -204,7 +241,11 @@ final class Floor
             throw new ValidationException($errors);
         }
         $updated = Database::execute(
-            'UPDATE floors SET name = ?, level = ? WHERE id = ? AND project_id IN (SELECT id FROM projects WHERE user_id = ?)',
+            'UPDATE floors SET name = ?, level = ? WHERE id = ? AND project_id IN (
+                 SELECT p.id FROM projects p
+                 JOIN memberships m ON m.organization_id = p.organization_id
+                 WHERE m.user_id = ? AND m.role IN ("owner", "admin", "editor")
+             )',
             [$name, $level, $floorId, $userId]
         );
         if ($updated !== 1) {

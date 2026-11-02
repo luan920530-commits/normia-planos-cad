@@ -7,6 +7,8 @@ use App\Core\Auth;
 use App\Core\Request;
 use App\Core\View;
 use App\Models\Floor;
+use App\Models\Membership;
+use App\Models\Organization;
 use App\Models\Project;
 
 abstract class BaseController
@@ -40,6 +42,25 @@ abstract class BaseController
             throw new \DomainException('El piso no existe o no tienes acceso.');
         }
         return $floor;
+    }
+
+    /** Empresa visible para la persona, con su rol. */
+    protected function organization(int $organizationId): array
+    {
+        $user = $this->user();
+        $organization = Organization::findForUser($organizationId, (int) $user['id']);
+        if ($organization === null) {
+            throw new \DomainException('La empresa no existe o no tienes acceso.');
+        }
+        return $organization;
+    }
+
+    /** Detiene la acción cuando el rol de la empresa no alcanza. */
+    protected function requireCapability(array $row, string $capability, string $message): void
+    {
+        if (!Membership::can($row['role'] ?? null, $capability)) {
+            throw new \DomainException($message);
+        }
     }
 
     /** @param array<string,mixed> $data */

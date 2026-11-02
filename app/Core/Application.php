@@ -14,6 +14,7 @@ use App\Controllers\ExportController;
 use App\Controllers\FloorApiController;
 use App\Controllers\InstallController;
 use App\Controllers\LibraryController;
+use App\Controllers\OrganizationController;
 use App\Controllers\PluginController;
 use App\Controllers\ProjectController;
 use Throwable;
@@ -83,6 +84,17 @@ final class Application
                 Response::json(['ok' => false, 'message' => $exception->getMessage(), 'code' => 'invalid'], 422);
             }
             self::renderError(422, $exception->getMessage());
+        } catch (SchemaException $exception) {
+            // Migración de esquema detenida: la aplicación no puede seguir
+            // fingiendo que sus tablas son las que espera.
+            error_log('Normia: esquema detenido: ' . $exception->getMessage());
+            @file_put_contents(Paths::storage() . '/last-error.log', 'ESQUEMA: ' . $exception->getMessage() . "\n");
+            if ($isApi || $request->wantsJson()) {
+                Response::json(['ok' => false, 'message' => 'La base de datos no pudo actualizarse. No se modificó nada.', 'code' => 'schema'], 503);
+            }
+            self::renderError(500, 'La base de datos no pudo actualizarse a la versión que esta aplicación necesita. '
+                . 'No se modificó ningún dato. Haz una copia de storage/ y revisa el archivo storage/last-error.log '
+                . 'antes de volver a intentarlo. Detalle: ' . $exception->getMessage());
         } catch (Throwable $exception) {
             error_log('Normia: ' . $exception->getMessage() . ' @ ' . $exception->getFile() . ':' . $exception->getLine());
             @file_put_contents(Paths::storage() . '/last-error.log', $exception->getMessage() . ' @ ' . $exception->getFile() . ':' . $exception->getLine() . "\n" . $exception->getTraceAsString());
@@ -116,6 +128,17 @@ final class Application
 
         // Presentación pública (portada para quien no ha entrado)
         $router->get('inicio', static fn () => (new HomeController())->index());
+
+        // Empresas (organizaciones) y personas con rol.
+        $router->get('empresas', static fn () => (new OrganizationController())->index());
+        $router->get('empresas/nueva', static fn () => (new OrganizationController())->create());
+        $router->post('empresas', static fn () => (new OrganizationController())->store());
+        $router->get('empresas/{id}', static fn (array $p) => (new OrganizationController())->show($p['id']));
+        $router->post('empresas/{id}', static fn (array $p) => (new OrganizationController())->update($p['id']));
+        $router->post('empresas/{id}/personas', static fn (array $p) => (new OrganizationController())->addMember($p['id']));
+        $router->post('empresas/{id}/personas/{memberId}/rol', static fn (array $p) => (new OrganizationController())->updateRole($p['id'], $p['memberId']));
+        $router->post('empresas/{id}/personas/{memberId}/quitar', static fn (array $p) => (new OrganizationController())->removeMember($p['id'], $p['memberId']));
+        $router->post('empresas/{id}/eliminar', static fn (array $p) => (new OrganizationController())->destroy($p['id']));
 
         // Panel y proyectos
         $router->get('', static fn () => (new DashboardController())->index());

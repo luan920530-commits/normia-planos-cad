@@ -107,6 +107,9 @@ final class Installer
             $schema = (string) file_get_contents($this->basePath . '/resources/schema.sql');
             Database::pdo()->exec($schema);
             $userId = User::create($name, $email, $password, true);
+            // Fase 2: cada cuenta estrena su propia empresa; los proyectos
+            // cuelgan de ella y el instalador deja al usuario como propietario.
+            \App\Models\Organization::ensurePersonal($userId, 'Espacio de ' . $name);
             if ($demo) {
                 $seeder = new DemoSeeder($this->basePath);
                 $seeder->seed($userId);

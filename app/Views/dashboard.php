@@ -23,6 +23,7 @@
   <article class="stat-card"><span class="stat-icon"><svg class="icon"><use href="#i-folder"></use></svg></span><div><strong><?= e($stats['projects']) ?></strong><small>Proyectos</small></div></article>
   <article class="stat-card"><span class="stat-icon"><svg class="icon"><use href="#i-layers"></use></svg></span><div><strong><?= e($stats['floors']) ?></strong><small>Pisos</small></div></article>
   <article class="stat-card"><span class="stat-icon"><svg class="icon"><use href="#i-history"></use></svg></span><div><strong><?= e($stats['versions']) ?></strong><small>Versiones guardadas</small></div></article>
+  <article class="stat-card"><span class="stat-icon"><svg class="icon"><use href="#i-property"></use></svg></span><div><strong><?= e((string) ($stats['organizations'] ?? 0)) ?></strong><small><?= (int) ($stats['organizations'] ?? 0) === 1 ? 'Empresa' : 'Empresas' ?></small></div></article>
   <article class="stat-card stat-card-muted"><span class="stat-icon"><svg class="icon"><use href="#i-sign"></use></svg></span><div><strong><?= e((string) $catalog['signs']) ?></strong><small>Pictogramas ISO 7010 y de servicios</small></div></article>
 </section>
 
@@ -57,6 +58,9 @@
           <div class="project-body">
             <div class="project-title-row">
               <h3><a href="<?= e(url('projects/' . $project['id'])) ?>"><?= e($project['name']) ?></a></h3>
+              <?php if (!empty($project['organization_name'])): ?>
+                <span class="project-org"><svg class="icon"><use href="#i-property"></use></svg><?= e($project['organization_name']) ?></span>
+              <?php endif; ?>
             </div>
             <p class="project-meta"><?= e($project['site'] !== '' ? $project['site'] : 'Sin sede') ?><?= $project['workplace'] !== '' ? ' · ' . e($project['workplace']) : '' ?></p>
             <p class="project-updated">Actualizado <?= e(format_date($project['floor_updated_at'] ?? $project['updated_at'])) ?> · <?= e($project['version_count']) ?> versiones</p>
