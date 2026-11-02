@@ -615,6 +615,17 @@ final class PlanAudit
             $findings[] = $finding;
         }
 
+        /* --------------------- simulacro de evacuación ---------------------
+         * A-05 (NORMIA-006 §32): el tiempo objetivo del piso con las rutas
+         * dibujadas y el tiempo de reacción declarado. Se calcula aparte del
+         * tiempo de salida del aforo: uno es cronómetro estimado de la marcha y
+         * la cola, el otro es el recorrido real de cada ruta hasta el punto de
+         * encuentro. */
+        $drill = EvacuationDrill::analyze($design, $routes, $routesReport, $exits, $aforo, $criteria);
+        foreach ($drill['findings'] as $finding) {
+            $findings[] = $finding;
+        }
+
         /* ------------------------------ orden ------------------------------ */
         usort($findings, static function (array $a, array $b): int {
             $order = array_flip(self::SEVERITIES);
@@ -675,6 +686,7 @@ final class PlanAudit
             'extinguishers' => $extinguishers,
             'firstAid' => $firstAid,
             'scenarios' => $scenarios,
+            'drill' => $drill,
             'routes' => $routesReport,
             'signs' => [
                 'youAreHere' => $hasYouAreHere,

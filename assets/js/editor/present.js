@@ -8,6 +8,10 @@
   const SPEEDS = { slow: { label: 'Lenta', factor: 1.7 }, normal: { label: 'Normal', factor: 1 }, fast: { label: 'Rápida', factor: 0.55 } };
   const EXIT_TYPES = ['door', 'door_double', 'gate'];
   const TRAIL_MS = 900;
+  /** Simulacro: milisegundos de pantalla por segundo simulado, por velocidad. */
+  const DRILL_MS_PER_S = { slow: 340, normal: 200, fast: 105 };
+  /** Velocidad de referencia si el informe no la trae (criterio del auditor). */
+  const DEFAULT_SPEED_MPS = 1;
 
   class Present {
     constructor(app) {
@@ -27,6 +31,10 @@
       this.timer = null;
       this.animated = 0;
       this.lastPoint = null;
+      /* Simulacro de evacuación (NORMIA-006 §32). */
+      this.drill = null;
+      this.drillRaf = null;
+      this.drillFigures = [];
     }
 
     /* ------------------------------- utilidades ------------------------------- */
@@ -68,6 +76,7 @@
             <button type="button" class="present-btn" data-present-laser aria-pressed="false" aria-label="Puntero láser"><span class="present-dot-icon"></span>Láser</button>
             <button type="button" class="present-btn" data-present-spot aria-pressed="false" aria-label="Foco de atención">Spotlight</button>
             <button type="button" class="present-btn" data-present-routes aria-label="Animar rutas de evacuación">Rutas</button>
+            <button type="button" class="present-btn" data-present-drill aria-label="Simulacro de evacuación">Simulacro</button>
             <label class="present-speed">Velocidad
               <select data-present-speed aria-label="Velocidad de la animación">
                 ${Object.entries(SPEEDS).map(([key, value]) => `<option value="${key}"${key === this.speed ? ' selected' : ''}>${value.label}</option>`).join('')}
@@ -92,6 +101,10 @@
         else if (button.dataset.presentLaser !== undefined) this.toggleLaser();
         else if (button.dataset.presentSpot !== undefined) this.toggleSpotlight();
         else if (button.dataset.presentRoutes !== undefined) this.animateRoutes();
+        else if (button.dataset.presentDrill !== undefined) this.showDrill();
+        else if (button.dataset.drillPlay !== undefined) this.playDrill();
+        else if (button.dataset.drillPause !== undefined) this.pauseDrill();
+        else if (button.dataset.drillReset !== undefined) this.resetDrill();
         else if (button.dataset.presentLayers !== undefined) this.showLayers();
         else if (button.dataset.presentQuiz !== undefined) this.showQuiz();
         else if (button.dataset.presentAnswer !== undefined) this.answer(Number(button.dataset.presentAnswer));
@@ -99,7 +112,19 @@
         else if (button.dataset.presentPanelClose !== undefined) this.hidePanel();
       });
       node.addEventListener('change', (event) => {
-        if (event.target.matches('[data-present-speed]')) this.speed = event.target.value;
+        if (event.target.matches('[data-present-speed]')) {
+          this.speed = event.target.value;
+          if (this.drill) this.renderDrillClock();
+        }
+        if (event.target.matches('[data-drill-reaction]')) {
+          const value = Math.max(0, Math.min(600, Math.round(Number(event.target.value) || 0)));
+          event.target.value = String(value);
+          if (this.drill) {
+            this.drill.reactionS = value;
+            this.buildDrillFigures();
+            this.resetDrill();
+          }
+        }
         if (event.target.matches('[data-layer-toggle]')) {
           const layer = this.model.design.layers.find((item) => item.id === event.target.dataset.layerToggle);
           if (layer) {
@@ -143,6 +168,7 @@
       this.unbindKeys();
       this.clearLaser();
       this.clearAnimation();
+      this.stopDrill();
       if (this.snapshot) {
         this.snapshot.layers.forEach((saved) => {
           const layer = this.model.design.layers.find((item) => item.id === saved.id);
@@ -321,6 +347,350 @@
       const label = q('[data-present-routes]', this.root);
       if (label) label.textContent = 'Rutas';
       label?.classList.remove('is-on');
+    }
+
+    /* ------------------------------- simulacro -------------------------------- */
+    /*
+     * Simulacro de evacuación (NORMIA-006 §32): figuras que salen de cada ruta
+     * dibujada, esperan el tiempo de reacción, caminan a la salida y siguen
+     * hasta el punto de encuentro. Tiempos del servidor; geometría del plano.
+     *
+     * Lo que se ve es un objetivo calculado, no un simulacro medido: la nota del
+     * panel lo dice con esas palabras.
+     */
+
+    /** Reloj corto: «42 s» o «1:07». */
+    drillClock(seconds) {
+      if (seconds === null || seconds === undefined || !Number.isFinite(Number(seconds))) return '—';
+      const total = Math.max(0, Math.round(Number(seconds)));
+      const minutes = Math.floor(total / 60);
+      const rest = total % 60;
+      return minutes > 0 ? `${minutes}:${String(rest).padStart(2, '0')}` : `${rest} s`;
+    }
+
+    /** Puntos absolutos del trazo (el modelo los guarda locales a la caja). */
+    routePath(route) {
+      const local = Array.isArray(route.points) && route.points.length >= 2
+        ? route.points
+        : [{ x: 0, y: 0 }, { x: route.w || 0, y: route.h || 0 }];
+      return local.map((point) => ({ x: (Number(route.x) || 0) + (Number(point.x) || 0), y: (Number(route.y) || 0) + (Number(point.y) || 0) }));
+    }
+
+    /** Informe del auditor: se reutiliza el del cajón si ya está, o se pide. */
+    async loadDrillReport() {
+      if (this.app.audit?.report) return this.app.audit.report;
+      const url = this.app.boot?.auditUrl || `api/floors/${this.app.boot?.floorId}/audit`;
+      const data = await this.app.store.request(url);
+      return data.report || null;
+    }
+
+    async showDrill() {
+      const reaction = Math.max(0, Math.round(Number(this.model.design.canvas.drill?.reactionS ?? 30)));
+      this.stopDrill();
+      this.drill = { report: null, reactionS: reaction, t: 0, playing: false, layer: null };
+      this.showDrillPanel({ loading: true, report: null, reactionS: reaction, error: '' });
+      try {
+        const report = await this.loadDrillReport();
+        if (!report) throw new Error('El servidor no devolvió el informe del plano.');
+        this.drill.report = report;
+        this.showDrillPanel({ loading: false, report, reactionS: reaction, error: '' });
+        this.buildDrillFigures();
+        this.resetDrill();
+      } catch (error) {
+        this.showDrillPanel({ loading: false, report: null, reactionS: reaction, error: error.message || 'No se pudo cargar el informe.' });
+      }
+    }
+
+    showDrillPanel({ loading, report, reactionS, error }) {
+      const drill = report?.drill || null;
+      const rows = (drill?.routes || []).map((route, index) => `
+        <li data-drill-row="${esc(route.id)}">
+          <strong>${esc(route.label || `Ruta ${index + 1}`)}</strong>
+          <span>${this.drillClock(route.arrivalS)}</span>
+          <small data-drill-state>esperando</small>
+        </li>`).join('');
+      const target = drill?.targetS ?? null;
+      this.showPanel(`
+        <header>
+          <h2>Simulacro de evacuación</h2>
+          <button type="button" class="present-x" data-present-panel-close aria-label="Cerrar">×</button>
+        </header>
+        ${loading ? '<p class="present-question">Calculando el tiempo objetivo…</p>' : ''}
+        ${error ? `<p class="present-feedback is-bad">${esc(error)}</p>` : ''}
+        ${!loading && !error && !drill ? '<p class="present-feedback is-bad">El informe no trae el bloque del simulacro.</p>' : ''}
+        ${drill ? `
+          <div class="drill-controls">
+            <label class="drill-field">Reacción
+              <input type="number" min="0" max="600" step="5" value="${Number(reactionS) || 0}" data-drill-reaction aria-label="Tiempo de reacción en segundos">
+              <span>s</span>
+            </label>
+            <div class="drill-buttons">
+              <button type="button" class="present-btn is-primary" data-drill-play>Reproducir</button>
+              <button type="button" class="present-btn" data-drill-pause>Pausa</button>
+              <button type="button" class="present-btn" data-drill-reset>Reiniciar</button>
+            </div>
+          </div>
+          <div class="drill-clock" aria-live="polite">
+            <strong data-drill-clock>0 s</strong>
+            <span data-drill-target>Objetivo ${this.drillClock(target)}</span>
+          </div>
+          <ul class="drill-list">${rows || '<li class="drill-empty">El piso no tiene rutas de evacuación dibujadas.</li>'}</ul>
+          <p class="present-note">Figuras simuladas con las rutas del plano, la velocidad de referencia (${Number(drill.speedMps || DEFAULT_SPEED_MPS).toLocaleString('es-CO', { maximumFractionDigits: 2 })} m/s) y el tiempo de reacción declarado. ${drill.meeting?.found ? 'El recorrido termina en el punto de encuentro declarado.' : 'Sin punto de encuentro declarado: el recorrido termina en la salida.'} No mide un simulacro real ni cuenta participantes: eso se cronometra en sitio.</p>
+        ` : ''}`);
+    }
+
+    /** Arma una figura por ruta con la geometría del plano y los tiempos del informe. */
+    buildDrillFigures() {
+      this.clearDrillLayer();
+      const report = this.drill?.report || null;
+      const drill = report?.drill || null;
+      if (!drill) {
+        this.drillFigures = [];
+        return;
+      }
+      const reactionS = Math.max(0, Math.round(Number(this.drill?.reactionS ?? drill.reactionS ?? 30)));
+      const speed = Math.max(0.1, Number(drill.speedMps) || DEFAULT_SPEED_MPS);
+      const unitsPerSecond = speed * 100; // geometría en centímetros
+      const meeting = drill.meeting?.found ? drill.meeting.position : null;
+      const exits = new Map((report?.exits?.items || []).map((exit) => [exit.id, exit]));
+      const figures = [];
+      (drill.routes || []).forEach((route, index) => {
+        const element = this.model.design.elements.find((item) => item.id === route.id);
+        if (!element) return;
+        const points = this.routePath(element);
+        if (points.length < 2) return;
+        const lengths = [];
+        let totalLen = 0;
+        for (let cursor = 1; cursor < points.length; cursor += 1) {
+          const length = Math.hypot(points[cursor].x - points[cursor - 1].x, points[cursor].y - points[cursor - 1].y);
+          lengths.push(length);
+          totalLen += length;
+        }
+        const exitElement = this.model.design.elements.find((item) => item.id === route.exitId);
+        const exitExit = exits.get(route.exitId) || null;
+        const exitCenter = exitElement
+          ? { x: (Number(exitElement.x) || 0) + (Number(exitElement.w) || 0) / 2, y: (Number(exitElement.y) || 0) + (Number(exitElement.h) || 0) / 2 }
+          : (exitExit ? { x: points[points.length - 1].x, y: points[points.length - 1].y } : null);
+        const transferLen = (exitCenter && meeting) ? Math.hypot(meeting.x - exitCenter.x, meeting.y - exitCenter.y) : 0;
+        figures.push({
+          id: route.id,
+          label: route.label || `Ruta ${index + 1}`,
+          points,
+          lengths,
+          totalLen,
+          unitsPerSecond,
+          exitCenter,
+          meeting,
+          transferLen,
+          walkS: Number(route.walkS) || 0,
+          transferS: route.transferS === null || route.transferS === undefined ? null : Number(route.transferS),
+          arrivalS: route.arrivalS === null || route.arrivalS === undefined ? null : Number(route.arrivalS),
+          reactionS,
+          node: null,
+          arrived: false,
+        });
+      });
+      this.drillFigures = figures;
+    }
+
+    /** Posición de una figura en el segundo simulado dado. */
+    drillPosition(figure, seconds) {
+      const start = figure.points[0];
+      if (seconds <= figure.reactionS) return { ...start, phase: 'waiting' };
+      const walked = (seconds - figure.reactionS) * figure.unitsPerSecond;
+      if (walked < figure.totalLen - 0.01) {
+        let remaining = walked;
+        for (let cursor = 0; cursor < figure.lengths.length; cursor += 1) {
+          const length = figure.lengths[cursor];
+          if (remaining <= length || cursor === figure.lengths.length - 1) {
+            const ratio = length > 0 ? Math.min(1, remaining / length) : 0;
+            const a = figure.points[cursor];
+            const b = figure.points[cursor + 1];
+            return { x: a.x + (b.x - a.x) * ratio, y: a.y + (b.y - a.y) * ratio, phase: 'walking' };
+          }
+          remaining -= length;
+        }
+      }
+      const exit = figure.exitCenter || figure.points[figure.points.length - 1];
+      if (!figure.meeting || figure.transferLen <= 0) return { ...exit, phase: 'at-exit' };
+      const transferWalked = Math.max(0, walked - figure.totalLen);
+      const ratio = Math.min(1, transferWalked / figure.transferLen);
+      return {
+        x: exit.x + (figure.meeting.x - exit.x) * ratio,
+        y: exit.y + (figure.meeting.y - exit.y) * ratio,
+        phase: ratio >= 1 ? 'arrived' : 'transfer',
+      };
+    }
+
+    /**
+     * El editor redibuja el SVG y se lleva por delante la capa del simulacro:
+     * aquí se vuelve a montar con la posición que tenía. Sin esto las figuras
+     * desaparecían al tocar una capa o al mover el plano.
+     */
+    redrawOverlay() {
+      if (!this.drill || !this.drillFigures.length) return;
+      this.drill.layer = null;
+      this.drillFigures.forEach((figure) => {
+        figure.node = null;
+        figure.labelNode = null;
+      });
+      this.paintDrill();
+      this.renderDrillClock();
+    }
+
+    clearDrillLayer() {
+      q('[data-drill-layer]', this.app.svg)?.remove();
+      if (this.drill) this.drill.layer = null;
+    }
+
+    drillLayer() {
+      if (this.drill?.layer?.isConnected) return this.drill.layer;
+      const layer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      layer.setAttribute('data-drill-layer', '');
+      layer.setAttribute('class', 'drill-layer');
+      layer.setAttribute('pointer-events', 'none');
+      this.app.svg.appendChild(layer);
+      if (this.drill) this.drill.layer = layer;
+      return layer;
+    }
+
+    /** Dibuja (o redibuja) las figuras en el lienzo. */
+    paintDrill() {
+      const layer = this.drillLayer();
+      const meeting = this.drillFigures.find((figure) => figure.meeting)?.meeting || null;
+      if (meeting && !q('[data-drill-meeting]', layer)) {
+        const marker = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        marker.setAttribute('data-drill-meeting', '');
+        marker.setAttribute('class', 'drill-meeting');
+        marker.setAttribute('cx', String(meeting.x));
+        marker.setAttribute('cy', String(meeting.y));
+        marker.setAttribute('r', '46');
+        layer.appendChild(marker);
+      }
+      this.drillFigures.forEach((figure, index) => {
+        if (!figure.node) {
+          const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          group.setAttribute('class', 'drill-figure');
+          group.setAttribute('data-drill-figure', figure.id);
+          const halo = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          halo.setAttribute('class', 'drill-figure-halo');
+          halo.setAttribute('r', '26');
+          const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          dot.setAttribute('class', 'drill-figure-dot');
+          dot.setAttribute('r', '15');
+          const head = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          head.setAttribute('class', 'drill-figure-head');
+          head.setAttribute('r', '6');
+          head.setAttribute('cy', '-4');
+          const body = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          body.setAttribute('class', 'drill-figure-body');
+          body.setAttribute('d', 'M-7 9 L-7 2 A7 7 0 0 1 7 2 L7 9');
+          group.append(halo, dot, head, body);
+          layer.appendChild(group);
+          figure.node = group;
+        }
+        const position = this.drillPosition(figure, this.drill?.t || 0);
+        figure.node.setAttribute('transform', `translate(${position.x.toFixed(2)} ${position.y.toFixed(2)})`);
+        figure.node.classList.toggle('is-waiting', position.phase === 'waiting');
+        /* Sin punto de encuentro el destino es la salida: también es llegar. */
+        figure.node.classList.toggle('is-arrived', position.phase === 'arrived' || position.phase === 'at-exit');
+        if (!figure.labelNode && position.phase !== 'waiting') {
+          const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          label.setAttribute('class', 'drill-figure-label');
+          label.setAttribute('y', '-24');
+          label.setAttribute('text-anchor', 'middle');
+          label.textContent = String(index + 1);
+          figure.node.appendChild(label);
+          figure.labelNode = label;
+        }
+        figure.phase = position.phase;
+      });
+    }
+
+    renderDrillClock() {
+      const clock = q('[data-drill-clock]', this.root);
+      if (clock) {
+        const t = this.drill?.t || 0;
+        const target = Number(this.drill?.report?.drill?.targetS) || 0;
+        clock.textContent = target > 0 && t >= target
+          ? `${this.drillClock(t)} · completo`
+          : this.drillClock(t);
+      }
+      this.drillFigures.forEach((figure) => {
+        const row = q(`[data-drill-row="${figure.id}"]`, this.root);
+        if (!row) return;
+        const state = q('[data-drill-state]', row);
+        if (!state) return;
+        const labels = { waiting: 'esperando la alarma', walking: 'caminando', transfer: 'hacia el punto de encuentro', 'at-exit': 'llegó a la salida', arrived: 'llegó al punto de encuentro' };
+        state.textContent = labels[figure.phase] || 'esperando';
+        row.classList.toggle('is-arrived', figure.phase === 'arrived');
+      });
+    }
+
+    /** Avanza el simulacro hasta el segundo indicado y repinta. */
+    stepDrill(seconds) {
+      if (!this.drill) return;
+      this.drill.t = Math.max(0, Number(seconds) || 0);
+      this.paintDrill();
+      this.renderDrillClock();
+    }
+
+    playDrill() {
+      if (!this.drill || this.drill.playing) return;
+      const total = Math.max(...this.drillFigures.map((figure) => Number(figure.arrivalS) || 0), 0);
+      if (!total) return;
+      if ((this.drill.t || 0) >= total) this.resetDrill();
+      this.drill.playing = true;
+      const msPerSecond = DRILL_MS_PER_S[this.speed] || DRILL_MS_PER_S.normal;
+      const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+      let last = Date.now();
+      const tick = () => {
+        if (!this.drill || !this.drill.playing) return;
+        const now = Date.now();
+        const delta = reduced ? msPerSecond / 60 : Math.min(400, now - last);
+        last = now;
+        const next = (this.drill.t || 0) + delta / msPerSecond;
+        this.stepDrill(Math.min(total, next));
+        if (next >= total) {
+          this.pauseDrill();
+          const clock = q('[data-drill-clock]', this.root);
+          if (clock) clock.textContent = `${this.drillClock(total)} · completo`;
+          return;
+        }
+        this.drillRaf = window.requestAnimationFrame(tick);
+      };
+      this.drillRaf = window.requestAnimationFrame ? window.requestAnimationFrame(tick) : window.setTimeout(tick, msPerSecond / 60);
+      this.renderDrillClock();
+    }
+
+    pauseDrill() {
+      if (!this.drill) return;
+      this.drill.playing = false;
+      if (this.drillRaf && window.cancelAnimationFrame) window.cancelAnimationFrame(this.drillRaf);
+      else if (this.drillRaf) window.clearTimeout(this.drillRaf);
+      this.drillRaf = null;
+    }
+
+    resetDrill() {
+      if (!this.drill) return;
+      this.pauseDrill();
+      this.drill.t = 0;
+      this.drillFigures.forEach((figure) => {
+        figure.arrived = false;
+        figure.phase = 'waiting';
+        figure.node?.classList.remove('is-arrived');
+        figure.labelNode?.remove?.();
+        figure.labelNode = null;
+      });
+      this.paintDrill();
+      this.renderDrillClock();
+    }
+
+    stopDrill() {
+      this.pauseDrill();
+      this.clearDrillLayer();
+      this.drillFigures = [];
+      this.drill = null;
     }
 
     /* ---------------------------------- paneles -------------------------------- */

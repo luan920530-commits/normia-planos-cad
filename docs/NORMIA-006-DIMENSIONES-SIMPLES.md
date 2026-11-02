@@ -10,7 +10,7 @@ pueda dibujar, anotar medidas y recibir cálculos sin aprender metrología.
 | Base | `bddc2dc` (NORMIA-005 entregado, PR #56 abierto) |
 | Reemplaza en parte | [`NORMIA-005-CALIBRACION-DIMENSIONAL.md`](NORMIA-005-CALIBRACION-DIMENSIONAL.md) — §8 de trazabilidad |
 | Alcance | **3.A a 3.J** — los nueve apartados, recibidos el 2026-11-02 |
-| Estado | **diseño completo**; DEC-1, DEC-2, DEC-5 y DEC-6 implementadas en la 1.19.0 (§26); **aforo calculado y publicado** en la 1.20.0 (§27); **ajuste global por mediana** en la 1.21.0 (§28); **escala física al exportar (DEC-8)** en la 1.22.0 (§29); **recursos de primeros auxilios en el cálculo** en la 1.23.0 (§30); DEC-7 y DEC-9 a DEC-12 pendientes |
+| Estado | **diseño completo**; DEC-1, DEC-2, DEC-5 y DEC-6 implementadas en la 1.19.0 (§26); **aforo calculado y publicado** en la 1.20.0 (§27); **ajuste global por mediana** en la 1.21.0 (§28); **escala física al exportar (DEC-8)** en la 1.22.0 (§29); **recursos de primeros auxilios en el cálculo** en la 1.23.0 (§30); **escenarios de ocupación temporal** en la 1.24.0 (§31) y **simulacro animado** en la 1.25.0 (§32); DEC-7 y DEC-9 a DEC-12 pendientes |
 
 ---
 
@@ -1961,3 +1961,99 @@ aforo declarado se mueva; el servidor los conserva; el cajón los resume), pági
 `scenarios` y por la demo: la planta baja gana un hallazgo importante y la cafetería
 otro, que es exactamente lo que un evento con más gente que la capacidad tiene que
 decir.
+
+## 32. Simulacro de evacuación con animación (1.25.0 · A-05)
+
+§20 diseñó los escenarios como registros con fecha; lo que faltaba era otra cosa:
+**ver la evacuación**. Un plano de emergencia se aprueba mirando líneas, pero se
+entiende viendo a la gente salir. Esta entrega añade el tiempo objetivo y una
+animación de figuras que recorren las rutas dibujadas hasta el punto de encuentro.
+
+### 32.1 Qué se declara
+
+En **Ajustes del piso** → *Simulacro de evacuación* hay dos números, los dos
+opcionales y los dos declarados por el usuario:
+
+| Campo | Rango | Qué es |
+| --- | --- | --- |
+| Reacción (s) | 0 a 600 · por defecto 30 | tiempo entre la alarma y el primer paso (pre-movimiento) |
+| Tiempo medido (s) | 1 a 7200 · opcional | lo que duró el simulacro cronometrado en sitio |
+
+Se guardan en `canvas.drill` (`{reactionS, measuredS?}`) con el plano, igual que
+los escenarios: sin migración, `user_version` sigue en **7**.
+
+### 32.2 Qué se calcula
+
+```text
+tiempo objetivo = reacción + camino hasta la salida + tramo al punto de encuentro
+```
+
+- El **camino** sale de la longitud real del trazo (`ElementMeasure`): si la ruta
+  tiene medida declarada, manda esa; si no, la geometría.
+- El **tramo** es la distancia en línea recta de la salida al punto de encuentro.
+- La **velocidad** es la del criterio (`egress.travelSpeedMps`, 1 m/s), no una
+  medición de esta brigada.
+- Sin punto de encuentro el objetivo existe igual: es la llegada a la salida, y el
+  informe dice cuál de los dos tramos está incluido (`targetSource`).
+
+El punto de encuentro se detecta por el objeto **«Punto de encuentro de
+evacuación»** (nuevo en el catálogo, familia Emergencia) o, si no está dibujado,
+por la señal **E007**. El objeto manda porque marca la zona de reunión, no solo el
+pictograma.
+
+### 32.3 La animación
+
+En **modo presentación** hay un botón **Simulacro** que abre un panel y dibuja una
+figura por ruta sobre el lienzo:
+
+1. esperan el tiempo de reacción (pulsando, en naranja);
+2. caminan por el trazo a la velocidad de referencia (azul);
+3. siguen de la salida al punto de encuentro (el aro discontinuo del plano);
+4. se pintan en verde al llegar.
+
+El reloj del panel corre en segundos simulados y termina con «completo» en el
+tiempo objetivo; la lista de rutas dice en qué fase va cada figura. La reacción se
+puede cambiar ahí mismo y el simulacro se reinicia sin tocar el plano guardado.
+Las velocidades de la barra (lenta, normal, rápida) cambian solo el ritmo de la
+pantalla, no los tiempos calculados.
+
+La capa de figuras se vuelve a montar en cada redibujado del editor
+(`redrawOverlay()`): sin eso desaparecían al mover el plano o tocar una capa.
+
+### 32.4 Los hallazgos
+
+| Código | Severidad | Cuándo |
+| --- | --- | --- |
+| `no_meeting_point` | menor | hay rutas pero ningún punto de encuentro declarado |
+| `drill_slower_than_target` | menor | el tiempo medido supera el objetivo calculado |
+
+### 32.5 Dónde se ve
+
+| Superficie | Qué muestra |
+| --- | --- |
+| Ajustes del piso | reacción y tiempo medido |
+| Modo presentación | panel con reloj, objetivo, lista de rutas y figuras animadas |
+| Informe imprimible | sección **Simulacro de evacuación**: objetivo, punto de encuentro, tiempo medido y su diferencia, y tabla por ruta |
+| Cajón Revisión | tres filas: objetivo, punto de encuentro y tiempo medido |
+| API | `report.drill` con `routes`, `meeting`, `reactionS`, `speedMps`, `targetS`, `measuredS`, `differenceS` |
+
+### 32.6 Lo que no hace, y se dice
+
+No mide un simulacro real, no cuenta participantes, no evalúa la ejecución de la
+brigada ni la evacuación de personas con movilidad reducida, y no convierte el
+tiempo calculado en una promesa. Lo escrito en el informe, el panel y el cajón es
+el mismo texto: *tiempo objetivo calculado; se cronometra en sitio*.
+
+### 32.7 Pruebas
+
+Funcional **384** (sin punto de encuentro el aviso aparece y el tramo no se
+inventa; el objetivo suma reacción y camino —30 s + 4 s = 34 s—; el punto
+dibujado cierra el recorrido; cambiar la reacción mueve el objetivo en la misma
+cantidad; el tiempo medido se compara y avisa; `422` para reacción 601, medido 0 y
+claves de más; sección del informe y punto de encuentro en el catálogo), interfaz
+**424** (los campos del simulacro se guardan y se limpian; el panel carga el
+informe, dibuja una figura por ruta, espera la reacción, camina, llega, reinicia y
+se retira al salir), páginas **54**, golden **8/8** con **7 514 valores**. El
+golden crece por el bloque `drill` y porque la demo gana dos hallazgos menores: el
+simulacro medido en la planta baja y la falta de punto de encuentro en los otros
+tres pisos, que es justo lo que el cálculo tiene que decir.

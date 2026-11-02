@@ -164,6 +164,10 @@
          del piso: se revisan aparte y aquí se resume el más exigente. */
       const scenarios = report.scenarios || null;
       const peak = scenarios?.peak || null;
+      /* Simulacro de evacuación (NORMIA-006 §32): tiempo objetivo con las rutas
+         dibujadas y comparación con el tiempo cronometrado, si lo hay. */
+      const drill = report.drill || null;
+      const drillClock = (seconds) => (seconds === null || seconds === undefined ? '—' : duration(seconds));
 
       this.host.innerHTML = `
         <section class="audit-score-row">
@@ -207,6 +211,10 @@
             <div><dt>Sin salida alcanzable</dt><dd>${number(travel.unreachableAreaM2)} m²</dd></div>
             <div><dt>Rejilla de cálculo</dt><dd>${number(travel.cellM, 2)} m</dd></div>
             <div><dt>Rutas dibujadas</dt><dd>${(report.routes || []).length}</dd></div>
+            ${drill && (drill.routes || []).length ? `
+            <div><dt>Simulacro (objetivo)</dt><dd>${esc(drillClock(drill.targetS))} <small>reacción ${esc(drillClock(drill.reactionS))} + ${number(drill.speedMps, 1)} m/s de referencia</small></dd></div>
+            <div><dt>Punto de encuentro</dt><dd>${drill.meeting?.found ? 'Declarado' : 'Sin declarar'} <small>${drill.meeting?.source === 'object' ? 'objeto en el plano' : (drill.meeting?.source === 'sign' ? 'solo la señal E007' : 'el recorrido termina en la salida')}</small></dd></div>
+            <div><dt>Tiempo medido</dt><dd>${drill.measuredS ? esc(drillClock(drill.measuredS)) : 'Sin registrar'} <small>${drill.measuredS && drill.differenceS !== null ? (drill.differenceS > 0 ? `+${esc(drillClock(drill.differenceS))} sobre el objetivo` : `${esc(drillClock(Math.abs(drill.differenceS)))} por debajo`) : 'se anota tras cronometrar el simulacro'}</small></dd></div>` : ''}
             ${scenarios && scenarios.count > 0 ? `
             <div><dt>Escenarios</dt><dd>${number(scenarios.count, 0)} <small>el más exigente: ${esc(peak?.name || 'sin nombre')} (${number(peak?.persons, 0)} pers.${peak && peak.fits ? '' : peak ? ', no cabe' : ''})</small></dd></div>
             <div><dt>Capacidad del piso</dt><dd>${number(scenarios.base?.capacity, 0)} pers. <small>la misma superficie libre × densidad del uso habitual</small></dd></div>` : ''}
@@ -232,6 +240,7 @@
           ${findings.length ? `<ul class="audit-finding-list">${rows}</ul>` : '<p class="audit-empty">Sin hallazgos en esta categoría.</p>'}
         </section>
 
+        ${drill && (drill.routes || []).length ? `<p class="audit-note">El <strong>simulacro</strong> es un tiempo objetivo calculado con las rutas dibujadas, la velocidad de referencia y el tiempo de reacción declarado. No mide un simulacro real ni cuenta participantes: eso se cronometra en sitio.</p>` : ''}
         ${scenarios && scenarios.count > 0 ? `<p class="audit-note">Los <strong>escenarios de ocupación temporal</strong> se calculan con la misma superficie, densidad y ancho útil del piso, aparte del aforo del uso habitual. No aprueban el evento ni verifican el permiso, la silletería ni la ocupación real en la puerta.</p>` : ''}
         <p class="audit-note">El aforo máximo es una capacidad calculada (superficie útil libre × densidad de referencia) y el permitido es el menor entre la ocupación declarada y esa capacidad. El informe imprimible lo deja por escrito y el pie del plano exportado muestra las dos cifras.</p>
         <p class="audit-note">Análisis sobre el plano guardado (v${number(this.app.boot?.version, 0)}). Los umbrales son referencias configurables: ajústalos a la normativa aplicable y valida el resultado con un profesional competente.</p>`;

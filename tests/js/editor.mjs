@@ -145,14 +145,14 @@ async function main() {
     report.check('Señales de baño disponibles', ['SVC_WC_MEN', 'SVC_WC_WOMEN', 'SVC_WC_MIXED', 'SVC_WC_ACCESSIBLE', 'SVC_BABY'].every((code) => app.catalogs.signs[code]?.name),
       ['SVC_WC_MEN', 'SVC_WC_WOMEN', 'SVC_WC_MIXED', 'SVC_WC_ACCESSIBLE', 'SVC_BABY'].filter((code) => !app.catalogs.signs[code]).join(',') || 'todas');
     report.check('La familia de servicios está disponible', app.catalogs.signCategories.services?.label === 'Orientación y servicios', app.catalogs.signCategories.services?.label);
-    report.check('Catálogo CAD ampliado a 421 objetos', Object.keys(app.catalogs.cad).length === 421, String(Object.keys(app.catalogs.cad).length));
+    report.check('Catálogo CAD ampliado a 422 objetos', Object.keys(app.catalogs.cad).length === 422, String(Object.keys(app.catalogs.cad).length));
     report.check('Familias CAD ampliadas a 31', Object.keys(app.catalogs.cadCategories).length === 31, Object.keys(app.catalogs.cadCategories).join(','));
     const expectedFamilies = ['restaurant', 'warehouse', 'retail', 'hospital', 'textile', 'grill', 'supermarket', 'residential', 'sports', 'outdoor', 'electrico', 'hidraulico', 'eds', 'drogueria', 'gimnasio', 'colegio', 'cafeteria'];
     report.check('Nuevas familias sectoriales disponibles', expectedFamilies.every((key) => app.catalogs.cadCategories[key]?.label), expectedFamilies.filter((key) => !app.catalogs.cadCategories[key]).join(',') || 'todas');
     const nuevasFamilias = ['fire', 'emergency', 'technic', 'access', 'security'];
     report.check('Cinco familias nuevas de emergencia y seguridad',
       nuevasFamilias.every((key) => app.catalogs.cadCategories[key]?.label)
-      && nuevasFamilias.reduce((total, key) => total + Object.values(app.catalogs.cad).filter((object) => object.category === key).length, 0) === 45,
+      && nuevasFamilias.reduce((total, key) => total + Object.values(app.catalogs.cad).filter((object) => object.category === key).length, 0) === 46,
       nuevasFamilias.map((key) => `${key}:${Object.values(app.catalogs.cad).filter((object) => object.category === key).length}`).join(' · '));
     report.check('Las señales de brigada están disponibles',
       ['SVC_EVAC_ROUTE', 'SVC_EXIT_TEXT', 'SVC_HYDRANT', 'SVC_COMMAND_POST', 'SVC_GAS_SHUTOFF', 'SVC_POWER_SHUTOFF'].every((code) => app.catalogs.signs[code]?.category === 'brigade' && app.catalogs.signs[code]?.aliases?.length > 0)
@@ -165,7 +165,7 @@ async function main() {
     report.check('Nombres de equipos sin duplicados', new Set(nombresCad).size === nombresCad.length,
       `${nombresCad.length - new Set(nombresCad).size} repetidos`);
     report.check('Paleta de colores expuesta', window.Normia.COLORS.length === 34, String(window.Normia.COLORS.length));
-    report.check('La barra lateral cuenta los equipos del catálogo', q(window, '[data-cad-count]')?.textContent === '421', q(window, '[data-cad-count]')?.textContent);
+    report.check('La barra lateral cuenta los equipos del catálogo', q(window, '[data-cad-count]')?.textContent === '422', q(window, '[data-cad-count]')?.textContent);
     report.check('La barra lateral cuenta las señales del catálogo', q(window, '[data-sign-count]')?.textContent === '395', q(window, '[data-sign-count]')?.textContent);
     report.check('Lienzo con el preset A4 horizontal', app.model.design.canvas.width === 1123 && app.model.design.canvas.height === 794, `${app.model.design.canvas.width}×${app.model.design.canvas.height}`);
     report.check('Barra de estado muestra el tamaño', q(window, '[data-canvas-size]').textContent.includes('794'), q(window, '[data-canvas-size]').textContent);
@@ -1894,7 +1894,7 @@ async function main() {
         assetFailures.push(`${key}: ${error.message}`);
       }
     }
-    report.check('Los 395 pictogramas y 421 equipos se instancian sin errores', assetsOk === 816 && assetFailures.length === 0,
+    report.check('Los 395 pictogramas y 422 equipos se instancian sin errores', assetsOk === 817 && assetFailures.length === 0,
       `${assetsOk}/500 · ${assetFailures.slice(0, 3).join(', ')}`);
 
     const xlink = new window.DOMParser().parseFromString(
@@ -2189,6 +2189,26 @@ async function main() {
     filaEscenario = q(window, '[data-scenario-row]');
     filaEscenario.querySelector('[data-scenario-name]').value = 'Visita corta';
     filaEscenario.querySelector('[data-scenario-persons]').value = '5';
+    q(window, '[data-canvas-form]').dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
+
+    /* Simulacro de evacuación (NORMIA-006 §32): reacción y tiempo medido. */
+    const reaccionField = q(window, '[data-canvas-form] input[name="reaction"]');
+    const medidoField = q(window, '[data-canvas-form] input[name="measured"]');
+    report.check('Los ajustes del piso piden la reacción y el tiempo medido del simulacro',
+      Boolean(reaccionField) && Boolean(medidoField)
+      && /Simulacro de evacuación/.test(q(window, '[data-drawer="settings"]')?.textContent || ''));
+    reaccionField.value = '45';
+    medidoField.value = '70';
+    q(window, '[data-canvas-form]').dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
+    report.check('La reacción y el tiempo medido se guardan en el lienzo',
+      app.model.design.canvas.drill?.reactionS === 45 && app.model.design.canvas.drill?.measuredS === 70,
+      `reacción ${app.model.design.canvas.drill?.reactionS} s · medido ${app.model.design.canvas.drill?.measuredS} s`);
+    medidoField.value = '';
+    q(window, '[data-canvas-form]').dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
+    report.check('Sin tiempo medido el lienzo guarda solo la reacción',
+      app.model.design.canvas.drill?.reactionS === 45 && app.model.design.canvas.drill?.measuredS === undefined,
+      JSON.stringify(app.model.design.canvas.drill));
+    reaccionField.value = '30';
     q(window, '[data-canvas-form]').dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
 
     /* El lienzo se edita en la unidad de trabajo sin cambiar el tamaño real. */
@@ -2502,6 +2522,8 @@ async function main() {
       app.activeDrawer === null && app.measure.tracing === false && !app.svg.classList.contains('is-measuring'));
 
     /* ---------------------------- modo presentación ---------------------------- */
+    /* ¿La figura se movió? Compara el translate del atributo transform. */
+    const caminoCambio = (node, previo) => Boolean(node) && node.getAttribute('transform') !== previo;
     const routes = app.model.design.elements.filter((element) => element.type === 'route');
     const railPresent = q(window, '[data-present-open]');
     report.check('La barra lateral ofrece el modo presentación', Boolean(railPresent && app.present));
@@ -2537,6 +2559,59 @@ async function main() {
     report.check('La velocidad de las rutas se ajusta desde la barra',
       app.present.speed === 'fast' && app.present.animationDuration(routes[0]) < slowDuration,
       `${app.present.animationDuration(routes[0])} ms`);
+    /* Simulacro animado: figuras sobre las rutas, reloj y llegada al punto. */
+    q(window, '[data-present-drill]').click();
+    await waitFor(() => q(window, '[data-drill-play]'), 20000);
+    const drillReport = app.present.drill?.report?.drill || null;
+    await waitFor(() => qa(window, '#plan-canvas .drill-figure').length >= 1, 20000);
+    report.check('El simulacro toma del informe las rutas y el tiempo objetivo',
+      Boolean(drillReport) && drillReport.routes.length >= 1
+      && Number.isFinite(drillReport.targetS) && drillReport.targetS > 0
+      && /Objetivo/.test(q(window, '[data-present-panel]')?.textContent || ''),
+      `${drillReport?.routes?.length || 0} rutas · objetivo ${drillReport?.targetS} s`);
+    report.check('El panel del simulacro avisa de que no mide un simulacro real',
+      /No mide un simulacro real/.test(q(window, '[data-present-panel]')?.textContent || ''));
+    app.present.stepDrill(0);
+    const figuras = qa(window, '#plan-canvas .drill-figure');
+    const inicio = figuras[0]?.getAttribute('transform') || '';
+    report.check('El simulacro dibuja una figura por ruta sobre el lienzo',
+      figuras.length === app.present.drillFigures.length && figuras.length >= 1
+      && figuras.every((node) => node.classList.contains('is-waiting')),
+      `${figuras.length} figuras · ${app.present.drillFigures.length} rutas`);
+    const reaccionPanel = q(window, '[data-drill-reaction]');
+    reaccionPanel.value = '10';
+    reaccionPanel.dispatchEvent(new window.Event('change', { bubbles: true }));
+    report.check('Cambiar la reacción desde el panel reinicia el simulacro',
+      app.present.drill.reactionS === 10 && app.present.drill.t === 0
+      && q(window, '[data-drill-reaction]')?.value === '10');
+    app.present.stepDrill(9);
+    const esperando = q(window, '#plan-canvas .drill-figure');
+    report.check('Antes de la reacción las figuras siguen en su sitio',
+      esperando?.classList.contains('is-waiting')
+      && esperando.getAttribute('transform') === inicio,
+      esperando?.getAttribute('transform') || 'sin figura');
+    app.present.stepDrill(drillReport.reactionS + 2);
+    const caminando = q(window, '#plan-canvas .drill-figure');
+    report.check('Pasada la reacción las figuras caminan por la ruta',
+      caminoCambio(caminando, inicio) && /caminando|hacia el punto|en la salida|llegó/.test(q(window, '[data-drill-state]')?.textContent || ''),
+      `${inicio} → ${caminando?.getAttribute('transform')} · ${q(window, '[data-drill-state]')?.textContent}`);
+    app.present.stepDrill(drillReport.targetS + 1);
+    report.check('Al final del tiempo objetivo todas las figuras llegan',
+      qa(window, '#plan-canvas .drill-figure.is-arrived').length === app.present.drillFigures.length
+      && /llegó/.test(q(window, '[data-drill-state]')?.textContent || '')
+      && /completo|llegó|en el punto/i.test(q(window, '[data-drill-clock]')?.textContent || ''),
+      `${qa(window, '.drill-figure.is-arrived').length} de ${app.present.drillFigures.length} · reloj ${q(window, '[data-drill-clock]')?.textContent}`);
+    q(window, '[data-drill-reset]').click();
+    report.check('Reiniciar devuelve las figuras al inicio y el reloj a cero',
+      app.present.drill.t === 0 && q(window, '[data-drill-clock]')?.textContent === '0 s',
+      q(window, '[data-drill-clock]')?.textContent);
+    q(window, '[data-present-exit]').click();
+    report.check('Salir de la presentación retira el simulacro del lienzo',
+      !app.present.active && !q(window, '#plan-canvas .drill-layer')
+      && app.present.drillFigures.length === 0);
+    // Volver a entrar para el resto de las comprobaciones de presentación.
+    q(window, '[data-present-open]').click();
+    await waitFor(() => q(window, '[data-present]') && !q(window, '[data-present]').hidden, 10000);
     const selectedBefore = [...app.model.selection];
     app.svg.dispatchEvent(new window.MouseEvent('pointerdown', { clientX: 300, clientY: 300, bubbles: true }));
     report.check('Durante la presentación el lienzo no edita ni selecciona',

@@ -405,7 +405,7 @@ final class DesignValidator
         if (!is_array($canvas)) {
             throw new DomainException('Falta la configuración del lienzo.');
         }
-        $allowed = ['width', 'height', 'grid', 'unit', 'scale', 'background', 'occupancy', 'scenarios'];
+        $allowed = ['width', 'height', 'grid', 'unit', 'scale', 'background', 'occupancy', 'scenarios', 'drill'];
         foreach (array_keys($canvas) as $key) {
             if (!in_array($key, $allowed, true)) {
                 throw new DomainException('El lienzo contiene una propiedad no permitida.');
@@ -430,6 +430,7 @@ final class DesignValidator
             throw new DomainException('El fondo del lienzo no es válido.');
         }
         $rawScenarios = $canvas['scenarios'] ?? null;
+        $rawDrill = $canvas['drill'] ?? null;
         $canvas = [
             'width' => $width,
             'height' => $height,
@@ -447,7 +448,42 @@ final class DesignValidator
         if ($scenarios !== []) {
             $canvas['scenarios'] = $scenarios;
         }
+        /* Simulacro (NORMIA-006 §32): el tiempo de reacción y, si ya se hizo, el
+           tiempo medido. La clave se omite cuando no hay nada que declarar. */
+        $drill = self::normalizeDrill($rawDrill);
+        if ($drill !== []) {
+            $canvas['drill'] = $drill;
+        }
         return $canvas;
+    }
+
+    /**
+     * Simulacro de evacuación: `{reactionS, measuredS?}`.
+     *
+     * `reactionS` es el tiempo de pre-movimiento declarado (0 a 600 s) y
+     * `measuredS` el que se cronometró en un simulacro real (1 a 7200 s), si ya
+     * se hizo. El segundo no reemplaza al primero: el informe compara los dos.
+     *
+     * @return array<string,int>
+     */
+    private static function normalizeDrill(mixed $drill): array
+    {
+        if ($drill === null) {
+            return [];
+        }
+        if (!is_array($drill) || array_is_list($drill)) {
+            throw new DomainException('La configuración del simulacro no es válida.');
+        }
+        foreach (array_keys($drill) as $key) {
+            if (!in_array($key, ['reactionS', 'measuredS'], true)) {
+                throw new DomainException('La configuración del simulacro contiene una propiedad no permitida.');
+            }
+        }
+        $result = ['reactionS' => self::integer($drill['reactionS'] ?? 30, 0, 600, 'tiempo de reacción del simulacro')];
+        if (array_key_exists('measuredS', $drill) && $drill['measuredS'] !== null) {
+            $result['measuredS'] = self::integer($drill['measuredS'], 1, 7200, 'tiempo medido del simulacro');
+        }
+        return $result;
     }
 
     /**

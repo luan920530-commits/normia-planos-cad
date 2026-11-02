@@ -597,6 +597,14 @@
         <div class="scenario-rows" data-scenario-rows></div>
         <button class="button button-ghost button-small" type="button" data-scenario-add>Añadir escenario</button>
       </fieldset>
+      <fieldset class="scenario-fieldset drill-fieldset">
+        <legend>Simulacro de evacuación</legend>
+        <p class="help-text">El simulacro calcula el tiempo objetivo de cada ruta: reacción + camino a la salida + tramo al punto de encuentro. Si ya cronometraste uno, anótalo y el informe compara los dos.</p>
+        <div class="form-row">
+          <label class="field"><span>Reacción (s)</span><input type="number" name="reaction" min="0" max="600" step="5" value="<?= (int) ($floor['design']['canvas']['drill']['reactionS'] ?? 30) ?>"><small>Tiempo entre la alarma y el primer paso.</small></label>
+          <label class="field"><span>Tiempo medido (s)</span><input type="number" name="measured" min="1" max="7200" step="1" value="<?= isset($floor['design']['canvas']['drill']['measuredS']) ? (int) $floor['design']['canvas']['drill']['measuredS'] : '' ?>" placeholder="Sin registrar"><small>Opcional. Se cronometra en el simulacro real.</small></label>
+        </div>
+      </fieldset>
       <button class="button button-primary button-small" type="submit">Aplicar lienzo</button>
       <p class="help-text">Los cambios de lienzo forman parte del diseño y se confirman al guardar el plano.</p>
     </form>

@@ -282,7 +282,7 @@ try {
   const designMatch = /<textarea id="editor-design" hidden>([\s\S]*?)<\/textarea>/.exec(editorHtml);
   let design = null;
   try { design = JSON.parse(decodeEntities(designMatch?.[1] || '')); } catch { design = null; }
-  report.check('Editor recibe el diseño guardado', design?.format === 2 && design?.elements?.length === 96, `${design?.elements?.length} elementos`);
+  report.check('Editor recibe el diseño guardado', design?.format === 2 && design?.elements?.length === 97, `${design?.elements?.length} elementos`);
   report.check('La demo trae dos salidas marcadas y la ocupación declarada',
     (design?.elements || []).filter((element) => element.isExit === true).length === 2 && design?.canvas?.occupancy === 30,
     `${(design?.elements || []).filter((element) => element.isExit === true).length} salidas · ${design?.canvas?.occupancy} personas`);
@@ -304,6 +304,12 @@ try {
     && (demoAudit.report?.findings || []).some((finding) => finding.code === 'scenario_over_capacity'
       && finding.title.includes('Capacitación de brigada')),
     `${demoEscenarios.count} escenarios · el más exigente ${demoEscenarios.peak?.persons} personas`);
+  const demoSimulacro = demoAudit.report?.drill || {};
+  report.check('La demo declara el simulacro con punto de encuentro y tiempo medido',
+    demoSimulacro.meeting?.found === true && demoSimulacro.routes?.length === 1
+    && demoSimulacro.targetS > (demoSimulacro.reactionS || 0)
+    && demoSimulacro.measuredS === 63 && demoSimulacro.differenceS > 0,
+    `objetivo ${demoSimulacro.targetS} s · medido ${demoSimulacro.measuredS} s · encuentro ${demoSimulacro.meeting?.source}`);
   const demoExt = demoAudit.report?.extinguishers || {};
   report.check('La demo incluye extintores con datos de norma',
     demoExt.summary?.count === 4 && demoExt.profile === 'colombia'
@@ -550,6 +556,95 @@ try {
     && /No aprueba el evento/i.test(informeEscenarios.text),
     `${informeEscenarios.status} · ${(informeEscenarios.text.match(/Escenarios de ocupación temporal/g) || []).length} sección`);
 
+  /* ------------------ simulacro de evacuación (1.25.0) ------------------
+   * A-05: tiempo objetivo por ruta (reacción + camino + tramo al punto de
+   * encuentro) y comparación con el tiempo cronometrado, si se declaró.
+   */
+  const simulacro = JSON.parse(JSON.stringify(escBase));
+  simulacro.canvas = { ...simulacro.canvas, width: 1200, height: 900, occupancy: 20, drill: { reactionS: 30 } };
+  simulacro.elements = [{
+    id: 'ruta_simulacro', type: 'route', layerId: extLayer, x: 200, y: 200, w: 400, h: 2,
+    rotation: 0, color: '#237f52', stroke: 3, opacity: 1, label: 'Ruta principal', locked: false,
+    points: [{ x: 0, y: 0 }, { x: 400, y: 0 }],
+  }, {
+    id: 'salida_simulacro', type: 'door', layerId: extLayer, x: 620, y: 190, w: 90, h: 16,
+    rotation: 0, color: '#0f172a', stroke: 2, opacity: 1, label: 'Salida', locked: false, isExit: true,
+  }];
+  let resSim = await client.postJson(`api/floors/${extFloorId}/save`, { design: simulacro, expected_version: (await json(`api/floors/${extFloorId}`)).body.floor.version, note: 'Simulacro sin punto de encuentro' });
+  const sinEncuentro = (await json(`api/floors/${extFloorId}/audit`)).body.report || {};
+  report.check('Sin punto de encuentro el simulacro lo advierte y no inventa el tramo final',
+    resSim.status === 200 && sinEncuentro.drill?.meeting?.found === false
+    && sinEncuentro.drill.routes.length === 1 && sinEncuentro.drill.routes[0].meetingM === null
+    && (sinEncuentro.findings || []).some((finding) => finding.code === 'no_meeting_point'),
+    `encuentro ${sinEncuentro.drill?.meeting?.found} · objetivo ${sinEncuentro.drill?.targetS}`);
+  report.check('El tiempo objetivo suma reacción y camino de la ruta',
+    sinEncuentro.drill?.reactionS === 30
+    && Math.abs((sinEncuentro.drill.routes[0].walkS || 0) - 4) < 0.1
+    && Math.abs((sinEncuentro.drill.targetS || 0) - 34) < 0.2
+    && sinEncuentro.drill.routes[0].targetSource === 'exit',
+    `reacción ${sinEncuentro.drill?.reactionS} s + camino ${sinEncuentro.drill?.routes?.[0]?.walkS} s = ${sinEncuentro.drill?.targetS} s`);
+
+  const conEncuentro = JSON.parse(JSON.stringify(simulacro));
+  conEncuentro.elements.push({
+    id: 'encuentro_demo', type: 'cad_emg_meeting', layerId: extLayer, x: 660, y: 300, w: 48, h: 48,
+    rotation: 0, color: '#0f766e', stroke: 2, opacity: 1, label: 'Punto de encuentro', locked: false,
+  });
+  res = await client.postJson(`api/floors/${extFloorId}/save`, { design: conEncuentro, expected_version: (await json(`api/floors/${extFloorId}`)).body.floor.version, note: 'Con punto de encuentro' });
+  const conPunto = (await json(`api/floors/${extFloorId}/audit`)).body.report || {};
+  report.check('El punto de encuentro dibujado cierra el recorrido del simulacro',
+    res.status === 200 && conPunto.drill?.meeting?.found === true && conPunto.drill.meeting.source === 'object'
+    && typeof conPunto.drill.routes[0].meetingM === 'number' && conPunto.drill.routes[0].meetingM > 0
+    && conPunto.drill.targetS > sinEncuentro.drill.targetS
+    && !(conPunto.findings || []).some((finding) => finding.code === 'no_meeting_point'),
+    `encuentro a ${conPunto.drill?.routes?.[0]?.meetingM} m · objetivo ${conPunto.drill?.targetS} s`);
+
+  const conReaccion = JSON.parse(JSON.stringify(conEncuentro));
+  conReaccion.canvas.drill = { reactionS: 90 };
+  res = await client.postJson(`api/floors/${extFloorId}/save`, { design: conReaccion, expected_version: (await json(`api/floors/${extFloorId}`)).body.floor.version, note: 'Reacción larga' });
+  const reaccionLarga = (await json(`api/floors/${extFloorId}/audit`)).body.report || {};
+  report.check('Cambiar el tiempo de reacción mueve el objetivo en la misma cantidad',
+    res.status === 200 && reaccionLarga.drill?.reactionS === 90
+    && Math.abs((reaccionLarga.drill.targetS - conPunto.drill.targetS) - 60) < 0.2,
+    `${conPunto.drill?.targetS} s → ${reaccionLarga.drill?.targetS} s`);
+
+  const conMedido = JSON.parse(JSON.stringify(conEncuentro));
+  conMedido.canvas.drill = { reactionS: 30, measuredS: 75 };
+  res = await client.postJson(`api/floors/${extFloorId}/save`, { design: conMedido, expected_version: (await json(`api/floors/${extFloorId}`)).body.floor.version, note: 'Simulacro medido' });
+  const simulacroMedido = (await json(`api/floors/${extFloorId}/audit`)).body.report || {};
+  const avisoMedido = (simulacroMedido.findings || []).find((finding) => finding.code === 'drill_slower_than_target');
+  report.check('El tiempo medido se compara con el objetivo y avisa si se pasa',
+    res.status === 200 && simulacroMedido.drill?.measuredS === 75
+    && simulacroMedido.drill.differenceS > 0 && avisoMedido?.severity === 'low'
+    && /^\d+ s$/.test(avisoMedido.value || ''),
+    `objetivo ${simulacroMedido.drill?.targetS} s · medido ${simulacroMedido.drill?.measuredS} s · diferencia ${simulacroMedido.drill?.differenceS} s`);
+
+  const reaccionInvalida = JSON.parse(JSON.stringify(conEncuentro));
+  reaccionInvalida.canvas.drill = { reactionS: 601 };
+  res = await client.postJson(`api/floors/${extFloorId}/save`, { design: reaccionInvalida, expected_version: (await json(`api/floors/${extFloorId}`)).body.floor.version });
+  report.check('La API rechaza un tiempo de reacción fuera de rango', res.status === 422, String(res.status));
+  const medidoCero = JSON.parse(JSON.stringify(conEncuentro));
+  medidoCero.canvas.drill = { reactionS: 30, measuredS: 0 };
+  res = await client.postJson(`api/floors/${extFloorId}/save`, { design: medidoCero, expected_version: (await json(`api/floors/${extFloorId}`)).body.floor.version });
+  report.check('La API rechaza un tiempo medido de cero segundos', res.status === 422, String(res.status));
+  const drillExtra = JSON.parse(JSON.stringify(conEncuentro));
+  drillExtra.canvas.drill = { reactionS: 30, hora: '10:00' };
+  res = await client.postJson(`api/floors/${extFloorId}/save`, { design: drillExtra, expected_version: (await json(`api/floors/${extFloorId}`)).body.floor.version });
+  report.check('La API rechaza datos de simulacro fuera de reacción y tiempo medido', res.status === 422, String(res.status));
+
+  res = await client.postJson(`api/floors/${extFloorId}/save`, { design: conMedido, expected_version: (await json(`api/floors/${extFloorId}`)).body.floor.version, note: 'Simulacro para el informe' });
+  const informeSimulacro = await client.get(`projects/${extProjectId}/floors/${extFloorId}/audit`);
+  report.check('El informe imprimible trae la sección del simulacro',
+    informeSimulacro.status === 200
+    && informeSimulacro.text.includes('Simulacro de evacuación')
+    && informeSimulacro.text.includes('Tiempo objetivo')
+    && /No mide un simulacro real/i.test(informeSimulacro.text),
+    `${informeSimulacro.status} · ${(informeSimulacro.text.match(/Simulacro de evacuación/g) || []).length} sección`);
+  const catalogoEncuentro = await json('catalogs/cad');
+  report.check('El catálogo trae el punto de encuentro de evacuación',
+    catalogoEncuentro.body.objects?.cad_emg_meeting?.name === 'Punto de encuentro de evacuación'
+    && /^<svg/.test(catalogoEncuentro.body.objects?.cad_emg_meeting?.svg || ''),
+    catalogoEncuentro.body.objects?.cad_emg_meeting?.name || 'sin punto de encuentro');
+
   res = await client.get('/assets/js/editor.js');
   report.check('JS del editor se sirve completo', res.status === 200 && res.text.length > 20000, `${res.text.length} bytes`);
   for (const asset of ['/assets/css/app.css', '/assets/css/editor.css', '/assets/css/print.css', '/assets/js/ui.js', '/assets/js/app.js', '/assets/js/lib/model.js', '/assets/js/lib/geometry.js', '/assets/js/lib/renderer.js', '/assets/img/favicon.svg']) {
@@ -579,7 +674,7 @@ try {
     Object.keys(catalog.categories || {}).join(','));
   report.check('Alias heredados disponibles', catalog.legacyTools?.extinguisher === 'F001' && catalog.legacyTools?.exit === 'E002');
   ({ response: catalogResponse, body: catalog } = await json('catalogs/cad'));
-  report.check('Catálogo CAD con 421 objetos', catalogResponse.status === 200 && catalog.count === 421 && Object.keys(catalog.objects || {}).length === 421);
+  report.check('Catálogo CAD con 422 objetos', catalogResponse.status === 200 && catalog.count === 422 && Object.keys(catalog.objects || {}).length === 422);
   report.check('Catálogo CAD con 31 familias sectoriales', Object.keys(catalog.categories || {}).length === 31
     && ['restaurant', 'warehouse', 'retail', 'hospital', 'textile', 'grill', 'supermarket', 'residential', 'sports', 'outdoor', 'electrico', 'hidraulico', 'eds', 'drogueria', 'gimnasio', 'colegio', 'cafeteria'].every((key) => catalog.categories?.[key]?.label),
     Object.keys(catalog.categories || {}).join(','));
@@ -609,7 +704,7 @@ try {
   /* ---------------------------- guardado y versiones ---------------------------- */
   ({ body: catalog } = await json(`api/floors/${floorId}`));
   let floor = catalog;
-  report.check('API del piso devuelve diseño y versión', floor.floor?.version === 1 && floor.design?.elements?.length === 96, `v${floor.floor?.version}`);
+  report.check('API del piso devuelve diseño y versión', floor.floor?.version === 1 && floor.design?.elements?.length === 97, `v${floor.floor?.version}`);
   const original = floor.design;
   const changed = JSON.parse(JSON.stringify(original));
   changed.elements[0].label = 'Prueba funcional';
@@ -1893,7 +1988,7 @@ echo '|SVC=' . ($repo::codeForType('sig_wc_men') ?? 'NULL');
   });
   const cadCatalog = await json('catalogs/cad');
   report.check('Instalar un .zip con SVG al lado añade los equipos',
-    [302, 303].includes(res.status) && cadCatalog.body.count === 423
+    [302, 303].includes(res.status) && cadCatalog.body.count === 424
     && Boolean(cadCatalog.body.objects?.cad_labo_equipos_tanque_agua)
     && /^<svg/.test(cadCatalog.body.objects?.cad_labo_equipos_tanque_agua?.svg || ''),
     `${cadCatalog.body.count} · ${Object.keys(cadCatalog.body.objects || {}).filter((key) => key.startsWith('cad_labo')).join(',')}`);
@@ -1915,7 +2010,7 @@ $manager = implode(chr(92), ['App', 'Services', 'PluginManager']);
 echo is_dir($manager::directory() . '/labo-equipos') ? 'QUEDA' : 'BORRADO';
 `);
   report.check('Eliminar un complemento borra su carpeta y sus equipos',
-    [302, 303].includes(res.status) && cadTrasBorrar.body.count === 421 && /BORRADO/.test(resto.text || ''),
+    [302, 303].includes(res.status) && cadTrasBorrar.body.count === 422 && /BORRADO/.test(resto.text || ''),
     `${cadTrasBorrar.body.count} · ${(resto.text || '').trim()}`);
 
   res = await client.postForm('plugins/acme-senalizacion/delete', { _token: homeToken });

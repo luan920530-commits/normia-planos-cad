@@ -461,6 +461,14 @@
          que un documento anterior se guarde igual que antes. */
       const scenarios = normalizeScenarios(canvasSource.scenarios);
       if (scenarios.length) canvas.scenarios = scenarios;
+      /* Simulacro (NORMIA-006 §32): reacción y, si existe, tiempo medido. */
+      const drillSource = canvasSource.drill && typeof canvasSource.drill === 'object' ? canvasSource.drill : null;
+      if (drillSource) {
+        const drill = { reactionS: G.clamp(Math.round(Number(drillSource.reactionS)) || 0, 0, 600) };
+        const measured = Math.round(Number(drillSource.measuredS) || 0);
+        if (measured >= 1) drill.measuredS = G.clamp(measured, 1, 7200);
+        canvas.drill = drill;
+      }
       let layers = Array.isArray(source.layers) && source.layers.length ? source.layers : [{ id: 'capa_planta', name: 'Planta', visible: true, locked: false }];
       layers = layers.slice(0, 24).map((layer, index) => ({
         id: String(layer.id || `capa_${index + 1}`),
@@ -2110,6 +2118,12 @@
       if (patch.scale !== undefined && /^1:[1-9][0-9]{0,4}$/.test(patch.scale)) canvas.scale = patch.scale;
       if (patch.background !== undefined && ['#ffffff', '#f8fafc'].includes(patch.background)) canvas.background = patch.background;
       if (patch.occupancy !== undefined) canvas.occupancy = G.clamp(Math.round(Number(patch.occupancy)) || 0, 0, 10000);
+      if (patch.drill !== undefined && patch.drill !== null) {
+        const drill = { reactionS: G.clamp(Math.round(Number(patch.drill.reactionS)) || 0, 0, 600) };
+        const measured = Math.round(Number(patch.drill.measuredS) || 0);
+        if (measured >= 1) drill.measuredS = G.clamp(measured, 1, 7200);
+        canvas.drill = drill;
+      }
       if (patch.scenarios !== undefined) {
         if (Array.isArray(patch.scenarios) && patch.scenarios.length > MAX_SCENARIOS) {
           throw new Error(`Puedes declarar hasta ${MAX_SCENARIOS} escenarios de ocupación por piso.`);

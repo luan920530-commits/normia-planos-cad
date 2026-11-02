@@ -712,6 +712,9 @@
       this.updateEmptyHint();
       this.updateRulers();
       this.measure?.drawOverlay();
+      /* El simulacro vive en una capa propia del SVG: el redibujado la reemplaza,
+         así que se vuelve a pintar con la posición del segundo en curso. */
+      this.present?.redrawOverlay();
     }
 
     updateHistoryButtons() {
@@ -2229,6 +2232,9 @@
       if (form.elements.unit) form.elements.unit.value = unit;
       form.dataset.unit = unit;
       this.renderScenarioRows();
+      const drill = canvas.drill || {};
+      if (form.elements.reaction) form.elements.reaction.value = String(Number(drill.reactionS ?? 30));
+      if (form.elements.measured) form.elements.measured.value = drill.measuredS ? String(Number(drill.measuredS)) : '';
     }
 
     /** Cambia la unidad visible del formulario sin mover ni redimensionar nada. */
@@ -2414,6 +2420,17 @@
         .filter((scenario) => scenario.name.trim() !== '');
     }
 
+    /** Tiempo de reacción y tiempo medido del simulacro (NORMIA-006 §32). */
+    readDrillFields() {
+      const form = q('[data-canvas-form]');
+      if (!form || !form.elements.reaction) return undefined;
+      const reactionS = Math.max(0, Math.min(600, Math.round(Number(form.elements.reaction.value) || 0)));
+      const measured = form.elements.measured ? Number(form.elements.measured.value) : 0;
+      const drill = { reactionS };
+      if (Number.isFinite(measured) && measured >= 1) drill.measuredS = Math.min(7200, Math.round(measured));
+      return drill;
+    }
+
     applyCanvasSettings(event) {
       event.preventDefault();
       const form = event.target;
@@ -2430,6 +2447,7 @@
           scale: form.elements.scale.value.trim(),
           occupancy: form.elements.occupancy ? Number(form.elements.occupancy.value) || 0 : 0,
           scenarios: this.readScenarioRows(),
+          drill: this.readDrillFields(),
         });
         this.fillCanvasForm(unit);
         this.fit(true);

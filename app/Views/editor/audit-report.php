@@ -5,6 +5,7 @@ $travel = $report['travel'];
 $occupancy = $report['occupancy'];
 $firstAid = $report['firstAid'] ?? null;
 $scenarios = $report['scenarios'] ?? null;
+$drill = $report['drill'] ?? null;
 $egress = $report['egress'];
 $exits = $report['exits'];
 $labels = \App\Services\PlanAudit::SEVERITY_LABELS;
@@ -224,6 +225,68 @@ $severityLabels = ['high' => 'Críticos', 'medium' => 'Importantes', 'low' => 'M
   <p class="audit-note audit-scenarios-note"><?= e((string) ($scenarios['notice'] ?? '')) ?></p>
   <?php endif; ?>
 
+
+  <?php if (is_array($drill) && ($drill['routes'] ?? []) !== []): ?>
+  <?php
+  $drillTarget = $drill['targetS'] ?? null;
+  $drillMeasured = $drill['measuredS'] ?? null;
+  $drillDifference = $drill['differenceS'] ?? null;
+  ?>
+  <h2 class="audit-h2">Simulacro de evacuación</h2>
+  <div class="audit-metrics">
+    <article>
+      <span>Tiempo objetivo</span>
+      <strong><?= $drillTarget === null ? 'Sin datos' : e($formatTime((float) $drillTarget)) ?></strong>
+      <small>Reacción <?= e($formatTime((float) ($drill['reactionS'] ?? 0))) ?> + caminos hasta el punto de encuentro</small>
+    </article>
+    <article>
+      <span>Punto de encuentro</span>
+      <strong><?= ($drill['meeting']['found'] ?? false) ? 'Declarado' : 'Sin declarar' ?></strong>
+      <small><?= ($drill['meeting']['source'] ?? 'none') === 'object'
+        ? 'Objeto «Punto de encuentro» en el plano'
+        : (($drill['meeting']['source'] ?? 'none') === 'sign' ? 'Solo la señal E007: ubica la zona de reunión' : 'El recorrido termina en la salida') ?></small>
+    </article>
+    <article>
+      <span>Tiempo medido</span>
+      <strong><?= $drillMeasured === null ? 'Sin registrar' : e($formatTime((float) $drillMeasured)) ?></strong>
+      <small><?php if ($drillMeasured === null): ?>Se anota después de cronometrar el simulacro real
+      <?php elseif ($drillDifference !== null && (float) $drillDifference > 0): ?>+<?= e($formatTime((float) $drillDifference)) ?> sobre el objetivo
+      <?php elseif ($drillDifference !== null): ?><?= e($formatTime(abs((float) $drillDifference))) ?> por debajo del objetivo
+      <?php else: ?>Sin objetivo con el que comparar<?php endif; ?></small>
+    </article>
+    <article>
+      <span>Personas del cálculo</span>
+      <strong><?= (int) ($drill['people'] ?? 0) ?> pers.</strong>
+      <small>Velocidad de referencia <?= $formatNumber((float) ($drill['speedMps'] ?? 1), 1) ?> m/s</small>
+    </article>
+  </div>
+  <table class="print-table audit-table audit-drill">
+    <thead>
+      <tr>
+        <th scope="col">Ruta</th>
+        <th scope="col">Longitud</th>
+        <th scope="col">Salida</th>
+        <th scope="col">Al punto de encuentro</th>
+        <th scope="col">Reacción</th>
+        <th scope="col">Tiempo objetivo</th>
+      </tr>
+    </thead>
+    <tbody>
+      <?php foreach ($drill['routes'] as $index => $ruta): ?>
+        <tr>
+          <th scope="row"><?= e(($ruta['label'] ?? '') !== '' ? $ruta['label'] : 'Ruta ' . ($index + 1)) ?></th>
+          <td><?= $formatNumber((float) $ruta['lengthM'], 1) ?> m</td>
+          <td><?= $ruta['exitId'] === null ? 'Sin salida' : ($ruta['endsAtExit'] ? 'Sí' : 'No termina en ella') ?></td>
+          <td><?= $ruta['meetingM'] === null ? '—' : $formatNumber((float) $ruta['meetingM'], 1) . ' m' ?></td>
+          <td><?= e($formatTime((float) $ruta['reactionS'])) ?></td>
+          <td><?= $ruta['arrivalS'] === null ? '—' : e($formatTime((float) $ruta['arrivalS'])) ?></td>
+        </tr>
+      <?php endforeach; ?>
+    </tbody>
+  </table>
+  <p class="audit-note audit-drill-note"><?= e((string) ($drill['notice'] ?? '')) ?></p>
+  <?php endif; ?>
+
   <h2 class="audit-h2">Hallazgos</h2>
   <?php if ($findings === []): ?>
     <p class="audit-clean">No se detectaron hallazgos con los criterios de referencia configurados. Aun así, verifica el plano en sitio antes de usarlo.</p>
@@ -290,6 +353,10 @@ $severityLabels = ['high' => 'Críticos', 'medium' => 'Importantes', 'low' => 'M
       <tr><th scope="row">Alcance del botiquín</th><td>≤ <?= $formatNumber((float) $firstAid['criteria']['kitTravelM'], 1) ?> m</td></tr>
       <tr><th scope="row">Alcance del DEA</th><td>≤ <?= $formatNumber((float) $firstAid['criteria']['aedTravelM'], 1) ?> m</td></tr>
       <tr><th scope="row">Umbral de afluencia para el DEA</th><td><?= (int) $firstAid['criteria']['aedMinPersons'] ?> personas</td></tr>
+      <?php endif; ?>
+      <?php if (is_array($drill) && ($drill['routes'] ?? []) !== []): ?>
+      <tr><th scope="row">Tiempo de reacción del simulacro</th><td><?= e($formatTime((float) ($drill['reactionS'] ?? 0))) ?></td></tr>
+      <tr><th scope="row">Velocidad de marcha del simulacro</th><td><?= $formatNumber((float) ($drill['speedMps'] ?? 1), 2) ?> m/s</td></tr>
       <?php endif; ?>
       <?php if (is_array($scenarios) && (int) ($scenarios['count'] ?? 0) > 0): ?>
       <tr><th scope="row">Escenarios de ocupación por piso</th><td>hasta <?= (int) ($scenarios['criteria']['maxScenarios'] ?? 8) ?></td></tr>
