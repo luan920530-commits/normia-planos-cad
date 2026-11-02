@@ -176,6 +176,11 @@
             <small>${number(report.exits.clearWidthM)} m de ancho útil</small>
           </article>
           <article class="audit-stat">
+            <span>Aforo permitido</span>
+            <strong>${number(occupancy.permitted, 0)} pers.</strong>
+            <small>Máximo ${number(occupancy.maxPersons, 0)} · ${occupancy.source === 'declared' ? 'declarada' : 'estimado por superficie'}</small>
+          </article>
+          <article class="audit-stat">
             <span>Tiempo estimado</span>
             <strong>${esc(duration(egress.estimatedTimeS))}</strong>
             <small>${number(occupancy.people, 0)} personas ${occupancy.source === 'declared' ? 'declaradas' : 'estimadas'}</small>
@@ -185,7 +190,9 @@
         <section class="audit-detail">
           <h3>Medición de evacuación</h3>
           <dl class="audit-facts">
-            <div><dt>Ocupación</dt><dd>${number(occupancy.people, 0)} pers. <small>${occupancy.source === 'declared' ? 'declarada' : 'estimada por superficie'}</small></dd></div>
+            <div><dt>Aforo máximo</dt><dd>${number(occupancy.maxPersons, 0)} pers. <small>${number(occupancy.freeAreaM2)} m² × ${number(occupancy.density, 2)} pers./m²</small></dd></div>
+            <div><dt>Aforo permitido</dt><dd>${number(occupancy.permitted, 0)} pers. <small>${occupancy.source === 'declared' ? 'mínimo entre declarado y máximo' : 'estimación por superficie'}</small></dd></div>
+            <div><dt>Ocupación</dt><dd>${number(occupancy.people, 0)} pers. <small>${occupancy.source === 'declared' ? 'declarada' : 'estimada por superficie'}${occupancy.excess > 0 ? ` · ${number(occupancy.excess, 0)} por encima del máximo` : ''}</small></dd></div>
             <div><dt>Ancho requerido</dt><dd>${number(egress.requiredWidthM, 2)} m <small>disponible ${number(egress.availableWidthM, 2)} m</small></dd></div>
             <div><dt>Marcha</dt><dd>${esc(duration(egress.walkTimeS))}</dd></div>
             <div><dt>Cola en salidas</dt><dd>${esc(duration(egress.queueTimeS))}</dd></div>
@@ -211,6 +218,7 @@
           ${findings.length ? `<ul class="audit-finding-list">${rows}</ul>` : '<p class="audit-empty">Sin hallazgos en esta categoría.</p>'}
         </section>
 
+        <p class="audit-note">El aforo máximo es una capacidad calculada (superficie útil libre × densidad de referencia) y el permitido es el menor entre la ocupación declarada y esa capacidad. El informe imprimible lo deja por escrito y el pie del plano exportado muestra las dos cifras.</p>
         <p class="audit-note">Análisis sobre el plano guardado (v${number(this.app.boot?.version, 0)}). Los umbrales son referencias configurables: ajústalos a la normativa aplicable y valida el resultado con un profesional competente.</p>`;
     }
   }

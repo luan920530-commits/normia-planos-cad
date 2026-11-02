@@ -69,6 +69,10 @@ final class PlanFooter
         ['text' => '{project} · {floor} · Nivel {level}', 'tone' => 'strong'],
         ['text' => 'Sitio: {site} · Área: {workplace} · Responsable: {responsible}', 'tone' => 'body'],
         ['text' => 'Escala {scale} · Unidad {unit} · Versión v{version} · Guardado {saved} · {count} elementos', 'tone' => 'body'],
+        // Aforo del piso (NORMIA-006 §27). Va en el pie porque el plano se usa en
+        // la puerta del recinto: la cifra que importa es cuánta gente puede haber.
+        ['text' => 'Aforo máximo {aforo_max} personas · Aforo permitido {aforo_permitido} personas · Superficie útil libre {aforo_superficie}', 'tone' => 'strong'],
+        ['text' => 'Aforo del piso: {aforo_fuente}. Cálculo de referencia: superficie libre × densidad; verifica la ocupación real y la normativa aplicable.', 'tone' => 'meta'],
         ['text' => '© {year} {app} · Licencia GPL-3.0 · Generado con la versión {app_version} · {attribution}', 'tone' => 'meta'],
         ['text' => '{note}', 'tone' => 'meta'],
     ];
@@ -125,9 +129,10 @@ final class PlanFooter
      * @param array<string,mixed> $meta
      * @return array{cells:list<array<string,string>>,lines:list<array{text:string,tone:string}>,fields:array<string,string>}
      */
-    public static function payload(array $design, array $meta = []): array
+    public static function payload(array $design, array $meta = [], ?array $aforo = null): array
     {
         $canvas = is_array($design['canvas'] ?? null) ? $design['canvas'] : [];
+        $aforo ??= self::aforo($design);
         $orDash = static function (mixed $value): string {
             $text = trim((string) $value);
             return $text === '' ? '—' : $text;
@@ -149,8 +154,29 @@ final class PlanFooter
             'app_version' => defined('NORMA_VERSION') ? (string) \NORMA_VERSION : '1.0',
             'attribution' => 'Pictogramas ISO 7010 (MIT © Karl Norling)',
             'note' => 'Los planos son esquemáticos: verifica dimensiones y escala en sitio.',
+            'aforo_max' => (string) (int) ($aforo['maxPersons'] ?? 0),
+            'aforo_permitido' => (string) (int) ($aforo['permitted'] ?? 0),
+            'aforo_superficie' => number_format((float) ($aforo['freeAreaM2'] ?? 0.0), 2, ',', '.') . ' m²',
+            'aforo_fuente' => ($aforo['source'] ?? 'estimated') === 'declared'
+                ? 'ocupación declarada en el piso y capacidad calculada por superficie'
+                : 'capacidad estimada por superficie libre (no hay ocupación declarada)',
         ];
         return ['cells' => self::CELLS, 'lines' => self::LINES, 'fields' => $fields, 'brand' => self::brand()];
+    }
+
+    /**
+     * Aforo del piso para el pie. Delega en `PlanAudit::aforo()`, que es la única
+     * fórmula; si el cálculo falla, el pie se dibuja igual y sin cifras.
+     *
+     * @return array<string,mixed>
+     */
+    public static function aforo(array $design): array
+    {
+        try {
+            return PlanAudit::aforo($design);
+        } catch (\Throwable) {
+            return ['maxPersons' => 0, 'permitted' => 0, 'declared' => 0, 'source' => 'estimated', 'freeAreaM2' => 0.0];
+        }
     }
 
     /** Columnas de la franja según el ancho disponible. */

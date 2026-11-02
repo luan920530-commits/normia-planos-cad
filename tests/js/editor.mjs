@@ -1315,6 +1315,15 @@ async function main() {
       footerExport.svg.querySelectorAll('[data-footer-cell]').length === 5
       && footerExport.svg.querySelectorAll('[data-footer-line]').length >= 4,
       `${footerExport.svg.querySelectorAll('[data-footer-cell]').length} celdas · ${footerExport.svg.querySelectorAll('[data-footer-line]').length} líneas`);
+    /* Aforo en el pie (NORMIA-006 §27): el plano exportado lo lleva impreso. */
+    const pieTexto = footerExport.svg.textContent.replace(/\s+/g, ' ');
+    report.check('El pie del plano exportado publica el aforo máximo y el permitido',
+      /Aforo máximo \d+ personas/.test(pieTexto) && /Aforo permitido \d+ personas/.test(pieTexto)
+      && /Superficie útil libre [\d.,]+ m²/.test(pieTexto),
+      (pieTexto.match(/Aforo máximo[^·]*·[^·]*/) || [''])[0].slice(0, 90));
+    report.check('La vista previa del pie también muestra el aforo',
+      /Aforo máximo/.test(footerPreview?.textContent || '')
+      && /Aforo permitido/.test(footerPreview?.textContent || ''));
     app.closeDrawer();
     report.check('El cajón del pie se cierra sin dejar el fondo bloqueado',
       app.activeDrawer === null && !window.document.body.classList.contains('has-drawer'),
@@ -2105,10 +2114,19 @@ async function main() {
     const auditReport = app.audit.report;
     report.check('La revisión real marca su paso en la guía de primeros pasos',
       app.guide?.flag('revision') === true);
-    report.check('La revisión mide salidas, recorrido y tiempo de evacuación',
+    report.check('La revisión mide salidas, recorrido, aforo y tiempo de evacuación',
       auditReport?.exits?.count >= 1 && Boolean(auditReport.travel) && Boolean(auditReport.egress)
-      && qa(window, '[data-drawer="audit"] .audit-stat').length === 4,
+      && qa(window, '[data-drawer="audit"] .audit-stat').length === 5,
       `${auditReport?.exits?.count} salidas · ${auditReport?.travel?.longestM} m · ${auditReport?.egress?.estimatedTimeS} s`);
+    /* Aforo (NORMIA-006 §27): capacidad por superficie y aforo que rige. */
+    report.check('El cajón de revisión calcula el aforo máximo y el permitido',
+      Number.isFinite(auditReport?.occupancy?.maxPersons) && auditReport.occupancy.maxPersons > 0
+      && auditReport.occupancy.permitted === Math.min(
+        auditReport.occupancy.declared || auditReport.occupancy.maxPersons,
+        auditReport.occupancy.maxPersons)
+      && /Aforo máximo/.test(q(window, '[data-drawer="audit"]')?.textContent || '')
+      && /Aforo permitido/.test(q(window, '[data-drawer="audit"]')?.textContent || ''),
+      `máximo ${auditReport?.occupancy?.maxPersons} · permitido ${auditReport?.occupancy?.permitted} · ${auditReport?.occupancy?.freeAreaM2} m²`);
     report.check('El cajón muestra la medición y el listado de hallazgos',
       /Medición de evacuación/.test(q(window, '[data-drawer="audit"]')?.textContent || '')
       && qa(window, '[data-drawer="audit"] .audit-finding').length === (auditReport?.findings || []).length,

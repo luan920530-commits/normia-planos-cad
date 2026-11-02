@@ -2355,16 +2355,30 @@
       const base = this.boot.footer;
       if (!base || !Array.isArray(base.cells) || base.cells.length === 0) return null;
       const canvas = this.model.design.canvas;
+      const fields = {
+        ...(base.fields || {}),
+        scale: canvas.scale,
+        unit: canvas.unit,
+        version: String(this.store.version),
+        count: String(this.model.design.elements.length),
+      };
+      /* El aforo llega calculado del servidor con el plano guardado. Si en esta
+         sesión se corrió la revisión, se usan sus cifras: son las mismas que el
+         informe que la persona acaba de leer y de imprimir. */
+      const report = this.audit?.report?.occupancy;
+      if (report) {
+        const numero = (value) => Number(value || 0).toLocaleString('es-CO', { maximumFractionDigits: 0 });
+        fields.aforo_max = numero(report.maxPersons);
+        fields.aforo_permitido = numero(report.permitted);
+        fields.aforo_superficie = `${Number(report.freeAreaM2 || 0).toLocaleString('es-CO', { maximumFractionDigits: 2 })} m²`;
+        fields.aforo_fuente = report.source === 'declared'
+          ? 'ocupación declarada en el piso y capacidad calculada por superficie'
+          : 'capacidad estimada por superficie libre (no hay ocupación declarada)';
+      }
       return {
         cells: base.cells,
         lines: Array.isArray(base.lines) ? base.lines : [],
-        fields: {
-          ...(base.fields || {}),
-          scale: canvas.scale,
-          unit: canvas.unit,
-          version: String(this.store.version),
-          count: String(this.model.design.elements.length),
-        },
+        fields,
       };
     }
 

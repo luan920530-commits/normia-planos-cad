@@ -10,7 +10,7 @@ pueda dibujar, anotar medidas y recibir cálculos sin aprender metrología.
 | Base | `bddc2dc` (NORMIA-005 entregado, PR #56 abierto) |
 | Reemplaza en parte | [`NORMIA-005-CALIBRACION-DIMENSIONAL.md`](NORMIA-005-CALIBRACION-DIMENSIONAL.md) — §8 de trazabilidad |
 | Alcance | **3.A a 3.J** — los nueve apartados, recibidos el 2026-11-02 |
-| Estado | **diseño completo**; DEC-1, DEC-2, DEC-5 y DEC-6 **implementadas en la 1.19.0** (§26); DEC-3 y DEC-7 a DEC-12 pendientes |
+| Estado | **diseño completo**; DEC-1, DEC-2, DEC-5 y DEC-6 implementadas en la 1.19.0 (§26); **aforo calculado y publicado** en la 1.20.0 (§27); DEC-3 y DEC-7 a DEC-12 pendientes |
 
 ---
 
@@ -1589,3 +1589,71 @@ exportado dice `420,0 cm` en centímetros y `4,20 m` en metros.
   impresión e importados. `user_version` sigue en **7**: la 1.19.0 no crea tablas.
 - La ergonomía del campo de medida y la impresión física con regla siguen sin
   verificarse (§25.4 y §25.5): no hay dispositivo real disponible aquí.
+
+---
+
+## 27. Aforo calculado y publicado (1.20.0)
+
+Etapa 3 pedida el 2026-11-02: que el informe **calcule el aforo a partir de las
+dimensiones del plano** y que el **pie del plano exportado** lo publique.
+
+### 27.1 Una sola fórmula
+
+`PlanAudit::aforo()` (PHP) es la única autoridad; el informe, el cajón de revisión
+y el pie del plano la usan a través de él.
+
+```
+aforo máximo = superficie útil libre (m²) × densidad de referencia (pers./m²)
+```
+
+La superficie útil libre es la misma rejilla del auditor: área interior
+transitable, sin muros ni el terreno de fuera del edificio. Se calcula con
+`PlanAudit::freeArea()`, que no necesita recorridos (el pie del plano no va a
+buscar el camino más largo hasta cada salida).
+
+| Clave | Qué es | De dónde sale |
+| --- | --- | --- |
+| `maxPersons` | capacidad del piso | superficie libre × densidad, acotada por `occupancy.maxPersons` |
+| `declared` | gente declarada | *Ajustes del piso › Ocupación declarada*; `0` = sin declarar |
+| `permitted` | **aforo permitido** | el menor entre `declared` y `maxPersons` |
+| `used` | gente con la que se calcula la salida | `declared` si existe; `maxPersons` si no |
+| `excess` | gente declarada por encima del máximo | `max(0, declared − maxPersons)` |
+| `source` | cómo se obtuvo el aforo | `declared` o `estimated` |
+
+**Por qué `used` es la declarada y no la permitida.** Si el plano declara 30
+personas y la capacidad es 23, en el recinto puede haber 30. Calcular la salida
+con 23 daría un tiempo optimista justo en el caso peor. Lo que sí se dice, con el
+hallazgo `occupancy_over_capacity`, es que el aforo declarado supera el máximo.
+
+### 27.2 Dónde se ve
+
+| Superficie | Qué muestra |
+| --- | --- |
+| Informe imprimible (`…/audit`) | sección **Aforo del piso**: capacidad y fórmula, aforo permitido, ocupación declarada con su exceso, y las personas del cálculo |
+| Cajón **Revisión** del editor | indicador *Aforo permitido* y filas de máximo, permitido y ocupación |
+| Pie del plano (SVG, PNG e impresión) | dos líneas: *Aforo máximo N personas · Aforo permitido N personas · Superficie útil libre X m²* y la fuente del dato |
+| API (`api/floors/{id}/audit`) | `report.occupancy.{maxPersons,declared,permitted,excess,freeAreaM2,density,cap}` |
+
+En el PNG del editor, si en la sesión se corrió la revisión, el pie usa las cifras
+recién calculadas en lugar de las del plano guardado.
+
+### 27.3 Límites, otra vez
+
+- Es una **capacidad calculada**, no un aforo legal. No reemplaza el que fije la
+  autoridad competente ni la revisión de la ocupación real.
+- La densidad es un criterio configurable (`occupancy.densityPersonsPerM2`), no una
+  tabla normativa por uso. Con `density = 0` no se inventa capacidad: manda el
+  techo `occupancy.maxPersons`.
+- La superficie libre depende de cómo se dibujaron los muros: un recinto sin
+  muros se mide como un solo espacio.
+- Sin verificar: la densidad adecuada para cada uso según la norma aplicable y la
+  lectura en sitio; y el comportamiento en papel de las dos líneas nuevas del pie.
+
+### 27.4 Pruebas
+
+Funcional **342** (capacidad sin declarar, declarado desmedido con exceso,
+densidad 0 → techo, sección del informe, aforo en el pie del SVG), interfaz
+**397** (cajón con aforo permitido, pie del PNG y vista previa del pie), golden
+**8/8** con 6 504 valores. El golden cambia donde el plano declaraba más gente de
+la que cabe: aparece `occupancy_over_capacity` y los cuatro SVG ganan las dos
+líneas del aforo. Las métricas de evacuación no se mueven.

@@ -42,33 +42,34 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 23. [Guía de primeros pasos](#guía-de-primeros-pasos)
 24. [Complementos](#complementos)
 25. [Unidades y medidas](#unidades-y-medidas)
-26. [Cambios de la versión 1.19.0](#cambios-de-la-versión-1190)
-27. [Cambios de la versión 1.18.0](#cambios-de-la-versión-1180)
-28. [Cambios de la versión 1.17.0](#cambios-de-la-versión-1170)
-29. [Cambios de la versión 1.16.0](#cambios-de-la-versión-1160)
-30. [Cambios de la versión 1.15.9](#cambios-de-la-versión-1159)
-31. [Cambios de la versión 1.15.8](#cambios-de-la-versión-1158)
-32. [Cambios de la versión 1.15.7](#cambios-de-la-versión-1157)
-33. [Cambios de la versión 1.15.6](#cambios-de-la-versión-1156)
-34. [Cambios de la versión 1.15.5](#cambios-de-la-versión-1155)
-35. [Cambios de la versión 1.15.4](#cambios-de-la-versión-1154)
-36. [Cambios de la versión 1.15.3](#cambios-de-la-versión-1153)
-37. [Cambios de la versión 1.15.2](#cambios-de-la-versión-1152)
-38. [Cambios de la versión 1.15.1](#cambios-de-la-versión-1151)
-39. [Cambios de la versión 1.15.0](#cambios-de-la-versión-1150)
-40. [Cambios de la versión 1.14.2](#cambios-de-la-versión-1142)
-41. [Cambios de la versión 1.14.1](#cambios-de-la-versión-1141)
-42. [Cambios de la versión 1.14.0](#cambios-de-la-versión-1140)
-43. [Cambios de la versión 1.13.0](#cambios-de-la-versión-1130)
-44. [Cambios de la versión 1.12.0](#cambios-de-la-versión-1120)
-45. [Cambios de la versión 1.11.1](#cambios-de-la-versión-1111)
-46. [Cambios de la versión 1.11.0](#cambios-de-la-versión-1110)
-47. [Cambios de la versión 1.10.0](#cambios-de-la-versión-1100)
-48. [Cambios de la versión 1.9.0](#cambios-de-la-versión-190)
-49. [Cambios de la versión 1.8.0](#cambios-de-la-versión-180)
-50. [Paquetes y verificación](#paquetes-y-verificación)
-51. [Limitaciones](#limitaciones)
-52. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
+26. [Cambios de la versión 1.20.0](#cambios-de-la-versión-1200)
+27. [Cambios de la versión 1.19.0](#cambios-de-la-versión-1190)
+28. [Cambios de la versión 1.18.0](#cambios-de-la-versión-1180)
+29. [Cambios de la versión 1.17.0](#cambios-de-la-versión-1170)
+30. [Cambios de la versión 1.16.0](#cambios-de-la-versión-1160)
+31. [Cambios de la versión 1.15.9](#cambios-de-la-versión-1159)
+32. [Cambios de la versión 1.15.8](#cambios-de-la-versión-1158)
+33. [Cambios de la versión 1.15.7](#cambios-de-la-versión-1157)
+34. [Cambios de la versión 1.15.6](#cambios-de-la-versión-1156)
+35. [Cambios de la versión 1.15.5](#cambios-de-la-versión-1155)
+36. [Cambios de la versión 1.15.4](#cambios-de-la-versión-1154)
+37. [Cambios de la versión 1.15.3](#cambios-de-la-versión-1153)
+38. [Cambios de la versión 1.15.2](#cambios-de-la-versión-1152)
+39. [Cambios de la versión 1.15.1](#cambios-de-la-versión-1151)
+40. [Cambios de la versión 1.15.0](#cambios-de-la-versión-1150)
+41. [Cambios de la versión 1.14.2](#cambios-de-la-versión-1142)
+42. [Cambios de la versión 1.14.1](#cambios-de-la-versión-1141)
+43. [Cambios de la versión 1.14.0](#cambios-de-la-versión-1140)
+44. [Cambios de la versión 1.13.0](#cambios-de-la-versión-1130)
+45. [Cambios de la versión 1.12.0](#cambios-de-la-versión-1120)
+46. [Cambios de la versión 1.11.1](#cambios-de-la-versión-1111)
+47. [Cambios de la versión 1.11.0](#cambios-de-la-versión-1110)
+48. [Cambios de la versión 1.10.0](#cambios-de-la-versión-1100)
+49. [Cambios de la versión 1.9.0](#cambios-de-la-versión-190)
+50. [Cambios de la versión 1.8.0](#cambios-de-la-versión-180)
+51. [Paquetes y verificación](#paquetes-y-verificación)
+52. [Limitaciones](#limitaciones)
+53. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
 
 ---
 
@@ -462,18 +463,22 @@ El menú **Análisis** de la barra de herramientas abre el auditor con **Revisi�
 | Recorrido más largo | Rejilla de celdas sobre el espacio libre (muros y vanos respetados) y camino más corto desde cada celda hasta una salida. Se informa el punto más alejado y el límite de referencia. |
 | Superficie libre y zonas sin salida | Área interior transitable, superficie alcanzable y recintos que quedan sin camino a una salida. El terreno de fuera del edificio no cuenta. |
 | Salidas y anchos | Número de salidas, ancho de vano de cada una y ancho útil (vano × factor de holgura de hojas y marcos). |
-| Ocupación | La declarada en **Ajustes → Ocupación declarada (personas)**; si está en 0, se estima con la densidad de referencia por superficie libre y el informe lo advierte. |
+| Aforo máximo | **Capacidad calculada**: superficie útil libre × densidad de referencia, con el techo de `occupancy.maxPersons`. Es la cifra que se imprime en el pie del plano. |
+| Aforo permitido | El aforo que rige: el menor entre la ocupación declarada y el aforo máximo. Si no hay ocupación declarada, es la capacidad estimada y así se rotula. |
+| Ocupación | La declarada en **Ajustes → Ocupación declarada (personas)**; si está en 0, se estima con la densidad de referencia por superficie libre y el informe lo advierte. Declarar más de lo que cabe genera el hallazgo `occupancy_over_capacity`. |
 | Ancho requerido | Ocupación × ancho de paso por persona, comparado con el ancho útil disponible. |
 | Tiempo estimado | Marcha (recorrido ÷ velocidad) + cola en las salidas (personas ÷ flujo por metro de ancho). |
 | Señalización | Salida con pictograma de salida cerca del vano, presencia de «Usted está aquí» y de medios de extinción. |
 
-**Hallazgos.** Cada aviso trae severidad (*crítico*, *importante*, *menor*, *informativo*), título, explicación, valor medido y, cuando aplica, los elementos del plano. El botón **Ver en el plano** selecciona el elemento y ajusta el zoom. El contador del botón de la barra lateral muestra los críticos e importantes pendientes. Códigos: `no_exit`, `too_few_exits`, `narrow_exit`, `travel_too_long`, `unreachable_area`, `no_route`, `route_no_exit`, `route_through_wall`, `occupancy_missing`, `width_short`, `exit_without_sign`, `no_you_are_here` y `no_fire_sign`.
+**Hallazgos.** Cada aviso trae severidad (*crítico*, *importante*, *menor*, *informativo*), título, explicación, valor medido y, cuando aplica, los elementos del plano. El botón **Ver en el plano** selecciona el elemento y ajusta el zoom. El contador del botón de la barra lateral muestra los críticos e importantes pendientes. Códigos: `no_exit`, `too_few_exits`, `narrow_exit`, `travel_too_long`, `unreachable_area`, `no_route`, `route_no_exit`, `route_through_wall`, `occupancy_missing`, `occupancy_over_capacity`, `width_short`, `exit_without_sign`, `no_you_are_here` y `no_fire_sign`.
 
 **Criterios configurables.** Los umbrales están en `resources/audit-criteria.json`: recorrido máximo, mínimo de salidas, ancho mínimo de vano, factor de holgura, ancho por persona, velocidad de marcha, flujo, densidad de ocupación, tolerancia de llegada de las rutas, superficie mínima de recinto y radio de la señalización. Edita el archivo para ajustarlo a la norma aplicable; el informe imprimible enumera los valores usados.
 
-**API e informe.** `GET /index.php?r=api/floors/{id}/audit` (admite `?occupancy=N` para simular una ocupación) devuelve `{ok, floor, report, notice}` con `findings`, `counts`, `exits`, `travel`, `occupancy`, `egress`, `routes`, `signs` y `criteria`. El informe imprimible está en `…/projects/{id}/floors/{floorId}/audit` y lleva las métricas, los hallazgos, las rutas, los criterios aplicados y el aviso de alcance.
+**Aforo en el informe y en el pie del plano.** El informe imprimible tiene una sección **Aforo del piso** con la capacidad calculada (y su fórmula), el aforo permitido, la ocupación declarada —con cuántas personas excede el máximo, si es el caso— y las personas con las que se calcula la salida. El **pie del plano exportado** (SVG, PNG e impresión) publica *Aforo máximo* y *Aforo permitido* junto a la superficie útil libre, para que el plano colgado en la puerta diga a cuánta gente corresponde. La ocupación declarada por encima del máximo **no se recorta en silencio**: el tiempo de salida se calcula con la gente declarada y se añade el hallazgo.
 
-> **La revisión es de referencia.** Los umbrales son configurables y el cálculo es esquemático: **no es un dictamen**, no certifica cumplimiento normativo y no sustituye la verificación en sitio ni la revisión de un profesional competente. Los anchos, las rutas y la ocupación real deben confirmarse en el sitio.
+**API e informe.** `GET /index.php?r=api/floors/{id}/audit` (admite `?occupancy=N` para simular una ocupación) devuelve `{ok, floor, report, notice}` con `findings`, `counts`, `exits`, `travel`, `occupancy`, `egress`, `routes`, `signs` y `criteria`. Dentro de `occupancy` vienen `people` (con quién se calcula), `maxPersons`, `declared`, `permitted`, `excess`, `freeAreaM2`, `density` y `cap`. El informe imprimible está en `…/projects/{id}/floors/{floorId}/audit` y lleva las métricas, el aforo, los hallazgos, las rutas, los criterios aplicados y el aviso de alcance.
+
+> **La revisión es de referencia.** Los umbrales son configurables y el cálculo es esquemático: **no es un dictamen**, no certifica cumplimiento normativo y no sustituye la verificación en sitio ni la revisión de un profesional competente. Los anchos, las rutas y la ocupación real deben confirmarse en el sitio. El **aforo máximo es una capacidad calculada** con la superficie del dibujo: no reemplaza el aforo que fije la autoridad competente.
 
 ---
 
@@ -808,14 +813,14 @@ Lo único que no funciona sin red es la **vista previa de desarrollo** (`npm run
 | Bloque | Comprobaciones |
 | --- | --- |
 | `tests/php/lint.mjs` | `php -l` sobre todo `app/`, `bootstrap.php` e `index.php` en 8.1 y 8.3. |
-| `tests/php/functional.mjs` | 336 comprobaciones: instalador, requisitos, contraseñas débiles, CSRF, sesión, autorización entre cuentas, CRUD de proyectos/pisos, duplicados, importación v1/v2, catálogos (395 señales y 420 objetos), catálogo y guardado de redes, señales de baño y de servicios (guardado, color de familia y exportación SVG), **auditor y medición de evacuación** (salidas, recorrido máximo, zonas inalcanzables, rutas que cruzan muros o no llegan a la salida, ocupación declarada y estimada, señalización, validación de `isExit`, informe imprimible y demo coherente), **muros curvos y vías** (guardado en formato 3, auditor con el muro curvo separando recintos, arco `A` en el SVG, vía que no bloquea frente a muro que sí, `422` para curvas desalineadas, `kind` desconocido, curvas en una puerta y formato desconocido), **sección tipo y glorieta** (formato 4 con ancho derivado, SVG con calzada, andenes, anillo e isla, y `422` para una medida fuera de rango, una clave desconocida, una glorieta sin sección y un cruce desconocido), **modo brigadista** (panel, token de 32 caracteres, página pública sin sesión ni scripts inline, API del plan, service worker, regeneración y desactivación del enlace), **complementos** (pantalla, manual, descarga de las dos plantillas, instalación desde `plugin.json` y desde `.zip` con SVG al lado, familia y color propios en el catálogo, sinónimos en el buscador, activar/desactivar, borrado, rechazo de un manifiesto inválido y de un `.zip` sin su SVG), **verificación física** (lista sin trazos, tres estados, novedad sin nota rechazada, rondas e historial, cobertura, aviso de días y foto servida solo a la cuenta dueña) y **empresas y roles** (alta de empresa, acceso compartido, lector que no guarda ni borra, editor que no administra, último propietario protegido, aislamiento entre empresas y migración real desde una base `user_version = 5`), puertas y portones (geometría, sentidos de apertura, exportación con trazo), validaciones de la API, guardado/versiones/borradores/conflictos, exportaciones, ciclo de vida y logout. |
+| `tests/php/functional.mjs` | 342 comprobaciones: instalador, requisitos, contraseñas débiles, CSRF, sesión, autorización entre cuentas, CRUD de proyectos/pisos, duplicados, importación v1/v2, catálogos (395 señales y 420 objetos), catálogo y guardado de redes, señales de baño y de servicios (guardado, color de familia y exportación SVG), **auditor y medición de evacuación** (salidas, recorrido máximo, zonas inalcanzables, rutas que cruzan muros o no llegan a la salida, ocupación declarada y estimada, señalización, validación de `isExit`, informe imprimible y demo coherente), **muros curvos y vías** (guardado en formato 3, auditor con el muro curvo separando recintos, arco `A` en el SVG, vía que no bloquea frente a muro que sí, `422` para curvas desalineadas, `kind` desconocido, curvas en una puerta y formato desconocido), **sección tipo y glorieta** (formato 4 con ancho derivado, SVG con calzada, andenes, anillo e isla, y `422` para una medida fuera de rango, una clave desconocida, una glorieta sin sección y un cruce desconocido), **modo brigadista** (panel, token de 32 caracteres, página pública sin sesión ni scripts inline, API del plan, service worker, regeneración y desactivación del enlace), **complementos** (pantalla, manual, descarga de las dos plantillas, instalación desde `plugin.json` y desde `.zip` con SVG al lado, familia y color propios en el catálogo, sinónimos en el buscador, activar/desactivar, borrado, rechazo de un manifiesto inválido y de un `.zip` sin su SVG), **verificación física** (lista sin trazos, tres estados, novedad sin nota rechazada, rondas e historial, cobertura, aviso de días y foto servida solo a la cuenta dueña) y **empresas y roles** (alta de empresa, acceso compartido, lector que no guarda ni borra, editor que no administra, último propietario protegido, aislamiento entre empresas y migración real desde una base `user_version = 5`), puertas y portones (geometría, sentidos de apertura, exportación con trazo), validaciones de la API, guardado/versiones/borradores/conflictos, exportaciones, ciclo de vida y logout. |
 | `tests/php/golden.mjs` | **Golden de regresión numérica**: 6 405 valores del auditor (con y sin ocupación declarada), la cobertura de extintores, el resumen de redes y el SVG de los cuatro pisos de la demostración, más un plano sintético con tubería curva que comprueba que `MepCalculator` mide el arco igual que `PathGeometry`. Se capturó **antes** de consolidar los conversores de unidad y cualquier diferencia inesperada es un fallo. Se regenera con `--write`. |
 | `tests/php/units.mjs` | 23 comprobaciones de la **autoridad única de unidades** (`App\Core\Units`) contra la tabla compartida `tests/fixtures/units.json`: factores de `mm`/`cm`/`m`, conversión de longitudes y superficies, unidad desconocida que cae a `cm` sin lanzar en los conversores, lectura de la escala de impresión, **paridad bit a bit de la ruta `cm`** con el cálculo anterior y **identidad exacta de `fromMeters` con JavaScript** (18 casos en `mm`, `cm` y `m`), para que consolidar los siete conversores no mueva un solo número ni separe los dos lenguajes. |
 | `tests/php/curves.mjs` | 17 comprobaciones de la **medición de trazos curvos**: el arco en `mm`, `cm` y `m`, la recta idéntica bit a bit al cálculo anterior, la escala de impresión que no interviene, un arco degenerado que vuelve a medirse como recta, un elemento sin puntos que conserva la diagonal de su cajón, el informe de redes sumando 6,28 m donde antes sumaba 4, la caída de tensión que crece en la misma proporción, el rótulo del SVG con la nueva cifra también en milímetros y la puerta estricta de unidad del documento. |
 | `tests/php/stability.mjs` | 45 comprobaciones de la Fase 0: panel de respaldo, creación de la copia, descarga del ZIP y de la base, verificación aislada y detección de un archivo corrupto, la fotografía dentro de la copia, rotación con copia fijada, reserva del respaldo a la cuenta que instaló, bitácora de migraciones completa, **migración que falla sin tocar la versión ni los datos**, restauración de versión y **conflicto de carrera sin insertar filas**, los cuatro casos de cuerpo JSON (`empty_body`, `invalid_json`, `payload_too_large` y estructura incompleta) y la conservación del historial (protección de vigente, inicial y fijadas, y poda que solo borra lo seleccionado). |
 | `tests/js/units.mjs` | 30 comprobaciones del módulo `assets/js/lib/units.js` contra la **misma** tabla compartida: si PHP y JavaScript se separan, falla una de las dos suites. Fija además la longitud de un trazo curvo, la identidad exacta de `fromMeters` con PHP y que el editor coincide **exactamente** con el golden que escribe el servidor; y comprueba que el módulo no toca el DOM ni la red y que publica `window.Normia.Units`. |
 | `tests/js/plugins.mjs` | 20 comprobaciones de los complementos en el editor: traducción `plg_…` ↔ `PLG_…`, color y tamaño de la familia propia, búsqueda por sinónimos, filtro por familia, inserción, guardado y reapertura del elemento. |
-| `tests/js/editor.mjs` | 394 comprobaciones de interfaz sobre la app real: arranque, 395 señales y 420 objetos, **muros curvos** (rombo del tramo, arco de tres puntos, radio y flecha en el inspector, enderezar, doble clic que parte el arco, caja analítica, puerta sobre el arco, formato 3 y degradación a v2, marcado idéntico sin curvas), **vías y andenes** (banda de 6 m con carriles, cambio de ancho y carriles, parqueadero contado en la etiqueta, franjas del paso cebra y rótulo del lindero), **sección tipo y cruces** (avenida de 20 m en formato 4, perfil transversal en el inspector, cambio de andén que recalcula el ancho, glorieta de cinco accesos, vuelta a vía normal, corredor de ejemplo en una acción y sinónimos «carro», «bici» y «semáforo»), **trazado de tuberías y circuitos, inspector de red y panel de redes**, **mano y paneo, selección de superpuestos, inspector plegable y paleta de herramientas**, **guía de primeros pasos** (apertura en el primer uso, siete pasos, progreso tomado del plano, salto a la herramienta con la baldosa resaltada, reinicio y desactivación), **buscador con sinónimos y sin tildes** (calle → vía, anden → andén, parqueo → parqueadero), **baldosa propia de vías y andenes**, puertas dobles y portones, **vértices de ruta editables (arrastrar, doble clic, Alt+clic)**, **señal de baño insertada desde la biblioteca**, **posiciones reales del trazo**, **clic sobre muros finos, pictogramas y equipos**, **cambio de señal y de equipo desde el inspector**, **auditor de planos** (interruptor de salida, ocupación declarada, cajón de revisión, contador, filtros, «Ver en el plano», cierre sin dejar el fondo bloqueado), **pliego de señalización** (conteo, tamaño sugerido, CSV, precios y consistencia), **medición de rutas internas** (ruta que rodea muros, tramos, guardado en capa y comparación), **modo presentación** (pantalla limpia, láser, spotlight, rutas animadas, capas, quiz y salida sin perder el estado), **rotación**, **rutas cerradas**, **arrastrar y soltar desde la biblioteca sin que el cajón lo bloquee**, reglas, herramientas, inserción con puntero, selección, mover, escalar, rotar, color, cambio de tipo, deshacer/rehacer, duplicar, agrupar, bloquear, desplazar, texto y saneado, guardar, reabrir, borradores, conflictos, exportación SVG/JSON/PNG, tooltips sin acumulación, capas, versiones y límites. |
+| `tests/js/editor.mjs` | 397 comprobaciones de interfaz sobre la app real: arranque, 395 señales y 420 objetos, **muros curvos** (rombo del tramo, arco de tres puntos, radio y flecha en el inspector, enderezar, doble clic que parte el arco, caja analítica, puerta sobre el arco, formato 3 y degradación a v2, marcado idéntico sin curvas), **vías y andenes** (banda de 6 m con carriles, cambio de ancho y carriles, parqueadero contado en la etiqueta, franjas del paso cebra y rótulo del lindero), **sección tipo y cruces** (avenida de 20 m en formato 4, perfil transversal en el inspector, cambio de andén que recalcula el ancho, glorieta de cinco accesos, vuelta a vía normal, corredor de ejemplo en una acción y sinónimos «carro», «bici» y «semáforo»), **trazado de tuberías y circuitos, inspector de red y panel de redes**, **mano y paneo, selección de superpuestos, inspector plegable y paleta de herramientas**, **guía de primeros pasos** (apertura en el primer uso, siete pasos, progreso tomado del plano, salto a la herramienta con la baldosa resaltada, reinicio y desactivación), **buscador con sinónimos y sin tildes** (calle → vía, anden → andén, parqueo → parqueadero), **baldosa propia de vías y andenes**, puertas dobles y portones, **vértices de ruta editables (arrastrar, doble clic, Alt+clic)**, **señal de baño insertada desde la biblioteca**, **posiciones reales del trazo**, **clic sobre muros finos, pictogramas y equipos**, **cambio de señal y de equipo desde el inspector**, **auditor de planos** (interruptor de salida, ocupación declarada, cajón de revisión, contador, filtros, «Ver en el plano», cierre sin dejar el fondo bloqueado), **pliego de señalización** (conteo, tamaño sugerido, CSV, precios y consistencia), **medición de rutas internas** (ruta que rodea muros, tramos, guardado en capa y comparación), **modo presentación** (pantalla limpia, láser, spotlight, rutas animadas, capas, quiz y salida sin perder el estado), **rotación**, **rutas cerradas**, **arrastrar y soltar desde la biblioteca sin que el cajón lo bloquee**, reglas, herramientas, inserción con puntero, selección, mover, escalar, rotar, color, cambio de tipo, deshacer/rehacer, duplicar, agrupar, bloquear, desplazar, texto y saneado, guardar, reabrir, borradores, conflictos, exportación SVG/JSON/PNG, tooltips sin acumulación, capas, versiones y límites. |
 | `tests/js/pages.mjs` | 50 comprobaciones de las páginas fuera del editor y de la portada pública: menú de acciones de proyectos y pisos (capa fija, colocación, teclado, un solo menú), confirmación de borrado y borrado real de piso y proyecto, con la protección del último piso, la **portada pública** (cinco capturas con texto alternativo, flechas de la galería y token del formulario) y **la página pública del modo brigadista** ejecutando su JavaScript: acciones rápidas, atenuado del plano, alto contraste recordado, zoom y borrado de la copia local. |
 | `tests/php/package.mjs` | 39 comprobaciones: construye ambos ZIP, verifica que no haya bases, sesiones, credenciales, logs ni carpetas de desarrollo, valida los SHA-256 y hace una instalación limpia de la demo comprobando assets, catálogos (395/420), los cuatro pisos del proyecto de ejemplo, señales de servicios y redes en la demo, la señal «Usted está aquí», **el auditor y su informe en la demo empaquetada**, editor, SVG, JSON e impresión. |
 | `tests/php/desktop.mjs` | 37 comprobaciones del escritorio: rutas de datos separadas del código, `NORMA_DATA_PATH` (solo absolutas), lanzador (argumentos, puerto, estado, cierre), enrutador (bloqueos, saltos de directorio, byte nulo) y una instalación completa escribiendo en una carpeta de datos externa. |
@@ -1074,6 +1079,43 @@ Las seis primeras decisiones (DEC-1 a DEC-6) quedaron **aprobadas el 2026-11-02*
 las seis siguientes (DEC-7 a DEC-12) están **pendientes**. Ninguna etapa se ha
 ejecutado: no hay código ni tablas nuevas en el repositorio, y `user_version` sigue
 en 7.
+
+## Cambios de la versión 1.20.0
+
+**Etapa 3 · aforo calculado y publicado.** El auditor deja de limitarse a la
+ocupación declarada: calcula cuánta gente cabe en el piso, dice cuál es el aforo
+que rige y lo imprime en el pie del plano exportado.
+
+- **Aforo máximo.** Capacidad calculada con la **superficie útil libre** del plano
+  y la densidad de referencia: `superficie libre × densidad`, con el techo
+  `occupancy.maxPersons`. No se declara a mano ni obliga a configurar nada.
+- **Aforo permitido.** El que rige: el menor entre la ocupación declarada y el
+  aforo máximo. Sin ocupación declarada, es la capacidad estimada y el informe lo
+  dice con esa palabra.
+- **Ocupación por encima del máximo.** Nuevo hallazgo `occupancy_over_capacity`,
+  de severidad *importante*, con la cifra declarada, la capacidad y el exceso. La
+  salida **no se calcula con la capacidad**: se calcula con las personas
+  declaradas, para no dar un tiempo optimista.
+- **En el informe imprimible.** Sección **Aforo del piso** con las cuatro cifras,
+  la fórmula a la vista y el aviso de alcance: es una capacidad de referencia, no
+  el aforo que fija la autoridad.
+- **En el cajón Revisión.** Indicador de **Aforo permitido** y filas de aforo
+  máximo, permitido y ocupación, con el exceso cuando lo hay.
+- **En el pie del plano exportado.** Dos líneas nuevas —*Aforo máximo* y *Aforo
+  permitido* con la superficie útil libre— en el SVG exportado, en el PNG del
+  editor y en la impresión. El aforo se calcula con el plano guardado y, si en la
+  sesión se corrió la revisión, el PNG usa las cifras recién calculadas.
+- **Pruebas**: `run-all` 24/24 en PHP 8.1 y 8.3; funcional **342**, interfaz
+  **397**, golden **8/8** con 6 504 valores. Nuevas: capacidad sin ocupación
+  declarada, aforo declarado desmedido acotado con el exceso, densidad 0 → techo
+  del criterio, aforo en el informe, en el cajón y en el pie del SVG y del PNG.
+- **Cifras que se mueven, y por qué.** El golden cambia donde el plano declaraba
+  más gente de la que cabe: la demostración pasa a tener un hallazgo importante
+  (`occupancy_over_capacity`, 30 declaradas frente a 23 de capacidad) y los cuatro
+  SVG cambian porque el pie gana dos líneas. Las métricas de evacuación no se
+  mueven.
+
+El formato del plano y la base no cambian: `user_version` sigue en **7**.
 
 ## Cambios de la versión 1.19.0
 

@@ -562,10 +562,21 @@ try {
   report.check('Guardar un plano corregido con dos salidas', res.status === 200, String(res.status));
   ({ body: audit } = await json(`api/floors/${auditFloorId}/audit`));
   const fixedReport = audit.report || {};
-  report.check('Con dos salidas y ruta limpia no quedan hallazgos críticos ni importantes',
-    fixedReport.exits?.count === 2 && fixedReport.counts.high === 0 && fixedReport.counts.medium === 0
+  /* El plano de prueba declara 40 personas en un recinto pequeño: el aforo
+     máximo calculado por superficie es menor, así que el auditor lo dice. Es el
+     único hallazgo importante que puede quedar con la ruta ya limpia. */
+  report.check('Con dos salidas y ruta limpia no quedan hallazgos críticos',
+    fixedReport.exits?.count === 2 && fixedReport.counts.high === 0
     && (fixedReport.routes?.[0]?.wallCrossings || 0) === 0 && fixedReport.routes?.[0]?.endsAtExit === true,
-    `salidas ${fixedReport.exits?.count} · críticos ${fixedReport.counts?.high} · importantes ${fixedReport.counts?.medium} · ${codes(fixedReport).join(',')}`);
+    `salidas ${fixedReport.exits?.count} · críticos ${fixedReport.counts?.high} · ${codes(fixedReport).join(',')}`);
+  report.check('El aforo máximo sale de la superficie libre y acota la ocupación declarada',
+    fixedReport.occupancy?.maxPersons > 0
+    && fixedReport.occupancy?.permitted === Math.min(40, fixedReport.occupancy?.maxPersons)
+    && fixedReport.occupancy?.excess === Math.max(0, 40 - fixedReport.occupancy?.maxPersons)
+    && fixedReport.occupancy?.people === 40
+    && Math.abs((fixedReport.occupancy?.freeAreaM2 || 0) * (fixedReport.occupancy?.density || 0) - fixedReport.occupancy?.maxPersons) < 1
+    && codes(fixedReport).includes('occupancy_over_capacity'),
+    `máximo ${fixedReport.occupancy?.maxPersons} · permitido ${fixedReport.occupancy?.permitted} · declarado ${fixedReport.occupancy?.declared} · ${fixedReport.occupancy?.freeAreaM2} m²`);
   report.check('La ocupación declarada alimenta el ancho y el tiempo de evacuación',
     fixedReport.occupancy?.source === 'declared' && fixedReport.occupancy?.people === 40
     && Math.abs((fixedReport.egress?.requiredWidthM || 0) - 0.2) < 0.001
@@ -625,6 +636,74 @@ try {
     && /Medición de evacuación/.test(auditView.text) && /Criterios aplicados/.test(auditView.text)
     && /no certifica cumplimiento normativo/i.test(auditView.text),
     `${auditView.status} · ${auditView.text.length} bytes`);
+  /* Aforo en el informe (NORMIA-006 §27): capacidad calculada, aforo permitido
+     y ocupación declarada, con la fórmula a la vista y sin prometer certificación. */
+  report.check('El informe calcula y muestra el aforo del piso',
+    /Aforo del piso/.test(auditView.text)
+    && /Aforo máximo/.test(auditView.text) && /Aforo permitido/.test(auditView.text)
+    && /superficie útil libre/i.test(auditView.text)
+    && /capacidad calculada/i.test(auditView.text)
+    && /no sustituye el aforo que fije la autoridad competente/i.test(auditView.text),
+    `aforo en ${auditView.text.length} bytes`);
+
+  /* Reglas del aforo, sobre un plano sintético: sin ocupación declarada el
+     aforo permitido es la capacidad; con densidad 0 no se inventa una cifra y
+     manda el techo del criterio. La aritmética se comprueba contra la
+     superficie libre que devuelve el propio cálculo. */
+  const aforoRules = await app.run(`
+$design = App\\Services\\DesignValidator::normalizeArray([
+    'format' => 5,
+    'canvas' => [
+        'width' => 1200, 'height' => 800, 'grid' => 20,
+        'unit' => 'cm', 'scale' => '1:100', 'background' => '#ffffff', 'occupancy' => 0,
+    ],
+    'layers' => [['id' => 'capa', 'name' => 'Planta', 'visible' => true, 'locked' => false]],
+    'elements' => [
+        ['id' => 'muro_n', 'type' => 'wall', 'layerId' => 'capa', 'x' => 100, 'y' => 100, 'w' => 1000, 'h' => 4,
+         'points' => [['x' => 0, 'y' => 0], ['x' => 1000, 'y' => 0]], 'stroke' => 8, 'color' => '#0f172a'],
+        ['id' => 'muro_s', 'type' => 'wall', 'layerId' => 'capa', 'x' => 100, 'y' => 700, 'w' => 1000, 'h' => 4,
+         'points' => [['x' => 0, 'y' => 0], ['x' => 1000, 'y' => 0]], 'stroke' => 8, 'color' => '#0f172a'],
+    ],
+    'groups' => [],
+]);
+$vacio = App\\Services\\PlanAudit::aforo($design, 0);
+$lleno = App\\Services\\PlanAudit::aforo($design, 500);
+$sinDensidad = (new ReflectionMethod(App\\Services\\PlanAudit::class, 'aforoFromArea'))
+    ->invoke(null, 100.0, 0, $design, ['occupancy' => ['densityPersonsPerM2' => 0.0, 'maxPersons' => 120]]);
+echo json_encode([
+    'vacio' => $vacio,
+    'lleno' => $lleno,
+    'sinDensidad' => $sinDensidad,
+], JSON_UNESCAPED_UNICODE);
+`);
+  let aforoData = {};
+  try { aforoData = JSON.parse(aforoRules.text || '{}'); } catch { aforoData = {}; }
+  const aforoLibre = aforoData.vacio || {};
+  const aforoLleno = aforoData.lleno || {};
+  const aforoSinDensidad = aforoData.sinDensidad || {};
+  report.check('Sin ocupación declarada, el aforo permitido es la capacidad calculada',
+    aforoLibre.maxPersons > 0 && aforoLibre.permitted === aforoLibre.maxPersons
+    && aforoLibre.used === aforoLibre.maxPersons && aforoLibre.excess === 0
+    && aforoLibre.source === 'estimated'
+    && Math.abs(aforoLibre.freeAreaM2 * aforoLibre.density - aforoLibre.maxPersons) < 1,
+    `${aforoLibre.freeAreaM2} m² · máximo ${aforoLibre.maxPersons}`);
+  report.check('Un aforo declarado desmedido se acota al máximo y el cálculo usa el declarado',
+    aforoLleno.maxPersons === aforoLibre.maxPersons && aforoLleno.permitted === aforoLleno.maxPersons
+    && aforoLleno.used === 500 && aforoLleno.excess === 500 - aforoLleno.maxPersons
+    && aforoLleno.source === 'declared',
+    `declarado 500 · permitido ${aforoLleno.permitted} · exceso ${aforoLleno.excess}`);
+  report.check('Sin densidad de referencia el aforo máximo es el techo del criterio',
+    aforoSinDensidad.maxPersons === 120 && aforoSinDensidad.permitted === 120,
+    `máximo ${aforoSinDensidad.maxPersons}`);
+
+  /* El pie del plano exportado lleva el aforo como dato del plano. */
+  const aforoSvg = await client.get(`projects/${auditProjectId}/floors/${auditFloorId}/export/svg`);
+  const aforoBase = (await json(`api/floors/${auditFloorId}/audit`)).body.report?.occupancy || {};
+  report.check('El pie del plano exportado publica el aforo máximo y el permitido',
+    aforoSvg.status === 200
+    && aforoSvg.text.includes(`Aforo máximo ${aforoBase.maxPersons} personas`)
+    && aforoSvg.text.includes(`Aforo permitido ${aforoBase.permitted} personas`),
+    `máximo ${aforoBase.maxPersons} · permitido ${aforoBase.permitted}`);
 
   /* --------------------------- guardado de redes --------------------------- */
   // Se prueba en un proyecto aparte para no alterar el número de versión del

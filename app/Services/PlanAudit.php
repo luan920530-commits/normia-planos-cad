@@ -89,6 +89,110 @@ final class PlanAudit
         return self::$criteria = $merged;
     }
 
+    /* -------------------------------- aforo -------------------------------- */
+
+    /**
+     * Aforo del piso: cuánta gente cabe según la superficie libre, cuánta hay
+     * declarada y con cuántas se calcula la salida.
+     *
+     * Es una sola fórmula, usada por el informe, el pie del plano exportado y el
+     * cajón de revisión del editor:
+     *
+     *   aforo máximo = superficie libre (m²) × densidad de referencia
+     *
+     * | Clave | Qué es |
+     * | --- | --- |
+     * | `maxPersons` | capacidad calculada con la superficie libre y la densidad, limitada por `occupancy.maxPersons` |
+     * | `declared` | lo que se escribió en *Ajustes del piso*; `0` = sin declarar |
+     * | `permitted` | el aforo que rige: el declarado si no supera el máximo; si no, el máximo |
+     * | `used` | personas con las que se calculan ancho y tiempo de salida |
+     * | `excess` | personas declaradas por encima del máximo (0 si no hay exceso) |
+     * | `source` | `declared` o `estimated` |
+     *
+     * `used` es la declarada cuando existe: si el plano declara más gente de la
+     * que cabe, el tiempo de salida tiene que reflejar esa gente, no la capacidad.
+     * Reducirla en silencio daría un tiempo optimista. Lo que sí se dice, con un
+     * hallazgo propio, es que el aforo declarado supera el máximo.
+     *
+     * @return array{maxPersons:int,declared:int,permitted:int,used:int,excess:int,source:string,freeAreaM2:float,density:float,cap:int}
+     */
+    public static function aforo(array $design, int $occupancy = 0): array
+    {
+        $criteria = self::criteria();
+        $free = self::freeArea($design, $criteria);
+        return self::aforoFromArea($free['freeAreaM2'], $occupancy, $design, $criteria);
+    }
+
+    /**
+     * La misma cuenta cuando la superficie libre ya se conoce (el recorrido usa
+     * la rejilla y no vamos a construirla dos veces).
+     *
+     * @return array{maxPersons:int,declared:int,permitted:int,used:int,excess:int,source:string,freeAreaM2:float,density:float,cap:int}
+     */
+    private static function aforoFromArea(float $freeAreaM2, int $occupancy, array $design, array $criteria): array
+    {
+        $canvas = is_array($design['canvas'] ?? null) ? $design['canvas'] : [];
+        $declared = max(0, $occupancy);
+        if ($declared === 0) {
+            $declared = max(0, (int) ($canvas['occupancy'] ?? 0));
+        }
+        $density = max(0.0, (float) $criteria['occupancy']['densityPersonsPerM2']);
+        $cap = max(1, (int) $criteria['occupancy']['maxPersons']);
+        $freeAreaM2 = max(0.0, $freeAreaM2);
+        // Sin densidad no hay capacidad calculable: si el criterio se pone en 0,
+        // el máximo es el techo declarado y no se inventa una cifra.
+        $maxPersons = $density > 0.0
+            ? (int) min($cap, max(1, (int) round($freeAreaM2 * $density)))
+            : $cap;
+        $permitted = $declared > 0 ? min($declared, $maxPersons) : $maxPersons;
+        return [
+            'maxPersons' => $maxPersons,
+            'declared' => $declared,
+            'permitted' => $permitted,
+            'used' => $declared > 0 ? $declared : $maxPersons,
+            'excess' => max(0, $declared - $maxPersons),
+            'source' => $declared > 0 ? 'declared' : 'estimated',
+            'freeAreaM2' => self::round($freeAreaM2),
+            'density' => $density,
+            'cap' => $cap,
+        ];
+    }
+
+    /**
+     * Superficie libre del piso y su exterior, sin calcular recorridos. Es la
+     * base del aforo y de la ficha del pie de página, donde no hace falta el
+     * camino más largo hasta cada salida.
+     *
+     * @return array{freeAreaM2:float,exteriorAreaM2:float,cellM:float}
+     */
+    public static function freeArea(array $design, ?array $criteria = null): array
+    {
+        $criteria ??= self::criteria();
+        $walls = [];
+        $doors = [];
+        foreach ($design['elements'] as $element) {
+            if (!self::layerVisible($design, (string) ($element['layerId'] ?? ''))) {
+                continue;
+            }
+            $type = (string) ($element['type'] ?? '');
+            if ($type === 'wall') {
+                $walls[] = [
+                    'id' => (string) $element['id'],
+                    'points' => PlanGrid::visualPoints($element, Units::GEOMETRY_UNIT),
+                    'stroke' => max(1.0, (float) ($element['stroke'] ?? 2)),
+                ];
+            } elseif (in_array($type, DesignValidator::DOOR_TYPES, true)) {
+                $doors[] = ['id' => (string) $element['id'], 'opening' => PlanGrid::doorOpening($element)];
+            }
+        }
+        $grid = PlanGrid::build($design, $walls, $doors, $criteria);
+        return [
+            'freeAreaM2' => self::round((float) $grid['freeAreaM2']),
+            'exteriorAreaM2' => self::round((float) ($grid['exteriorAreaM2'] ?? 0.0)),
+            'cellM' => self::round((float) $grid['cellM'], 2),
+        ];
+    }
+
     /* ------------------------------ análisis ------------------------------ */
 
     /**
@@ -354,17 +458,29 @@ final class PlanAudit
         }
 
         /* ------------------------ ocupación y ancho ------------------------ */
-        $declared = max(0, $occupancy);
-        if ($declared === 0) {
-            $declared = max(0, (int) ($canvas['occupancy'] ?? 0));
-        }
-        $occupancySource = $declared > 0 ? 'declared' : 'estimated';
+        /* Aforo: capacidad por superficie libre, aforo declarado y aforo que
+           rige. Una sola fórmula para el informe, el pie y el editor. */
+        $aforo = self::aforoFromArea(max(0.0, $field['freeAreaM2']), $occupancy, $design, $criteria);
+        $declared = $aforo['used'];
+        $occupancySource = $aforo['source'];
         $freeAreaM2 = max(0.0, $field['freeAreaM2']);
-        if ($declared === 0) {
-            $density = max(0.0, (float) $criteria['occupancy']['densityPersonsPerM2']);
-            $declared = (int) min(
-                (int) $criteria['occupancy']['maxPersons'],
-                max(1, (int) round($freeAreaM2 * $density))
+        if ($aforo['excess'] > 0) {
+            $add(
+                $findings,
+                'occupancy_over_capacity',
+                'medium',
+                'Aforo declarado por encima de la capacidad del piso',
+                sprintf(
+                    'El piso declara %d personas y su superficie libre de %s m² admite %d con la densidad de referencia (%s pers./m²). El aforo permitido queda en %d: reduce la ocupación, amplía la superficie útil o ajusta la densidad documentada.',
+                    $aforo['declared'],
+                    self::number($aforo['freeAreaM2']),
+                    $aforo['maxPersons'],
+                    self::number($aforo['density'], 2),
+                    $aforo['permitted']
+                ),
+                [],
+                null,
+                $aforo['declared'] . ' de ' . $aforo['maxPersons']
             );
         }
         if ($occupancySource === 'estimated') {
@@ -510,9 +626,18 @@ final class PlanAudit
             ],
             'travel' => $travel,
             'occupancy' => [
+                // `people` es con quién se calcula; el aforo va aparte para que
+                // el informe pueda decir «caben 23, declaras 30, rigen 23».
                 'people' => $declared,
                 'source' => $occupancySource,
                 'density' => (float) $criteria['occupancy']['densityPersonsPerM2'],
+                'maxPersons' => $aforo['maxPersons'],
+                'declared' => $aforo['declared'],
+                'permitted' => $aforo['permitted'],
+                'excess' => $aforo['excess'],
+                'freeAreaM2' => $aforo['freeAreaM2'],
+                'cap' => $aforo['cap'],
+                'formula' => 'superficie libre × densidad de referencia',
             ],
             'egress' => [
                 'requiredWidthM' => $requiredWidthM,

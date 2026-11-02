@@ -96,6 +96,37 @@ $severityLabels = ['high' => 'Críticos', 'medium' => 'Importantes', 'low' => 'M
     </article>
   </div>
 
+  <h2 class="audit-h2">Aforo del piso</h2>
+  <div class="audit-metrics">
+    <article>
+      <span>Aforo máximo</span>
+      <strong><?= (int) $occupancy['maxPersons'] ?> pers.</strong>
+      <small>Superficie útil libre <?= $formatNumber((float) $occupancy['freeAreaM2']) ?> m² × <?= $formatNumber((float) $occupancy['density'], 2) ?> pers./m²</small>
+    </article>
+    <article>
+      <span>Aforo permitido</span>
+      <strong><?= (int) $occupancy['permitted'] ?> pers.</strong>
+      <small><?= $occupancy['source'] === 'declared'
+        ? 'El menor entre la ocupación declarada y el aforo máximo'
+        : 'Estimación por superficie libre: no hay ocupación declarada' ?></small>
+    </article>
+    <article>
+      <span>Ocupación declarada</span>
+      <strong><?= (int) $occupancy['declared'] > 0 ? (int) $occupancy['declared'] . ' pers.' : 'Sin declarar' ?></strong>
+      <small><?= (int) $occupancy['declared'] > 0
+        ? ((int) $occupancy['excess'] > 0
+          ? 'Supera el aforo máximo en ' . (int) $occupancy['excess'] . ' personas'
+          : 'Dentro de la capacidad del piso')
+        : 'Se usa el aforo máximo como referencia del cálculo' ?></small>
+    </article>
+    <article>
+      <span>Personas en el cálculo</span>
+      <strong><?= (int) $occupancy['people'] ?> pers.</strong>
+      <small>Base del ancho requerido y del tiempo de salida</small>
+    </article>
+  </div>
+  <p class="audit-note audit-aforo-note">El aforo máximo es una <strong>capacidad calculada</strong> con la superficie útil libre del plano y la densidad de referencia; no sustituye el aforo que fije la autoridad competente ni la revisión de la ocupación real del recinto. Con la ocupación declarada por encima del máximo, el tiempo de salida se calcula con las personas declaradas para no dar un resultado optimista.</p>
+
   <h2 class="audit-h2">Hallazgos</h2>
   <?php if ($findings === []): ?>
     <p class="audit-clean">No se detectaron hallazgos con los criterios de referencia configurados. Aun así, verifica el plano en sitio antes de usarlo.</p>
@@ -154,6 +185,7 @@ $severityLabels = ['high' => 'Críticos', 'medium' => 'Importantes', 'low' => 'M
       <tr><th scope="row">Ancho mínimo de vano por salida</th><td><?= $formatNumber(((float) $criteria['egress']['minExitWidthCm']) / 100) ?> m</td></tr>
       <tr><th scope="row">Ancho útil por persona</th><td><?= $formatNumber((float) $criteria['egress']['widthMmPerPerson'], 1) ?> mm</td></tr>
       <tr><th scope="row">Densidad de ocupación</th><td><?= $formatNumber((float) $criteria['occupancy']['densityPersonsPerM2'], 2) ?> pers./m²</td></tr>
+      <tr><th scope="row">Techo de aforo del criterio</th><td><?= (int) $occupancy['cap'] ?> personas</td></tr>
       <tr><th scope="row">Velocidad de marcha</th><td><?= $formatNumber((float) $criteria['egress']['travelSpeedMps'], 2) ?> m/s</td></tr>
       <tr><th scope="row">Señal de salida junto al vano</th><td>≤ <?= $formatNumber(((float) $criteria['signs']['exitSignRadiusCm']) / 100, 1) ?> m</td></tr>
       <tr><th scope="row">Rejilla de cálculo</th><td><?= (int) $criteria['grid']['cellCm'] ?> cm</td></tr>
