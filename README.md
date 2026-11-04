@@ -1010,6 +1010,10 @@ importar después en un proyecto de la edición completa sin conversiones.
   oficial `normia-plan` que la edición completa importa.
 - **Sin firma comercial**: macOS puede mostrar Gatekeeper y Windows SmartScreen;
   las instrucciones están en [`docs/ESTUDIO.md`](docs/ESTUDIO.md).
+- **¿Y una app 100 % nativa, sin Electron?** No lo es todavía: la ventana y los
+  diálogos son del sistema, el interior es el editor web con PHP compilado a
+  WebAssembly. El alcance, las etapas y el costo real de la alternativa nativa
+  están en [`docs/APP-NATIVA.md`](docs/APP-NATIVA.md).
 
 Los instaladores los compila **GitHub Actions** en el flujo *Distribución de
 Normia Estudio (solo editor)*, con la comprobación del contenido del paquete y el
