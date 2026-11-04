@@ -222,7 +222,7 @@
           <div class="rail-flyout" data-view-flyout role="menu" hidden>
             <button type="button" role="menuitem" data-open-drawer="layers"><svg class="icon"><use href="#i-layers"></use></svg>Capas</button>
             <button type="button" role="menuitem" data-present-open><svg class="icon"><use href="#i-present"></use></svg>Modo presentación</button>
-            <button type="button" role="menuitem" data-open-drawer="settings"><svg class="icon"><use href="#i-settings"></use></svg>Ajustes del piso</button>
+            <button type="button" role="menuitem" data-open-drawer="settings"><svg class="icon"><use href="#i-settings"></use></svg><?= $study ? 'Ajustes del plano' : 'Ajustes del piso' ?></button>
           </div>
         </div>
       </div>
@@ -541,7 +541,7 @@
     <button class="export-card" type="button" data-export="png"><span class="export-icon"><svg class="icon"><use href="#i-image"></use></svg></span><strong>PNG</strong><small>Imagen rasterizada a partir del SVG guardado. Útil para informes.</small><span class="export-action">Descargar <svg class="icon"><use href="#i-download"></use></svg></span></button>
     <button class="export-card" type="button" data-export="json"><span class="export-icon"><svg class="icon"><use href="#i-file"></use></svg></span><strong>JSON</strong><small>Formato propio validado. Conserva capas, textos, rotaciones y objetos.</small><span class="export-action">Descargar <svg class="icon"><use href="#i-download"></use></svg></span></button>
     <button class="export-card" type="button" data-export="print"><span class="export-icon"><svg class="icon"><use href="#i-print"></use></svg></span><strong>Imprimir / PDF</strong><small>Abre una hoja limpia; usa el diálogo del navegador para guardar PDF.</small><span class="export-action">Abrir <svg class="icon"><use href="#i-chevron-right"></use></svg></span></button>
-    <button class="export-card export-footer-card" type="button" data-open-drawer="footer" data-footer-open><span class="export-icon"><svg class="icon"><use href="#i-layout-footer"></use></svg></span><strong>Pie de plano</strong><small>Franja de orientación y datos del piso que acompaña al SVG, al PNG y a la impresión.</small><span class="export-action">Revisar <svg class="icon"><use href="#i-chevron-right"></use></svg></span></button>
+    <button class="export-card export-footer-card" type="button" data-open-drawer="footer" data-footer-open><span class="export-icon"><svg class="icon"><use href="#i-layout-footer"></use></svg></span><strong>Pie de plano</strong><small>Franja de orientación y datos del plano que acompaña al SVG, al PNG y a la impresión.</small><span class="export-action">Revisar <svg class="icon"><use href="#i-chevron-right"></use></svg></span></button>
     <div class="notice notice-info export-note"><svg class="icon"><use href="#i-info"></use></svg><p>Las exportaciones usan la última versión guardada, no cambios sin guardar. No se ofrece compatibilidad DWG/DXF en esta versión.</p></div>
   </div>
   <footer class="drawer-foot"><p><?php if ($study): ?>Los archivos guardados con <strong>Guardar</strong> se abren después con <strong>Archivo → Abrir</strong>.<?php else: ?><a class="text-link" href="<?= e(url('projects/' . (int) $project['id'] . '#importar')) ?>">Importar un plano JSON</a> desde el proyecto.<?php endif; ?></p></footer>
@@ -553,12 +553,12 @@
     <button class="icon-button" type="button" data-close-drawer aria-label="Cerrar el pie de plano"><svg class="icon"><use href="#i-close"></use></svg></button>
   </header>
   <div class="drawer-body footer-body">
-    <p class="help-text">Este pie se agrega automáticamente debajo del plano en la exportación SVG, en el PNG y en la impresión. Toma los datos guardados del proyecto y del piso; los cambios sin guardar no aparecen hasta que guardes.</p>
+    <p class="help-text">Este pie se agrega automáticamente debajo del plano en la exportación SVG, en el PNG y en la impresión. Toma los datos guardados del <?= $study ? 'plano en curso' : 'proyecto y del piso' ?>; los cambios sin guardar no aparecen hasta que guardes.</p>
     <div class="footer-preview" data-footer-preview aria-live="polite">
       <p class="muted">Preparando la vista previa…</p>
     </div>
     <div class="footer-cells" data-footer-cells></div>
-    <div class="notice notice-info"><svg class="icon"><use href="#i-info"></use></svg><p>Las cinco celdas de orientación son fijas: posición actual, rutas, salidas, equipos contra incendios y punto de reunión. El bloque inferior incluye proyecto, piso, nivel, sitio, área, responsable, escala, unidad, versión, fecha de guardado, número de elementos y la nota de la aplicación que generó el plano.</p></div>
+    <div class="notice notice-info"><svg class="icon"><use href="#i-info"></use></svg><p>Las cinco celdas de orientación son fijas: posición actual, rutas, salidas, equipos contra incendios y punto de reunión. <?php if ($study): ?>El bloque inferior incluye el nombre del plano, el área, la escala, la unidad, la versión, la fecha de guardado, el número de elementos y la nota de la aplicación que generó el plano. Los datos de empresa y responsable quedan vacíos a propósito: el estudio no los inventa.<?php else: ?>El bloque inferior incluye proyecto, piso, nivel, sitio, área, responsable, escala, unidad, versión, fecha de guardado, número de elementos y la nota de la aplicación que generó el plano.<?php endif; ?></p></div>
   </div>
   <footer class="drawer-foot footer-actions">
     <button class="button button-primary button-small" type="button" data-export="print"><svg class="icon"><use href="#i-print"></use></svg>Imprimir con el pie</button>
@@ -568,7 +568,7 @@
 
 <section class="drawer drawer-narrow" data-drawer="settings" hidden aria-labelledby="settings-title">
   <header class="drawer-head">
-    <div><span class="eyebrow">Configuración</span><h2 id="settings-title">Ajustes del piso</h2></div>
+    <div><span class="eyebrow">Configuración</span><h2 id="settings-title"><?= $study ? 'Ajustes del plano' : 'Ajustes del piso' ?></h2></div>
     <button class="icon-button" type="button" data-close-drawer aria-label="Cerrar ajustes"><svg class="icon"><use href="#i-close"></use></svg></button>
   </header>
   <div class="drawer-body">

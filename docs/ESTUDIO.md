@@ -179,7 +179,7 @@ Microsoft. Eso exige certificados de pago que esta edición no tiene.
 
 | Suite | Qué cubre |
 | --- | --- |
-| `tests/js/estudio.mjs` (29) | La página abre **sin instalar** nada; no hay portada, pisos ni versiones; el editor arranca en blanco; el puente guarda, abre y avisa del título; el plano llega al auditor, al informe, a la impresión y al SVG; el JSON es el sobre oficial y se importa en la edición completa; los catálogos se sirven sin sesión |
+| `tests/js/estudio.mjs` (32) | La página abre **sin instalar** nada; no hay portada, pisos ni versiones; los cajones hablan del plano y no de un piso de proyecto; el editor arranca en blanco; el puente guarda, abre y avisa del título; el plano llega al auditor, al informe, a la impresión y al SVG; el JSON es el sobre oficial y se importa en la edición completa; renombrar funciona y los acentos no se pierden en el nombre del archivo; los catálogos se sirven sin sesión |
 | `tests/js/electron.mjs` (48) | Incluye la edición del estudio: ventana sin Node, puente mínimo, cierre con aviso, diálogos de archivo, sobre oficial y el flujo de las tres plataformas |
 | `tests/run-all.mjs` | 26 pasos con PHP 8.1 y 8.3: el estudio corre en los dos intérpretes |
 

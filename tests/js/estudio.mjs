@@ -9,7 +9,8 @@
  *   4. el puente de archivos guarda, abre y avisa al proceso principal;
  *   5. el plano en curso llega al auditor, al informe, a la impresión y al SVG;
  *   6. el JSON que se descarga es el sobre oficial, importable sin conversiones;
- *   7. los catálogos se sirven sin sesión (la biblioteca del editor).
+ *   7. los catálogos se sirven sin sesión (la biblioteca del editor);
+ *   8. renombrar el plano y los nombres con acentos llegan al informe y al archivo.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -37,6 +38,14 @@ try {
   const htmlPlano = html.replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
   report.check('El plano en blanco es A4 horizontal a 1:100', /"width":1123/.test(htmlPlano) && /"scale":"1:100"/.test(htmlPlano),
     (htmlPlano.match(/"width":[0-9]+,"height":[0-9]+/) || [''])[0]);
+  // El test usa las mismas rutas que el editor, con el token que sirve la
+  // página: así se comprueba el servidor tal como lo ve el navegador.
+  app.client.csrf = (htmlPlano.match(/"csrf":"([^"]+)"/) || [])[1] || '';
+
+  report.check('Los cajones hablan del plano, no de un piso de proyecto',
+    htmlPlano.includes('Ajustes del plano') && !htmlPlano.includes('Ajustes del piso')
+    && /datos guardados del plano en curso/.test(htmlPlano),
+    `${(htmlPlano.match(/Ajustes del (plano|piso)/g) || []).join(' · ')}`);
 
   /* ------------------- 2 · catálogos sin sesión ni instalación ------------------- */
   const signs = await app.client.get('catalogs/signs', { accept: 'application/json' });
@@ -184,6 +193,21 @@ echo json_encode([
     datos.elements === 1 && datos.project === 'Planta de prueba' && datos.canvas === 1400,
     `${datos.elements ?? '?'} elementos · ${datos.canvas ?? '?'}`);
   fs.rmSync(ruta, { force: true });
+
+  /* -------------- 7 · renombrar y nombres con acentos en el archivo -------------- */
+  const renombrado = await app.client.postJson('estudio/nombre', { name: 'Sótano · Diseño' });
+  let nombreNuevo = {};
+  try { nombreNuevo = renombrado.json(); } catch { nombreNuevo = {}; }
+  report.check('Renombrar desde Ajustes cambia el nombre del plano en curso',
+    renombrado.status === 200 && nombreNuevo.ok === true && nombreNuevo.name === 'Sótano · Diseño',
+    `${renombrado.status} · ${nombreNuevo.name || renombrado.text.slice(0, 80)}`);
+
+  const conAcento = await app.client.get('estudio/export/json', { accept: 'application/json' });
+  const disposicion = String([].concat(conAcento.headers['content-disposition'] || '')[0] || '');
+  const nombreInforme = await app.client.get('estudio/informe', { accept: 'text/html' });
+  report.check('El nombre con acentos llega al informe y al archivo sin perder letras',
+    /Sótano · Diseño/.test(nombreInforme.text) && /filename="sotano-diseno\.json"/.test(disposicion),
+    disposicion || 'sin nombre de archivo');
 
   report.check('Sin errores de JavaScript durante la sesión del estudio',
     window.__errors.length === 0, window.__errors.slice(0, 2).join(' | '));
