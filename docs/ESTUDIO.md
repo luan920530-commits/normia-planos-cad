@@ -139,6 +139,32 @@ Todo esto se calcula con el mismo motor que la edición completa:
 
 ## 6. Compilar
 
+### Descargar los instaladores ya compilados
+
+Los instaladores no se adjuntan al repositorio: los produce **GitHub Actions** y
+se descargan del trabajo que los compiló.
+
+1. GitHub → pestaña **Actions** → **Distribución de Normia Estudio (solo editor)**.
+2. Abre el trabajo de la versión que buscas (por ejemplo el del tag `v1.28.0`).
+3. Abajo, en **Artifacts**, descarga el de tu sistema:
+
+| Sistema | Artefacto | Archivo dentro |
+| --- | --- | --- |
+| macOS Intel (Monterey o superior) | `normia-estudio-macos-15-intel-x64` | `normia-estudio-<versión>-macos-x64.dmg` |
+| macOS Apple Silicon | `normia-estudio-macos-latest-arm64` | `normia-estudio-<versión>-macos-arm64.dmg` |
+| Windows 10/11 de 64 bits | `normia-estudio-windows-latest-x64` | `normia-estudio-<versión>-windows-x64-instalador.exe` |
+| Linux de 64 bits | `normia-estudio-ubuntu-latest-x64` | `normia-estudio-<versión>-linux-x64.AppImage` |
+
+- Los artefactos son **ZIP**, con el instalador y su `SHA256SUMS.txt` dentro; se
+  conservan **30 días**.
+- El flujo se puede lanzar a mano (**Run workflow**) porque escucha
+  `workflow_dispatch`, además de los tags `v*`.
+- **El `.dmg` no se puede compilar fuera de macOS**: en Linux o Windows solo se
+  obtienen el `.exe` y el `.AppImage`. Por eso, si el trabajo de macOS no ha
+  corrido, el `.dmg` no existe en ninguna parte.
+- Si un sistema falla, el motivo aparece como **anotación** del trabajo (no hace
+  falta abrir el registro completo).
+
 En el equipo de desarrollo (necesita Node ≥ 22 y `npm install`):
 
 ```sh

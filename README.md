@@ -1015,6 +1015,13 @@ Los instaladores los compila **GitHub Actions** en el flujo *Distribución de
 Normia Estudio (solo editor)*, con la comprobación del contenido del paquete y el
 mínimo de macOS leído del `.app`.
 
+**Dónde se descargan:** GitHub → **Actions** → *Distribución de Normia Estudio
+(solo editor)* → trabajo de la versión → **Artifacts**. El de tu Mac es
+`normia-estudio-macos-15-intel-x64`, y dentro viene
+`normia-estudio-<versión>-macos-x64.dmg`. Los artefactos se conservan 30 días y
+no viajan en el repositorio; el `.dmg` solo existe si el trabajo de macOS ha
+corrido, porque se compila con las herramientas de macOS.
+
 ## Guía de primeros pasos
 
 El editor explica dónde está cada cosa **en su sitio**, sin manuales aparte ni
