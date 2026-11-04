@@ -2,7 +2,7 @@
 
 Editor de planos de emergencia y evacuación, en español, pensado para pequeñas y medianas organizaciones que necesitan documentar plantas, rutas, señalización y equipamiento sin depender de software CAD de escritorio ni de servicios externos.
 
-- **Editor completo**: instalador web, cuentas, proyectos y pisos, editor SVG real, biblioteca de **395 pictogramas** (332 ISO 7010 + 23 de orientación y servicios como baños, vestidores, cafetería y **«Usted está aquí»** + **34 de señalización de tránsito** + **6 de emergencia y brigada**), **422 objetos CAD esquemáticos en 31 familias** (estación de servicio, droguería, gimnasio, colegio, cafetería, supermercado, restaurante, bodega, comercio, hospital, costura, asadero, vivienda, deportes, exteriores, instalaciones eléctricas y redes hidrosanitarias, más **vías y tránsito, señalización vial y bicicletas**, entre otras), puertas de uno y dos batientes y portones, **muros curvos con arcos de tres puntos** (radio y flecha editables), **rutas con vértices editables**, **vías con sección tipo (carriles, separador, berma, ciclorruta y andenes), glorietas e intersecciones paramétricas, corredor de ejemplo en una acción, andenes, pasos cebra, parqueaderos y límites de predio esquemáticos**, **redes de tubería (agua, gas, desagües e incendio) y circuitos eléctricos**, cambio de señal y de equipo desde el inspector, guardado con versiones, borradores automáticos, deshacer/rehacer y exportación SVG/JSON/PNG/impresión.
+- **Editor completo**: instalador web, cuentas, proyectos y pisos, editor SVG real, biblioteca de **395 pictogramas** (332 ISO 7010 + 23 de orientación y servicios como baños, vestidores, cafetería y **«Usted está aquí»** + **34 de señalización de tránsito** + **6 de emergencia y brigada**), **422 objetos CAD esquemáticos en 31 familias** (estación de servicio, droguería, gimnasio, colegio, cafetería, supermercado, restaurante, bodega, comercio, hospital, costura, asadero, vivienda, deportes, exteriores, instalaciones eléctricas y redes hidrosanitarias, más **vías y tránsito, señalización vial y bicicletas**, entre otras), puertas de uno y dos batientes y portones, **muros curvos con arcos de tres puntos** (radio y flecha editables), **rutas con vértices editables**, **pluma con nodos de control para muros, líneas, cotas, vías, andenes y linderos**, **vías con sección tipo (carriles, separador, berma, ciclorruta y andenes), glorietas e intersecciones paramétricas, corredor de ejemplo en una acción, andenes, pasos cebra, parqueaderos y límites de predio esquemáticos**, **redes de tubería (agua, gas, desagües e incendio) y circuitos eléctricos**, cambio de señal y de equipo desde el inspector, guardado con versiones, borradores automáticos, deshacer/rehacer y exportación SVG/JSON/PNG/impresión.
 - **Auditor de planos y evacuación**: el cajón **Revisión** mide el recorrido más largo hasta las salidas marcadas, cuenta salidas y anchos útiles, estima la ocupación (declarada o por densidad), calcula el ancho requerido y el tiempo de evacuación, y lista los hallazgos por severidad con un botón para verlos en el plano. Los umbrales viven en `resources/audit-criteria.json`, el cálculo también corre en el servidor y el informe se imprime o se guarda como PDF. Desde la 1.23.0 revisa además botiquín, camilla y DEA, y desde la 1.24.0 los **escenarios de ocupación temporal** (un evento con más gente que el uso habitual) se calculan aparte, sin mover el aforo del piso; y desde la 1.25.0 el **simulacro** calcula el tiempo objetivo por ruta y lo anima en modo presentación, con las figuras moviéndose por el espacio libre del plano desde la 1.26.0.
 - **Instalaciones**: tuberías de agua, gas, desagües e incendio y red eléctrica con longitudes, diámetros, circuitos, cargas y caída de tensión estimada.
 - **Empresas, personas y roles.** Los planos pertenecen a una empresa y las personas entran por una membresía con rol (propietario, administrador, editor o lector). Una persona puede pertenecer a varias empresas; el sistema impide quedarse sin propietario y no deja que un lector guarde cambios.
@@ -42,40 +42,41 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 23. [Guía de primeros pasos](#guía-de-primeros-pasos)
 24. [Complementos](#complementos)
 25. [Unidades y medidas](#unidades-y-medidas)
-26. [Cambios de la versión 1.26.0](#cambios-de-la-versión-1260)
-27. [Cambios de la versión 1.25.0](#cambios-de-la-versión-1250)
-28. [Cambios de la versión 1.24.0](#cambios-de-la-versión-1240)
-29. [Cambios de la versión 1.23.0](#cambios-de-la-versión-1230)
-30. [Cambios de la versión 1.22.0](#cambios-de-la-versión-1220)
-31. [Cambios de la versión 1.21.0](#cambios-de-la-versión-1210)
-32. [Cambios de la versión 1.20.0](#cambios-de-la-versión-1200)
-33. [Cambios de la versión 1.19.0](#cambios-de-la-versión-1190)
-34. [Cambios de la versión 1.18.0](#cambios-de-la-versión-1180)
-35. [Cambios de la versión 1.17.0](#cambios-de-la-versión-1170)
-36. [Cambios de la versión 1.16.0](#cambios-de-la-versión-1160)
-37. [Cambios de la versión 1.15.9](#cambios-de-la-versión-1159)
-38. [Cambios de la versión 1.15.8](#cambios-de-la-versión-1158)
-39. [Cambios de la versión 1.15.7](#cambios-de-la-versión-1157)
-40. [Cambios de la versión 1.15.6](#cambios-de-la-versión-1156)
-41. [Cambios de la versión 1.15.5](#cambios-de-la-versión-1155)
-42. [Cambios de la versión 1.15.4](#cambios-de-la-versión-1154)
-43. [Cambios de la versión 1.15.3](#cambios-de-la-versión-1153)
-44. [Cambios de la versión 1.15.2](#cambios-de-la-versión-1152)
-45. [Cambios de la versión 1.15.1](#cambios-de-la-versión-1151)
-46. [Cambios de la versión 1.15.0](#cambios-de-la-versión-1150)
-47. [Cambios de la versión 1.14.2](#cambios-de-la-versión-1142)
-48. [Cambios de la versión 1.14.1](#cambios-de-la-versión-1141)
-49. [Cambios de la versión 1.14.0](#cambios-de-la-versión-1140)
-50. [Cambios de la versión 1.13.0](#cambios-de-la-versión-1130)
-51. [Cambios de la versión 1.12.0](#cambios-de-la-versión-1120)
-52. [Cambios de la versión 1.11.1](#cambios-de-la-versión-1111)
-53. [Cambios de la versión 1.11.0](#cambios-de-la-versión-1110)
-54. [Cambios de la versión 1.10.0](#cambios-de-la-versión-1100)
-55. [Cambios de la versión 1.9.0](#cambios-de-la-versión-190)
-56. [Cambios de la versión 1.8.0](#cambios-de-la-versión-180)
-57. [Paquetes y verificación](#paquetes-y-verificación)
-58. [Limitaciones](#limitaciones)
-59. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
+26. [Cambios de la versión 1.27.0](#cambios-de-la-versión-1270)
+27. [Cambios de la versión 1.26.0](#cambios-de-la-versión-1260)
+28. [Cambios de la versión 1.25.0](#cambios-de-la-versión-1250)
+29. [Cambios de la versión 1.24.0](#cambios-de-la-versión-1240)
+30. [Cambios de la versión 1.23.0](#cambios-de-la-versión-1230)
+31. [Cambios de la versión 1.22.0](#cambios-de-la-versión-1220)
+32. [Cambios de la versión 1.21.0](#cambios-de-la-versión-1210)
+33. [Cambios de la versión 1.20.0](#cambios-de-la-versión-1200)
+34. [Cambios de la versión 1.19.0](#cambios-de-la-versión-1190)
+35. [Cambios de la versión 1.18.0](#cambios-de-la-versión-1180)
+36. [Cambios de la versión 1.17.0](#cambios-de-la-versión-1170)
+37. [Cambios de la versión 1.16.0](#cambios-de-la-versión-1160)
+38. [Cambios de la versión 1.15.9](#cambios-de-la-versión-1159)
+39. [Cambios de la versión 1.15.8](#cambios-de-la-versión-1158)
+40. [Cambios de la versión 1.15.7](#cambios-de-la-versión-1157)
+41. [Cambios de la versión 1.15.6](#cambios-de-la-versión-1156)
+42. [Cambios de la versión 1.15.5](#cambios-de-la-versión-1155)
+43. [Cambios de la versión 1.15.4](#cambios-de-la-versión-1154)
+44. [Cambios de la versión 1.15.3](#cambios-de-la-versión-1153)
+45. [Cambios de la versión 1.15.2](#cambios-de-la-versión-1152)
+46. [Cambios de la versión 1.15.1](#cambios-de-la-versión-1151)
+47. [Cambios de la versión 1.15.0](#cambios-de-la-versión-1150)
+48. [Cambios de la versión 1.14.2](#cambios-de-la-versión-1142)
+49. [Cambios de la versión 1.14.1](#cambios-de-la-versión-1141)
+50. [Cambios de la versión 1.14.0](#cambios-de-la-versión-1140)
+51. [Cambios de la versión 1.13.0](#cambios-de-la-versión-1130)
+52. [Cambios de la versión 1.12.0](#cambios-de-la-versión-1120)
+53. [Cambios de la versión 1.11.1](#cambios-de-la-versión-1111)
+54. [Cambios de la versión 1.11.0](#cambios-de-la-versión-1110)
+55. [Cambios de la versión 1.10.0](#cambios-de-la-versión-1100)
+56. [Cambios de la versión 1.9.0](#cambios-de-la-versión-190)
+57. [Cambios de la versión 1.8.0](#cambios-de-la-versión-180)
+58. [Paquetes y verificación](#paquetes-y-verificación)
+59. [Limitaciones](#limitaciones)
+60. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
 
 ---
 
@@ -277,6 +278,7 @@ herramientas o desde **Atajos**. Los detalles están en
 - **Mano (H)**: arrastra para desplazar el lienzo; la rueda sigue haciendo zoom y el botón central o `Espacio` + arrastre funcionan en cualquier herramienta.
 - Arrastrar un elemento seleccionado lo mueve con ajuste a la rejilla (`Alt` desactiva el ajuste).
 - Los tiradores de la caja de selección escalan; el tirador superior rota (`Shift` fija pasos de 15°). Los tiradores se dibujan un poco más grandes que el trazo para poder agarrar muros finos, pero un clic sin arrastre nunca mueve ni deforma nada.
+- **Pluma (muros, líneas, cotas, vías, andenes y linderos)**: cada clic deja un nodo y el tramo elástico sigue al cursor con su cifra a la vista; `Enter` o doble clic termina, `Retroceso` quita el último nodo, `Esc` cancela y el clic sobre el primer nodo cierra el recinto. Sigue valiendo arrastrar para crear un tramo de dos puntos de una vez.
 - **Rutas de evacuación**: clic para añadir puntos, clic sobre el primer punto para cerrar el circuito, `Retroceso` quita el último punto, `Enter` o doble clic termina y `Esc` cancela.
 - **Biblioteca**: arrastra una tarjeta al lienzo o pulsa **Insertar en el plano**; el cajón se cierra y el recurso se coloca con el siguiente clic (o `Enter` sobre la tarjeta).
 - **Tuberías y circuitos**: igual que una ruta (clic para añadir puntos, `Enter` o doble clic para cerrar, `Esc` para cancelar). Después puedes arrastrar sus vértices como cualquier trazo.
@@ -826,7 +828,7 @@ Lo único que no funciona sin red es la **vista previa de desarrollo** (`npm run
 | `tests/php/stability.mjs` | 45 comprobaciones de la Fase 0: panel de respaldo, creación de la copia, descarga del ZIP y de la base, verificación aislada y detección de un archivo corrupto, la fotografía dentro de la copia, rotación con copia fijada, reserva del respaldo a la cuenta que instaló, bitácora de migraciones completa, **migración que falla sin tocar la versión ni los datos**, restauración de versión y **conflicto de carrera sin insertar filas**, los cuatro casos de cuerpo JSON (`empty_body`, `invalid_json`, `payload_too_large` y estructura incompleta) y la conservación del historial (protección de vigente, inicial y fijadas, y poda que solo borra lo seleccionado). |
 | `tests/js/units.mjs` | 30 comprobaciones del módulo `assets/js/lib/units.js` contra la **misma** tabla compartida: si PHP y JavaScript se separan, falla una de las dos suites. Fija además la longitud de un trazo curvo, la identidad exacta de `fromMeters` con PHP y que el editor coincide **exactamente** con el golden que escribe el servidor; y comprueba que el módulo no toca el DOM ni la red y que publica `window.Normia.Units`. |
 | `tests/js/plugins.mjs` | 20 comprobaciones de los complementos en el editor: traducción `plg_…` ↔ `PLG_…`, color y tamaño de la familia propia, búsqueda por sinónimos, filtro por familia, inserción, guardado y reapertura del elemento. |
-| `tests/js/editor.mjs` | 426 comprobaciones de interfaz sobre la app real: arranque, 395 señales y 422 objetos, **muros curvos** (rombo del tramo, arco de tres puntos, radio y flecha en el inspector, enderezar, doble clic que parte el arco, caja analítica, puerta sobre el arco, formato 3 y degradación a v2, marcado idéntico sin curvas), **vías y andenes** (banda de 6 m con carriles, cambio de ancho y carriles, parqueadero contado en la etiqueta, franjas del paso cebra y rótulo del lindero), **sección tipo y cruces** (avenida de 20 m en formato 4, perfil transversal en el inspector, cambio de andén que recalcula el ancho, glorieta de cinco accesos, vuelta a vía normal, corredor de ejemplo en una acción y sinónimos «carro», «bici» y «semáforo»), **trazado de tuberías y circuitos, inspector de red y panel de redes**, **mano y paneo, selección de superpuestos, inspector plegable y paleta de herramientas**, **guía de primeros pasos** (apertura en el primer uso, siete pasos, progreso tomado del plano, salto a la herramienta con la baldosa resaltada, reinicio y desactivación), **buscador con sinónimos y sin tildes** (calle → vía, anden → andén, parqueo → parqueadero), **baldosa propia de vías y andenes**, puertas dobles y portones, **vértices de ruta editables (arrastrar, doble clic, Alt+clic)**, **señal de baño insertada desde la biblioteca**, **posiciones reales del trazo**, **clic sobre muros finos, pictogramas y equipos**, **cambio de señal y de equipo desde el inspector**, **auditor de planos** (interruptor de salida, ocupación declarada, cajón de revisión, contador, filtros, «Ver en el plano», cierre sin dejar el fondo bloqueado), **pliego de señalización** (conteo, tamaño sugerido, CSV, precios y consistencia), **medición de rutas internas** (ruta que rodea muros, tramos, guardado en capa y comparación), **modo presentación** (pantalla limpia, láser, spotlight, rutas animadas, capas, quiz y salida sin perder el estado), **rotación**, **rutas cerradas**, **arrastrar y soltar desde la biblioteca sin que el cajón lo bloquee**, reglas, herramientas, inserción con puntero, selección, mover, escalar, rotar, color, cambio de tipo, deshacer/rehacer, duplicar, agrupar, bloquear, desplazar, texto y saneado, guardar, reabrir, borradores, conflictos, exportación SVG/JSON/PNG, tooltips sin acumulación, capas, versiones y límites. |
+| `tests/js/editor.mjs` | 442 comprobaciones de interfaz sobre la app real: arranque, 395 señales y 422 objetos, **pluma de muros** (nodo por clic, tramo elástico con su cifra, banda de grosor, `Retroceso`, `Shift`, `Enter`, cierre sobre el primer nodo, doble clic, `Esc` y la cota que se cierra con dos nodos), **muros curvos** (rombo del tramo, arco de tres puntos, radio y flecha en el inspector, enderezar, doble clic que parte el arco, caja analítica, puerta sobre el arco, formato 3 y degradación a v2, marcado idéntico sin curvas), **vías y andenes** (banda de 6 m con carriles, cambio de ancho y carriles, parqueadero contado en la etiqueta, franjas del paso cebra y rótulo del lindero), **sección tipo y cruces** (avenida de 20 m en formato 4, perfil transversal en el inspector, cambio de andén que recalcula el ancho, glorieta de cinco accesos, vuelta a vía normal, corredor de ejemplo en una acción y sinónimos «carro», «bici» y «semáforo»), **trazado de tuberías y circuitos, inspector de red y panel de redes**, **mano y paneo, selección de superpuestos, inspector plegable y paleta de herramientas**, **guía de primeros pasos** (apertura en el primer uso, siete pasos, progreso tomado del plano, salto a la herramienta con la baldosa resaltada, reinicio y desactivación), **buscador con sinónimos y sin tildes** (calle → vía, anden → andén, parqueo → parqueadero), **baldosa propia de vías y andenes**, puertas dobles y portones, **vértices de ruta editables (arrastrar, doble clic, Alt+clic)**, **señal de baño insertada desde la biblioteca**, **posiciones reales del trazo**, **clic sobre muros finos, pictogramas y equipos**, **cambio de señal y de equipo desde el inspector**, **auditor de planos** (interruptor de salida, ocupación declarada, cajón de revisión, contador, filtros, «Ver en el plano», cierre sin dejar el fondo bloqueado), **pliego de señalización** (conteo, tamaño sugerido, CSV, precios y consistencia), **medición de rutas internas** (ruta que rodea muros, tramos, guardado en capa y comparación), **modo presentación** (pantalla limpia, láser, spotlight, rutas animadas, capas, quiz y salida sin perder el estado), **rotación**, **rutas cerradas**, **arrastrar y soltar desde la biblioteca sin que el cajón lo bloquee**, reglas, herramientas, inserción con puntero, selección, mover, escalar, rotar, color, cambio de tipo, deshacer/rehacer, duplicar, agrupar, bloquear, desplazar, texto y saneado, guardar, reabrir, borradores, conflictos, exportación SVG/JSON/PNG, tooltips sin acumulación, capas, versiones y límites. |
 | `tests/js/pages.mjs` | 50 comprobaciones de las páginas fuera del editor y de la portada pública: menú de acciones de proyectos y pisos (capa fija, colocación, teclado, un solo menú), confirmación de borrado y borrado real de piso y proyecto, con la protección del último piso, la **portada pública** (cinco capturas con texto alternativo, flechas de la galería y token del formulario) y **la página pública del modo brigadista** ejecutando su JavaScript: acciones rápidas, atenuado del plano, alto contraste recordado, zoom y borrado de la copia local. |
 | `tests/php/package.mjs` | 39 comprobaciones: construye ambos ZIP, verifica que no haya bases, sesiones, credenciales, logs ni carpetas de desarrollo, valida los SHA-256 y hace una instalación limpia de la demo comprobando assets, catálogos (395/420), los cuatro pisos del proyecto de ejemplo, señales de servicios y redes en la demo, la señal «Usted está aquí», **el auditor y su informe en la demo empaquetada**, editor, SVG, JSON e impresión. |
 | `tests/php/desktop.mjs` | 37 comprobaciones del escritorio: rutas de datos separadas del código, `NORMA_DATA_PATH` (solo absolutas), lanzador (argumentos, puerto, estado, cierre), enrutador (bloqueos, saltos de directorio, byte nulo) y una instalación completa escribiendo en una carpeta de datos externa. |
@@ -1084,6 +1086,34 @@ siguen **pendientes** DEC-7 y DEC-9 a DEC-12. Están implementadas las etapas 1 
 4 (geometría en centímetros, medida por objeto, aforo calculado, ajuste por
 mediana y escala física al exportar); las etapas 5 a 10 no han empezado. Ni una
 tabla nueva: `user_version` sigue en 7.
+
+## Cambios de la versión 1.27.0
+
+**La pluma: muros, cotas, vías y linderos se trazan nodo a nodo.**
+
+Los seis trazos de un solo eje se dibujaban de un arrastre. Ahora se dibujan como en
+un editor vectorial: cada clic deja un nodo, el tramo elástico sigue al cursor con su
+cifra y el trazo se cierra cuando uno quiere.
+
+- **Un nodo por clic** en muro, línea, cota, vía vehicular, andén y límite de predio.
+  `Enter` o doble clic termina, `Retroceso` quita el último nodo y `Esc` descarta.
+- **Cierre en circuito**: el clic sobre el primer nodo cierra el recinto de muros,
+  vías, andenes y linderos, con el primer punto repetido al final. Una cota se cierra
+  con el segundo nodo, porque una medida es entre dos puntos.
+- **Nodos de control a la vista**: el borrador dibuja los nodos ya fijados, marca el
+  primero como destino de cierre, enseña el **grosor real del muro** (2 m) y la
+  **cifra del tramo elástico** en la unidad del plano.
+- **El arrastre sigue valiendo**: la pluma decide al soltar, así que un arrastre crea
+  el tramo de dos puntos de siempre. Nadie tiene que aprender un modo nuevo para un
+  muro corto.
+- **`Shift`** alinea el nodo nuevo con el anterior y **`Alt`** suelta la rejilla para
+  ese nodo.
+- **Cambiar de herramienta no pierde el trazo**: se cierra con los nodos ya puestos.
+  La pluma queda activa para el tramo siguiente.
+- **Nada cambia por debajo**: el modelo ya admitía N puntos y curvas, el formato de
+  guardado es el mismo, `user_version` sigue en **7** y el golden no se mueve.
+- **Pruebas**: interfaz **442** (16 nuevas), funcional **386**, páginas **54** y
+  golden **8/8** con **7 552 valores**.
 
 ## Cambios de la versión 1.26.0
 

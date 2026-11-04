@@ -2120,3 +2120,86 @@ a 8,11 m; una ruta encerrada sin vano se queda sin `pathM`, sin `walkS` y con
 reacción, caminan, llegan y se reinician), páginas **54**, golden **8/8** con
 **7 552 valores**. En el golden solo se añaden las claves nuevas del camino: ningún
 recuento de hallazgos se mueve.
+
+## 34. La pluma: nodos de control en los trazos (1.27.0)
+
+Los trazos de un solo eje se dibujaban de dos maneras: **arrastre** para muros,
+líneas, cotas, vías, andenes y linderos, y **clic a clic** solo para rutas, tuberías
+y circuitos. El arrastre obliga a dibujar el elemento entero en un gesto: no hay
+manera de corregir la esquina anterior sin soltar, y en un muro largo el pulso manda
+sobre lo que se quiere medir.
+
+Desde la 1.27.0 los seis trazos de arrastre se dibujan **como en una pluma
+vectorial**: cada clic deja un nodo, el tramo elástico sigue al cursor y el trazo se
+cierra cuando el usuario decide.
+
+### 34.1 Un gesto que se decide al soltar
+
+| Gesto | Resultado |
+| --- | --- |
+| `pointerdown` + `pointerup` en el mismo sitio | Un nodo fijo |
+| `pointerdown` + mover más de 3 px | Tramo de dos puntos de siempre |
+| Clic sobre el primer nodo (a ≤ 14 px de pantalla) | Cierra el recinto, con el primer punto repetido al final |
+| `Enter` o doble clic | Termina con los nodos ya fijados |
+| `Retroceso` / `Supr` | Quita el último nodo; con un solo nodo, descarta el trazo |
+| `Esc` | Descarta el trazo a medio dibujar |
+| `Shift` | Alinea el nodo nuevo con el anterior, horizontal o vertical |
+| `Alt` | Suelta el ajuste a la rejilla para ese nodo |
+
+La decisión se toma **al soltar**, no al pulsar: el gesto anterior sigue valiendo y
+nadie tiene que aprender un modo nuevo para dibujar un muro de dos puntos. El
+arrastre no crea un nodo aparte; si el trazo ya empezó, cada clic añade un nodo y
+el arrastre queda desactivado hasta terminarlo, para que no se mezclen los dos
+modos a mitad de un recinto.
+
+La pluma **solo cierra en circuito** los trazos que delimitan algo: muro, vía,
+andén y límite de predio. Una línea o una cota abiertas no se cierran solas, y una
+cota se termina con el **segundo nodo**, porque una medida es entre dos puntos.
+
+### 34.2 Lo que se ve mientras se dibuja
+
+El borrador (`renderer.draftNode()`) deja de ser una línea entre dos puntos:
+
+- **Nodos de control**: círculos sobre los nodos ya fijados; el primero se marca más
+  grande y con el verde de cierre, porque es el destino del clic que cierra.
+- **Tramo elástico**: la polilínea sigue al cursor y el último punto no forma parte
+  del trazo hasta que se hace clic.
+- **Grosor real del muro**: una banda translúcida de 2 m, el mismo ancho con que el
+  muro se dibuja en el plano, así que lo que se ve es lo que va a quedar.
+- **Cifra del tramo elástico**: la distancia del último nodo al cursor, en la unidad
+  del plano, para saber cuánto va a medir antes de fijarlo.
+- **Pista de la barra**: nombre del trazo, número de nodos, cómo cerrar y cómo
+  terminar; con un solo nodo, «necesita al menos dos nodos».
+
+Los nodos del borrador son **informativos**: se dibujan con `pointer-events: none` y
+no se arrastran. Para mover un nodo ya creado se usa el elemento terminado, que ya
+tenía sus tiradores de vértice y sus combas.
+
+### 34.3 Qué no cambia
+
+- **El modelo**: `Model.addPath()` ya aceptaba N puntos y sus curvas. Un muro de
+  cinco nodos es el mismo elemento de siempre, con el mismo formato de guardado y
+  las mismas exportaciones. **No hay migración**: `user_version` sigue en 7 y el
+  formato de plano no sube de versión.
+- **Las cifras**: el área, el recorrido del auditor, la escala y el golden no se
+  mueven. Un muro dibujado con cuatro clics mide exactamente la suma de sus tramos,
+  y el nodo cae sobre la rejilla de 20 cm (o donde el usuario quiera con `Alt`).
+- **El arrastre**: sigue disponible en los seis trazos y no cambia de resultado.
+- **Los demás elementos**: rectángulos, elipses, pasos cebra, parqueaderos, puertas
+  y textos conservan su gesto.
+
+### 34.4 Pruebas
+
+Interfaz **442** comprobaciones (16 nuevas): el primer clic abre el muro con su nodo
+visible; cada clic añade un nodo y el tramo elástico sigue al cursor; el borrador
+muestra nodos, cifra del tramo y banda de grosor; `Retroceso` quita el último nodo;
+`Shift` alinea con el nodo anterior; `Enter` cierra con los nodos puestos y la
+longitud que suman (500 cm en cuatro nodos); la pluma sigue activa para el muro
+siguiente; el clic sobre el primer nodo cierra el recinto; el doble clic termina;
+`Esc` no deja elemento; la cota de dos clics se cierra sola; y arrastrar sigue
+creando el muro de dos puntos. Funcional **386**, páginas **54** y golden **8/8** con
+**7 552 valores** sin cambios.
+
+Los muros de prueba de estas comprobaciones se retiran al final del bloque para que
+el resto de la sesión siga con el plano tal como estaba: un muro nuevo en medio del
+plano cambiaría los caminos del auditor.

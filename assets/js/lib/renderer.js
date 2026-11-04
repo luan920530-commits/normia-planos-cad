@@ -8,6 +8,8 @@
   const DOOR_TYPES = ['door', 'door_double', 'door_garage'];
   const PATH_TYPES = ['wall', 'route', 'line', 'dimension', 'pipe', 'conduit', 'road', 'sidewalk', 'property'];
   const OUTDOOR_TYPES = ['road', 'sidewalk', 'crosswalk', 'parking', 'property'];
+  /* Trazos de la pluma: muestran nodos de control mientras se dibujan. */
+  const PEN_TOOLS = ['wall', 'line', 'dimension', 'road', 'sidewalk', 'property'];
 
   const node = (name, attrs = {}, text = null) => {
     const element = document.createElementNS(NS, name);
@@ -19,6 +21,8 @@
   };
 
   const clean = (value) => String(value ?? '').replace(/[<>]/g, '');
+  /* Color y grosor con que se insinúa cada trazo de la pluma. */
+  const DEFAULT_PEN_COLORS = { wall: '#0f172a', line: '#334155', dimension: '#475569', road: '#64748b', sidewalk: '#94a3b8', property: '#b45309' };
 
   class Renderer {
     constructor(svg, catalogs = {}) {
@@ -1177,17 +1181,44 @@
         }
         return group;
       }
-      if (draft.tool === 'route' || draft.tool === 'pipe' || draft.tool === 'conduit') {
+      if (draft.tool === 'route' || draft.tool === 'pipe' || draft.tool === 'conduit' || PEN_TOOLS.includes(draft.tool)) {
         const mep = this.catalogs.mep;
-        const color = draft.color || (draft.tool === 'route' ? '#237f52' : draft.tool === 'conduit' ? '#2563eb' : (mep?.hydraulic?.[draft.network]?.color || '#0891b2'));
-        const width = draft.tool === 'route' ? 2 / zoom : Math.max(2, (draft.stroke || 3.5)) / zoom;
-        group.appendChild(node('polyline', { points: draft.points.map((point) => `${point.x} ${point.y}`).join(' '), fill: 'none', stroke: color, 'stroke-width': width, 'stroke-dasharray': draft.tool === 'route' ? `${5 / zoom} ${4 / zoom}` : `${9 / zoom} ${5 / zoom}` }));
+        const pen = PEN_TOOLS.includes(draft.tool);
+        const color = draft.color || (draft.tool === 'route' ? '#237f52'
+          : draft.tool === 'conduit' ? '#2563eb'
+            : pen ? (DEFAULT_PEN_COLORS[draft.tool] || '#2563eb')
+              : (mep?.hydraulic?.[draft.network]?.color || '#0891b2'));
+        const width = draft.tool === 'route' ? 2 / zoom : pen ? 1.5 / zoom : Math.max(2, (draft.stroke || 3.5)) / zoom;
+        const data = draft.points.map((point) => `${point.x} ${point.y}`).join(' ');
+        /* El muro se ve con el grosor con que se va a dibujar: 2 m por defecto,
+           el mismo ancho que usa el propio muro en el plano. */
+        if (draft.tool === 'wall') {
+          const band = Math.max(2, root.Units.fromMeters(Number(draft.widthM) || 2, this.design?.canvas?.unit || 'cm'));
+          group.appendChild(node('polyline', { points: data, fill: 'none', stroke: color, 'stroke-width': (band + 3) / zoom, 'stroke-opacity': 0.14, 'stroke-linecap': 'butt', 'stroke-linejoin': 'round' }));
+        }
+        group.appendChild(node('polyline', { points: data, fill: 'none', stroke: color, 'stroke-width': width, 'stroke-dasharray': pen || draft.tool === 'route' ? `${5 / zoom} ${4 / zoom}` : `${9 / zoom} ${5 / zoom}` }));
+        /* Nodos de control: el primero se marca como destino de cierre. */
         for (const [index, point] of draft.points.slice(0, -1).entries()) {
           group.appendChild(node('circle', {
-            cx: point.x, cy: point.y, r: (index === 0 ? 7 : 3) / zoom,
-            fill: index === 0 ? 'rgba(35, 127, 82, .16)' : color,
-            stroke: index === 0 ? color : 'none', 'stroke-width': 1.5 / zoom,
+            cx: point.x, cy: point.y, r: (index === 0 ? (pen ? 6 : 7) : (pen ? 4 : 3)) / zoom,
+            fill: index === 0 ? 'rgba(35, 127, 82, .16)' : (pen ? '#ffffff' : color),
+            stroke: pen || index === 0 ? color : 'none', 'stroke-width': 1.5 / zoom,
+            class: index === 0 ? 'draft-node draft-node-first' : 'draft-node',
           }));
+        }
+        /* Cifra del tramo elástico: se ve cuánto va a medir antes de fijarlo. */
+        const committed = draft.points.slice(0, -1);
+        const cursorPoint = draft.points[draft.points.length - 1];
+        if (pen && committed.length && cursorPoint) {
+          const anchor = committed[committed.length - 1];
+          const span = G.distance(anchor, cursorPoint);
+          if (span > 1) {
+            group.appendChild(node('text', {
+              x: (anchor.x + cursorPoint.x) / 2, y: (anchor.y + cursorPoint.y) / 2 - 8 / zoom,
+              'text-anchor': 'middle', 'font-size': 10 / zoom, fill: color,
+              'paint-order': 'stroke', stroke: '#ffffff', 'stroke-width': 3 / zoom, class: 'draft-measure',
+            }, G.formatMeasurement(span, this.design?.canvas?.unit || 'cm')));
+          }
         }
         return group;
       }

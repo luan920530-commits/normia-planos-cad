@@ -5,27 +5,32 @@
   const G = root.Geometry;
   const NS = 'http://www.w3.org/2000/svg';
   const MIN_SIZE = 4;
+  /* Trazos de la pluma vectorial: cada clic deja un nodo y el tramo elástico
+     sigue al cursor. Arrastrar sigue creando el tramo de dos puntos. */
+  const PEN_TOOLS = ['wall', 'line', 'dimension', 'road', 'sidewalk', 'property'];
+  /* Solo cierran en circuito los trazos que delimitan un recinto o un borde. */
+  const PEN_CLOSED_TOOLS = ['wall', 'road', 'sidewalk', 'property'];
   const TYPE_HINTS = {
     select: 'Selecciona y arrastra para mover. Shift añade a la selección; Ctrl + clic baja al elemento que queda debajo; arrastra el fondo para seleccionar un área.',
     hand: 'Mano: arrastra para desplazar el lienzo sin tocar los elementos. Rueda para zoom; doble clic o 0 ajusta a pantalla.',
-    wall: 'Muro: arrastra para trazar. Mantén Shift para alinear horizontal o vertical. Esc vuelve a seleccionar.',
+    wall: 'Muro: haz clic para colocar cada nodo y el tramo sigue al cursor; Enter o doble clic termina. También puedes arrastrar un tramo recto. Shift alinea, Alt suelta la rejilla, Retroceso quita el último nodo y Esc cancela.',
     door: 'Puerta sencilla: haz clic sobre el muro; la hoja abre hacia arriba. Flip en el inspector para cambiar bisagra o lado.',
     door_double: 'Puerta doble: haz clic sobre el muro. Dos hojas encontradas; ajusta el ancho de la caja para el vano.',
     door_garage: 'Portón o reja de garaje: haz clic sobre el muro y ajusta el ancho de la caja al vano real.',
     route: 'Ruta de evacuación: haz clic para añadir puntos. Enter o doble clic termina; Esc cancela. Al terminar podrás arrastrar sus vértices.',
     text: 'Texto: haz clic para insertar una etiqueta y edítala en el inspector.',
-    dimension: 'Medida: arrastra entre dos puntos para acotar la distancia.',
-    line: 'Línea: arrastra entre dos puntos.',
+    dimension: 'Medida: haz clic en el primer punto y en el segundo; la cota se cierra con esos dos nodos. También puedes arrastrar entre los dos puntos.',
+    line: 'Línea: haz clic para añadir nodos; Enter o doble clic termina. También puedes arrastrar entre dos puntos.',
     rect: 'Rectángulo: arrastra desde una esquina hasta la opuesta.',
     ellipse: 'Elipse: arrastra para definir ancho y alto.',
     pipe: 'Tubería: arrastra o haz clic para trazar la red. Elige la red (agua, gas, desagües o incendio) en la flecha del botón y ajusta diámetro, material y pendiente en el inspector.',
     conduit: 'Tubería eléctrica: arrastra o haz clic para trazar el circuito. Asigna código, tensión y calibre en el inspector; el panel Redes calcula carga y caída de tensión.',
     place: 'Colocación: haz clic para insertar el recurso elegido. Mantén Shift para insertar varios. Esc cancela.',
-    road: 'Vía vehicular: arrastra para trazarla y ajusta ancho y carriles en el inspector. Ordena la lectura del plano; no bloquea el tránsito.',
-    sidewalk: 'Andén: arrastra para trazarlo junto a la vía; el ancho se ajusta en el inspector.',
+    road: 'Vía vehicular: haz clic para trazar el eje nodo a nodo (o arrastra un tramo). Ajusta ancho y carriles en el inspector. Ordena la lectura del plano; no bloquea el tránsito.',
+    sidewalk: 'Andén: haz clic para trazar el eje nodo a nodo (o arrastra) junto a la vía; el ancho se ajusta en el inspector.',
     crosswalk: 'Paso cebra: arrastra para dibujar la caja sobre la calzada.',
     parking: 'Parqueadero: arrastra para dibujar la caja; los puestos se reparten a 2,50 × 5,00 m.',
-    property: 'Límite de predio: arrastra para marcar el lindero. No es un muro y no bloquea el paso.',
+    property: 'Límite de predio: haz clic para marcar el lindero nodo a nodo (o arrastra). No es un muro y no bloquea el paso.',
   };
   const TYPE_NAMES = {
     wall: 'Muro', door: 'Puerta sencilla', door_double: 'Puerta doble', door_garage: 'Portón de garaje', route: 'Ruta de evacuación', text: 'Texto', dimension: 'Medida',
@@ -493,6 +498,8 @@
       // los puntos ya confirmados antes de cambiar de herramienta.
       if (this.draft?.tool === 'route' && this.draft.points.length > 2) this.finishRoute();
       if (['pipe', 'conduit'].includes(this.draft?.tool) && this.draft.points.length > 2) this.finishPipe();
+      // La pluma cierra con los nodos ya colocados en vez de perderlos.
+      if (this.draft && PEN_TOOLS.includes(this.draft.tool) && this.draft.points.length > 2) this.finishDraft();
       this.tool = tool;
       this.draft = null;
       this.ghost = null;
@@ -989,9 +996,86 @@
         this.insertAtPoint(this.tool, point);
         return;
       }
+      if (this.draft && PEN_TOOLS.includes(this.draft.tool)) {
+        // Con un trazo a medio dibujar, cada clic es un nodo: así se corrige
+        // la esquina anterior sin cerrar el muro.
+        this.addDraftNode(this.draftPoint(point, event));
+        return;
+      }
+      if (PEN_TOOLS.includes(this.tool)) {
+        // La pluma decide al soltar: un clic deja un nodo y un arrastre crea el
+        // tramo de dos puntos de siempre, sin gestos nuevos que aprender.
+        this.pending = {
+          mode: 'pen',
+          start: this.draftPoint(point, event),
+          startClient: { x: event.clientX, y: event.clientY },
+          pointerId: event.pointerId,
+          elementId: null,
+        };
+        this.svg.setPointerCapture?.(event.pointerId);
+        return;
+      }
       this.drag = { mode: 'draw', start: point, current: point, pointerId: event.pointerId };
       this.draft = { tool: this.tool, points: [point, point] };
       this.svg.setPointerCapture?.(event.pointerId);
+      this.scheduleRender();
+    }
+
+    /** Punto de un nodo nuevo: ajustado a la rejilla y, con Shift, alineado al nodo anterior. */
+    draftPoint(point, event = {}) {
+      const target = this.clampPoint(this.snapPoint(point, event));
+      if (!event.shiftKey || !this.draft) return target;
+      const committed = this.draft.points.slice(0, -1);
+      const anchor = committed[committed.length - 1];
+      if (!anchor) return target;
+      return Math.abs(target.x - anchor.x) >= Math.abs(target.y - anchor.y)
+        ? { x: target.x, y: anchor.y }
+        : { x: anchor.x, y: target.y };
+    }
+
+    /** Convierte el clic sostenido de la pluma en el arrastre de dos puntos. */
+    startPenDrag(pending, point) {
+      this.drag = { mode: 'draw', start: pending.start, current: point, pointerId: pending.pointerId };
+      this.draft = { tool: this.tool, points: [pending.start, point] };
+      this.svg.setPointerCapture?.(pending.pointerId);
+      this.scheduleRender();
+    }
+
+    /**
+     * Añade un nodo al trazo de la pluma. Devuelve el control al primer nodo
+     * cuando el clic cae encima: el muro cierra el recinto, como en un
+     * programa vectorial.
+     */
+    addDraftNode(point) {
+      if (!this.draft) {
+        this.draft = { tool: this.tool, points: [point, point] };
+      } else {
+        const committed = this.draft.points.slice(0, -1);
+        const first = committed[0];
+        const last = committed[committed.length - 1];
+        const closeDistance = 14 / (this.view.zoom || 1);
+        if (first && committed.length >= 3 && PEN_CLOSED_TOOLS.includes(this.draft.tool)
+          && G.distance(point, first) <= closeDistance) {
+          this.finishDraft(true);
+          return;
+        }
+        if (last && G.distance(point, last) < 2) {
+          // Un clic repetido en el mismo sitio no duplica el nodo.
+          this.updateRouteHint();
+          this.scheduleRender();
+          return;
+        }
+        this.draft.points.splice(this.draft.points.length - 1, 0, point);
+        // El tramo elástico arranca en el nodo recién fijado, no donde estaba
+        // el puntero la última vez que se movió.
+        this.draft.points[this.draft.points.length - 1] = { x: point.x, y: point.y };
+        // Una cota es entre dos puntos: el segundo nodo la cierra sola.
+        if (this.draft.tool === 'dimension' && this.draft.points.length > 2) {
+          this.finishDraft();
+          return;
+        }
+      }
+      this.updateRouteHint();
       this.scheduleRender();
     }
 
@@ -1126,6 +1210,7 @@
         if (pending.mode === 'transform') this.startTransform(pending);
         else if (pending.mode === 'vertex') this.startVertex(pending);
         else if (pending.mode === 'curve') this.startCurve(pending);
+        else if (pending.mode === 'pen') this.startPenDrag(pending, point);
         else this.startMove(pending);
       }
       if (this.pan) {
@@ -1207,6 +1292,13 @@
         this.scheduleRender();
         return;
       }
+      if (this.draft && PEN_TOOLS.includes(this.draft.tool)) {
+        // El último punto del borrador es el cursor elástico: se mueve con el
+        // puntero y no forma parte del trazo hasta que se hace clic.
+        this.draft.points[this.draft.points.length - 1] = this.draftPoint(point, event);
+        this.scheduleRender();
+        return;
+      }
       if ((this.tool === 'route' || this.tool === 'pipe' || this.tool === 'conduit') && this.draft) {
         const snapped = this.snapPoint(point, event);
         this.draft.points[this.draft.points.length - 1] = snapped;
@@ -1218,6 +1310,13 @@
       if (this.pending) {
         const pending = this.pending;
         this.pending = null;
+        // Pluma: un pointerdown que no llegó a arrastrar es un clic, y un clic
+        // deja un nodo.
+        if (pending.mode === 'pen') {
+          if (!cancelled) this.addDraftNode(pending.start);
+          else this.scheduleRender();
+          return;
+        }
         // Alt sin arrastre: el vértice señalado se elimina.
         if (pending.mode === 'vertex' && pending.altKey) {
           const element = this.model.element(pending.elementId);
@@ -1279,6 +1378,11 @@
     }
 
     onDoubleClick(event) {
+      if (this.draft && PEN_TOOLS.includes(this.draft.tool)) {
+        event.preventDefault();
+        this.finishDraft();
+        return;
+      }
       if (['pipe', 'conduit'].includes(this.draft?.tool)) {
         event.preventDefault();
         this.finishPipe();
@@ -1410,7 +1514,7 @@
         if (['wall', 'line', 'dimension', 'road', 'sidewalk', 'property'].includes(tool)) {
           const length = Math.hypot(end.x - start.x, end.y - start.y);
           if (length < MIN_SIZE) {
-            this.toast('Arrastra para trazar el elemento. Pulsa Esc para volver a seleccionar.', 'info');
+            this.toast('Haz clic para colocar los nodos o arrastra para trazar el tramo. Pulsa Esc para volver a seleccionar.', 'info');
             return;
           }
           this.model.addPath(tool, [start, end], {});
@@ -1421,6 +1525,40 @@
           }
           this.model.addBox(tool, (start.x + end.x) / 2, (start.y + end.y) / 2, width, height);
         }
+      } catch (error) {
+        this.toast(error.message, 'error');
+      }
+      this.scheduleRender();
+    }
+
+    /**
+     * Cierra el trazo de la pluma (muro, línea, medida, vía, andén o lindero)
+     * con los nodos ya confirmados. El último punto del borrador es el cursor
+     * elástico y no forma parte del trazo.
+     */
+    finishDraft(closed = false) {
+      const tool = this.draft?.tool;
+      if (!PEN_TOOLS.includes(tool)) return;
+      const committed = this.draft.points.slice(0, -1);
+      const points = committed.filter((point, index, list) => index === 0 || G.distance(point, list[index - 1]) > 2);
+      const name = TYPE_NAMES[tool] || 'Trazo';
+      this.draft = null;
+      this.updateRouteHint();
+      if (points.length < 2) {
+        this.toast(`${name}: necesita al menos dos nodos. Haz clic para trazar.`, 'info', { duration: 2800 });
+        this.scheduleRender();
+        return;
+      }
+      const closes = closed && PEN_CLOSED_TOOLS.includes(tool) && points.length >= 3;
+      if (closes) points.push({ x: points[0].x, y: points[0].y });
+      try {
+        this.model.addPath(tool, points, {});
+        const created = this.model.design.elements.at(-1);
+        const total = created ? Math.round(this.model.pathLength?.(created) ?? 0) : 0;
+        const detail = total > 0 ? ` · ${G.formatMeasurement(total, this.model.design.canvas.unit)}` : '';
+        this.toast(closes
+          ? `${name} con circuito cerrado · ${points.length - 1} nodos${detail}`
+          : `${name} · ${points.length} nodos${detail}`, 'success', { duration: 2600 });
       } catch (error) {
         this.toast(error.message, 'error');
       }
@@ -1497,7 +1635,11 @@
         return;
       }
       const count = Math.max(0, this.draft.points.length - 1);
-      hint.textContent = `Ruta de evacuación · ${count} punto${count === 1 ? '' : 's'} · clic en el primer punto para cerrar el circuito · Enter o doble clic termina · Retroceso quita el último · Esc cancela`;
+      const label = this.draft.tool === 'route' ? 'Ruta de evacuación' : (TYPE_NAMES[this.draft.tool] || 'Trazo');
+      const closing = this.draft.tool === 'route' || PEN_CLOSED_TOOLS.includes(this.draft.tool)
+        ? ' · clic en el primer punto para cerrar el circuito'
+        : '';
+      hint.textContent = `${label} · ${count} nodo${count === 1 ? '' : 's'}${closing} · Enter o doble clic termina · Retroceso quita el último · Esc cancela`;
     }
 
     /**
@@ -1736,7 +1878,7 @@
         this.scheduleRender();
         return;
       }
-      if (this.draft?.tool === 'route' && (event.key === 'Backspace' || event.key === 'Delete')) {
+      if (this.draft && (this.draft.tool === 'route' || PEN_TOOLS.includes(this.draft.tool)) && (event.key === 'Backspace' || event.key === 'Delete')) {
         event.preventDefault();
         const committed = this.draft.points.length - 1;
         if (committed > 1) this.draft.points.splice(this.draft.points.length - 2, 1);
@@ -1807,6 +1949,9 @@
         } else if (['pipe', 'conduit'].includes(this.draft?.tool)) {
           event.preventDefault();
           this.finishPipe();
+        } else if (this.draft && PEN_TOOLS.includes(this.draft.tool)) {
+          event.preventDefault();
+          this.finishDraft();
         }
         return;
       }

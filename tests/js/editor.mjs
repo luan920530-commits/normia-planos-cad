@@ -328,13 +328,117 @@ async function main() {
       near(lineDrawn[0], 600, 3) && near(lineDrawn[1], 400, 3) && near(lineDrawn[2], 400, 3) && near(lineDrawn[3], 500, 3),
       `${lineDrawn.slice(0, 4).map((value) => Math.round(value)).join(',')}`);
 
-    /* --------------------------------- rutas --------------------------------- */
+    /* ------------------- pluma: muros nodo a nodo (1.27.0) ------------------- */
     const clickAt = (x, y) => {
       const point = clientPoint(app, x, y);
       pointer(window, app.svg, 'pointerdown', point);
       pointer(window, app.svg, 'pointerup', point);
       return point;
     };
+    /* La pluma coloca un nodo por clic y deja el tramo elástico al cursor: el
+       muro se traza como en un programa vectorial, con sus nodos a la vista. */
+    app.model.clearSelection();
+    clearToasts(window);
+    app.applyTool('wall');
+    const penNodes = () => qa(window, '#plan-canvas .draft-preview .draft-node');
+    clickAt(700, 620);
+    app.renderNow();
+    report.check('La pluma abre el muro con el primer nodo', app.draft?.tool === 'wall' && app.draft.points.length === 2,
+      `${app.draft?.points?.length ?? 0} puntos`);
+    report.check('El borrador del muro muestra su nodo de control', penNodes().length === 1, `${penNodes().length} nodos`);
+    clickAt(980, 620);
+    pointer(window, app.svg, 'pointermove', clientPoint(app, 1060, 600));
+    app.renderNow();
+    report.check('Cada clic añade un nodo y el último tramo sigue al cursor',
+      app.draft?.points?.length === 3 && near(app.draft.points[2].x, 1060, 2),
+      `${app.draft?.points?.length} puntos · cursor ${Math.round(app.draft?.points?.at(-1)?.x ?? 0)}`);
+    report.check('El borrador dibuja los nodos ya fijados y la cifra del tramo elástico',
+      penNodes().length === 2 && Boolean(q(window, '#plan-canvas .draft-measure')),
+      `${penNodes().length} nodos · ${q(window, '#plan-canvas .draft-measure')?.textContent ?? 'sin cifra'}`);
+    report.check('El muro enseña su grosor mientras se dibuja',
+      Number(q(window, '#plan-canvas .draft-preview polyline')?.getAttribute('stroke-width')) > 100,
+      `${q(window, '#plan-canvas .draft-preview polyline')?.getAttribute('stroke-width')} de ancho`);
+    report.check('La pista de la pluma cuenta los nodos y cómo terminar',
+      /nodo/.test(q(window, '[data-stage-hint]').textContent) && /doble clic/.test(q(window, '[data-stage-hint]').textContent),
+      q(window, '[data-stage-hint]').textContent.slice(0, 70));
+    key(window, window.document.body, 'Backspace');
+    app.renderNow();
+    report.check('Retroceso quita el último nodo del muro', app.draft?.points?.length === 2, `${app.draft?.points?.length} puntos`);
+    clickAt(980, 620);
+    clickAt(980, 720);
+    const penPoint = clientPoint(app, 1100, 800);
+    pointer(window, app.svg, 'pointerdown', penPoint, { shiftKey: true });
+    pointer(window, app.svg, 'pointerup', penPoint, { shiftKey: true });
+    report.check('Shift alinea el nodo nuevo con el anterior',
+      near(app.draft?.points?.at(-2)?.y ?? -1, 720, 1), String(Math.round(app.draft?.points?.at(-2)?.y ?? -1)));
+    key(window, window.document.body, 'Enter');
+    app.renderNow();
+    const penWall = app.model.design.elements.at(-1);
+    report.check('Enter cierra el muro con los nodos colocados',
+      penWall?.type === 'wall' && penWall.points.length === 4 && app.draft === null,
+      `${penWall?.points?.length} vértices`);
+    report.check('El muro trazado mide lo que dicen sus nodos',
+      Math.round(app.model.pathLength(penWall)) === 500,
+      `${Math.round(app.model.pathLength(penWall))} cm`);
+    report.check('La pluma sigue activa para trazar el muro siguiente',
+      app.tool === 'wall' && /Muro · 4 nodos/.test(toastText(window)), toastText(window).slice(0, 60));
+    clearToasts(window);
+    /* Cerrar el recinto: el clic sobre el primer nodo devuelve a él. */
+    clickAt(700, 700);
+    clickAt(1000, 700);
+    clickAt(1000, 780);
+    clickAt(702, 702);
+    app.renderNow();
+    const closedWall = app.model.design.elements.at(-1);
+    report.check('El clic sobre el primer nodo cierra el muro en circuito',
+      closedWall?.type === 'wall' && closedWall.points.length === 4
+      && near(closedWall.points[0].x, closedWall.points[3].x, 0.01)
+      && /circuito cerrado/.test(toastText(window)),
+      `${closedWall?.points?.length} vértices · ${toastText(window).slice(0, 40)}`);
+    clearToasts(window);
+    /* Doble clic también termina; Esc descarta lo que aún no se cerró. */
+    clickAt(760, 560);
+    clickAt(900, 560);
+    pointer(window, app.svg, 'dblclick', clientPoint(app, 900, 560));
+    app.renderNow();
+    const dblWall = app.model.design.elements.at(-1);
+    report.check('Doble clic termina el trazo de la pluma', dblWall?.type === 'wall'
+      && dblWall.points.length === 2 && app.draft === null, `${dblWall?.points?.length} vértices`);
+    const beforeEsc = app.model.design.elements.length;
+    clickAt(760, 520);
+    clickAt(860, 520);
+    key(window, window.document.body, 'Escape');
+    app.renderNow();
+    report.check('Esc descarta el trazo a medio dibujar sin crear nada',
+      app.draft === null && app.model.design.elements.length === beforeEsc,
+      `${app.model.design.elements.length - beforeEsc} elementos nuevos`);
+    /* El arrastre de siempre sigue creando el tramo de dos puntos. */
+    const beforeDrag = app.model.design.elements.length;
+    drag(window, app.svg, clientPoint(app, 700, 480), clientPoint(app, 900, 480));
+    app.renderNow();
+    const draggedWall = app.model.design.elements.at(-1);
+    report.check('Arrastrar sigue creando un muro de dos puntos de una vez',
+      app.model.design.elements.length === beforeDrag + 1 && draggedWall?.type === 'wall'
+      && draggedWall.points.length === 2, `${draggedWall?.points?.length} vértices`);
+    /* La cota también se dibuja a dos clics y se cierra sola. */
+    clearToasts(window);
+    app.applyTool('dimension');
+    clickAt(700, 460);
+    clickAt(900, 460);
+    app.renderNow();
+    const penDimension = app.model.design.elements.at(-1);
+    report.check('La cota de dos clics se cierra sola con dos nodos', penDimension?.type === 'dimension'
+      && penDimension.points.length === 2 && app.draft === null,
+      `${penDimension?.type} · ${penDimension?.points?.length} · ${toastText(window).slice(0, 40)}`);
+    // Los trazos de prueba de la pluma se retiran: el resto de la sesión sigue
+    // con el plano tal como estaba y las rutas no quedan bloqueadas.
+    app.model.select([penWall.id, closedWall.id, dblWall.id, draggedWall.id, penDimension.id]);
+    app.model.deleteSelected();
+    app.applyTool('select');
+    app.model.clearSelection();
+    app.renderNow();
+
+    /* --------------------------------- rutas --------------------------------- */
     app.applyTool('route');
     clickAt(120, 620);
     clickAt(320, 620);
