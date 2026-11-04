@@ -108,6 +108,38 @@ report.check('El intérprete se copia con filtro: electron-builder descarta node
 report.check('El armado revisa el instalador terminado y falla si le falta el intérprete',
   /verifyInstallers\(out\);/.test(buildCode) && /El instalador quedó sin paquetes de php-wasm/.test(build));
 
+/* --------------------- edición «solo editor» (estudio) --------------------- */
+
+const estudioMain = read('tools/electron/estudio/main.mjs');
+const estudioPreload = read('tools/electron/estudio/preload.cjs');
+const estudioWorkflow = read('.github/workflows/dist-estudio.yml');
+const estudioCode = estudioMain.split('\n').filter((line) => !line.trim().startsWith('//') && !line.trim().startsWith('*')).join('\n');
+
+report.check('El editor suelto abre directo en el lienzo, sin portada ni cuentas',
+  /index\.php\?r=estudio/.test(estudioCode) && !/login/.test(estudioCode) && !/install/.test(estudioCode));
+report.check('La ventana del estudio tampoco da Node a la página y usa su propio puente',
+  /nodeIntegration: false/.test(estudioCode) && /contextIsolation: true/.test(estudioCode)
+  && /sandbox: true/.test(estudioCode) && /preload\.cjs/.test(estudioCode));
+report.check('El puente del estudio solo expone abrir, guardar, guardar como y el título',
+  /contextBridge\.exposeInMainWorld\('NormiaEstudio'/.test(estudioPreload)
+  && /estudio:abrir/.test(estudioPreload) && /estudio:guardar/.test(estudioPreload)
+  && !/require\('fs'\)/.test(estudioPreload));
+report.check('Cerrar con cambios sin guardar pregunta antes de perderlos',
+  /window\.on\('close'/.test(estudioCode) && /Guardar y cerrar/.test(estudioMain) && /Salir sin guardar/.test(estudioMain));
+report.check('Los planos se abren y se guardan como archivos con los diálogos del sistema',
+  /showOpenDialog/.test(estudioCode) && /showSaveDialog/.test(estudioCode) && /recientes\.json/.test(estudioCode));
+report.check('El archivo del estudio es el sobre oficial, importable en la edición completa',
+  /format: 'normia-plan'/.test(estudioCode) && /schema_version: 3/.test(estudioCode) && /design,/.test(estudioCode));
+report.check('El armado distingue las dos ediciones y no las pisa al instalar',
+  /match\[1\] === 'modo'/.test(build) && /mode === 'estudio'/.test(build)
+  && /co\.normia\.estudio/.test(build) && /co\.normia\.cad/.test(build)
+  && /normia-estudio/.test(build) && /productFor\(args\.mode\)/.test(build));
+report.check('El flujo del editor suelto compila las tres plataformas y comprueba el paquete',
+  /--modo=estudio/.test(estudioWorkflow) && /macos-15-intel/.test(estudioWorkflow)
+  && /verify-package\.mjs/.test(estudioWorkflow) && /LSMinimumSystemVersion/.test(estudioWorkflow)
+  && /normia-estudio-\$\{\{ matrix\.os \}\}-\$\{\{ matrix\.arch \}\}\.SHA256SUMS\.txt/.test(estudioWorkflow)
+  && /upload-artifact@v4/.test(estudioWorkflow));
+
 report.check('Las sumas del flujo evitan opciones de GNU que macOS no tiene',
   !/^\s*find .* -printf/m.test(workflow) && /sha256sum "\$archivo"/.test(workflow) && /shasum -a 256/.test(workflow));
 // Se mira la línea de comando del paso y no el texto: los comentarios explican

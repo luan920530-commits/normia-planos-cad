@@ -39,44 +39,46 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 20. [Pruebas](#pruebas)
 21. [Distribución: escritorio y Android](#distribución-escritorio-y-android)
 22. [Edición Electron](#edición-electron)
-23. [Guía de primeros pasos](#guía-de-primeros-pasos)
-24. [Complementos](#complementos)
-25. [Unidades y medidas](#unidades-y-medidas)
-26. [Cambios de la versión 1.27.0](#cambios-de-la-versión-1270)
-27. [Cambios de la versión 1.26.0](#cambios-de-la-versión-1260)
-28. [Cambios de la versión 1.25.0](#cambios-de-la-versión-1250)
-29. [Cambios de la versión 1.24.0](#cambios-de-la-versión-1240)
-30. [Cambios de la versión 1.23.0](#cambios-de-la-versión-1230)
-31. [Cambios de la versión 1.22.0](#cambios-de-la-versión-1220)
-32. [Cambios de la versión 1.21.0](#cambios-de-la-versión-1210)
-33. [Cambios de la versión 1.20.0](#cambios-de-la-versión-1200)
-34. [Cambios de la versión 1.19.0](#cambios-de-la-versión-1190)
-35. [Cambios de la versión 1.18.0](#cambios-de-la-versión-1180)
-36. [Cambios de la versión 1.17.0](#cambios-de-la-versión-1170)
-37. [Cambios de la versión 1.16.0](#cambios-de-la-versión-1160)
-38. [Cambios de la versión 1.15.9](#cambios-de-la-versión-1159)
-39. [Cambios de la versión 1.15.8](#cambios-de-la-versión-1158)
-40. [Cambios de la versión 1.15.7](#cambios-de-la-versión-1157)
-41. [Cambios de la versión 1.15.6](#cambios-de-la-versión-1156)
-42. [Cambios de la versión 1.15.5](#cambios-de-la-versión-1155)
-43. [Cambios de la versión 1.15.4](#cambios-de-la-versión-1154)
-44. [Cambios de la versión 1.15.3](#cambios-de-la-versión-1153)
-45. [Cambios de la versión 1.15.2](#cambios-de-la-versión-1152)
-46. [Cambios de la versión 1.15.1](#cambios-de-la-versión-1151)
-47. [Cambios de la versión 1.15.0](#cambios-de-la-versión-1150)
-48. [Cambios de la versión 1.14.2](#cambios-de-la-versión-1142)
-49. [Cambios de la versión 1.14.1](#cambios-de-la-versión-1141)
-50. [Cambios de la versión 1.14.0](#cambios-de-la-versión-1140)
-51. [Cambios de la versión 1.13.0](#cambios-de-la-versión-1130)
-52. [Cambios de la versión 1.12.0](#cambios-de-la-versión-1120)
-53. [Cambios de la versión 1.11.1](#cambios-de-la-versión-1111)
-54. [Cambios de la versión 1.11.0](#cambios-de-la-versión-1110)
-55. [Cambios de la versión 1.10.0](#cambios-de-la-versión-1100)
-56. [Cambios de la versión 1.9.0](#cambios-de-la-versión-190)
-57. [Cambios de la versión 1.8.0](#cambios-de-la-versión-180)
-58. [Paquetes y verificación](#paquetes-y-verificación)
-59. [Limitaciones](#limitaciones)
-60. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
+23. [Normia Estudio (solo editor)](#normia-estudio-solo-editor)
+24. [Guía de primeros pasos](#guía-de-primeros-pasos)
+25. [Complementos](#complementos)
+26. [Unidades y medidas](#unidades-y-medidas)
+27. [Cambios de la versión 1.28.0](#cambios-de-la-versión-1280)
+28. [Cambios de la versión 1.27.0](#cambios-de-la-versión-1270)
+29. [Cambios de la versión 1.26.0](#cambios-de-la-versión-1260)
+30. [Cambios de la versión 1.25.0](#cambios-de-la-versión-1250)
+31. [Cambios de la versión 1.24.0](#cambios-de-la-versión-1240)
+32. [Cambios de la versión 1.23.0](#cambios-de-la-versión-1230)
+33. [Cambios de la versión 1.22.0](#cambios-de-la-versión-1220)
+34. [Cambios de la versión 1.21.0](#cambios-de-la-versión-1210)
+35. [Cambios de la versión 1.20.0](#cambios-de-la-versión-1200)
+36. [Cambios de la versión 1.19.0](#cambios-de-la-versión-1190)
+37. [Cambios de la versión 1.18.0](#cambios-de-la-versión-1180)
+38. [Cambios de la versión 1.17.0](#cambios-de-la-versión-1170)
+39. [Cambios de la versión 1.16.0](#cambios-de-la-versión-1160)
+40. [Cambios de la versión 1.15.9](#cambios-de-la-versión-1159)
+41. [Cambios de la versión 1.15.8](#cambios-de-la-versión-1158)
+42. [Cambios de la versión 1.15.7](#cambios-de-la-versión-1157)
+43. [Cambios de la versión 1.15.6](#cambios-de-la-versión-1156)
+44. [Cambios de la versión 1.15.5](#cambios-de-la-versión-1155)
+45. [Cambios de la versión 1.15.4](#cambios-de-la-versión-1154)
+46. [Cambios de la versión 1.15.3](#cambios-de-la-versión-1153)
+47. [Cambios de la versión 1.15.2](#cambios-de-la-versión-1152)
+48. [Cambios de la versión 1.15.1](#cambios-de-la-versión-1151)
+49. [Cambios de la versión 1.15.0](#cambios-de-la-versión-1150)
+50. [Cambios de la versión 1.14.2](#cambios-de-la-versión-1142)
+51. [Cambios de la versión 1.14.1](#cambios-de-la-versión-1141)
+52. [Cambios de la versión 1.14.0](#cambios-de-la-versión-1140)
+53. [Cambios de la versión 1.13.0](#cambios-de-la-versión-1130)
+54. [Cambios de la versión 1.12.0](#cambios-de-la-versión-1120)
+55. [Cambios de la versión 1.11.1](#cambios-de-la-versión-1111)
+56. [Cambios de la versión 1.11.0](#cambios-de-la-versión-1110)
+57. [Cambios de la versión 1.10.0](#cambios-de-la-versión-1100)
+58. [Cambios de la versión 1.9.0](#cambios-de-la-versión-190)
+59. [Cambios de la versión 1.8.0](#cambios-de-la-versión-180)
+60. [Paquetes y verificación](#paquetes-y-verificación)
+61. [Limitaciones](#limitaciones)
+62. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
 
 ---
 
@@ -829,10 +831,11 @@ Lo único que no funciona sin red es la **vista previa de desarrollo** (`npm run
 | `tests/js/units.mjs` | 30 comprobaciones del módulo `assets/js/lib/units.js` contra la **misma** tabla compartida: si PHP y JavaScript se separan, falla una de las dos suites. Fija además la longitud de un trazo curvo, la identidad exacta de `fromMeters` con PHP y que el editor coincide **exactamente** con el golden que escribe el servidor; y comprueba que el módulo no toca el DOM ni la red y que publica `window.Normia.Units`. |
 | `tests/js/plugins.mjs` | 20 comprobaciones de los complementos en el editor: traducción `plg_…` ↔ `PLG_…`, color y tamaño de la familia propia, búsqueda por sinónimos, filtro por familia, inserción, guardado y reapertura del elemento. |
 | `tests/js/editor.mjs` | 442 comprobaciones de interfaz sobre la app real: arranque, 395 señales y 422 objetos, **pluma de muros** (nodo por clic, tramo elástico con su cifra, banda de grosor, `Retroceso`, `Shift`, `Enter`, cierre sobre el primer nodo, doble clic, `Esc` y la cota que se cierra con dos nodos), **muros curvos** (rombo del tramo, arco de tres puntos, radio y flecha en el inspector, enderezar, doble clic que parte el arco, caja analítica, puerta sobre el arco, formato 3 y degradación a v2, marcado idéntico sin curvas), **vías y andenes** (banda de 6 m con carriles, cambio de ancho y carriles, parqueadero contado en la etiqueta, franjas del paso cebra y rótulo del lindero), **sección tipo y cruces** (avenida de 20 m en formato 4, perfil transversal en el inspector, cambio de andén que recalcula el ancho, glorieta de cinco accesos, vuelta a vía normal, corredor de ejemplo en una acción y sinónimos «carro», «bici» y «semáforo»), **trazado de tuberías y circuitos, inspector de red y panel de redes**, **mano y paneo, selección de superpuestos, inspector plegable y paleta de herramientas**, **guía de primeros pasos** (apertura en el primer uso, siete pasos, progreso tomado del plano, salto a la herramienta con la baldosa resaltada, reinicio y desactivación), **buscador con sinónimos y sin tildes** (calle → vía, anden → andén, parqueo → parqueadero), **baldosa propia de vías y andenes**, puertas dobles y portones, **vértices de ruta editables (arrastrar, doble clic, Alt+clic)**, **señal de baño insertada desde la biblioteca**, **posiciones reales del trazo**, **clic sobre muros finos, pictogramas y equipos**, **cambio de señal y de equipo desde el inspector**, **auditor de planos** (interruptor de salida, ocupación declarada, cajón de revisión, contador, filtros, «Ver en el plano», cierre sin dejar el fondo bloqueado), **pliego de señalización** (conteo, tamaño sugerido, CSV, precios y consistencia), **medición de rutas internas** (ruta que rodea muros, tramos, guardado en capa y comparación), **modo presentación** (pantalla limpia, láser, spotlight, rutas animadas, capas, quiz y salida sin perder el estado), **rotación**, **rutas cerradas**, **arrastrar y soltar desde la biblioteca sin que el cajón lo bloquee**, reglas, herramientas, inserción con puntero, selección, mover, escalar, rotar, color, cambio de tipo, deshacer/rehacer, duplicar, agrupar, bloquear, desplazar, texto y saneado, guardar, reabrir, borradores, conflictos, exportación SVG/JSON/PNG, tooltips sin acumulación, capas, versiones y límites. |
+| `tests/js/estudio.mjs` | 29 comprobaciones de **Normia Estudio**: la página abre **sin instalar** nada, sin portada ni pisos ni versiones; el editor arranca en blanco con A4 a 1:100; el puente de escritorio guarda, abre y avisa del título; el plano en curso llega al auditor, al informe, a la impresión y al SVG; el JSON que se exporta es el sobre oficial y se **importa** en la edición completa; los catálogos se sirven sin sesión. |
 | `tests/js/pages.mjs` | 50 comprobaciones de las páginas fuera del editor y de la portada pública: menú de acciones de proyectos y pisos (capa fija, colocación, teclado, un solo menú), confirmación de borrado y borrado real de piso y proyecto, con la protección del último piso, la **portada pública** (cinco capturas con texto alternativo, flechas de la galería y token del formulario) y **la página pública del modo brigadista** ejecutando su JavaScript: acciones rápidas, atenuado del plano, alto contraste recordado, zoom y borrado de la copia local. |
 | `tests/php/package.mjs` | 39 comprobaciones: construye ambos ZIP, verifica que no haya bases, sesiones, credenciales, logs ni carpetas de desarrollo, valida los SHA-256 y hace una instalación limpia de la demo comprobando assets, catálogos (395/420), los cuatro pisos del proyecto de ejemplo, señales de servicios y redes en la demo, la señal «Usted está aquí», **el auditor y su informe en la demo empaquetada**, editor, SVG, JSON e impresión. |
 | `tests/php/desktop.mjs` | 37 comprobaciones del escritorio: rutas de datos separadas del código, `NORMA_DATA_PATH` (solo absolutas), lanzador (argumentos, puerto, estado, cierre), enrutador (bloqueos, saltos de directorio, byte nulo) y una instalación completa escribiendo en una carpeta de datos externa. |
-| `tests/js/electron.mjs` | 40 comprobaciones de la edición Electron: ventana sin acceso a Node, puente mínimo, enlaces externos, instancia única, menú en español, descargas, servidor en `127.0.0.1` sin cookies en memoria, entorno de php-wasm, instalación completa con datos fuera del código, `storage/` inaccesible, armado del paquete (aplicación, ventana e intérprete), los ocho paquetes de php-wasm dentro de `runtime/node_modules`, el rechazo de un paquete sin ellos, el mínimo de macOS y la ausencia de ICU y de versiones de PHP que no se usan. |
+| `tests/js/electron.mjs` | 48 comprobaciones de la edición Electron (incluida la del editor suelto): ventana sin acceso a Node, puente mínimo, enlaces externos, instancia única, menú en español, descargas, servidor en `127.0.0.1` sin cookies en memoria, entorno de php-wasm, instalación completa con datos fuera del código, `storage/` inaccesible, armado del paquete (aplicación, ventana e intérprete), los ocho paquetes de php-wasm dentro de `runtime/node_modules`, el rechazo de un paquete sin ellos, el mínimo de macOS y la ausencia de ICU y de versiones de PHP que no se usan. |
 | `tests/js/android.mjs` | 52 comprobaciones del APK: arranque de PHP 8.3 sobre WebAssembly, instalación, sesión, panel, editor, auditor, guardado, reapertura y verificación del contenedor nativo (permisos, descargas, impresión, selección de archivos, firma, prefijo de los activos y aviso de error). |
 | `tests/js/offline.mjs` | 0 dependencias de red: revisa las vistas, los estilos, los scripts y los catálogos y falla si aparece un `fetch`, un `WebSocket`, un `src`/`href`/`url()` externo, una llamada de red desde PHP o un dominio no declarado. |
 
@@ -863,7 +866,7 @@ Resultados esperados de la última ejecución completa:
 ✓ Android (APK) · 52/52
 ✓ Escritorio (Electron) · 40/40
 ✓ Paquetes y demo · 39/39
-24/24 pasos correctos
+26/26 pasos correctos
 ```
 
 Las pruebas trabajan sobre copias temporales: no escriben configuración ni bases en el repositorio. `node_modules` solo contiene dependencias de desarrollo y se excluye de los paquetes.
@@ -978,6 +981,38 @@ Las ediciones de escritorio se compilan en los flujos de trabajo y su tamaño ex
 se publica en la release junto con el `SHA256SUMS.txt`; los paquetes web se
 construyen con `tools/build-packages.sh` y se verifican con la suite.
 
+## Normia Estudio (solo editor)
+
+La edición de escritorio que trae **solo el editor**: se abre y se dibuja. Sin
+portada, sin cuentas, sin proyectos y **sin base de datos**. El plano es un
+**archivo** que la persona abre y guarda donde quiera, y ese archivo se puede
+importar después en un proyecto de la edición completa sin conversiones.
+
+| Plataforma | Archivo |
+| --- | --- |
+| macOS 12 Monterey o superior · Intel y Apple Silicon | `normia-estudio-<versión>-macos-arm64.dmg` · `…-macos-x64.dmg` |
+| Windows 10 y 11 de 64 bits | `normia-estudio-<versión>-windows-x64-instalador.exe` |
+| Linux de 64 bits | `normia-estudio-<versión>-linux-x64.AppImage` |
+
+- **El editor completo, y nada más**: muros con la pluma de nodos y arcos de tres
+  puntos, puertas, biblioteca de señales y objetos CAD, redes, vías, capas,
+  deshacer, inspector, guía, modo presentación, auditor, informe, impresión con
+  escala física y exportaciones.
+- **Archivo → Nuevo / Abrir… / Guardar / Guardar como…**, con `⌘N`, `⌘O`, `⌘S` y
+  `⇧⌘S`, y los últimos diez archivos en **Abrir reciente**.
+- **Cerrar con cambios sin guardar pregunta** antes de perderlos.
+- **El auditor, el informe, la impresión y el SVG** se calculan con el **mismo
+  código PHP** que la edición completa (PHP 8.3 en WebAssembly dentro del
+  paquete), así que las cifras no cambian de una edición a otra.
+- **El mismo formato de plano**: lo que se guarda en el estudio es el sobre
+  oficial `normia-plan` que la edición completa importa.
+- **Sin firma comercial**: macOS puede mostrar Gatekeeper y Windows SmartScreen;
+  las instrucciones están en [`docs/ESTUDIO.md`](docs/ESTUDIO.md).
+
+Los instaladores los compila **GitHub Actions** en el flujo *Distribución de
+Normia Estudio (solo editor)*, con la comprobación del contenido del paquete y el
+mínimo de macOS leído del `.app`.
+
 ## Guía de primeros pasos
 
 El editor explica dónde está cada cosa **en su sitio**, sin manuales aparte ni
@@ -1086,6 +1121,33 @@ siguen **pendientes** DEC-7 y DEC-9 a DEC-12. Están implementadas las etapas 1 
 4 (geometría en centímetros, medida por objeto, aforo calculado, ajuste por
 mediana y escala física al exportar); las etapas 5 a 10 no han empezado. Ni una
 tabla nueva: `user_version` sigue en 7.
+
+## Cambios de la versión 1.28.0
+
+**Normia Estudio: el editor, suelto.**
+
+Una edición de escritorio que trae **solo el editor**. Se abre y se dibuja, sin
+portada, sin cuentas, sin proyectos y **sin base de datos**: el plano es un
+archivo del equipo.
+
+- **Modo estudio en la aplicación PHP** (`estudio`): una ruta nueva que abre el
+  editor sin instalar nada y sin sesión. El auditor, el informe, la impresión y el
+  SVG se calculan con el mismo código, así que **ninguna cifra cambia**.
+- **El plano es un archivo**: **Nuevo**, **Abrir…**, **Guardar**, **Guardar
+  como…** y los últimos diez en **Abrir reciente**, con los diálogos del sistema.
+- **Cerrar con cambios sin guardar pregunta** antes de perderlos.
+- **El archivo guardado es el sobre oficial** `normia-plan` (esquema 3): se
+  importa tal cual en un proyecto de la edición completa. Hay prueba de ida y
+  vuelta.
+- **Un puente mínimo** (`preload` con cuatro llamadas) y la regla de siempre: la
+  página no toca el disco ni tiene Node.
+- **Armado propio**: `--modo=estudio` produce *Normia Estudio* con su
+  `appId`, sus nombres de archivo y su flujo de GitHub Actions para macOS 12
+  Monterey (Intel y Apple Silicon), Windows y Linux, sin firma comercial.
+- **Se puede tener instalada junto a la edición completa**: distinto `appId`,
+  distinto nombre y distinta carpeta de datos.
+- **Pruebas**: `tests/js/estudio.mjs` con **29** comprobaciones en PHP 8.1 y 8.3,
+  `tests/js/electron.mjs` de 40 a **48** y la suite en **26/26** pasos.
 
 ## Cambios de la versión 1.27.0
 

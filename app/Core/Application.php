@@ -19,6 +19,7 @@ use App\Controllers\OrganizationController;
 use App\Controllers\PluginController;
 use App\Controllers\ProjectController;
 use App\Controllers\RetentionController;
+use App\Controllers\StudyController;
 use Throwable;
 
 final class Application
@@ -33,6 +34,18 @@ final class Application
         $isApi = str_starts_with($route, 'api/');
 
         try {
+            // Modo estudio y catálogos: no necesitan instalación, ni cuenta, ni
+            // base de datos. Es la edición de escritorio «solo editor», donde el
+            // plano es un archivo y PHP solo calcula el auditor y los documentos.
+            if (self::runsWithoutDatabase($route)) {
+                if ($request->isPost() && !Csrf::check($request->csrfToken())) {
+                    Response::json(['ok' => false, 'message' => 'La sesión o el token de seguridad expiraron. Recarga la página e inténtalo de nuevo.', 'code' => 'csrf'], 419);
+                    return;
+                }
+                self::dispatch($request, $route);
+                return;
+            }
+
             if (!$installed) {
                 if ($route !== 'install') {
                     Response::redirect(url('install'));
@@ -118,6 +131,18 @@ final class Application
         }
     }
 
+    /**
+     * Rutas que funcionan sin instalación ni sesión: el modo estudio y los
+     * catálogos de solo lectura. Sin esto, la edición de escritorio pediría
+     * instalar una base de datos antes de abrir el lienzo.
+     */
+    private static function runsWithoutDatabase(string $route): bool
+    {
+        return $route === 'estudio'
+            || str_starts_with($route, 'estudio/')
+            || in_array($route, ['catalogs/signs', 'catalogs/cad', 'catalogs/mep'], true);
+    }
+
     private static function dispatch(Request $request, string $route): void
     {
         $router = self::router();
@@ -129,6 +154,19 @@ final class Application
     public static function router(): Router
     {
         $router = new Router();
+
+        // Modo estudio: el editor suelto, sin cuentas ni base de datos. El plano
+        // es un archivo del equipo; estas rutas solo calculan y sirven documentos.
+        $router->get('estudio', static fn () => (new StudyController())->show());
+        $router->get('estudio/plano', static fn () => (new StudyController())->plano());
+        $router->post('estudio/plano', static fn () => (new StudyController())->plano());
+        $router->post('estudio/nombre', static fn () => (new StudyController())->nombre());
+        $router->get('estudio/auditoria', static fn () => (new StudyController())->auditoria());
+        $router->post('estudio/auditoria', static fn () => (new StudyController())->auditoria());
+        $router->get('estudio/informe', static fn () => (new StudyController())->informe());
+        $router->get('estudio/imprimir', static fn () => (new StudyController())->imprimir());
+        $router->get('estudio/export/svg', static fn () => (new StudyController())->svg());
+        $router->get('estudio/export/json', static fn () => (new StudyController())->json());
 
         // Instalación
         $router->get('install', static fn () => (new InstallController())->show());

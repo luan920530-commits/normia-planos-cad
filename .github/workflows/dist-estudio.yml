@@ -1,0 +1,186 @@
+# Normia Estudio · edición de escritorio «solo editor».
+#
+# El mismo motor que la edición completa (PHP 8.3 compilado a WebAssembly dentro
+# del paquete), con una ventana distinta: abre directamente el editor, sin
+# portada, sin cuentas y sin base de datos. El plano es un archivo que la persona
+# abre y guarda donde quiera.
+#
+# macOS 12 Monterey: se compila con Electron 43, la última rama que abre en
+# Monterey (39–43) y se declara LSMinimumSystemVersion 12.0. No subir de rama
+# mayor sin cambiar `tools/electron/build.mjs` y la tabla de docs/ESTUDIO.md.
+#
+# Firma: no hay certificados de Apple ni de Microsoft. macOS sale con firma
+# ad-hoc y Windows sin firmar; los avisos de Gatekeeper y SmartScreen se
+# documentan en docs/ESTUDIO.md.
+name: Distribución de Normia Estudio (solo editor)
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+concurrency:
+  group: estudio-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  paquete:
+    name: Editor suelto · ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            arch: arm64
+          - os: macos-15-intel
+            arch: x64
+          - os: windows-latest
+            arch: x64
+          - os: ubuntu-latest
+            arch: x64
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Dependencias
+        run: npm install --no-audit --no-fund
+
+      - name: Instalar Electron y el empaquetador
+        # Electron 43 es la última rama que abre en macOS 12 Monterey.
+        run: npm install --no-save --no-audit --no-fund electron@43 electron-builder@26
+
+      - name: Comprobar el intérprete armado
+        run: node tools/electron/build.mjs --modo=estudio --out=dist/estudio --sin-instalador
+
+      - name: Armar y compilar el instalador del editor
+        shell: bash
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+          ELECTRON_BUILDER_CACHE: ${{ github.workspace }}/dist/estudio/.cache
+        run: |
+          set -o pipefail
+          node tools/electron/build.mjs --modo=estudio --out=dist/estudio --arch=${{ matrix.arch }} 2>&1 | tee "$RUNNER_TEMP/build-estudio.log"
+
+      - name: Diagnóstico del armado
+        if: failure()
+        shell: bash
+        run: |
+          if [ -f "$RUNNER_TEMP/build-estudio.log" ]; then
+            grep -E "⨯|^Error|error:|Cannot|failed" "$RUNNER_TEMP/build-estudio.log" | tail -8 | while IFS= read -r line; do
+              echo "::error title=armado::${line//$'\r'/}"
+            done
+          fi
+          ls -R dist/estudio/installers 2>/dev/null | head -30 || true
+
+      - name: Comprobar el instalador del editor
+        shell: bash
+        run: |
+          set -euo pipefail
+          ls -lh dist/estudio/installers
+          case "${{ matrix.os }}" in
+            macos-*) PATRON="normia-estudio-*.dmg" ;;
+            windows-*) PATRON="normia-estudio-*-instalador.exe" ;;
+            *) PATRON="normia-estudio-*.AppImage" ;;
+          esac
+          ENCONTRADO=""
+          for archivo in dist/estudio/installers/*; do
+            [ -f "$archivo" ] || continue
+            case "$(basename "$archivo")" in
+              $PATRON) ENCONTRADO="$archivo" ;;
+            esac
+          done
+          if [ -z "$ENCONTRADO" ]; then
+            echo "::error title=sin instalador::no se generó ningún archivo $PATRON"
+            ls -l dist/estudio/installers
+            exit 1
+          fi
+          cd dist/estudio/installers
+          rm -f SHA256SUMS.txt
+          for archivo in *; do
+            [ -f "$archivo" ] || continue
+            if command -v sha256sum >/dev/null 2>&1; then sha256sum "$archivo"; else shasum -a 256 "$archivo"; fi
+          done > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+          mv SHA256SUMS.txt "normia-estudio-${{ matrix.os }}-${{ matrix.arch }}.SHA256SUMS.txt"
+
+      - name: Comprobar el contenido del paquete
+        shell: bash
+        run: |
+          set -euo pipefail
+          RESOURCES="$(find dist/estudio/installers -type d -name runtime | head -1)"
+          RESOURCES="$(dirname "$RESOURCES")"
+          if [ ! -d "$RESOURCES/app" ]; then
+            echo "::error title=paquete::no se encontró resources/app en el paquete"
+            exit 1
+          fi
+          node tools/electron/verify-package.mjs "$RESOURCES" --completo
+          # El editor suelto necesita la ruta del estudio en el paquete: si falta,
+          # la ventana abriría el instalador web en lugar del lienzo.
+          if ! grep -rq "estudio" "$RESOURCES/app/app/Core/Application.php"; then
+            echo "::error title=paquete::la aplicación empaquetada no tiene el modo estudio"
+            exit 1
+          fi
+
+      - name: Comprobar el mínimo de macOS del paquete
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP="$(find dist/estudio/installers -maxdepth 2 -name '*.app' | head -1)"
+          if [ -z "$APP" ]; then
+            echo "::error title=paquete::no se encontró la aplicación .app"
+            exit 1
+          fi
+          MIN="$(/usr/libexec/PlistBuddy -c 'Print :LSMinimumSystemVersion' "$APP/Contents/Info.plist")"
+          echo "LSMinimumSystemVersion del paquete: $MIN"
+          case "$MIN" in
+            12.*) echo "Abre en macOS 12 Monterey o superior." ;;
+            *)
+              echo "::error title=macOS::el paquete exige macOS $MIN; Electron 44 o superior deja fuera Monterey"
+              exit 1
+              ;;
+          esac
+
+      - name: Prueba de humo del binario
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -uo pipefail
+          export NORMA_DATA_PATH="$RUNNER_TEMP/normia-estudio-humo"
+          rm -rf "$NORMA_DATA_PATH"; mkdir -p "$NORMA_DATA_PATH"
+          case "${{ matrix.os }}" in
+            macos-*)
+              APP="$(find dist/estudio/installers -maxdepth 2 -name '*.app' | head -1)"
+              if [ -n "$APP" ]; then "$APP/Contents/MacOS/Normia Estudio" --check; fi
+              ;;
+            windows-*)
+              EXE="$(find dist/estudio/installers -path '*win-unpacked*' -name '*.exe' | head -1)"
+              if [ -n "$EXE" ]; then "$EXE" --check; fi
+              ;;
+            *)
+              sudo apt-get update -qq && sudo apt-get install -y -qq xvfb
+              APPIMAGE="$(find dist/estudio/installers -maxdepth 1 -name '*.AppImage' | head -1)"
+              chmod +x "$APPIMAGE"
+              xvfb-run -a env APPIMAGE_EXTRACT_AND_RUN=1 "$APPIMAGE" --no-sandbox --disable-gpu --check
+              ;;
+          esac
+
+      - name: Guardar los instaladores del editor
+        uses: actions/upload-artifact@v4
+        with:
+          name: normia-estudio-${{ matrix.os }}-${{ matrix.arch }}
+          path: |
+            dist/estudio/installers/*.dmg
+            dist/estudio/installers/*.exe
+            dist/estudio/installers/*.AppImage
+            dist/estudio/installers/*.SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 30

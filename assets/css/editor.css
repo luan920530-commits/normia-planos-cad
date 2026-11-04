@@ -32,6 +32,10 @@ body.editor-body { overflow: hidden; background: #eef2f8; }
 .editor-doc-title { display: flex; flex-direction: column; line-height: 1.25; min-width: 0; }
 .editor-doc-title strong { font-size: .95rem; letter-spacing: -.01em; color: #f4f8ff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 34ch; }
 .editor-doc-title span { color: #93a7c4; font-size: .76rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Modo estudio: el editor suelto no tiene proyecto al que volver ni pisos que
+   cambiar; la etiqueta dice de dónde viene el plano. */
+.study-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; border: 1px solid rgba(147, 167, 196, .28); background: rgba(147, 167, 196, .12); color: #cbd8ea; font-size: .74rem; letter-spacing: .04em; text-transform: uppercase; }
+.study-chip .icon { width: 14px; height: 14px; opacity: .8; }
 .floor-switch-button {
   display: inline-flex; align-items: center; gap: 7px; padding: 7px 11px;
   border: 1px solid rgba(255, 255, 255, .14); border-radius: 11px;

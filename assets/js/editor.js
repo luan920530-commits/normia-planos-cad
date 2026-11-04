@@ -118,7 +118,11 @@
       this.renderNow();
       this.updateRulers();
       this.updateSaveStatus();
-      this.store.startAutosave(bootData.autosaveInterval, (error) => this.onAutosaveError(error));
+      // Sin intervalo (modo estudio) no hay borrador que guardar: el plano es
+      // un archivo y el espejo del servidor se refresca al guardar y al exportar.
+      if (Number(bootData.autosaveInterval) > 0) {
+        this.store.startAutosave(bootData.autosaveInterval, (error) => this.onAutosaveError(error));
+      }
       this.showBootNotices();
       // La guía de primeros pasos se abre una sola vez, cuando la pantalla de
       // bienvenida ya se retiró; el usuario puede desactivarla desde su pie y
