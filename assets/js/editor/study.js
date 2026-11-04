@@ -31,6 +31,7 @@
       this.patchExport();
       this.bindKeys();
       this.bindMenu();
+      this.bindDrop();
       this.reportTitle();
       this.notifyState();
     }
@@ -225,6 +226,49 @@
         if (!link) return;
         event.preventDefault();
         this.sync().then(() => window.open(link.getAttribute('href'), '_blank', 'noopener'));
+      }, true);
+    }
+
+    /* --------------------------- arrastrar y soltar --------------------------- */
+
+    /**
+     * Un plano `.json` soltado sobre la ventana se abre. El archivo lo lee el
+     * proceso principal —la página no toca el disco— y solo se le pasa la ruta.
+     * Se ignoran los arrastres internos del editor (pictogramas y objetos CAD),
+     * que ya tienen su propio manejador en el lienzo.
+     */
+    bindDrop() {
+      if (!this.bridge?.soltar || !this.bridge?.rutaDeArchivo) return;
+      const isInternal = (transfer) => Array.from(transfer?.types || []).includes('application/x-normia-resource');
+      const hasFiles = (transfer) => Boolean(transfer?.files && transfer.files.length);
+
+      window.addEventListener('dragover', (event) => {
+        if (!hasFiles(event.dataTransfer) || isInternal(event.dataTransfer)) return;
+        document.body.classList.add('is-plan-drop');
+      }, true);
+
+      window.addEventListener('dragleave', (event) => {
+        if (event.relatedTarget) return;
+        document.body.classList.remove('is-plan-drop');
+      }, true);
+
+      window.addEventListener('drop', (event) => {
+        document.body.classList.remove('is-plan-drop');
+        const transfer = event.dataTransfer;
+        if (!hasFiles(transfer) || isInternal(transfer)) return;
+        event.preventDefault();
+        const file = transfer.files[0];
+        const path = this.bridge.rutaDeArchivo(file) || '';
+        const name = path || file.name || '';
+        if (!/\.json$/i.test(name)) {
+          this.toast('Para abrir un plano, suelta un archivo .json.', 'info', { duration: 4200 });
+          return;
+        }
+        if (!path) {
+          this.toast('No se pudo leer la ruta del archivo soltado.', 'error');
+          return;
+        }
+        this.bridge.soltar({ path });
       }, true);
     }
 

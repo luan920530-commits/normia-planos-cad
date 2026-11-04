@@ -6,7 +6,7 @@
  * Todo lo demás (leer un archivo, elegir carpeta, escribir) ocurre en el proceso
  * principal, que sí controla los diálogos del sistema.
  */
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
 contextBridge.exposeInMainWorld('NormiaEstudio', {
   /** Abre un plano. Sin ruta, muestra el diálogo del sistema. */
@@ -19,6 +19,19 @@ contextBridge.exposeInMainWorld('NormiaEstudio', {
   titulo: (payload = {}) => ipcRenderer.invoke('estudio:titulo', payload),
   /** Avisa de cambios sin guardar para no cerrar perdiéndolos. */
   estado: (payload = {}) => ipcRenderer.send('estudio:estado', payload),
+  /**
+   * Ruta real de un archivo soltado sobre la ventana. La página nunca toca el
+   * disco: solo pregunta cómo se llama lo que el usuario arrastró.
+   */
+  rutaDeArchivo: (file) => {
+    try {
+      return (webUtils?.getPathForFile?.(file) || '');
+    } catch {
+      return '';
+    }
+  },
+  /** Abrir el plano que se acaba de soltar sobre la ventana. */
+  soltar: (payload = {}) => ipcRenderer.send('estudio:soltar', payload),
   /** Órdenes del menú: nuevo, abrir, guardar, guardar-como, ayuda. */
   alComando: (callback) => {
     if (typeof callback !== 'function') return () => {};

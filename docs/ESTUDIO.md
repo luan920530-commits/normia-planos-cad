@@ -97,6 +97,12 @@ Electron
   guardar* o *Cancelar*. Nunca se pierde trabajo en silencio.
 - **Abrir un archivo desde el sistema** (doble clic, *Abrir con…*) funciona: si la
   aplicación ya está abierta, la ventana existente carga ese plano.
+- **Soltar un plano sobre la ventana también lo abre**: mientras arrastras, un
+  borde discontinuo y una pastilla avisan de lo que va a pasar. Antes de
+  reemplazar el lienzo se pregunta si había cambios sin guardar, y soltar otra
+  cosa (una foto, un PDF) no hace nada más que decirlo.
+- **Abrir reciente se limpia solo**: si un archivo se movió o se borró, sale de
+  la lista en vez de quedarse como una entrada que ya no abre nada.
 - **El archivo guardado es el sobre oficial** (`application:
   normia-planos-cad`, `format: normia-plan`, `schema_version: 3`): el mismo que
   exporta la edición completa y el mismo que su importador acepta. Un plano
@@ -179,8 +185,8 @@ Microsoft. Eso exige certificados de pago que esta edición no tiene.
 
 | Suite | Qué cubre |
 | --- | --- |
-| `tests/js/estudio.mjs` (32) | La página abre **sin instalar** nada; no hay portada, pisos ni versiones; los cajones hablan del plano y no de un piso de proyecto; el editor arranca en blanco; el puente guarda, abre y avisa del título; el plano llega al auditor, al informe, a la impresión y al SVG; el JSON es el sobre oficial y se importa en la edición completa; renombrar funciona y los acentos no se pierden en el nombre del archivo; los catálogos se sirven sin sesión |
-| `tests/js/electron.mjs` (48) | Incluye la edición del estudio: ventana sin Node, puente mínimo, cierre con aviso, diálogos de archivo, sobre oficial y el flujo de las tres plataformas |
+| `tests/js/estudio.mjs` (35) | La página abre **sin instalar** nada; no hay portada, pisos ni versiones; los cajones hablan del plano y no de un piso de proyecto; el editor arranca en blanco; el puente guarda, abre y avisa del título; el plano llega al auditor, al informe, a la impresión y al SVG; el JSON es el sobre oficial y se importa en la edición completa; renombrar funciona y los acentos no se pierden en el nombre del archivo; soltar un plano pide abrirlo (y solo un `.json`); los catálogos se sirven sin sesión |
+| `tests/js/electron.mjs` (52) | Incluye la edición del estudio: ventana sin Node, puente mínimo, cierre con aviso, diálogos de archivo, arrastrar y soltar, sobre oficial, el flujo de las tres plataformas y **el paquete real abriendo el estudio sin base de datos** |
 | `tests/run-all.mjs` | 26 pasos con PHP 8.1 y 8.3: el estudio corre en los dos intérpretes |
 
 ---

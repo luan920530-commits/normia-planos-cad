@@ -7,10 +7,11 @@
  *   2. no hay portada, ni conmutador de pisos, ni versiones: solo el editor;
  *   3. el editor arranca en JSDOM con un plano en blanco y sin errores;
  *   4. el puente de archivos guarda, abre y avisa al proceso principal;
- *   5. el plano en curso llega al auditor, al informe, a la impresión y al SVG;
- *   6. el JSON que se descarga es el sobre oficial, importable sin conversiones;
- *   7. los catálogos se sirven sin sesión (la biblioteca del editor);
- *   8. renombrar el plano y los nombres con acentos llegan al informe y al archivo.
+ *   5. soltar un plano sobre la ventana pide abrirlo (y solo un .json);
+ *   6. el plano en curso llega al auditor, al informe, a la impresión y al SVG;
+ *   7. el JSON que se descarga es el sobre oficial, importable sin conversiones;
+ *   8. renombrar el plano y los nombres con acentos llegan al informe y al archivo;
+ *   9. los catálogos se sirven sin sesión (la biblioteca del editor).
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -65,6 +66,7 @@ try {
   const abiertos = [];
   const titulos = [];
   const estados = [];
+  const soltados = [];
   let comando = null;
   window.NormiaEstudio = {
     guardar: async (payload) => {
@@ -94,6 +96,8 @@ try {
     },
     titulo: (payload) => titulos.push(payload),
     estado: (payload) => estados.push(payload),
+    rutaDeArchivo: (file) => `/tmp/${file?.name || 'soltado.json'}`,
+    soltar: (payload) => soltados.push(payload),
     alComando: (callback) => { comando = callback; },
   };
   window.eval(`${estudioSource}\n//# sourceURL=js/editor/study.js`);
@@ -142,7 +146,26 @@ try {
     && escritos[1].path === '/tmp/planta.json',
     `${escritos.length} escrituras · ${escritos[1]?.path || 'sin ruta'}`);
 
-  /* ------------------ 5 · el plano llega al auditor y al informe ------------------ */
+  /* ------------------- 5 · soltar un plano sobre la ventana ------------------- */
+  const drop = (files, types = ['Files']) => {
+    const event = new window.Event('drop', { bubbles: true, cancelable: true });
+    Object.defineProperty(event, 'dataTransfer', { value: { files, types } });
+    window.dispatchEvent(event);
+    return event;
+  };
+  const soltarPlano = drop([new window.File(['{}'], 'planta.json', { type: 'application/json' })]);
+  report.check('Soltar un plano .json pide abrirlo al proceso principal',
+    soltados.length === 1 && soltados[0].path === '/tmp/planta.json' && soltarPlano.defaultPrevented,
+    `${soltados.length} soltados · ${soltados[0]?.path || 'sin ruta'}`);
+  const soltarTexto = drop([new window.File(['hola'], 'notas.txt', { type: 'text/plain' })]);
+  // La ventana no debe navegar al archivo soltado, y tampoco abrirlo como plano.
+  report.check('Soltar otra cosa no abre nada y la ventana no navega',
+    soltados.length === 1 && soltarTexto.defaultPrevented, `${soltados.length} soltados`);
+  drop([new window.File(['{}'], 'objeto.json', { type: 'application/json' })], ['Files', 'application/x-normia-resource']);
+  report.check('Un arrastre interno del editor no se confunde con un archivo',
+    soltados.length === 1, `${soltados.length} soltados`);
+
+  /* ------------------ 6 · el plano llega al auditor y al informe ------------------ */
   await window.NormiaStud.sync();
   const auditoria = await app.client.get('estudio/auditoria', { accept: 'application/json' });
   let auditoriaData = {};
@@ -167,7 +190,7 @@ try {
   const svg = await app.client.get('estudio/export/svg', { accept: 'image/svg+xml' });
   report.check('El SVG se exporta con escala física', svg.status === 200 && /<svg/i.test(svg.text) && /mm/.test(svg.text), `${svg.type} · ${svg.text.length} bytes`);
 
-  /* ------------------- 6 · el JSON es el sobre oficial e importable ------------------- */
+  /* ------------------- 7 · el JSON es el sobre oficial e importable ------------------- */
   const json = await app.client.get('estudio/export/json', { accept: 'application/json' });
   let sobre = {};
   try { sobre = JSON.parse(json.text); } catch { sobre = {}; }
@@ -194,7 +217,7 @@ echo json_encode([
     `${datos.elements ?? '?'} elementos · ${datos.canvas ?? '?'}`);
   fs.rmSync(ruta, { force: true });
 
-  /* -------------- 7 · renombrar y nombres con acentos en el archivo -------------- */
+  /* -------------- 8 · renombrar y nombres con acentos en el archivo -------------- */
   const renombrado = await app.client.postJson('estudio/nombre', { name: 'Sótano · Diseño' });
   let nombreNuevo = {};
   try { nombreNuevo = renombrado.json(); } catch { nombreNuevo = {}; }

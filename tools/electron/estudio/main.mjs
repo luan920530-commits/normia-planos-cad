@@ -153,13 +153,27 @@ function recentFile() {
   return path.join(app.getPath('userData'), 'recientes.json');
 }
 
+/**
+ * Últimos diez planos abiertos. Un archivo borrado o movido desaparece de la
+ * lista en vez de quedarse como una entrada que ya no abre nada.
+ */
 function readRecent() {
+  let list;
   try {
-    const list = JSON.parse(fs.readFileSync(recentFile(), 'utf8'));
-    return Array.isArray(list) ? list.filter((item) => item && typeof item.path === 'string').slice(0, 10) : [];
+    list = JSON.parse(fs.readFileSync(recentFile(), 'utf8'));
   } catch {
     return [];
   }
+  if (!Array.isArray(list)) return [];
+  const alive = list
+    .filter((item) => item && typeof item.path === 'string' && fs.existsSync(item.path))
+    .slice(0, 10);
+  if (alive.length !== list.length) {
+    try {
+      fs.writeFileSync(recentFile(), `${JSON.stringify(alive, null, 2)}\n`, 'utf8');
+    } catch { /* si no se puede limpiar la lista, se muestra igual la que sirve */ }
+  }
+  return alive;
 }
 
 function rememberRecent(filePath, name) {
@@ -227,6 +241,31 @@ async function savePlan(payload = {}) {
 }
 
 ipcMain.handle('estudio:abrir', async (_event, payload = {}) => openPlan(String(payload.path || '')));
+
+/**
+ * Un plano soltado sobre la ventana. Antes de reemplazar lo que hay en el
+ * lienzo se pregunta si había cambios sin guardar: soltar un archivo no puede
+ * ser la forma de perder media hora de dibujo.
+ */
+ipcMain.on('estudio:soltar', async (_event, payload = {}) => {
+  const file = String(payload.path || '');
+  if (!file || !fs.existsSync(file)) {
+    return; // Un arrastre que no deja ruta (por ejemplo desde el navegador) se ignora.
+  }
+  if (rendererState.dirty) {
+    const choice = await dialog.showMessageBox(mainWindow, {
+      type: 'warning',
+      title: 'Hay cambios sin guardar',
+      message: 'Abrir otro plano descarta los cambios de este.',
+      detail: 'Guarda primero si quieres conservarlos.',
+      buttons: ['Abrir de todas formas', 'Cancelar'],
+      defaultId: 1,
+      cancelId: 1,
+    });
+    if (choice.response !== 0) return;
+  }
+  openRecent(file);
+});
 ipcMain.handle('estudio:guardar', async (_event, payload = {}) => savePlan(payload));
 ipcMain.handle('estudio:guardar-como', async (_event, payload = {}) => savePlanAs(payload));
 
