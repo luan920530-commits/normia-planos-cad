@@ -10,7 +10,7 @@
 
 APP := build/NormiaEstudio.app
 BIN := $(APP)/Contents/MacOS/NormiaEstudio
-CORE := ../src/units.c ../src/geometry.c ../src/json.c ../src/jsonw.c ../src/format.c ../src/plan.c ../src/document.c ../src/svg.c ../src/grid.c ../src/audit.c ../src/travel.c ../src/findings.c ../src/library.c ../src/signage.c ../src/firstaid.c ../src/extinguisher.c
+CORE := ../src/units.c ../src/geometry.c ../src/json.c ../src/jsonw.c ../src/format.c ../src/plan.c ../src/document.c ../src/svg.c ../src/grid.c ../src/audit.c ../src/travel.c ../src/findings.c ../src/library.c ../src/signage.c ../src/firstaid.c ../src/extinguisher.c ../src/scenarios.c ../src/routes.c ../src/inspect.c
 OBJC := main.m AppDelegate.m CanvasView.m
 CFLAGS ?= -O2 -Wall -Wextra -Wno-unused-parameter
 # Cocoa dibuja la ventana; UniformTypeIdentifiers da UTTypeJSON para los paneles.
@@ -23,6 +23,10 @@ $(BIN): $(OBJC) Info.plist $(wildcard ../include/normia/*.h) $(CORE)
 	clang -fobjc-arc -std=c11 $(CFLAGS) -I../include \
 		$(OBJC) $(CORE) $(FRAMEWORKS) -lm -o $(BIN)
 	@cp Info.plist $(APP)/Contents/Info.plist
+	@# Los catálogos viajan dentro del paquete: sin ellos el cajón de revisión
+	@# mide el plano pero no puede revisar señalización ni extintores.
+	@mkdir -p $(APP)/Contents/Resources/resources
+	@cp ../resources/*.json $(APP)/Contents/Resources/resources/
 	@echo "· Aplicación armada: $(APP)"
 
 check: $(BIN)

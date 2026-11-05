@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "normia/inspect.h"
 #include "normia/svg.h"
 
 #include "normia/document.h"
@@ -29,6 +30,24 @@ static const char *kAppName = "Normia Estudio";
 @property(nonatomic, copy) NSString *planName;
 /** Submenú «Abrir reciente», que se rehace cada vez que se abre. */
 @property(nonatomic, strong) NSMenu *recentMenu;
+/* Cajón de revisión: la lista de hallazgos del núcleo, sin recalcular nada. */
+@property(nonatomic, strong) NSView *auditPanel;
+@property(nonatomic, strong) NSTextView *auditText;
+@property(nonatomic, strong) NSTextField *auditHeader;
+@property(nonatomic, strong) NSMutableArray<NSValue *> *findingRanges;
+@property(nonatomic) BOOL auditVisible;
+@property(nonatomic) norma_inspect_result inspection;
+@property(nonatomic) BOOL hasInspection;
+
+- (void)buildAuditPanel:(NSView *)content;
+- (void)toggleAudit:(id)sender;
+- (void)layoutCanvas;
+- (NSString *)resourcesPath;
+- (void)refreshInspection:(id)sender;
+- (void)fillAuditText;
+- (void)updateCanvasFindings;
+- (void)revealSelectedFinding:(id)sender;
+- (void)invalidateInspection;
 @end
 
 /** Preferencia donde viven los últimos planos: archivo del equipo, nunca la app. */
@@ -50,6 +69,9 @@ static const NSUInteger kRecentLimit = 10;
 - (void)dealloc
 {
     norma_document_free(&_document);
+    if (_hasInspection) {
+        norma_inspect_free(&_inspection);
+    }
 }
 
 /* -------------------------------- arranque ------------------------------- */
@@ -96,6 +118,8 @@ static const NSUInteger kRecentLimit = 10;
     self.canvas.document = &_document;
     [content addSubview:self.canvas];
 
+    [self buildAuditPanel:content];
+
     // Barra de estado sobria, debajo del lienzo.
     self.statusLabel = [NSTextField labelWithString:@""];
     self.statusLabel.font = [NSFont systemFontOfSize:11.0];
@@ -107,6 +131,205 @@ static const NSUInteger kRecentLimit = 10;
     [self.window center];
     [self.window makeKeyAndOrderFront:nil];
     [self.window makeFirstResponder:self.canvas];
+}
+
+/* --------------------------- cajón de revisión ---------------------------- */
+
+/**
+ * El cajón de la derecha: el informe del núcleo tal cual, con los hallazgos en
+ * orden y un botón para llevar el plano al punto del hallazgo elegido.
+ *
+ * No calcula nada: llama a `norma_inspect_document()`, la misma receta que
+ * `norma-core --inspect`, para que la ventana y la web no puedan decir cosas
+ * distintas.
+ */
+- (void)buildAuditPanel:(NSView *)content
+{
+    const CGFloat width = 330.0;
+    const CGFloat height = NSHeight(content.bounds);
+    NSView *panel = [[NSView alloc] initWithFrame:NSMakeRect(NSWidth(content.bounds) - width, 0.0,
+                                                             width, height)];
+    panel.autoresizingMask = NSViewMinXMargin | NSViewHeightSizable;
+
+    self.auditHeader = [NSTextField labelWithString:@"Revisión del plano"];
+    self.auditHeader.font = [NSFont systemFontOfSize:12.0 weight:NSFontWeightSemibold];
+    self.auditHeader.textColor = [NSColor colorWithCalibratedWhite:0.92 alpha:1.0];
+    self.auditHeader.frame = NSMakeRect(14.0, height - 36.0, width - 28.0, 28.0);
+    self.auditHeader.autoresizingMask = NSViewWidthSizable | NSViewMinYMargin;
+    [panel addSubview:self.auditHeader];
+
+    NSScrollView *scroll = [[NSScrollView alloc] initWithFrame:NSMakeRect(0.0, 46.0, width, height - 90.0)];
+    scroll.hasVerticalScroller = YES;
+    scroll.drawsBackground = NO;
+    scroll.borderType = NSNoBorder;
+    scroll.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
+
+    NSTextView *text = [[NSTextView alloc] initWithFrame:scroll.bounds];
+    text.editable = NO;
+    text.selectable = YES;
+    text.richText = NO;
+    text.drawsBackground = NO;
+    text.font = [NSFont systemFontOfSize:12.0];
+    text.textColor = [NSColor colorWithCalibratedWhite:0.90 alpha:1.0];
+    text.textContainerInset = NSMakeSize(12.0, 10.0);
+    text.verticallyResizable = YES;
+    text.horizontallyResizable = NO;
+    text.autoresizingMask = NSViewWidthSizable;
+    text.textContainer.widthTracksTextView = YES;
+    scroll.documentView = text;
+
+    self.auditText = text;
+    self.findingRanges = [NSMutableArray array];
+    [panel addSubview:scroll];
+
+    NSButton *reveal = [NSButton buttonWithTitle:@"Ver en el plano" target:self
+                                          action:@selector(revealSelectedFinding:)];
+    reveal.frame = NSMakeRect(14.0, 10.0, width - 28.0, 28.0);
+    reveal.autoresizingMask = NSViewWidthSizable | NSViewMaxYMargin;
+    reveal.bezelStyle = NSBezelStyleRounded;
+    [panel addSubview:reveal];
+
+    panel.hidden = YES;
+    self.auditPanel = panel;
+    [content addSubview:panel];
+}
+
+/** Muestra u oculta el cajón; al abrirlo, revisa el plano de nuevo. */
+- (void)toggleAudit:(id)sender
+{
+    (void) sender;
+    self.auditVisible = !self.auditVisible;
+    self.auditPanel.hidden = !self.auditVisible;
+    [self layoutCanvas];
+    if (self.auditVisible) {
+        [self refreshInspection:nil];
+    }
+    [self.window makeFirstResponder:self.auditVisible ? self.auditText : self.canvas];
+}
+
+/** El lienzo ocupa lo que deja el cajón y la barra de estado. */
+- (void)layoutCanvas
+{
+    NSView *content = self.window.contentView;
+    const CGFloat panel = self.auditVisible ? NSWidth(self.auditPanel.frame) : 0.0;
+    const NSRect bounds = content.bounds;
+    self.canvas.frame = NSMakeRect(0.0, 0.0, NSWidth(bounds) - panel, NSHeight(bounds));
+    [self.canvas setNeedsDisplay:YES];
+}
+
+/** Carpeta de catálogos dentro del paquete (`Contents/Resources/resources`). */
+- (NSString *)resourcesPath
+{
+    return [[[NSBundle mainBundle] resourcePath] stringByAppendingPathComponent:@"resources"];
+}
+
+/** Revisa el plano y llena el cajón. Una sola llamada al núcleo. */
+- (void)refreshInspection:(id)sender
+{
+    (void) sender;
+    if (self.hasInspection) {
+        norma_inspect_free(&_inspection);
+        self.hasInspection = NO;
+    }
+    char error[256] = "";
+    const NSString *resources = [self resourcesPath];
+    const int ok = norma_inspect_document(&_document, resources.fileSystemRepresentation, &_inspection,
+                                          error, sizeof(error));
+    if (!ok) {
+        [self canvasStatus:self.canvas message:[NSString stringWithUTF8String:error]];
+        return;
+    }
+    self.hasInspection = YES;
+    [self fillAuditText];
+    [self updateCanvasFindings];
+    [self canvasStatus:self.canvas message:[NSString stringWithFormat:
+                                            @"Revisión · %lu hallazgos · %ld personas · %ld salidas"
+                                            @" · criterios de la app, no certificación",
+                                            (unsigned long) _inspection.findings.count,
+                                            _inspection.summary.persons, _inspection.summary.exit_count]];
+}
+
+/** Arma el texto del cajón y recuerda el tramo de cada hallazgo. */
+- (void)fillAuditText
+{
+    [self.findingRanges removeAllObjects];
+    NSMutableString *body = [NSMutableString string];
+    const norma_inspect_summary *summary = &_inspection.summary;
+    [body appendFormat:@"%ld personas · %.1f m² libres · %ld salidas\n", summary->persons,
+                       summary->free_area_m2, summary->exit_count];
+    if (summary->has_longest) {
+        [body appendFormat:@"Recorrido más largo: %.1f m\n", summary->longest_travel_m];
+    }
+    if (!_inspection.has_library) {
+        [body appendString:@"Sin catálogo de señalización: no se revisó la señalización.\n"];
+    }
+    if (!_inspection.has_ext_norms) {
+        [body appendString:@"Sin tablas de extintores: no se revisó el equipamiento.\n"];
+    }
+    [body appendString:@"\n"];
+
+    for (size_t index = 0; index < _inspection.findings.count; index += 1) {
+        const norma_finding *finding = &_inspection.findings.items[index];
+        const char *mark = strcmp(finding->severity, "high") == 0 ? "▲"
+                          : strcmp(finding->severity, "medium") == 0 ? "●"
+                          : strcmp(finding->severity, "low") == 0 ? "○" : "·";
+        const NSUInteger start = body.length;
+        [body appendFormat:@"%s %s\n%s\n\n", mark, finding->title, finding->detail];
+        [self.findingRanges addObject:[NSValue valueWithRange:NSMakeRange(start, body.length - start)]];
+    }
+    if (_inspection.findings.count == 0) {
+        [body appendString:@"Sin hallazgos con los criterios de la app.\n"];
+    }
+
+    self.auditHeader.stringValue = [NSString stringWithFormat:@"Revisión · %lu hallazgos",
+                                    (unsigned long) _inspection.findings.count];
+    self.auditText.string = body;
+}
+
+/** Copia al lienzo los puntos de los hallazgos para dibujarlos como anillos. */
+- (void)updateCanvasFindings
+{
+    norma_point points[64];
+    size_t count = 0;
+    for (size_t index = 0; index < _inspection.findings.count && count < 64; index += 1) {
+        const norma_finding *finding = &_inspection.findings.items[index];
+        if (finding->has_position) {
+            points[count] = finding->position;
+            count += 1;
+        }
+    }
+    [self.canvas setFindingPoints:points count:count];
+}
+
+/** Lleva el plano al punto del hallazgo donde está el cursor del cajón. */
+- (void)revealSelectedFinding:(id)sender
+{
+    (void) sender;
+    if (!self.hasInspection) {
+        [self refreshInspection:nil];
+    }
+    if (!self.hasInspection || self.findingRanges.count == 0) {
+        return;
+    }
+    const NSUInteger caret = self.auditText.selectedRange.location;
+    NSUInteger index = 0;
+    for (NSUInteger slot = 0; slot < self.findingRanges.count; slot += 1) {
+        const NSRange range = self.findingRanges[slot].rangeValue;
+        if (caret >= range.location && caret < NSMaxRange(range)) {
+            index = slot;
+            break;
+        }
+        if (caret >= NSMaxRange(range)) {
+            index = slot;
+        }
+    }
+    const norma_finding *finding = &_inspection.findings.items[index];
+    if (!finding->has_position) {
+        [self canvasStatus:self.canvas message:@"Ese hallazgo no tiene un punto en el plano."];
+        return;
+    }
+    [self.canvas focusOnPoint:finding->position];
+    [self canvasStatus:self.canvas message:[NSString stringWithUTF8String:finding->title]];
 }
 
 - (void)buildMenu
@@ -163,6 +386,8 @@ static const NSUInteger kRecentLimit = 10;
     [viewMenu addItemWithTitle:@"Acercar" action:@selector(zoomIn:) keyEquivalent:@"+"];
     [viewMenu addItemWithTitle:@"Alejar" action:@selector(zoomOut:) keyEquivalent:@"-"];
     [viewMenu addItemWithTitle:@"Zoom 100 %" action:@selector(zoomReset:) keyEquivalent:@"1"];
+    [viewMenu addItem:[NSMenuItem separatorItem]];
+    [viewMenu addItemWithTitle:@"Revisar plano" action:@selector(toggleAudit:) keyEquivalent:@"r"];
     [viewMenu addItem:[NSMenuItem separatorItem]];
     [viewMenu addItemWithTitle:@"Pantalla completa" action:@selector(toggleFullScreen:) keyEquivalent:@"f"];
     viewItem.submenu = viewMenu;
@@ -280,10 +505,26 @@ static const NSUInteger kRecentLimit = 10;
     }
 }
 
+/** Cualquier edición deja la revisión vieja: se vuelve a pedir con ⌘R. */
+- (void)invalidateInspection
+{
+    if (self.hasInspection) {
+        norma_inspect_free(&_inspection);
+        self.hasInspection = NO;
+    }
+    [self.canvas setFindingPoints:NULL count:0];
+    self.auditHeader.stringValue = @"Revisión · sin actualizar";
+    self.auditText.string = @"El plano cambió. Pulsa ⌘R para revisarlo de nuevo.";
+    [self.findingRanges removeAllObjects];
+}
+
 - (void)canvasDidChange:(CanvasView *)view
 {
     (void) view;
     [self refreshTitle];
+    if (self.hasInspection) {
+        [self invalidateInspection];
+    }
 }
 
 - (void)canvasStatus:(CanvasView *)view message:(NSString *)message
@@ -324,6 +565,7 @@ static const NSUInteger kRecentLimit = 10;
     [self.canvas documentDidLoad];
     [self refreshTitle];
     [self canvasStatus:self.canvas message:@"Plano nuevo. Pulsa M para dibujar un muro."];
+    [self invalidateInspection];
 }
 
 - (void)openPlan:(id)sender
@@ -362,6 +604,7 @@ static const NSUInteger kRecentLimit = 10;
     [self.canvas documentDidLoad];
     [self refreshTitle];
     [self canvasStatus:self.canvas message:[NSString stringWithFormat:@"Plano abierto · %@", self.planName]];
+    [self invalidateInspection];
 }
 
 - (void)savePlan:(id)sender

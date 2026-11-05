@@ -55,10 +55,10 @@ es lo que comprueba `tests/parity.mjs`.
 
 ```sh
 make -C native            # construye native/build/norma-core
-make -C native test       # núcleo (23), documento (31), SVG (25), auditor (50), señalización (30) y extintores (32)
+make -C native test       # núcleo (23), documento (31), SVG (25), auditor (57), señalización (30) y extintores (32)
 node native/tests/core.mjs         # compila en estricto y corre los cuatro (8)
-node native/tests/parity.mjs 8.3   # paridad contra el motor PHP (56)
-node native/tests/macos.mjs        # contrato de la ventana nativa (46)
+node native/tests/parity.mjs 8.3   # paridad contra el motor PHP (60)
+node native/tests/macos.mjs        # contrato de la ventana nativa (52)
 ```
 
 Y en macOS, con las herramientas de Xcode:

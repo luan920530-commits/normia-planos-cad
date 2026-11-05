@@ -59,6 +59,9 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
     double _panX;
     double _panY;
     BOOL _viewReady;
+    /* Puntos de la revisión (hallazgos con posición), para verlos en el plano. */
+    norma_point _findingPoints[64];
+    size_t _findingCount;
 }
 
 - (instancetype)initWithFrame:(NSRect)frame
@@ -445,6 +448,16 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
         CGContextStrokePath(context);
     }
 
+    // La revisión: un anillo por hallazgo con punto en el plano.
+    CGContextSetRGBStrokeColor(context, 0.86, 0.30, 0.22, 0.95);
+    CGContextSetLineWidth(context, 1.8 / zoom);
+    for (size_t index = 0; index < _findingCount; index += 1) {
+        const norma_point point = _findingPoints[index];
+        const CGFloat radius = 11.0 / zoom;
+        CGContextStrokeEllipseInRect(context, CGRectMake(point.x - radius, point.y - radius,
+                                                         radius * 2.0, radius * 2.0));
+    }
+
     CGContextRestoreGState(context);
 
     // Las cifras se dibujan en coordenadas de la ventana: si se hicieran dentro
@@ -741,6 +754,43 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
     [self.delegate canvasStatus:self message:[self hintForTool]];
     [self setNeedsDisplay:YES];
     return YES;
+}
+
+/* ------------------------- revisión sobre el plano ------------------------ */
+
+/** Puntos de los hallazgos: se pintan como anillos rojos hasta la próxima revisión. */
+- (void)setFindingPoints:(const norma_point *)points count:(size_t)count
+{
+    _findingCount = 0;
+    if (points == NULL) {
+        return;
+    }
+    for (size_t index = 0; index < count && _findingCount < 64; index += 1) {
+        _findingPoints[_findingCount] = points[index];
+        _findingCount += 1;
+    }
+    [self setNeedsDisplay:YES];
+}
+
+- (size_t)findingCount
+{
+    return _findingCount;
+}
+
+/**
+ * Lleva el plano a un punto: lo deja en el centro y, si la vista está muy
+ * alejada, la acerca lo suficiente para leer el plano alrededor.
+ */
+- (void)focusOnPoint:(norma_point)point
+{
+    [self ensureView];
+    const double zoom = _zoom < 0.8 ? 1.2 : _zoom;
+    const double width = (double) NSWidth(self.bounds);
+    const double height = (double) NSHeight(self.bounds);
+    _zoom = zoom;
+    _panX = width / 2.0 - point.x * zoom;
+    _panY = height / 2.0 - point.y * zoom;
+    [self setNeedsDisplay:YES];
 }
 
 - (void)cancelDraft

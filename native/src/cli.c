@@ -19,6 +19,7 @@
 
 #include "normia/audit.h"
 #include "normia/findings.h"
+#include "normia/inspect.h"
 #include "normia/extinguisher.h"
 #include "normia/firstaid.h"
 #include "normia/library.h"
@@ -43,11 +44,12 @@ static void usage(FILE *out, const char *program)
             "  %s --stats plano.json   cifras del plano, en JSON\n"
             "  %s --svg plano.json     SVG del plano, por la salida estándar\n"
             "  %s --audit plano.json   superficie libre y aforo, en JSON\n"
+            "  %s --inspect plano.json resumen y hallazgos, como el cajón Revisión\n"
             "  %s --sign-board x.svg   hoja con todas las señalizaciones, en SVG\n"
             "  %s --help               esta ayuda\n\n"
             "Opciones:\n"
             "  --resources DIR         carpeta de catálogos (por omisión, ./resources)\n",
-            NORMA_CORE_VERSION, program, program, program, program, program, program, program);
+            NORMA_CORE_VERSION, program, program, program, program, program, program, program, program);
 }
 
 /** Carpeta de catálogos pedida con `--resources` o con el entorno. */
@@ -186,6 +188,52 @@ static int command_stats(const char *path)
            (unsigned long) stats.elements, (unsigned long) stats.walls, (unsigned long) stats.curved_walls,
            stats.wall_length_cm, stats.wall_length_m, stats.canvas_area_m2);
     return 0;
+}
+
+/** Escribe un hallazgo como objeto JSON (el mismo en `--audit` y `--inspect`). */
+static void write_finding(const norma_finding *finding)
+{
+    printf("{\"code\":");
+    write_json_string(finding->code);
+    printf(",\"severity\":");
+    write_json_string(finding->severity);
+    printf(",\"title\":");
+    write_json_string(finding->title);
+    printf(",\"detail\":");
+    write_json_string(finding->detail);
+    printf(",\"elements\":[");
+    for (size_t element = 0; element < finding->element_count; element += 1) {
+        if (element > 0) {
+            printf(",");
+        }
+        write_json_string(finding->element_ids[element]);
+    }
+    printf("],\"position\":");
+    if (finding->has_position) {
+        printf("{\"x\":%.17g,\"y\":%.17g}", finding->position.x, finding->position.y);
+    } else {
+        printf("null");
+    }
+    printf(",\"value\":");
+    if (finding->has_value) {
+        write_json_string(finding->value);
+    } else {
+        printf("null");
+    }
+    printf("}");
+}
+
+/** La lista completa, en el orden del auditor. */
+static void write_findings(const norma_findings *findings)
+{
+    printf("[");
+    for (size_t index = 0; index < findings->count; index += 1) {
+        if (index > 0) {
+            printf(",");
+        }
+        write_finding(&findings->items[index]);
+    }
+    printf("]");
 }
 
 static int command_audit(const char *path)
@@ -465,41 +513,11 @@ static int command_audit(const char *path)
         printf("null");
     }
     printf("},\"findingsCount\":{\"high\":%ld,\"medium\":%ld,\"low\":%ld,\"info\":%ld},"
-           "\"findings\":[",
+           "\"findings\":",
            counts.high, counts.medium, counts.low, counts.info);
-    for (size_t index = 0; index < findings.count; index += 1) {
-        const norma_finding *finding = &findings.items[index];
-        printf("%s{\"code\":", index > 0 ? "," : "");
-        write_json_string(finding->code);
-        printf(",\"severity\":");
-        write_json_string(finding->severity);
-        printf(",\"title\":");
-        write_json_string(finding->title);
-        printf(",\"detail\":");
-        write_json_string(finding->detail);
-        printf(",\"elements\":[");
-        for (size_t element = 0; element < finding->element_count; element += 1) {
-            if (element > 0) {
-                printf(",");
-            }
-            write_json_string(finding->element_ids[element]);
-        }
-        printf("],\"position\":");
-        if (finding->has_position) {
-            printf("{\"x\":%.17g,\"y\":%.17g}", finding->position.x, finding->position.y);
-        } else {
-            printf("null");
-        }
-        printf(",\"value\":");
-        if (finding->has_value) {
-            write_json_string(finding->value);
-        } else {
-            printf("null");
-        }
-        printf("}");
-    }
+    write_findings(&findings);
     norma_findings_free(&findings);
-    printf("]}\n"); /* cierra findings y el objeto raíz */
+    printf("}\n"); /* cierra el objeto raíz */
     norma_signage_free(&signage);
     if (has_ext_norms) {
         norma_ext_norms_free(&ext_norms);
@@ -645,6 +663,67 @@ static int command_sign_board(const char *path)
     return 0;
 }
 
+/**
+ * `--inspect plano.json`: lo mismo que la ventana nativa muestra en su cajón de
+ * revisión —resumen y hallazgos—, con una sola receta (`norma_inspect_document`).
+ * Existe para que la lista de la ventana se pueda comparar con el motor PHP.
+ */
+static int command_inspect(const char *path)
+{
+    size_t length = 0;
+    char *text = read_file(path, &length);
+    if (text == NULL) {
+        return 1;
+    }
+    norma_document document;
+    norma_document_init(&document);
+    char error[256];
+    const int ok = norma_document_from_json(&document, text, length, error, sizeof(error));
+    free(text);
+    if (!ok) {
+        fprintf(stderr, "%s\n", error);
+        return 2;
+    }
+    norma_inspect_result report;
+    if (!norma_inspect_document(&document, g_resources, &report, error, sizeof(error))) {
+        norma_document_free(&document);
+        fprintf(stderr, "%s\n", error);
+        return 3;
+    }
+    const norma_inspect_summary *summary = &report.summary;
+    printf("{\"summary\":{\"persons\":%ld,\"declared\":%ld,\"permitted\":%ld,\"excess\":%ld,\"source\":",
+           summary->persons, summary->declared, summary->permitted, summary->excess);
+    write_json_string(summary->source);
+    printf(",\"freeAreaM2\":%.17g,\"exitCount\":%ld,\"longestTravelM\":", summary->free_area_m2,
+           summary->exit_count);
+    if (summary->has_longest) {
+        printf("%.17g", summary->longest_travel_m);
+    } else {
+        printf("null");
+    }
+    printf(",\"unreachableM2\":%.17g,\"rooms\":%lu,\"routes\":%lu,\"extinguishers\":%lu,"
+           "\"coveredM2\":%.17g,\"coveredPct\":",
+           summary->unreachable_m2, (unsigned long) summary->room_count,
+           (unsigned long) summary->route_count, (unsigned long) summary->extinguisher_count,
+           summary->covered_m2);
+    if (summary->has_covered_pct) {
+        printf("%.17g", summary->covered_pct);
+    } else {
+        printf("null");
+    }
+    printf(",\"hasLibrary\":%s,\"hasExtinguisherNorms\":%s,\"counts\":{"
+           "\"high\":%ld,\"medium\":%ld,\"low\":%ld,\"info\":%ld}},"
+           "\"findings\":",
+           report.has_library ? "true" : "false",
+           report.has_ext_norms ? "true" : "false", summary->counts.high, summary->counts.medium,
+           summary->counts.low, summary->counts.info);
+    write_findings(&report.findings);
+    printf("}\n");
+    norma_inspect_free(&report);
+    norma_document_free(&document);
+    return 0;
+}
+
 int main(int argc, char **argv)
 {
     const char *program = argc > 0 ? argv[0] : "norma-core";
@@ -678,6 +757,13 @@ int main(int argc, char **argv)
     }
     if (strcmp(command, "--check") == 0) {
         return command_check();
+    }
+    if (strcmp(command, "--inspect") == 0) {
+        if (argc < 3) {
+            fprintf(stderr, "Uso: %s --inspect plano.json\n", argv[0]);
+            return 2;
+        }
+        return command_inspect(argv[2]);
     }
     if (strcmp(command, "--audit") == 0) {
         if (count < 2) {

@@ -164,6 +164,35 @@ report.check('La ruta se pinta con su color, su punta de flecha y su longitud',
   && /norma_polyline_length\(element->nodes, element->node_count, element->arcs\)/.test(canvas),
   'verde · flecha · cifra');
 
+/* --------------------- 4b3 · el cajón de revisión (N3) --------------------- */
+
+report.check('El cajón de revisión pide el informe al núcleo, no lo inventa',
+  /norma_inspect_document\(&_document/.test(delegate) && /norma_inspect_free/.test(delegate)
+  && /#include "normia\/inspect\.h"/.test(delegate) && /norma_inspect_result inspection/.test(delegate),
+  'norma_inspect_document');
+
+report.check('⌘R abre y cierra la revisión desde el menú Ver',
+  /Revisar plano/.test(delegate) && /action:@selector\(toggleAudit:\) keyEquivalent:@"r"/.test(delegate)
+  && /- \(void\)toggleAudit:/.test(delegate), '⌘R');
+
+report.check('La lista del cajón sigue el orden del auditor y lleva al punto',
+  /fillAuditText/.test(delegate) && /findingRanges/.test(delegate)
+  && /focusOnPoint:/.test(delegate) && /revealSelectedFinding:/.test(delegate),
+  'título · detalle · Ver en el plano');
+
+report.check('Los hallazgos con punto se dibujan en el plano',
+  /setFindingPoints:/.test(canvas) && /setFindingPoints:\(const norma_point \*\)points count:/.test(canvasHeader)
+  && /CGContextStrokeEllipseInRect/.test(canvas) && /focusOnPoint:\(norma_point\)point/.test(canvasHeader),
+  'anillos rojos');
+
+report.check('Editar el plano invalida la revisión en vez de mostrar cifras viejas',
+  /invalidateInspection/.test(delegate) && /if \(self\.hasInspection\) \{\s*\[self invalidateInspection\]/.test(delegate),
+  'se vuelve a pedir con ⌘R');
+
+report.check('El paquete lleva los catálogos que el cajón necesita',
+  /Contents\/Resources\/resources/.test(makefile) && /cp \.\.\/resources\/\*\.json/.test(makefile),
+  'Resources/resources');
+
 /* ------------------------ 4c · recientes, papel y PDF ------------------------ */
 
 report.check('Los recientes se guardan como preferencia y no dentro del paquete',

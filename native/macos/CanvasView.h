@@ -46,6 +46,14 @@ NS_ASSUME_NONNULL_BEGIN
  * Devuelve `NO` si la tecla no es de ninguna herramienta.
  */
 - (BOOL)selectToolWithKey:(NSString *)key;
+/**
+ * Marca los puntos de la revisión (hallazgos con posición) para verlos en el
+ * plano. Se copian: la lista del informe puede cambiar sin avisar.
+ */
+- (void)setFindingPoints:(const norma_point *)points count:(size_t)count;
+- (size_t)findingCount;
+/** Centra el plano en un punto y, si hace falta, lo acerca para poder leerlo. */
+- (void)focusOnPoint:(norma_point)point;
 /** Cancela la herramienta en curso sin tocar el documento. */
 - (void)cancelDraft;
 

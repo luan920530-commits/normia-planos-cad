@@ -232,7 +232,7 @@ dígito**:
 | Lectura del sobre `normia-plan`, muros y superficie | `native/src/plan.c` | hecho |
 | Programa `norma-core --check / --stats` | `native/src/cli.c` | hecho |
 | Pruebas del núcleo | `native/tests/test_core.c` | **23/23** |
-| Paridad contra PHP | `native/tests/parity.mjs` | **56/56** |
+| Paridad contra PHP | `native/tests/parity.mjs` | **60/60** |
 
 Resultados de la prueba de paridad con un plano de tres muros (uno curvo):
 
@@ -280,8 +280,8 @@ selección por proximidad y el **sobre oficial** de ida y vuelta.
 | `native/tests/test_core.c` | unidades, arcos, JSON, plano | **23/23** |
 | `native/tests/test_document.c` | muros, deshacer, selección, guardar y abrir, unidades, rutas | **31/31** |
 | `native/tests/test_svg.c` | cifras es-CO y SVG con escala física (etapa N2) | **25/25** |
-| `native/tests/parity.mjs` | paridad C contra PHP, dígito a dígito, también en el SVG y en el auditor | **56/56** |
-| `native/tests/macos.mjs` | contrato de la ventana: AppKit, sin WebView, menú en español, atajos, sobre oficial, macOS 12, herramientas y ruta de evacuación | **46/46** |
+| `native/tests/parity.mjs` | paridad C contra PHP, dígito a dígito, también en el SVG, el auditor y la revisión | **60/60** |
+| `native/tests/macos.mjs` | contrato de la ventana: AppKit, sin WebView, menú en español, atajos, sobre oficial, macOS 12, herramientas, ruta y cajón de revisión | **52/52** |
 | `native/tests/core.mjs` | compilación estricta y los tres programas de prueba del núcleo | **7/7** |
 
 Y en el flujo de verificación hay un trabajo nuevo en **`macos-15-intel`** que
@@ -314,7 +314,7 @@ para sacar el plano sin el motor PHP:
 | `norma-core --svg plano.json` | `native/src/cli.c` | hecho |
 | Herramientas del lienzo `V · M · P · A · D · R` con borrador y previsualización | `native/macos/CanvasView.m` | hecho |
 | Exportar SVG con panel del sistema (`⌘E`) | `native/macos/AppDelegate.m` | escrito |
-| Abrir reciente (10 archivos, preferencia del sistema, se limpia sola) | `native/macos/AppDelegate.m` | hecho · **46/46** |
+| Abrir reciente (10 archivos, preferencia del sistema, se limpia sola) | `native/macos/AppDelegate.m` | hecho · **52/52** |
 | Lienzo abierto: zoom 2 %–4000 % sobre el cursor, desplazamiento con el botón central o derecho y rejilla adaptativa | `native/macos/CanvasView.m` | hecho |
 | Imprimir en A4 horizontal y exportar PDF con el fondo en blanco | `native/macos/AppDelegate.m`, `CanvasView.m` | hecho |
 
@@ -334,7 +334,7 @@ Lo que da el SVG del núcleo, medido en el plano de prueba A4 a 1:100:
 
 - **La ventana con las herramientas nuevas no se ha compilado**: en el entorno
   donde se escribe esto no hay AppKit. El contrato se comprueba con
-  `native/tests/macos.mjs` (46/46) y la compilación real la hace el trabajo
+  `native/tests/macos.mjs` (52/52) y la compilación real la hace el trabajo
   `macos-nativo` del flujo.
 - **Recientes e impresión** ya están escritos, pero quien los usa con ratón y
   teclado es una persona: aquí solo se comprueba su contrato y que compilen.
@@ -360,8 +360,8 @@ en la web.
 | Primeros auxilios | `native/src/firstaid.c` | Botiquín, camilla y DEA: recuento y alcance medido sobre la rejilla |
 | Extintores | `native/src/extinguisher.c` | Tablas NTC 2885 / NFPA 10 y Resolución 2400: recorrido por clase y riesgo, área por número de A, cobertura por recorrido real y zonas descubiertas con su motivo |
 | Programa | `native/src/cli.c` | `norma-core --audit plano.json` incluye salidas, recorrido, señalización, primeros auxilios y hallazgos; `--sign-board hoja.svg` dibuja el catálogo completo |
-| Pruebas | `native/tests/test_audit.c` · `test_signs.c` · `test_extinguishers.c` | **50/50**, **30/30** y **32/32** (documento **31/31**, ventana **46/46**) |
-| Paridad | `native/tests/parity.mjs` | **56/56** |
+| Pruebas | `native/tests/test_audit.c` · `test_signs.c` · `test_extinguishers.c` | **57/57**, **30/30** y **32/32** (documento **31/31**, ventana **52/52**) |
+| Paridad | `native/tests/parity.mjs` | **60/60** |
 
 El caso de prueba y sus cifras, idénticas en C y en PHP: una habitación de
 6 × 4 m con un vano de 80 cm y una vía de 4 m de ancho al sur, con 5 000
@@ -578,18 +578,39 @@ va en **verde de evacuación**, con **punta de flecha** en el sentido de salida 
 la longitud rotulada junto al extremo, con la misma cifra que dará el informe.
 
 La herramienta se comprueba donde se puede comprobar aquí, sobre el código
-fuente (`native/tests/macos.mjs`, **46/46**); dibujarla con el ratón en un Mac es
+fuente (`native/tests/macos.mjs`, **52/52**); dibujarla con el ratón en un Mac es
 lo que sigue viendo una persona.
+
+### El cajón de revisión, dentro de la ventana
+
+La ventana ya **muestra** el auditor: **⌘R** (menú Ver › Revisar plano) abre un
+cajón a la derecha con la lista de hallazgos —icono por gravedad, título y
+detalle—, el resumen del plano (personas, superficie libre, salidas, recorrido más
+largo) y un botón **Ver en el plano** que centra y acerca el lienzo en el punto del
+hallazgo elegido. Cada hallazgo con punto se dibuja además como un **anillo rojo**
+sobre el plano.
+
+El cajón **no calcula**: llama a `norma_inspect_document()`, la misma receta que el
+programa expone como `norma-core --inspect plano.json`. Así la lista de la ventana
+y la del informe web salen de un solo sitio; el bloque 4i de `parity.mjs` compara
+las dos listas completas, campo por campo, contra `PlanAudit::analyze()`.
+
+Dos reglas que se ven en pantalla:
+
+1. **Editar invalida**. Cualquier cambio en el plano deja la revisión vieja: el
+   cajón lo dice («El plano cambió») y no muestra cifras que ya no son ciertas.
+2. **Lo que falta se dice**. Si el paquete no encuentra el catálogo de
+   señalización o las tablas de extintores, el cajón lo escribe y sigue midiendo;
+   no inventa códigos ni umbrales.
+
+Los catálogos viajan dentro del `.app` (`Contents/Resources/resources`), así que la
+revisión funciona **sin red y sin instalar nada**.
 
 ### Lo que N3 todavía no tiene
 
 - **Pintar los pictogramas del catálogo en el lienzo** (el catálogo, la
   validación del SVG y la hoja de señales ya están; el lienzo usa el marcador
   genérico).
-- **El panel del auditor dentro de la ventana**: el cálculo completo está en el
-  núcleo y se consulta con `norma-core --audit plano.json`, pero la ventana
-  todavía no lista los hallazgos ni los lleva al plano. Decirlo así es parte de
-  la entrega: el motor ya mide, la cara que lo muestra es lo siguiente.
 
 Y una ausencia **decidida**, no pendiente: el **simulacro** (tiempo objetivo por
 ruta, punto de encuentro y comparación con un tiempo medido) no entra en la

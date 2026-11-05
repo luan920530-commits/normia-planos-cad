@@ -907,6 +907,52 @@ if (suyasRutas) {
     vacío.findings.some((f) => f.code === 'no_route'), 'no_route');
 }
 
+/* ---------- 4i · la revisión de la ventana: una sola lista de hallazgos ------ */
+
+// `--inspect` es exactamente la receta que usará el cajón Revisión de la ventana
+// nativa. Se compara su lista completa y su resumen con `PlanAudit::analyze()`:
+// si la ventana y la web dijeran cosas distintas, esto falla.
+const fixtureRevision = path.join(os.tmpdir(), `normia-paridad-revision-${process.pid}.json`);
+fs.writeFileSync(fixtureRevision, JSON.stringify(planoConRutas), 'utf8');
+const míaRevision = JSON.parse(runCore(['--inspect', fixtureRevision, '--resources', resources]));
+
+const app10 = await startApp(VERSION);
+let suyaRevision = null;
+try {
+  const resultado = await app10.run(`
+$design = json_decode((string) file_get_contents(${JSON.stringify(fixtureRevision)}), true)['design'];
+$report = App\\Services\\PlanAudit::analyze($design);
+echo json_encode(['report' => $report]);
+`);
+  const text = String(resultado.text || '');
+  suyaRevision = JSON.parse(text.slice(text.indexOf('{'))).report;
+} catch (error) {
+  report.check('El motor PHP entrega su informe completo', false,
+    String(error?.message || error).slice(0, 120));
+}
+await app10.close();
+fs.rmSync(fixtureRevision, { force: true });
+
+if (suyaRevision) {
+  // El simulacro no entra en la nativa (DEC-14): PHP añade su hallazgo de punto
+  // de encuentro y la ventana no. Se compara todo lo demás.
+  const soloSimulacro = ['no_meeting_point', 'drill_route_blocked', 'drill_slower_than_target'];
+  const suyaSinSimulacro = suyaRevision.findings.filter((f) => !soloSimulacro.includes(f.code));
+  report.check('La revisión del núcleo trae los mismos hallazgos que el informe PHP, sin el simulacro',
+    míaRevision.findings.length === suyaSinSimulacro.length,
+    `${míaRevision.findings.length} hallazgos · PHP ${suyaRevision.findings.length} con el simulacro`);
+  const todos = míaRevision.findings.map((f) => f.code);
+  const comparable = comparar(míaRevision.findings, suyaRevision.findings, todos);
+  report.check('Cada hallazgo del cajón de revisión coincide palabra por palabra con PHP',
+    comparable.igual, `${comparable.mío.length} comparados`);
+  report.check('El resumen de la ventana usa las mismas personas que el informe PHP',
+    míaRevision.summary.persons === Number(suyaRevision.occupancy.people),
+    `${míaRevision.summary.persons} personas · ${míaRevision.summary.exitCount} salidas`);
+  report.check('La revisión dice si encontró el catálogo y las tablas de extintores',
+    míaRevision.summary.hasLibrary === true && míaRevision.summary.hasExtinguisherNorms === true,
+    'catálogo y tablas cargados');
+}
+
 /* ------------------- 5 · el núcleo no se rompe con basura ------------------ */
 
 const basura = path.join(os.tmpdir(), `normia-basura-${process.pid}.json`);

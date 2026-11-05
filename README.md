@@ -866,8 +866,8 @@ Resultados esperados de la última ejecución completa:
 ✓ Modo estudio PHP 8.1 · 35/35
 ✓ Modo estudio PHP 8.3 · 35/35
 ✓ Núcleo en C (compilación estricta) · 3.9s
-✓ Núcleo nativo (paridad C/PHP) · 56/56
-✓ Ventana nativa (macOS) · 46/46
+✓ Núcleo nativo (paridad C/PHP) · 60/60
+✓ Ventana nativa (macOS) · 52/52
 ✓ Escritorio (instaladores) · 37/37
 ✓ Android (APK) · 52/52
 ✓ Escritorio (Electron) · 52/52
@@ -1019,7 +1019,7 @@ importar después en un proyecto de la edición completa sin conversiones.
 - **¿Y una app 100 % nativa, sin Electron?** Va en camino, y ya se puede ver: la
   **ventana nativa de macOS en AppKit** dibuja con Core Graphics —sin WebView, sin
   JavaScript— y su motor es un **núcleo en C11** sin dependencias que da las mismas
-  cifras que el PHP **hasta el último dígito** (56/56 de paridad, 50/50 del auditor
+  cifras que el PHP **hasta el último dígito** (60/60 de paridad, 57/57 del auditor
   propio). Trae el auditor completo —superficie, aforo, salidas, recorridos,
   señalización, primeros auxilios, extintores con acciones cuantificadas,
   escenarios y rutas—, las herramientas de dibujo `M · P · A · D · R`, zoom de CAD,
@@ -1187,12 +1187,20 @@ macOS trae las herramientas de evacuación.
 - **El lienzo, de CAD**: infinito, zoom de 2 % a 4000 % anclado al cursor,
   desplazamiento con el botón central o derecho, rejilla adaptativa, cotas,
   pluma, arcos y exportación SVG con escala física.
+- **El cajón de revisión, en la ventana** (**⌘R**): la lista de hallazgos del
+  núcleo con su gravedad, su título y su detalle, el resumen del plano y un botón
+  *Ver en el plano* que centra el punto del hallazgo; los puntos se marcan con
+  anillos rojos. El cajón no calcula: pide el informe a
+  `norma_inspect_document()`, la misma receta que `norma-core --inspect`, y
+  `parity.mjs` compara las dos listas con `PlanAudit::analyze()`. Editar el plano
+  invalida la revisión en vez de mostrar cifras viejas, y los catálogos viajan
+  dentro del `.app`.
 - **El simulacro no entra en la nativa** (DEC-14): se queda en la web, donde ya
   existe el informe y la animación. La ventana nativa conserva lo que alimenta un
   plano —ruta medida, llegada a la salida y cruces de muro—, no la puesta en
   escena.
-- **Pruebas**: auditor **50/50**, señalización **30/30**, extintores **32/32**,
-  documento **31/31**, ventana de macOS **46/46** y paridad C/PHP **56/56**. El
+- **Pruebas**: auditor **57/57**, señalización **30/30**, extintores **32/32**,
+  documento **31/31**, ventana de macOS **52/52** y paridad C/PHP **60/60**. El
   flujo compila el núcleo con `-Werror` en Linux y compila, arranca y exporta el
   `.app` en un runner de macOS.
 - **Los instaladores salieron completos** al empujar el tag: macOS Intel y Apple

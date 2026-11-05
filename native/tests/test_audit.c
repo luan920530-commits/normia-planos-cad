@@ -17,6 +17,10 @@
 #include "normia/travel.h"
 #include "normia/document.h"
 #include "normia/grid.h"
+#include <errno.h>
+#include <unistd.h>
+
+#include "normia/inspect.h"
 #include "normia/routes.h"
 #include "normia/scenarios.h"
 
@@ -76,6 +80,18 @@ static void build_room(norma_document *document)
         element->h = 60.0;
         element->width_m = 4.0;
     }
+}
+
+/** Primer hallazgo cuyo código empiece por `prefix` (familias enteras). */
+static const norma_finding *find_prefix(const norma_findings *findings, const char *prefix)
+{
+    const size_t length = strlen(prefix);
+    for (size_t index = 0; index < findings->count; index += 1) {
+        if (strncmp(findings->items[index].code, prefix, length) == 0) {
+            return &findings->items[index];
+        }
+    }
+    return NULL;
 }
 
 static void test_grid(void)
@@ -540,6 +556,66 @@ static void test_routes(void)
     norma_document_free(&document);
 }
 
+static void test_inspect(void)
+{
+    norma_document document;
+    build_warehouse(&document);
+    const norma_point buena[2] = {{330.0, 200.0}, {330.0, 2890.0}};
+    add_route(&document, "ruta1", "Ruta principal", buena, 2);
+    document.occupancy = 120;
+
+    norma_inspect_result report;
+    char error[256];
+    const int ok = norma_inspect_document(&document, "../../resources", &report, error, sizeof(error));
+    char detail[220];
+    snprintf(detail, sizeof(detail), "%zu hallazgos · %.1f m² libres · %ld personas",
+             report.findings.count, report.summary.free_area_m2, report.summary.persons);
+    check("La revisión mide el plano y arma la lista completa",
+          ok && report.findings.count > 0 && report.summary.free_area_m2 > 100.0
+              && report.summary.persons == 120,
+          ok ? detail : error);
+    check("La revisión encuentra el catálogo y las tablas de extintores",
+          ok && report.has_library == 1 && report.has_ext_norms == 1, "catálogo y tablas");
+    check("La lista de la revisión va ordenada por gravedad",
+          ok && report.findings.count > 0 && strcmp(report.findings.items[0].severity, "high") == 0,
+          ok && report.findings.count > 0 ? report.findings.items[0].severity : "sin lista");
+    long suma = report.summary.counts.high + report.summary.counts.medium + report.summary.counts.low
+                + report.summary.counts.info;
+    check("El recuento por gravedad cuadra con la lista",
+          ok && suma == (long) report.findings.count,
+          "cuenta y lista coinciden");
+    check("La revisión informa la salida y la ruta dibujada",
+          ok && report.summary.exit_count == 1 && report.summary.route_count == 1,
+          "una salida · una ruta");
+    const norma_finding *sin_botiquin = find_code(&report.findings, "no_first_aid_kit");
+    const norma_finding *de_extintores = find_prefix(&report.findings, "ext_");
+    check("La revisión trae también los hallazgos de primeros auxilios y extintores",
+          ok && sin_botiquin != NULL && de_extintores != NULL,
+          de_extintores != NULL ? de_extintores->code : "sin hallazgo de extintores");
+    norma_inspect_free(&report);
+
+    /* Sin recursos se dice que faltan, no se inventan códigos. Para que no
+       encuentre el `resources/` del repositorio, se mira desde la raíz. */
+    char previous[1024];
+    const int had_cwd = getcwd(previous, sizeof(previous)) != NULL;
+    if (had_cwd && chdir("/") == 0) {
+        norma_inspect_result sin_catalogo;
+        const int sin = norma_inspect_document(&document, "/ruta/que/no/existe", &sin_catalogo,
+                                               error, sizeof(error));
+        check("Sin catálogo la revisión sigue midiendo y lo dice",
+              sin == 1 && sin_catalogo.has_library == 0 && sin_catalogo.has_ext_norms == 0
+                  && sin_catalogo.findings.count > 0,
+              "sin catálogo, con hallazgos");
+        norma_inspect_free(&sin_catalogo);
+        if (chdir(previous) != 0) {
+            check("La prueba vuelve a su carpeta de trabajo", 0, strerror(errno));
+        }
+    } else {
+        check("La prueba puede mirar desde otra carpeta", 0, "sin cambiar de carpeta");
+    }
+    norma_document_free(&document);
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IOLBF, 0);
@@ -553,6 +629,8 @@ int main(void)
     test_travel_and_findings();
     test_scenarios();
     test_routes();
+    printf("\nRevisión completa\n");
+    test_inspect();
 
     printf("\n%d/%d comprobaciones correctas.\n", checks - failures, checks);
     return failures == 0 ? 0 : 1;
