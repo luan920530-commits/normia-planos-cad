@@ -34,6 +34,7 @@ const steps = [
   { name: 'Páginas y menús PHP 8.3', script: 'tests/js/pages.mjs', args: ['8.3'] },
   { name: 'Modo estudio PHP 8.1', script: 'tests/js/estudio.mjs', args: ['8.1'] },
   { name: 'Modo estudio PHP 8.3', script: 'tests/js/estudio.mjs', args: ['8.3'] },
+  { name: 'Núcleo nativo (paridad C/PHP)', script: 'native/tests/parity.mjs', args: ['8.3'] },
   { name: 'Escritorio (instaladores)', script: 'tests/php/desktop.mjs', args: [] },
   { name: 'Android (APK)', script: 'tests/js/android.mjs', args: [] },
   { name: 'Escritorio (Electron)', script: 'tests/js/electron.mjs', args: [] },

@@ -1,7 +1,8 @@
 # Normia nativa: plan de una aplicación 100 % nativa
 
-**Estado:** documento de alcance, para decidir. No hay código escrito de esta
-propuesta todavía.
+**Estado:** en marcha. La **etapa N0** (núcleo en C con paridad verificada
+contra el motor PHP) está hecha en `native/`; ver § 11. El resto del documento
+sigue siendo el alcance para decidir.
 
 **Pregunta que responde:** ¿Normia Estudio puede ser una aplicación nativa de
 verdad —como AutoCAD— y no una app con Electron?
@@ -215,3 +216,42 @@ Tres preguntas, en orden:
 
 Mientras no haya decisión, **no se toca nada**: la 1.28.0 sigue siendo la
 entrega vigente y su `.dmg` funciona en tu Mac.
+
+## 11. Etapa N0, hecha: el núcleo en C da las mismas cifras
+
+Primer paso del camino C, elegido el 2026-11-04. Está en `native/`, compila sin
+dependencias y sin un solo aviso, y **reproduce el motor PHP hasta el último
+dígito**:
+
+| Qué | Archivo | Estado |
+| --- | --- | --- |
+| Unidades (mm, cm, m; geometría en cm; m²; tolerancia; escala `1:N`) | `native/src/units.c` | hecho |
+| Geometría de trazos (arco por tres puntos, longitud real del arco) | `native/src/geometry.c` | hecho |
+| Lector de JSON propio, sin bibliotecas | `native/src/json.c` | hecho |
+| Lectura del sobre `normia-plan`, muros y superficie | `native/src/plan.c` | hecho |
+| Programa `norma-core --check / --stats` | `native/src/cli.c` | hecho |
+| Pruebas del núcleo | `native/tests/test_core.c` | **23/23** |
+| Paridad contra PHP | `native/tests/parity.mjs` | **12/12** |
+
+Resultados de la prueba de paridad con un plano de tres muros (uno curvo):
+
+| Cifra | C | PHP |
+| --- | --- | --- |
+| Longitud total de muros (cm) | 1121.2388980384690 | 1121.2388980384690 |
+| Longitud en metros | 11.212388980384690 | 11.212388980384690 |
+| Superficie del lienzo (m²) | 89.166200000000003 | 89.166200000000003 |
+| Muro curvo (cm) | 471.23889803846896 | 471.23889803846896 |
+
+Lo que este primer paso **no** hace, para no confundir: no hay ventana, ni
+lienzo, ni menú. El programa actual es de línea de órdenes. La siguiente etapa
+(N1) es la ventana nativa de macOS con su lienzo; ahí empieza el trabajo de los
+3–5 meses de § 4.
+
+Consecuencias prácticas de haber empezado por el núcleo:
+
+- El riesgo grande —«las cifras se separan»— ya está cubierto por una prueba que
+  falla si un número deja de coincidir.
+- La ventana nativa podrá construirse **sobre** ese núcleo sin volver a decidir
+  unidades, arcos ni JSON.
+- El flujo de verificación compila el C con `-Werror` y corre la paridad en cada
+  cambio, así que el núcleo no se degrada en silencio.

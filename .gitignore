@@ -38,3 +38,6 @@ Thumbs.db
 /tools/android/build/
 /tools/android/app/build/
 /tools/android/local.properties
+
+# Núcleo nativo en C: lo construido no se versiona
+native/build/

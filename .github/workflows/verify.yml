@@ -58,6 +58,31 @@ jobs:
       - name: Edición Electron
         run: node tests/js/electron.mjs
 
+  # El núcleo nativo se compila y se prueba aparte: no necesita PHP del sistema
+  # ni Node para sus propias pruebas, y así un fallo del C no se confunde con un
+  # fallo del editor. La paridad sí usa el arnés de PHP (php-wasm).
+  nativo:
+    name: Núcleo nativo en C
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compilar y probar el núcleo
+        run: |
+          make -C native clean
+          make -C native CFLAGS="-std=c11 -O2 -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wstrict-prototypes -Werror"
+          make -C native test
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Instalar dependencias de prueba
+        run: npm install --no-save --no-audit --no-fund
+
+      - name: Paridad entre el núcleo en C y el motor PHP
+        run: node native/tests/parity.mjs 8.3
+
   paquete:
     name: Paquete y demo
     runs-on: ubuntu-latest
