@@ -1,9 +1,9 @@
 # Normia nativa: plan de una aplicación 100 % nativa
 
 **Estado:** en marcha. Hechas la **etapa N0** (núcleo en C con paridad
-verificada contra el motor PHP, § 11) y la **etapa N1** (documento editable y
-ventana nativa de macOS con lienzo propio, sin WebView, § 12). Las etapas N2–N4
-siguen siendo el plan.
+verificada contra el motor PHP, § 11), la **etapa N1** (documento editable y
+ventana nativa de macOS con lienzo propio, sin WebView, § 12), la **N2** (§ 13) y
+la **N3** (§ 14). Queda la **N4**: Windows y Linux.
 
 **Pregunta que responde:** ¿Normia Estudio puede ser una aplicación nativa de
 verdad —como AutoCAD— y no una app con Electron?
@@ -232,7 +232,7 @@ dígito**:
 | Lectura del sobre `normia-plan`, muros y superficie | `native/src/plan.c` | hecho |
 | Programa `norma-core --check / --stats` | `native/src/cli.c` | hecho |
 | Pruebas del núcleo | `native/tests/test_core.c` | **23/23** |
-| Paridad contra PHP | `native/tests/parity.mjs` | **12/12** |
+| Paridad contra PHP | `native/tests/parity.mjs` | **56/56** |
 
 Resultados de la prueba de paridad con un plano de tres muros (uno curvo):
 
@@ -278,10 +278,10 @@ selección por proximidad y el **sobre oficial** de ida y vuelta.
 | Prueba | Qué comprueba | Resultado |
 | --- | --- | --- |
 | `native/tests/test_core.c` | unidades, arcos, JSON, plano | **23/23** |
-| `native/tests/test_document.c` | muros, deshacer, selección, guardar y abrir, unidades | **27/27** |
+| `native/tests/test_document.c` | muros, deshacer, selección, guardar y abrir, unidades, rutas | **31/31** |
 | `native/tests/test_svg.c` | cifras es-CO y SVG con escala física (etapa N2) | **25/25** |
-| `native/tests/parity.mjs` | paridad C contra PHP, dígito a dígito, también en el SVG | **16/16** |
-| `native/tests/macos.mjs` | contrato de la ventana: AppKit, sin WebView, menú en español, atajos, sobre oficial, macOS 12, herramientas | **28/28** |
+| `native/tests/parity.mjs` | paridad C contra PHP, dígito a dígito, también en el SVG y en el auditor | **56/56** |
+| `native/tests/macos.mjs` | contrato de la ventana: AppKit, sin WebView, menú en español, atajos, sobre oficial, macOS 12, herramientas y ruta de evacuación | **46/46** |
 | `native/tests/core.mjs` | compilación estricta y los tres programas de prueba del núcleo | **7/7** |
 
 Y en el flujo de verificación hay un trabajo nuevo en **`macos-15-intel`** que
@@ -312,9 +312,9 @@ para sacar el plano sin el motor PHP:
 | SVG con escala física: papel en milímetros, `viewBox` en centímetros, rejilla, franja de datos y cotas rotuladas | `native/src/svg.c` | hecho |
 | Cota como objeto del documento (`tipo: dimension`) | `native/src/document.c` | hecho |
 | `norma-core --svg plano.json` | `native/src/cli.c` | hecho |
-| Herramientas del lienzo `V · M · P · A · D` con borrador y previsualización | `native/macos/CanvasView.m` | escrito |
+| Herramientas del lienzo `V · M · P · A · D · R` con borrador y previsualización | `native/macos/CanvasView.m` | hecho |
 | Exportar SVG con panel del sistema (`⌘E`) | `native/macos/AppDelegate.m` | escrito |
-| Abrir reciente (10 archivos, preferencia del sistema, se limpia sola) | `native/macos/AppDelegate.m` | hecho · **42/42** |
+| Abrir reciente (10 archivos, preferencia del sistema, se limpia sola) | `native/macos/AppDelegate.m` | hecho · **46/46** |
 | Lienzo abierto: zoom 2 %–4000 % sobre el cursor, desplazamiento con el botón central o derecho y rejilla adaptativa | `native/macos/CanvasView.m` | hecho |
 | Imprimir en A4 horizontal y exportar PDF con el fondo en blanco | `native/macos/AppDelegate.m`, `CanvasView.m` | hecho |
 
@@ -334,18 +334,18 @@ Lo que da el SVG del núcleo, medido en el plano de prueba A4 a 1:100:
 
 - **La ventana con las herramientas nuevas no se ha compilado**: en el entorno
   donde se escribe esto no hay AppKit. El contrato se comprueba con
-  `native/tests/macos.mjs` (28/28) y la compilación real la hace el trabajo
+  `native/tests/macos.mjs` (46/46) y la compilación real la hace el trabajo
   `macos-nativo` del flujo.
 - **Recientes e impresión** ya están escritos, pero quien los usa con ratón y
   teclado es una persona: aquí solo se comprueba su contrato y que compilen.
 - **El paquete se publica como artefacto del flujo**, no como release: así se
   puede bajar el `.app` sin firmar y abrirlo en un Mac con Intel.
 
-## 14. Etapa N3, primera pieza: la rejilla y el aforo en C
+## 14. Etapa N3, hecha: rejilla, aforo, salidas, recorridos, extintores y rutas
 
-El auditor completo (recorridos, hallazgos, rutas) es la etapa N3. Antes hay que
-tener lo que todo lo demás usa: **la superficie libre** y **el aforo**, medidos
-igual que en la web.
+La etapa N3 lleva el auditor completo al núcleo en C. Lo primero fue el cimiento
+que todo lo demás usa: **la superficie libre** y **el aforo**, medidos igual que
+en la web.
 
 | Pieza | Archivo | Qué hace |
 | --- | --- | --- |
@@ -360,7 +360,7 @@ igual que en la web.
 | Primeros auxilios | `native/src/firstaid.c` | Botiquín, camilla y DEA: recuento y alcance medido sobre la rejilla |
 | Extintores | `native/src/extinguisher.c` | Tablas NTC 2885 / NFPA 10 y Resolución 2400: recorrido por clase y riesgo, área por número de A, cobertura por recorrido real y zonas descubiertas con su motivo |
 | Programa | `native/src/cli.c` | `norma-core --audit plano.json` incluye salidas, recorrido, señalización, primeros auxilios y hallazgos; `--sign-board hoja.svg` dibuja el catálogo completo |
-| Pruebas | `native/tests/test_audit.c` · `test_signs.c` · `test_extinguishers.c` | **50/50**, **30/30** y **32/32** |
+| Pruebas | `native/tests/test_audit.c` · `test_signs.c` · `test_extinguishers.c` | **50/50**, **30/30** y **32/32** (documento **31/31**, ventana **46/46**) |
 | Paridad | `native/tests/parity.mjs` | **56/56** |
 
 El caso de prueba y sus cifras, idénticas en C y en PHP: una habitación de
@@ -567,10 +567,25 @@ En la nave de prueba, la ruta que llega a la salida mide **28,87 m** sin cruces,
 la que se queda corta queda a **4,61 m** del vano y cruza el muro una vez; los dos
 hallazgos y el informe de rutas coinciden al decimal con `PlanAudit::analyze()`.
 
+### La herramienta de dibujo de rutas
+
+La ruta también se dibuja en la ventana nativa, con el mismo gesto que la pluma:
+tecla **`R`**, un clic por nodo, `Enter` o doble clic cierra el trazo y
+`Retroceso` quita el último nodo. Se guarda como elemento de tipo `route` con su
+identificador (`ruta_7`) y su grosor, así que el auditor del núcleo la mide igual
+que si viniera de la edición web —con sus arcos, no con la cuerda—. En pantalla
+va en **verde de evacuación**, con **punta de flecha** en el sentido de salida y
+la longitud rotulada junto al extremo, con la misma cifra que dará el informe.
+
+La herramienta se comprueba donde se puede comprobar aquí, sobre el código
+fuente (`native/tests/macos.mjs`, **46/46**); dibujarla con el ratón en un Mac es
+lo que sigue viendo una persona.
+
 ### Lo que N3 todavía no tiene
 
-- **Dibujar y editar las rutas** sobre el lienzo nativo (el cálculo y el trazado
-  del archivo ya están; falta la herramienta de dibujo en la ventana).
+- **Pintar los pictogramas del catálogo en el lienzo** (el catálogo, la
+  validación del SVG y la hoja de señales ya están; el lienzo usa el marcador
+  genérico).
 
 Y una ausencia **decidida**, no pendiente: el **simulacro** (tiempo objetivo por
 ruta, punto de encuentro y comparación con un tiempo medido) no entra en la

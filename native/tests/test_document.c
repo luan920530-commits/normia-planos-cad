@@ -63,6 +63,44 @@ static void test_walls(void)
     norma_document_free(&document);
 }
 
+static void test_routes(void)
+{
+    norma_document document;
+    norma_document_init(&document);
+    const norma_point nodes[3] = {{100.0, 100.0}, {300.0, 100.0}, {300.0, 300.0}};
+    const long index = norma_document_add_route(&document, nodes, 3, NULL, NULL);
+    char detail[128];
+    snprintf(detail, sizeof(detail), "%s · grosor %.1f · %zu nodos",
+             index >= 0 ? document.elements[index].type : "sin ruta",
+             index >= 0 ? document.elements[index].stroke : 0.0,
+             index >= 0 ? document.elements[index].node_count : 0);
+    check("La herramienta Ruta guarda un trazo de tipo ruta con su grosor",
+          index >= 0 && strcmp(document.elements[index].type, "route") == 0
+              && document.elements[index].stroke == 3.0
+              && document.elements[index].node_count == 3,
+          detail);
+    check("La ruta se identifica con su propio nombre",
+          index >= 0 && strncmp(document.elements[index].id, "ruta_", 5) == 0,
+          index >= 0 ? document.elements[index].id : "sin ruta");
+    check("La ruta entra al historial como cualquier otra edición",
+          document.count == 1 && norma_document_length_cm(&document) > 399.0
+              && norma_document_length_cm(&document) < 401.0,
+          "400 cm dibujados");
+
+    char *json = norma_document_to_json(&document, "Rutas");
+    norma_document leido;
+    norma_document_init(&leido);
+    char error[128];
+    const int ok = json != NULL
+                   && norma_document_from_json(&leido, json, strlen(json), error, sizeof(error));
+    check("La ruta sobrevive a guardar y abrir",
+          ok && leido.count == 1 && strcmp(leido.elements[0].type, "route") == 0,
+          ok ? leido.elements[0].type : error);
+    free(json);
+    norma_document_free(&leido);
+    norma_document_free(&document);
+}
+
 static void test_history(void)
 {
     norma_document document;
@@ -208,6 +246,8 @@ int main(void)
     setvbuf(stdout, NULL, _IOLBF, 0);
     printf("Documento nativo · pruebas\n\nMuros y medidas\n");
     test_walls();
+    printf("\nRutas\n");
+    test_routes();
     printf("\nDeshacer y rehacer\n");
     test_history();
     printf("\nSelección\n");

@@ -13,9 +13,8 @@ señales del catálogo local), los **primeros auxilios** y los **extintores** (c
 **acciones cuantificadas**: añadir, reubicar o subir el rótulo, con la ganancia
 medida otra vez por el motor), los **escenarios de ocupación temporal** y las
 **rutas** (longitud, llegada a la salida y cruces de muro), todos con paridad
-contra PHP.
-Lo que todavía no hay: la **herramienta de dibujo**
-de rutas en el lienzo nativo y Windows y Linux (N4). El **simulacro** no entra en
+contra PHP, y la **herramienta de dibujo de rutas** en el lienzo (`R`).
+Lo que todavía no hay: los pictogramas pintados en el lienzo y Windows y Linux (N4). El **simulacro** no entra en
 la edición nativa por decisión del autor (DEC-14): se queda en la web. El alcance completo
 está en [`docs/APP-NATIVA.md`](../docs/APP-NATIVA.md).
 
@@ -89,7 +88,7 @@ Opciones de compilación: `-std=c11 -O2 -Wall -Wextra -Wpedantic -Wshadow
 `-Werror`: **no se admite un solo aviso**. Con `CC=clang` compila también con el
 compilador de macOS, y con MinGW o MSVC en Windows.
 
-## Resultado de la paridad (1.28.0)
+## Resultado de la paridad (1.29.0)
 
 | Cifra | C | PHP |
 | --- | --- | --- |
@@ -110,7 +109,7 @@ JavaScript, sin Electron**. Compila con `clang -fobjc-arc` y enlaza solo `Cocoa`
 | --- | --- | --- |
 | Arranque | `main.m` | `--check` sin ventana; si no, abre la aplicación |
 | Ventana y menú | `AppDelegate.m` | Archivo / Editar / Ver / Ayuda en español, `⌘N ⌘O ⌘S ⇧⌘S ⌘Z ⇧⌘Z`, paneles del sistema, aviso al cerrar con cambios |
-| Lienzo | `CanvasView.m` | Dibujo con Core Graphics, rejilla de 20 cm, muros con arcos, equipos; clic selecciona, arrastrar mueve, `M` dibuja muros, `Esc` sale, Retroceso borra |
+| Lienzo | `CanvasView.m` | Dibujo con Core Graphics, rejilla de 20 cm, muros con arcos, equipos; clic selecciona, arrastrar mueve, `M` dibuja muros, `P` pluma, `A` arco, `D` cota, `R` ruta de evacuación (verde, con punta de flecha y su longitud rotulada), `Esc` sale, Retroceso borra |
 
 El documento en C es lo que se edita:
 
@@ -123,6 +122,7 @@ El documento en C es lo que se edita:
 | `norma_document_undo` / `redo` | Deshacer y rehacer por edición (64 niveles) |
 | `norma_document_to_json` / `from_json` | Sobre oficial de ida y vuelta |
 | `norma_document_add_dimension` | Cota entre dos puntos, con su cifra y su unidad (N2) |
+| `norma_document_add_route` | Ruta de evacuación: trazo de tipo `route` con su id y su grosor (N3) |
 | `norma_document_to_svg` | SVG con escala física, rejilla, franja y cotas (N2) |
 | `norma_format_measure_cm` | Cifra de una medida en es-CO, con su unidad (N2) |
 
@@ -147,7 +147,7 @@ firma ni release. Al abrirlo por primera vez, macOS pide permiso en
 | **N0** | Núcleo en C con paridad verificada | **hecho** |
 | **N1** | Ventana nativa en macOS (AppKit/CoreGraphics), sin WebView: lienzo, selección, muros, deshacer, guardar y abrir | **hecho** en código; compila y arranca en el flujo de macOS |
 | **N2** | Cotas, pluma de nodos, arcos, SVG del núcleo, recientes, impresión y PDF | **hecho** en código; compila y exporta en el flujo de macOS |
-| N3 | Rejilla y aforo en C, con paridad | **primera pieza hecha** (17/17 · 22/22); faltan recorridos, hallazgos y rutas |
+| N3 | Rejilla y aforo en C, con paridad | **hecho**: rejilla, salidas, recorridos, hallazgos, señalización, primeros auxilios, extintores, escenarios, rutas y su herramienta de dibujo |
 | N4 | Windows (Win32) y Linux (GTK) | pendiente |
 
 Las reglas no cambian: sin procedimientos metrológicos obligatorios, sin

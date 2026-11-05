@@ -41,6 +41,11 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)zoomReset;
 /** Escala actual del plano en la ventana. */
 - (double)currentZoom;
+/**
+ * Elige herramienta con la letra del lienzo (`m`, `p`, `a`, `d`, `r`, `v`).
+ * Devuelve `NO` si la tecla no es de ninguna herramienta.
+ */
+- (BOOL)selectToolWithKey:(NSString *)key;
 /** Cancela la herramienta en curso sin tocar el documento. */
 - (void)cancelDraft;
 

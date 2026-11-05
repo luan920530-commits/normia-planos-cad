@@ -43,39 +43,40 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 24. [Guía de primeros pasos](#guía-de-primeros-pasos)
 25. [Complementos](#complementos)
 26. [Unidades y medidas](#unidades-y-medidas)
-27. [Cambios de la versión 1.28.0](#cambios-de-la-versión-1280)
-28. [Cambios de la versión 1.27.0](#cambios-de-la-versión-1270)
-29. [Cambios de la versión 1.26.0](#cambios-de-la-versión-1260)
-30. [Cambios de la versión 1.25.0](#cambios-de-la-versión-1250)
-31. [Cambios de la versión 1.24.0](#cambios-de-la-versión-1240)
-32. [Cambios de la versión 1.23.0](#cambios-de-la-versión-1230)
-33. [Cambios de la versión 1.22.0](#cambios-de-la-versión-1220)
-34. [Cambios de la versión 1.21.0](#cambios-de-la-versión-1210)
-35. [Cambios de la versión 1.20.0](#cambios-de-la-versión-1200)
-36. [Cambios de la versión 1.19.0](#cambios-de-la-versión-1190)
-37. [Cambios de la versión 1.18.0](#cambios-de-la-versión-1180)
-38. [Cambios de la versión 1.17.0](#cambios-de-la-versión-1170)
-39. [Cambios de la versión 1.16.0](#cambios-de-la-versión-1160)
-40. [Cambios de la versión 1.15.9](#cambios-de-la-versión-1159)
-41. [Cambios de la versión 1.15.8](#cambios-de-la-versión-1158)
-42. [Cambios de la versión 1.15.7](#cambios-de-la-versión-1157)
-43. [Cambios de la versión 1.15.6](#cambios-de-la-versión-1156)
-44. [Cambios de la versión 1.15.5](#cambios-de-la-versión-1155)
-45. [Cambios de la versión 1.15.4](#cambios-de-la-versión-1154)
-46. [Cambios de la versión 1.15.3](#cambios-de-la-versión-1153)
-47. [Cambios de la versión 1.15.2](#cambios-de-la-versión-1152)
-48. [Cambios de la versión 1.15.1](#cambios-de-la-versión-1151)
-49. [Cambios de la versión 1.15.0](#cambios-de-la-versión-1150)
-50. [Cambios de la versión 1.14.2](#cambios-de-la-versión-1142)
-51. [Cambios de la versión 1.14.1](#cambios-de-la-versión-1141)
-52. [Cambios de la versión 1.14.0](#cambios-de-la-versión-1140)
-53. [Cambios de la versión 1.13.0](#cambios-de-la-versión-1130)
-54. [Cambios de la versión 1.12.0](#cambios-de-la-versión-1120)
-55. [Cambios de la versión 1.11.1](#cambios-de-la-versión-1111)
-56. [Cambios de la versión 1.11.0](#cambios-de-la-versión-1110)
-57. [Cambios de la versión 1.10.0](#cambios-de-la-versión-1100)
-58. [Cambios de la versión 1.9.0](#cambios-de-la-versión-190)
-59. [Cambios de la versión 1.8.0](#cambios-de-la-versión-180)
+27. [Cambios de la versión 1.29.0](#cambios-de-la-versión-1290)
+28. [Cambios de la versión 1.28.0](#cambios-de-la-versión-1280)
+29. [Cambios de la versión 1.27.0](#cambios-de-la-versión-1270)
+30. [Cambios de la versión 1.26.0](#cambios-de-la-versión-1260)
+31. [Cambios de la versión 1.25.0](#cambios-de-la-versión-1250)
+32. [Cambios de la versión 1.24.0](#cambios-de-la-versión-1240)
+33. [Cambios de la versión 1.23.0](#cambios-de-la-versión-1230)
+34. [Cambios de la versión 1.22.0](#cambios-de-la-versión-1220)
+35. [Cambios de la versión 1.21.0](#cambios-de-la-versión-1210)
+36. [Cambios de la versión 1.20.0](#cambios-de-la-versión-1200)
+37. [Cambios de la versión 1.19.0](#cambios-de-la-versión-1190)
+38. [Cambios de la versión 1.18.0](#cambios-de-la-versión-1180)
+39. [Cambios de la versión 1.17.0](#cambios-de-la-versión-1170)
+40. [Cambios de la versión 1.16.0](#cambios-de-la-versión-1160)
+41. [Cambios de la versión 1.15.9](#cambios-de-la-versión-1159)
+42. [Cambios de la versión 1.15.8](#cambios-de-la-versión-1158)
+43. [Cambios de la versión 1.15.7](#cambios-de-la-versión-1157)
+44. [Cambios de la versión 1.15.6](#cambios-de-la-versión-1156)
+45. [Cambios de la versión 1.15.5](#cambios-de-la-versión-1155)
+46. [Cambios de la versión 1.15.4](#cambios-de-la-versión-1154)
+47. [Cambios de la versión 1.15.3](#cambios-de-la-versión-1153)
+48. [Cambios de la versión 1.15.2](#cambios-de-la-versión-1152)
+49. [Cambios de la versión 1.15.1](#cambios-de-la-versión-1151)
+50. [Cambios de la versión 1.15.0](#cambios-de-la-versión-1150)
+51. [Cambios de la versión 1.14.2](#cambios-de-la-versión-1142)
+52. [Cambios de la versión 1.14.1](#cambios-de-la-versión-1141)
+53. [Cambios de la versión 1.14.0](#cambios-de-la-versión-1140)
+54. [Cambios de la versión 1.13.0](#cambios-de-la-versión-1130)
+55. [Cambios de la versión 1.12.0](#cambios-de-la-versión-1120)
+56. [Cambios de la versión 1.11.1](#cambios-de-la-versión-1111)
+57. [Cambios de la versión 1.11.0](#cambios-de-la-versión-1110)
+58. [Cambios de la versión 1.10.0](#cambios-de-la-versión-1100)
+59. [Cambios de la versión 1.9.0](#cambios-de-la-versión-190)
+60. [Cambios de la versión 1.8.0](#cambios-de-la-versión-180)
 60. [Paquetes y verificación](#paquetes-y-verificación)
 61. [Limitaciones](#limitaciones)
 62. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
@@ -831,8 +832,8 @@ Lo único que no funciona sin red es la **vista previa de desarrollo** (`npm run
 | `tests/js/units.mjs` | 30 comprobaciones del módulo `assets/js/lib/units.js` contra la **misma** tabla compartida: si PHP y JavaScript se separan, falla una de las dos suites. Fija además la longitud de un trazo curvo, la identidad exacta de `fromMeters` con PHP y que el editor coincide **exactamente** con el golden que escribe el servidor; y comprueba que el módulo no toca el DOM ni la red y que publica `window.Normia.Units`. |
 | `tests/js/plugins.mjs` | 20 comprobaciones de los complementos en el editor: traducción `plg_…` ↔ `PLG_…`, color y tamaño de la familia propia, búsqueda por sinónimos, filtro por familia, inserción, guardado y reapertura del elemento. |
 | `tests/js/editor.mjs` | 442 comprobaciones de interfaz sobre la app real: arranque, 395 señales y 422 objetos, **pluma de muros** (nodo por clic, tramo elástico con su cifra, banda de grosor, `Retroceso`, `Shift`, `Enter`, cierre sobre el primer nodo, doble clic, `Esc` y la cota que se cierra con dos nodos), **muros curvos** (rombo del tramo, arco de tres puntos, radio y flecha en el inspector, enderezar, doble clic que parte el arco, caja analítica, puerta sobre el arco, formato 3 y degradación a v2, marcado idéntico sin curvas), **vías y andenes** (banda de 6 m con carriles, cambio de ancho y carriles, parqueadero contado en la etiqueta, franjas del paso cebra y rótulo del lindero), **sección tipo y cruces** (avenida de 20 m en formato 4, perfil transversal en el inspector, cambio de andén que recalcula el ancho, glorieta de cinco accesos, vuelta a vía normal, corredor de ejemplo en una acción y sinónimos «carro», «bici» y «semáforo»), **trazado de tuberías y circuitos, inspector de red y panel de redes**, **mano y paneo, selección de superpuestos, inspector plegable y paleta de herramientas**, **guía de primeros pasos** (apertura en el primer uso, siete pasos, progreso tomado del plano, salto a la herramienta con la baldosa resaltada, reinicio y desactivación), **buscador con sinónimos y sin tildes** (calle → vía, anden → andén, parqueo → parqueadero), **baldosa propia de vías y andenes**, puertas dobles y portones, **vértices de ruta editables (arrastrar, doble clic, Alt+clic)**, **señal de baño insertada desde la biblioteca**, **posiciones reales del trazo**, **clic sobre muros finos, pictogramas y equipos**, **cambio de señal y de equipo desde el inspector**, **auditor de planos** (interruptor de salida, ocupación declarada, cajón de revisión, contador, filtros, «Ver en el plano», cierre sin dejar el fondo bloqueado), **pliego de señalización** (conteo, tamaño sugerido, CSV, precios y consistencia), **medición de rutas internas** (ruta que rodea muros, tramos, guardado en capa y comparación), **modo presentación** (pantalla limpia, láser, spotlight, rutas animadas, capas, quiz y salida sin perder el estado), **rotación**, **rutas cerradas**, **arrastrar y soltar desde la biblioteca sin que el cajón lo bloquee**, reglas, herramientas, inserción con puntero, selección, mover, escalar, rotar, color, cambio de tipo, deshacer/rehacer, duplicar, agrupar, bloquear, desplazar, texto y saneado, guardar, reabrir, borradores, conflictos, exportación SVG/JSON/PNG, tooltips sin acumulación, capas, versiones y límites. |
-| `native/tests/macos.mjs` | 21 comprobaciones del **contrato de la ventana nativa de macOS**: es AppKit y no un WebView, el lienzo dibuja con Core Graphics, el menú está en español con `⌘N ⌘O ⌘S ⇧⌘S ⌘Z ⇧⌘Z`, guarda en el sobre oficial, pregunta al cerrar con cambios, declara macOS 12 y hay un trabajo de macOS en el flujo que la compila y la arranca con `--check`. |
-| `native/tests/parity.mjs` | 12 comprobaciones de **paridad del núcleo nativo (C11)** con el motor PHP: compila sin avisos con `-Werror`, el plano da el mismo número de elementos y de muros, la longitud total y la del muro curvo coinciden dígito a dígito, la superficie en m² también, cambiar la unidad declarada no mueve nada y un archivo que no es un plano se rechaza con su motivo. |
+| `native/tests/macos.mjs` | 46 comprobaciones del **contrato de la ventana nativa de macOS**: es AppKit y no un WebView, el lienzo dibuja con Core Graphics, el menú está en español con `⌘N ⌘O ⌘S ⇧⌘S ⌘Z ⇧⌘Z`, guarda en el sobre oficial, pregunta al cerrar con cambios, declara macOS 12 y hay un trabajo de macOS en el flujo que la compila y la arranca con `--check`. |
+| `native/tests/parity.mjs` | 56 comprobaciones de **paridad del núcleo nativo (C11)** con el motor PHP: compila sin avisos con `-Werror`, el plano da el mismo número de elementos y de muros, la longitud total y la del muro curvo coinciden dígito a dígito, la superficie en m² también, cambiar la unidad declarada no mueve nada y un archivo que no es un plano se rechaza con su motivo. |
 | `tests/js/estudio.mjs` | 35 comprobaciones de **Normia Estudio**: la página abre **sin instalar** nada, sin portada ni pisos ni versiones; los cajones hablan del plano y no de un piso de proyecto; el editor arranca en blanco con A4 a 1:100; el puente de escritorio guarda, abre y avisa del título; el plano en curso llega al auditor, al informe, a la impresión y al SVG; el JSON que se exporta es el sobre oficial y se **importa** en la edición completa; renombrar el plano funciona y los acentos no se pierden en el nombre del archivo; los catálogos se sirven sin sesión. |
 | `tests/js/pages.mjs` | 50 comprobaciones de las páginas fuera del editor y de la portada pública: menú de acciones de proyectos y pisos (capa fija, colocación, teclado, un solo menú), confirmación de borrado y borrado real de piso y proyecto, con la protección del último piso, la **portada pública** (cinco capturas con texto alternativo, flechas de la galería y token del formulario) y **la página pública del modo brigadista** ejecutando su JavaScript: acciones rápidas, atenuado del plano, alto contraste recordado, zoom y borrado de la copia local. |
 | `tests/php/package.mjs` | 39 comprobaciones: construye ambos ZIP, verifica que no haya bases, sesiones, credenciales, logs ni carpetas de desarrollo, valida los SHA-256 y hace una instalación limpia de la demo comprobando assets, catálogos (395/420), los cuatro pisos del proyecto de ejemplo, señales de servicios y redes en la demo, la señal «Usted está aquí», **el auditor y su informe en la demo empaquetada**, editor, SVG, JSON e impresión. |
@@ -864,13 +865,14 @@ Resultados esperados de la última ejecución completa:
 ✓ Páginas y menús PHP 8.3 · 54/54
 ✓ Modo estudio PHP 8.1 · 35/35
 ✓ Modo estudio PHP 8.3 · 35/35
-✓ Núcleo nativo (paridad C/PHP) · 12/12
-✓ Ventana nativa (macOS) · 21/21
+✓ Núcleo en C (compilación estricta) · 3.9s
+✓ Núcleo nativo (paridad C/PHP) · 56/56
+✓ Ventana nativa (macOS) · 46/46
 ✓ Escritorio (instaladores) · 37/37
 ✓ Android (APK) · 52/52
 ✓ Escritorio (Electron) · 52/52
 ✓ Paquetes y demo · 39/39
-28/28 pasos correctos
+29/29 pasos correctos
 ```
 
 Las pruebas trabajan sobre copias temporales: no escriben configuración ni bases en el repositorio. `node_modules` solo contiene dependencias de desarrollo y se excluye de los paquetes.
@@ -1014,16 +1016,17 @@ importar después en un proyecto de la edición completa sin conversiones.
   oficial `normia-plan` que la edición completa importa.
 - **Sin firma comercial**: macOS puede mostrar Gatekeeper y Windows SmartScreen;
   las instrucciones están en [`docs/ESTUDIO.md`](docs/ESTUDIO.md).
-- **¿Y una app 100 % nativa, sin Electron?** Todavía no: la ventana y los
-  diálogos son del sistema, el interior es el editor web con PHP compilado a
-  WebAssembly. El alcance, las etapas y el costo real están en
-  [`docs/APP-NATIVA.md`](docs/APP-NATIVA.md), y van **dos etapas hechas**: el
-  núcleo de cálculo en **C11** sin dependencias, con paridad dígito a dígito
-  contra el motor PHP (23/23 pruebas propias y 12/12 de paridad), y la
-  **ventana nativa de macOS en AppKit**, con su lienzo en Core Graphics, menú en
-  español, abrir y guardar con los paneles del sistema y deshacer (27/27 del
-  documento y 21/21 del contrato de la ventana). Se compila y arranca en el
-  trabajo de macOS del flujo de verificación.
+- **¿Y una app 100 % nativa, sin Electron?** Va en camino, y ya se puede ver: la
+  **ventana nativa de macOS en AppKit** dibuja con Core Graphics —sin WebView, sin
+  JavaScript— y su motor es un **núcleo en C11** sin dependencias que da las mismas
+  cifras que el PHP **hasta el último dígito** (56/56 de paridad, 50/50 del auditor
+  propio). Trae el auditor completo —superficie, aforo, salidas, recorridos,
+  señalización, primeros auxilios, extintores con acciones cuantificadas,
+  escenarios y rutas—, las herramientas de dibujo `M · P · A · D · R`, zoom de CAD,
+  exportación SVG e impresión. Faltan Windows y Linux y los pictogramas en el
+  lienzo; el alcance y las etapas están en
+  [`docs/APP-NATIVA.md`](docs/APP-NATIVA.md). Lo que **no** entra, por decisión del
+  autor, es el simulacro: se queda en la web.
 
 Los instaladores los compila **GitHub Actions** en el flujo *Distribución de
 Normia Estudio (solo editor)*, con la comprobación del contenido del paquete y el
@@ -1144,6 +1147,54 @@ siguen **pendientes** DEC-7 y DEC-9 a DEC-12. Están implementadas las etapas 1 
 4 (geometría en centímetros, medida por objeto, aforo calculado, ajuste por
 mediana y escala física al exportar); las etapas 5 a 10 no han empezado. Ni una
 tabla nueva: `user_version` sigue en 7.
+
+## Cambios de la versión 1.29.0
+
+**El auditor completo en C, y las rutas se dibujan en la ventana nativa.**
+
+La aplicación nativa deja de ser un dibujante con cotas: su motor en **C11** ya
+calcula lo mismo que la edición web —comprobado cifra a cifra— y la ventana de
+macOS trae las herramientas de evacuación.
+
+- **Superficie y aforo en C** (`native/src/grid.c`): celdas de 20 cm, muros con
+  medio trazo, holgura y media celda, vanos de puerta que abren paso, exterior
+  inundado y vías, andenes, cebras, parqueaderos y linderos que no cuentan como
+  piso. El aforo distingue capacidad calculada, aforo declarado, el que rige y el
+  **exceso**.
+- **Salidas y recorridos**: ancho de vano (medida declarada o geometría), ancho
+  útil, ancho que pide el criterio, cola con flujo de 1,3 pers./s·m, recorrido
+  más largo con Dijkstra de ocho vecinos, punto más lejano, superficie alcanzable
+  y **zonas sin salida** agrupadas por vecindad.
+- **Señalización** sobre las **395** señales del catálogo local (332 ISO 7010 +
+  63 de servicio): salida sin pictograma cerca, falta de «usted está aquí» y falta
+  de señalización contra incendios.
+- **Primeros auxilios y extintores**: botiquín, camilla y DEA con su alcance
+  medido; tablas NTC 2885 / NFPA 10 y Resolución 2400 con **acciones
+  cuantificadas** —añadir, reubicar, subir el rótulo— y la ganancia medida otra
+  vez por el motor. Los criterios van rotulados como criterios de la app, no como
+  certificación.
+- **Escenarios de ocupación temporal**, con la misma aritmética que la web.
+- **Rutas de evacuación en C** (`native/src/routes.c`): longitud con los arcos
+  resueltos y no la cuerda, llegada a la salida con tolerancia de **80 cm**,
+  distancia al vano más cercano y **cruces de muro** fuera de un vano. Hallazgos
+  `no_route`, `route_no_exit` y `route_through_wall`, idénticos a los de
+  `PlanAudit::analyze()`.
+- **La herramienta de rutas en el lienzo** (`R`): un clic por nodo, `Enter` o
+  doble clic cierra, `Retroceso` quita el último nodo. Se guarda como elemento
+  `route` con su identificador y su grosor, se pinta en **verde de evacuación** con
+  **punta de flecha** y su **longitud rotulada**, y el auditor la mide igual que
+  si viniera de la web.
+- **El lienzo, de CAD**: infinito, zoom de 2 % a 4000 % anclado al cursor,
+  desplazamiento con el botón central o derecho, rejilla adaptativa, cotas,
+  pluma, arcos y exportación SVG con escala física.
+- **El simulacro no entra en la nativa** (DEC-14): se queda en la web, donde ya
+  existe el informe y la animación. La ventana nativa conserva lo que alimenta un
+  plano —ruta medida, llegada a la salida y cruces de muro—, no la puesta en
+  escena.
+- **Pruebas**: auditor **50/50**, señalización **30/30**, extintores **32/32**,
+  documento **31/31**, ventana de macOS **46/46** y paridad C/PHP **56/56**. El
+  flujo compila el núcleo con `-Werror` en Linux y compila, arranca y exporta el
+  `.app` en un runner de macOS.
 
 ## Cambios de la versión 1.28.0
 

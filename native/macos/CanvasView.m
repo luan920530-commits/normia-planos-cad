@@ -8,6 +8,8 @@
  *   · P · pluma de nodos: un clic por nodo, Enter o doble clic cierra;
  *   · A · arco de tres puntos: inicio, punto de paso y fin;
  *   · D · cota entre dos puntos, rotulada con la cifra y la unidad;
+ *   · R · ruta de evacuación: un clic por nodo, Enter o doble clic cierra; el
+ *     auditor la mide después y dice si llega a una salida;
  *   · Esc cancela la herramienta y Retroceso borra lo seleccionado.
  *
  * La geometría, las medidas y el formato de las cifras viven en el núcleo en C:
@@ -29,6 +31,7 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
     CanvasToolPen,
     CanvasToolArc,
     CanvasToolDimension,
+    CanvasToolRoute,
 };
 
 @interface CanvasView ()
@@ -358,6 +361,10 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
         } else if (strcmp(element->type, "wall") == 0) {
             CGContextSetRGBStrokeColor(context, 0.12, 0.15, 0.20, 1.0);
             CGContextSetLineWidth(context, 1.6 / zoom);
+        } else if (strcmp(element->type, "route") == 0) {
+            // Verde de evacuación, el mismo de la edición web.
+            CGContextSetRGBStrokeColor(context, 0.14, 0.50, 0.32, 1.0);
+            CGContextSetLineWidth(context, 2.4 / zoom);
         } else {
             CGContextSetRGBStrokeColor(context, 0.85, 0.22, 0.24, 1.0);
             CGContextSetLineWidth(context, 1.4 / zoom);
@@ -379,6 +386,20 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
                 }
             }
             CGContextStrokePath(context);
+            if (strcmp(element->type, "route") == 0 && element->node_count >= 2) {
+                // Punta de flecha en el sentido de la evacuación.
+                const norma_point end = element->nodes[element->node_count - 1];
+                const norma_point previous = element->nodes[element->node_count - 2];
+                const double angle = atan2(end.y - previous.y, end.x - previous.x);
+                const double size = 9.0 / zoom;
+                CGContextSetRGBFillColor(context, 0.14, 0.50, 0.32, 1.0);
+                CGContextBeginPath(context);
+                CGContextMoveToPoint(context, end.x, end.y);
+                CGContextAddLineToPoint(context, end.x - size * cos(angle - 0.4), end.y - size * sin(angle - 0.4));
+                CGContextAddLineToPoint(context, end.x - size * cos(angle + 0.4), end.y - size * sin(angle + 0.4));
+                CGContextClosePath(context);
+                CGContextFillPath(context);
+            }
             if (isDimension) {
                 // Marcas en los extremos, como en el editor web.
                 for (size_t end = 0; end < 2; end += 1) {
@@ -430,7 +451,20 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
     // de la transformación, el texto crecería con el zoom.
     for (size_t index = 0; index < self.document->count; index += 1) {
         const norma_element *element = &self.document->elements[index];
-        if (strcmp(element->type, "dimension") != 0 || element->node_count < 2) {
+        if (element->node_count < 2) {
+            continue;
+        }
+        if (strcmp(element->type, "route") == 0) {
+            // La longitud de la ruta se rotula junto a su extremo, con la misma
+            // cifra que dará el auditor.
+            char caption[64];
+            norma_format_measure_cm(norma_polyline_length(element->nodes, element->node_count, element->arcs),
+                                    self.document->unit, caption, sizeof(caption));
+            const norma_point end = element->nodes[element->node_count - 1];
+            [self drawLabel:@(caption) atPlan:((norma_point) {end.x + 6.0, end.y + 14.0})];
+            continue;
+        }
+        if (strcmp(element->type, "dimension") != 0) {
             continue;
         }
         const norma_point a = element->nodes[0];
@@ -479,6 +513,8 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
         } else {
             [self.delegate canvasStatus:self message:@"El arco no es válido: los tres puntos están en línea." ];
         }
+    } else if (_tool == CanvasToolRoute) {
+        index = norma_document_add_route(self.document, _draft, (size_t) _draftCount, NULL, NULL);
     } else {
         index = norma_document_add_wall(self.document, _draft, (size_t) _draftCount, NULL, NULL);
     }
@@ -514,7 +550,7 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
         return;
     }
 
-    if (_tool == CanvasToolPen) {
+    if (_tool == CanvasToolPen || _tool == CanvasToolRoute) {
         if (_draftCount < kMaxDraftNodes) {
             _draft[_draftCount] = point;
             _draftCount += 1;
@@ -558,6 +594,8 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
         return @"Pluma: un clic por nodo. Enter o doble clic cierra el trazo; Retroceso quita el último nodo.";
     case CanvasToolArc:
         return @"Arco: tercer clic para cerrar la curva por el punto de paso.";
+    case CanvasToolRoute:
+        return @"Ruta: un clic por nodo. Enter o doble clic cierra el trazo; el auditor dirá si llega a una salida.";
     case CanvasToolDimension:
         return @"Cota: segundo clic para medir el tramo.";
     case CanvasToolSelect:
@@ -641,21 +679,8 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
 - (void)keyDown:(NSEvent *)event
 {
     const NSString *characters = event.charactersIgnoringModifiers.lowercaseString;
-    if ([characters isEqualToString:@"m"]) {
-        _tool = CanvasToolWall;
-        _draftCount = 0;
-    } else if ([characters isEqualToString:@"p"]) {
-        _tool = CanvasToolPen;
-        _draftCount = 0;
-    } else if ([characters isEqualToString:@"a"]) {
-        _tool = CanvasToolArc;
-        _draftCount = 0;
-    } else if ([characters isEqualToString:@"d"]) {
-        _tool = CanvasToolDimension;
-        _draftCount = 0;
-    } else if ([characters isEqualToString:@"v"]) {
-        _tool = CanvasToolSelect;
-        _draftCount = 0;
+    if ([self selectToolWithKey:characters]) {
+        // La tecla eligió herramienta: abajo se anuncia cuál.
     } else if (event.keyCode == 53) { // Esc
         _tool = CanvasToolSelect;
         _draftCount = 0;
@@ -664,12 +689,12 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
         [self setNeedsDisplay:YES];
         return;
     } else if (event.keyCode == 36 || event.keyCode == 76) { // Return y Enter
-        if (_tool == CanvasToolPen && _draftCount >= 2) {
+        if ((_tool == CanvasToolPen || _tool == CanvasToolRoute) && _draftCount >= 2) {
             [self commitDraft];
         }
         return;
     } else if (event.keyCode == 51 || event.keyCode == 117) { // Retroceso y Suprimir
-        if (_tool == CanvasToolPen && _draftCount > 0) {
+        if ((_tool == CanvasToolPen || _tool == CanvasToolRoute) && _draftCount > 0) {
             _draftCount -= 1;
             [self setNeedsDisplay:YES];
             return;
@@ -689,6 +714,33 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
     }
     [self.delegate canvasStatus:self message:[self hintForTool]];
     [self setNeedsDisplay:YES];
+}
+
+- (BOOL)selectToolWithKey:(NSString *)key
+{
+    const NSString *caracter = key.lowercaseString;
+    CanvasTool tool;
+    if ([caracter isEqualToString:@"m"]) {
+        tool = CanvasToolWall;
+    } else if ([caracter isEqualToString:@"p"]) {
+        tool = CanvasToolPen;
+    } else if ([caracter isEqualToString:@"a"]) {
+        tool = CanvasToolArc;
+    } else if ([caracter isEqualToString:@"d"]) {
+        tool = CanvasToolDimension;
+    } else if ([caracter isEqualToString:@"r"]) {
+        tool = CanvasToolRoute;
+    } else if ([caracter isEqualToString:@"v"]) {
+        tool = CanvasToolSelect;
+    } else {
+        return NO;
+    }
+    _tool = tool;
+    _draftCount = 0;
+    _hasCursor = NO;
+    [self.delegate canvasStatus:self message:[self hintForTool]];
+    [self setNeedsDisplay:YES];
+    return YES;
 }
 
 - (void)cancelDraft

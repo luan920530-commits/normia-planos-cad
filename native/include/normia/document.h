@@ -140,6 +140,16 @@ long norma_document_add_wall(norma_document *document, const norma_point *nodes,
  */
 long norma_document_add_dimension(norma_document *document, norma_point a, norma_point b, const char *layer);
 
+/**
+ * Añade una **ruta de evacuación** por sus nodos (herramienta Ruta).
+ *
+ * La ruta se guarda como un trazo de tipo `route` con el grosor de la
+ * herramienta; el auditor la mide y dice si llega a una salida y cuántas veces
+ * cruza un muro.
+ */
+long norma_document_add_route(norma_document *document, const norma_point *nodes, size_t count,
+                              const norma_arc *through, const char *layer);
+
 /** Añade una señal o un equipo en un punto. Devuelve el índice o -1. */
 long norma_document_add_marker(norma_document *document, const char *type, double x, double y, const char *layer);
 

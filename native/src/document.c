@@ -197,6 +197,20 @@ long norma_document_add_wall(norma_document *document, const norma_point *nodes,
     return (long) (document->count - 1);
 }
 
+long norma_document_add_route(norma_document *document, const norma_point *nodes, size_t count,
+                              const norma_arc *through, const char *layer)
+{
+    const long index = norma_document_add_wall(document, nodes, count, through, layer);
+    if (index < 0) {
+        return -1;
+    }
+    norma_element *element = &document->elements[index];
+    snprintf(element->id, sizeof(element->id), "ruta_%d", document->identifier);
+    set_text(element->type, sizeof(element->type), "route", "route");
+    element->stroke = 3.0;
+    return index;
+}
+
 long norma_document_add_dimension(norma_document *document, norma_point a, norma_point b, const char *layer)
 {
     if (document == NULL) {

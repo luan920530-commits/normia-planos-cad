@@ -140,6 +140,30 @@ report.check('El lienzo pinta las cotas con su línea, sus marcas y su cifra',
   /drawLabel:/.test(canvas) && /strcmp\(element->type, "dimension"\)/.test(canvas)
   && /node_count - 1/.test(canvas), 'línea · marcas · texto');
 
+/* ---------------------- 4b2 · la herramienta de rutas de N3 ---------------------- */
+
+report.check('R elige la herramienta de ruta y la pista dice cómo se cierra',
+  /CanvasToolRoute/.test(canvas) && /isEqualToString:@"r"/.test(canvas)
+  && /Ruta: un clic por nodo/.test(canvas)
+  && /selectToolWithKey:/.test(canvas) && /selectToolWithKey:/.test(canvasHeader),
+  'R · Enter · doble clic');
+
+report.check('La ruta usa el mismo borrador de polilínea que la pluma',
+  /_tool == CanvasToolPen \|\| _tool == CanvasToolRoute/.test(canvas)
+  && /_tool == CanvasToolRoute\) && _draftCount >= 2/.test(canvas),
+  'borrador compartido');
+
+report.check('La ruta se guarda con el núcleo como tipo ruta, no como un muro',
+  /norma_document_add_route\(self\.document, _draft, \(size_t\) _draftCount/.test(canvas)
+  && !/norma_document_add_wall\(self\.document, _draft, \(size_t\) _draftCount\)\s*;\n?\s*\}\s*else if \(_tool == CanvasToolRoute/.test(canvas),
+  'norma_document_add_route');
+
+report.check('La ruta se pinta con su color, su punta de flecha y su longitud',
+  /strcmp\(element->type, "route"\) == 0/.test(canvas)
+  && /Punta de flecha/.test(canvas)
+  && /norma_polyline_length\(element->nodes, element->node_count, element->arcs\)/.test(canvas),
+  'verde · flecha · cifra');
+
 /* ------------------------ 4c · recientes, papel y PDF ------------------------ */
 
 report.check('Los recientes se guardan como preferencia y no dentro del paquete',
