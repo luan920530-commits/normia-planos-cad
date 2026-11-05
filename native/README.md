@@ -14,9 +14,9 @@ señales del catálogo local), los **primeros auxilios** y los **extintores** (c
 medida otra vez por el motor), los **escenarios de ocupación temporal** y las
 **rutas** (longitud, llegada a la salida y cruces de muro), todos con paridad
 contra PHP.
-Lo que todavía no hay: el **simulacro** (tiempo objetivo por
-ruta y comparación con un tiempo medido), la **herramienta de dibujo** de rutas en
-el lienzo nativo y Windows y Linux (N4). El alcance completo
+Lo que todavía no hay: la **herramienta de dibujo**
+de rutas en el lienzo nativo y Windows y Linux (N4). El **simulacro** no entra en
+la edición nativa por decisión del autor (DEC-14): se queda en la web. El alcance completo
 está en [`docs/APP-NATIVA.md`](../docs/APP-NATIVA.md).
 
 ## Por qué se empieza por el núcleo

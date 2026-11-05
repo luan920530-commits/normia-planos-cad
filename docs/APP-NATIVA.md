@@ -569,9 +569,14 @@ hallazgos y el informe de rutas coinciden al decimal con `PlanAudit::analyze()`.
 
 ### Lo que N3 todavía no tiene
 
-- **Los hallazgos** de simulacro (tiempo objetivo por ruta, punto de encuentro y
-  comparación con un tiempo medido).
 - **Dibujar y editar las rutas** sobre el lienzo nativo (el cálculo y el trazado
   del archivo ya están; falta la herramienta de dibujo en la ventana).
+
+Y una ausencia **decidida**, no pendiente: el **simulacro** (tiempo objetivo por
+ruta, punto de encuentro y comparación con un tiempo medido) no entra en la
+edición nativa (DEC-14, 2026-11-05). Se queda en la web, donde ya existe el
+informe y la animación; la ventana nativa conserva del simulacro lo que alimenta
+un plano —la ruta medida, la llegada a la salida y los cruces de muro—, no la
+puesta en escena.
 - **Pintar los pictogramas en el lienzo** de la ventana de macOS: hoy se dibujan en
   el SVG exportado; el lienzo nativo todavía usa el marcador genérico.
