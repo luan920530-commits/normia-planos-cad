@@ -161,7 +161,7 @@ report.check('Abrir y guardar recuerdan el archivo, y falta el archivo avisa',
 
 report.check('Imprimir abre el panel del sistema en A4 horizontal y ajusta la hoja',
   /printPlan:/.test(delegate) && /NSPrintOperation printOperationWithView:self\.canvas/.test(delegate)
-  && /NSPaperOrientationLandscape/.test(delegate) && /NSFitPagination/.test(delegate)
+  && /NSPaperOrientationLandscape/.test(delegate) && /NSPrintingPaginationModeFit/.test(delegate)
   && /Imprimir…".*printPlan:.*keyEquivalent:@"p"\]/.test(delegate), '⌘P');
 
 report.check('Al imprimir o exportar PDF el fondo es blanco, no el gris de pantalla',

@@ -475,8 +475,8 @@ static const NSUInteger kRecentLimit = 10;
     NSPrintInfo *info = [[NSPrintInfo sharedPrintInfo] copy]; /* no tocar el compartido */
     info.orientation = NSPaperOrientationLandscape;
     [info setPaperSize:NSMakeSize(842.0, 595.0)]; /* A4 horizontal, en puntos */
-    info.horizontalPagination = NSFitPagination;
-    info.verticalPagination = NSFitPagination;
+    info.horizontalPagination = NSPrintingPaginationModeFit;
+    info.verticalPagination = NSPrintingPaginationModeFit;
     info.horizontallyCentered = YES;
     info.verticallyCentered = YES;
     info.topMargin = 24.0;
