@@ -96,26 +96,40 @@ jobs:
 
       - name: Compilar la aplicación nativa
         run: |
-          set -o pipefail
           # Los registros de los trabajos no siempre se pueden descargar, así que
-          # el motivo de un fallo se publica como anotación del propio paso.
-          anotar() {
-            local archivo="$1" titulo="$2"
+          # el motivo de un fallo se publica como anotación del propio paso y, si
+          # no hay anotaciones, en el resumen del trabajo (que sí se puede leer).
+          publicar() {
+            archivo="$1"
+            titulo="$2"
             [ -f "$archivo" ] || return 0
-            tail -n 25 "$archivo" | while IFS= read -r linea; do
-              echo "::error title=${titulo}::${linea//$'\r'/}"
-            done
+            {
+              echo "### ${titulo}"
+              echo '```'
+              tail -n 40 "$archivo"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY" || true
+            tail -n 25 "$archivo" > "$RUNNER_TEMP/lineas.txt" || true
+            while IFS= read -r linea; do
+              echo "::error title=${titulo}::$(printf '%s' "$linea" | tr -d '\r')"
+            done < "$RUNNER_TEMP/lineas.txt"
           }
-          make -C native clean
+          paso() {
+            echo "- $1" >> "$GITHUB_STEP_SUMMARY" || true
+          }
+          rm -rf native/build
+          paso "limpieza hecha"
           set +e
-          make -C native CFLAGS="-std=c11 -O2 -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wstrict-prototypes -Werror" 2>&1 | tee "$RUNNER_TEMP/compilacion.log"
-          NUCLEO=${PIPESTATUS[0]}
-          make -C native test 2>&1 | tee "$RUNNER_TEMP/pruebas.log"
-          PRUEBAS=${PIPESTATUS[0]}
+          make -C native CFLAGS="-std=c11 -O2 -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wstrict-prototypes -Werror" > "$RUNNER_TEMP/compilacion.log" 2>&1
+          NUCLEO=$?
+          paso "núcleo: make terminó con $NUCLEO"
+          make -C native test > "$RUNNER_TEMP/pruebas.log" 2>&1
+          PRUEBAS=$?
+          paso "pruebas: make test terminó con $PRUEBAS"
           set -e
           if [ "$NUCLEO" -ne 0 ] || [ "$PRUEBAS" -ne 0 ]; then
-            anotar "$RUNNER_TEMP/compilacion.log" "núcleo"
-            anotar "$RUNNER_TEMP/pruebas.log" "pruebas nativas"
+            publicar "$RUNNER_TEMP/compilacion.log" "núcleo"
+            publicar "$RUNNER_TEMP/pruebas.log" "pruebas nativas"
             echo "::error title=make::el núcleo o sus pruebas fallaron (núcleo $NUCLEO · pruebas $PRUEBAS)"
             exit 1
           fi
@@ -124,14 +138,18 @@ jobs:
           make -C native/macos CFLAGS="-O2 -Wall -Wextra -Werror -Wno-unused-parameter" > "$RUNNER_TEMP/macos.log" 2>&1
           ESTADO=$?
           set -e
+          paso "ventana: make -C native/macos terminó con $ESTADO"
           cat "$RUNNER_TEMP/macos.log"
           if [ "$ESTADO" -ne 0 ]; then
-            grep -E "error:|warning:|Undefined symbol|ld: |symbol\(s\) not found" "$RUNNER_TEMP/macos.log" | head -15 | while IFS= read -r linea; do
-              echo "::error title=clang::${linea//$'\r'/}"
-            done
+            publicar "$RUNNER_TEMP/macos.log" "clang"
+            grep -E "error:|warning:|Undefined symbol|ld: |symbol\(s\) not found" "$RUNNER_TEMP/macos.log" > "$RUNNER_TEMP/clang.txt" 2>/dev/null || true
+            while IFS= read -r linea; do
+              echo "::error title=clang::$(printf '%s' "$linea" | tr -d '\r')"
+            done < "$RUNNER_TEMP/clang.txt"
             echo "::error title=clang::la aplicación nativa no compiló (código $ESTADO)"
             exit 1
           fi
+          paso "ventana compilada"
 
       - name: Comprobar el paquete y el mínimo de macOS
         run: |
