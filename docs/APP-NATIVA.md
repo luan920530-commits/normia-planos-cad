@@ -1,8 +1,9 @@
 # Normia nativa: plan de una aplicación 100 % nativa
 
-**Estado:** en marcha. La **etapa N0** (núcleo en C con paridad verificada
-contra el motor PHP) está hecha en `native/`; ver § 11. El resto del documento
-sigue siendo el alcance para decidir.
+**Estado:** en marcha. Hechas la **etapa N0** (núcleo en C con paridad
+verificada contra el motor PHP, § 11) y la **etapa N1** (documento editable y
+ventana nativa de macOS con lienzo propio, sin WebView, § 12). Las etapas N2–N4
+siguen siendo el plan.
 
 **Pregunta que responde:** ¿Normia Estudio puede ser una aplicación nativa de
 verdad —como AutoCAD— y no una app con Electron?
@@ -255,3 +256,43 @@ Consecuencias prácticas de haber empezado por el núcleo:
   unidades, arcos ni JSON.
 - El flujo de verificación compila el C con `-Werror` y corre la paridad en cada
   cambio, así que el núcleo no se degrada en silencio.
+
+## 12. Etapa N1, hecha: la ventana nativa de macOS
+
+`native/macos/` es una aplicación **AppKit** de verdad, compilada con
+`clang -fobjc-arc`, que enlaza solo `Cocoa`. No hay WebView, ni HTML, ni
+JavaScript, ni Electron, ni PHP.
+
+| Pieza | Archivo | Qué hace |
+| --- | --- | --- |
+| Arranque | `main.m` | `--check` comprueba el núcleo sin abrir ventana |
+| Ventana y menú | `AppDelegate.m` | Archivo / Editar / Ver / Ayuda en español; `⌘N ⌘O ⌘S ⇧⌘S ⌘Z ⇧⌘Z`; paneles del sistema; aviso al cerrar con cambios; título con «•» y documento editado en el Dock |
+| Lienzo | `CanvasView.m` | Core Graphics: hoja A4, rejilla de 20 cm, muros con arcos, equipos; clic selecciona, arrastrar mueve nodos o el trazo, `M` dibuja muros, `Esc` sale, Retroceso borra |
+
+El documento en C (`native/src/document.c`) es lo que la ventana edita y lo que
+se guarda: muros por nodos con arcos, equipos, deshacer y rehacer de 64 niveles,
+selección por proximidad y el **sobre oficial** de ida y vuelta.
+
+### Pruebas
+
+| Prueba | Qué comprueba | Resultado |
+| --- | --- | --- |
+| `native/tests/test_core.c` | unidades, arcos, JSON, plano | **23/23** |
+| `native/tests/test_document.c` | muros, deshacer, selección, guardar y abrir, unidades | **27/27** |
+| `native/tests/parity.mjs` | paridad C contra PHP, dígito a dígito | **12/12** |
+| `native/tests/macos.mjs` | contrato de la ventana: AppKit, sin WebView, menú en español, atajos, sobre oficial, macOS 12 | **21/21** |
+
+Y en el flujo de verificación hay un trabajo nuevo en **`macos-15-intel`** que
+compila con `-Werror`, arma el `.app`, comprueba el `LSMinimumSystemVersion` con
+`PlistBuddy` y **arranca la aplicación con `--check`**.
+
+### Lo que esta etapa no puede prometer
+
+- **La ventana en pantalla**: no se puede probar desde el entorno donde se
+  escribió (Linux sin pantalla ni Xcode). Se compila y se arranca en el flujo de
+  macOS; el primer uso real con ratón y teclado lo hace una persona.
+- **Firma y notarización**: la `.app` sale sin firmar, como el estudio.
+- **Paridad visual exacta** con el editor web: colores y grosores son los del
+  lienzo nativo, no una copia píxel a píxel.
+- **El resto de herramientas**: cotas, pluma de nodos, informes y el auditor en
+  pantalla son la etapa N2 y siguientes.

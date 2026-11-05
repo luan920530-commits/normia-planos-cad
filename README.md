@@ -831,6 +831,7 @@ Lo único que no funciona sin red es la **vista previa de desarrollo** (`npm run
 | `tests/js/units.mjs` | 30 comprobaciones del módulo `assets/js/lib/units.js` contra la **misma** tabla compartida: si PHP y JavaScript se separan, falla una de las dos suites. Fija además la longitud de un trazo curvo, la identidad exacta de `fromMeters` con PHP y que el editor coincide **exactamente** con el golden que escribe el servidor; y comprueba que el módulo no toca el DOM ni la red y que publica `window.Normia.Units`. |
 | `tests/js/plugins.mjs` | 20 comprobaciones de los complementos en el editor: traducción `plg_…` ↔ `PLG_…`, color y tamaño de la familia propia, búsqueda por sinónimos, filtro por familia, inserción, guardado y reapertura del elemento. |
 | `tests/js/editor.mjs` | 442 comprobaciones de interfaz sobre la app real: arranque, 395 señales y 422 objetos, **pluma de muros** (nodo por clic, tramo elástico con su cifra, banda de grosor, `Retroceso`, `Shift`, `Enter`, cierre sobre el primer nodo, doble clic, `Esc` y la cota que se cierra con dos nodos), **muros curvos** (rombo del tramo, arco de tres puntos, radio y flecha en el inspector, enderezar, doble clic que parte el arco, caja analítica, puerta sobre el arco, formato 3 y degradación a v2, marcado idéntico sin curvas), **vías y andenes** (banda de 6 m con carriles, cambio de ancho y carriles, parqueadero contado en la etiqueta, franjas del paso cebra y rótulo del lindero), **sección tipo y cruces** (avenida de 20 m en formato 4, perfil transversal en el inspector, cambio de andén que recalcula el ancho, glorieta de cinco accesos, vuelta a vía normal, corredor de ejemplo en una acción y sinónimos «carro», «bici» y «semáforo»), **trazado de tuberías y circuitos, inspector de red y panel de redes**, **mano y paneo, selección de superpuestos, inspector plegable y paleta de herramientas**, **guía de primeros pasos** (apertura en el primer uso, siete pasos, progreso tomado del plano, salto a la herramienta con la baldosa resaltada, reinicio y desactivación), **buscador con sinónimos y sin tildes** (calle → vía, anden → andén, parqueo → parqueadero), **baldosa propia de vías y andenes**, puertas dobles y portones, **vértices de ruta editables (arrastrar, doble clic, Alt+clic)**, **señal de baño insertada desde la biblioteca**, **posiciones reales del trazo**, **clic sobre muros finos, pictogramas y equipos**, **cambio de señal y de equipo desde el inspector**, **auditor de planos** (interruptor de salida, ocupación declarada, cajón de revisión, contador, filtros, «Ver en el plano», cierre sin dejar el fondo bloqueado), **pliego de señalización** (conteo, tamaño sugerido, CSV, precios y consistencia), **medición de rutas internas** (ruta que rodea muros, tramos, guardado en capa y comparación), **modo presentación** (pantalla limpia, láser, spotlight, rutas animadas, capas, quiz y salida sin perder el estado), **rotación**, **rutas cerradas**, **arrastrar y soltar desde la biblioteca sin que el cajón lo bloquee**, reglas, herramientas, inserción con puntero, selección, mover, escalar, rotar, color, cambio de tipo, deshacer/rehacer, duplicar, agrupar, bloquear, desplazar, texto y saneado, guardar, reabrir, borradores, conflictos, exportación SVG/JSON/PNG, tooltips sin acumulación, capas, versiones y límites. |
+| `native/tests/macos.mjs` | 21 comprobaciones del **contrato de la ventana nativa de macOS**: es AppKit y no un WebView, el lienzo dibuja con Core Graphics, el menú está en español con `⌘N ⌘O ⌘S ⇧⌘S ⌘Z ⇧⌘Z`, guarda en el sobre oficial, pregunta al cerrar con cambios, declara macOS 12 y hay un trabajo de macOS en el flujo que la compila y la arranca con `--check`. |
 | `native/tests/parity.mjs` | 12 comprobaciones de **paridad del núcleo nativo (C11)** con el motor PHP: compila sin avisos con `-Werror`, el plano da el mismo número de elementos y de muros, la longitud total y la del muro curvo coinciden dígito a dígito, la superficie en m² también, cambiar la unidad declarada no mueve nada y un archivo que no es un plano se rechaza con su motivo. |
 | `tests/js/estudio.mjs` | 35 comprobaciones de **Normia Estudio**: la página abre **sin instalar** nada, sin portada ni pisos ni versiones; los cajones hablan del plano y no de un piso de proyecto; el editor arranca en blanco con A4 a 1:100; el puente de escritorio guarda, abre y avisa del título; el plano en curso llega al auditor, al informe, a la impresión y al SVG; el JSON que se exporta es el sobre oficial y se **importa** en la edición completa; renombrar el plano funciona y los acentos no se pierden en el nombre del archivo; los catálogos se sirven sin sesión. |
 | `tests/js/pages.mjs` | 50 comprobaciones de las páginas fuera del editor y de la portada pública: menú de acciones de proyectos y pisos (capa fija, colocación, teclado, un solo menú), confirmación de borrado y borrado real de piso y proyecto, con la protección del último piso, la **portada pública** (cinco capturas con texto alternativo, flechas de la galería y token del formulario) y **la página pública del modo brigadista** ejecutando su JavaScript: acciones rápidas, atenuado del plano, alto contraste recordado, zoom y borrado de la copia local. |
@@ -864,11 +865,12 @@ Resultados esperados de la última ejecución completa:
 ✓ Modo estudio PHP 8.1 · 35/35
 ✓ Modo estudio PHP 8.3 · 35/35
 ✓ Núcleo nativo (paridad C/PHP) · 12/12
+✓ Ventana nativa (macOS) · 21/21
 ✓ Escritorio (instaladores) · 37/37
 ✓ Android (APK) · 52/52
 ✓ Escritorio (Electron) · 52/52
 ✓ Paquetes y demo · 39/39
-27/27 pasos correctos
+28/28 pasos correctos
 ```
 
 Las pruebas trabajan sobre copias temporales: no escriben configuración ni bases en el repositorio. `node_modules` solo contiene dependencias de desarrollo y se excluye de los paquetes.
@@ -1015,10 +1017,13 @@ importar después en un proyecto de la edición completa sin conversiones.
 - **¿Y una app 100 % nativa, sin Electron?** Todavía no: la ventana y los
   diálogos son del sistema, el interior es el editor web con PHP compilado a
   WebAssembly. El alcance, las etapas y el costo real están en
-  [`docs/APP-NATIVA.md`](docs/APP-NATIVA.md), y la **primera etapa ya está
-  hecha**: el núcleo de cálculo en **C11**, sin dependencias, en `native/`, con
-  paridad dígito a dígito contra el motor PHP (23/23 pruebas propias y 12/12 de
-  paridad). La ventana nativa es lo siguiente.
+  [`docs/APP-NATIVA.md`](docs/APP-NATIVA.md), y van **dos etapas hechas**: el
+  núcleo de cálculo en **C11** sin dependencias, con paridad dígito a dígito
+  contra el motor PHP (23/23 pruebas propias y 12/12 de paridad), y la
+  **ventana nativa de macOS en AppKit**, con su lienzo en Core Graphics, menú en
+  español, abrir y guardar con los paneles del sistema y deshacer (27/27 del
+  documento y 21/21 del contrato de la ventana). Se compila y arranca en el
+  trabajo de macOS del flujo de verificación.
 
 Los instaladores los compila **GitHub Actions** en el flujo *Distribución de
 Normia Estudio (solo editor)*, con la comprobación del contenido del paquete y el
@@ -1174,7 +1179,7 @@ archivo del equipo.
   `plano-sin-titulo` y no como `plano-sin-t-tulo` en ningún sistema. Vale para
   todas las exportaciones de las dos ediciones.
 - **Pruebas**: `tests/js/estudio.mjs` con **35** comprobaciones en PHP 8.1 y 8.3,
-  `tests/js/electron.mjs` de 40 a **52** y la suite en **27/27** pasos. Entre
+  `tests/js/electron.mjs` de 40 a **52** y la suite en **28/28** pasos. Entre
   ellas, la más importante: **el paquete real se arranca, abre el estudio y
   audita un plano sin instalar nada ni crear una base de datos**.
 

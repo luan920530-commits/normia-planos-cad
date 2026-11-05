@@ -83,6 +83,36 @@ jobs:
       - name: Paridad entre el núcleo en C y el motor PHP
         run: node native/tests/parity.mjs 8.3
 
+  # La ventana nativa de macOS solo se puede compilar en macOS: aquí se hace con
+  # clang y AppKit, y se arranca con --check (sin abrir ventana). El lienzo y el
+  # menú no se pueden probar sin pantalla, pero sí que compila y que el núcleo
+  # responde dentro de la aplicación.
+  macos-nativo:
+    name: Ventana nativa de macOS
+    runs-on: macos-15-intel
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compilar la aplicación nativa
+        run: |
+          make -C native clean
+          make -C native CFLAGS="-std=c11 -O2 -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wstrict-prototypes -Werror"
+          make -C native test
+          make -C native/macos CFLAGS="-O2 -Wall -Wextra -Werror -Wno-unused-parameter"
+
+      - name: Comprobar el paquete y el mínimo de macOS
+        run: |
+          APP="native/macos/build/NormiaEstudio.app"
+          test -x "$APP/Contents/MacOS/NormiaEstudio"
+          MIN="$(/usr/libexec/PlistBuddy -c 'Print :LSMinimumSystemVersion' "$APP/Contents/Info.plist")"
+          echo "LSMinimumSystemVersion: $MIN"
+          case "$MIN" in 12.*) ;; *) echo "::error title=macOS::el paquete exige macOS $MIN"; exit 1 ;; esac
+          plutil -lint "$APP/Contents/Info.plist"
+
+      - name: Arrancar la aplicación sin ventana
+        run: native/macos/build/NormiaEstudio.app/Contents/MacOS/NormiaEstudio --check
+
   paquete:
     name: Paquete y demo
     runs-on: ubuntu-latest
