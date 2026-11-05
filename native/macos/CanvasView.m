@@ -13,6 +13,7 @@
 #import "CanvasView.h"
 
 #include <math.h>
+#include <string.h>
 
 static const CGFloat kToleranceScreen = 8.0;
 

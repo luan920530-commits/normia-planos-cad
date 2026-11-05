@@ -96,10 +96,23 @@ jobs:
 
       - name: Compilar la aplicación nativa
         run: |
+          set -o pipefail
           make -C native clean
-          make -C native CFLAGS="-std=c11 -O2 -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wstrict-prototypes -Werror"
+          make -C native CFLAGS="-std=c11 -O2 -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wstrict-prototypes -Werror" 2>&1 | tee "$RUNNER_TEMP/compilacion.log"
           make -C native test
-          make -C native/macos CFLAGS="-O2 -Wall -Wextra -Werror -Wno-unused-parameter"
+          # Si clang se queja, el motivo se copia a las anotaciones del trabajo.
+          set +e
+          make -C native/macos CFLAGS="-O2 -Wall -Wextra -Werror -Wno-unused-parameter" > "$RUNNER_TEMP/macos.log" 2>&1
+          ESTADO=$?
+          set -e
+          cat "$RUNNER_TEMP/macos.log"
+          if [ "$ESTADO" -ne 0 ]; then
+            grep -E "error:|warning:" "$RUNNER_TEMP/macos.log" | head -15 | while IFS= read -r linea; do
+              echo "::error title=clang::${linea//$'\r'/}"
+            done
+            echo "::error title=clang::la aplicación nativa no compiló (código $ESTADO)"
+            exit 1
+          fi
 
       - name: Comprobar el paquete y el mínimo de macOS
         run: |
