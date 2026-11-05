@@ -279,8 +279,10 @@ selección por proximidad y el **sobre oficial** de ida y vuelta.
 | --- | --- | --- |
 | `native/tests/test_core.c` | unidades, arcos, JSON, plano | **23/23** |
 | `native/tests/test_document.c` | muros, deshacer, selección, guardar y abrir, unidades | **27/27** |
-| `native/tests/parity.mjs` | paridad C contra PHP, dígito a dígito | **12/12** |
-| `native/tests/macos.mjs` | contrato de la ventana: AppKit, sin WebView, menú en español, atajos, sobre oficial, macOS 12 | **21/21** |
+| `native/tests/test_svg.c` | cifras es-CO y SVG con escala física (etapa N2) | **25/25** |
+| `native/tests/parity.mjs` | paridad C contra PHP, dígito a dígito, también en el SVG | **16/16** |
+| `native/tests/macos.mjs` | contrato de la ventana: AppKit, sin WebView, menú en español, atajos, sobre oficial, macOS 12, herramientas | **28/28** |
+| `native/tests/core.mjs` | compilación estricta y los tres programas de prueba del núcleo | **7/7** |
 
 Y en el flujo de verificación hay un trabajo nuevo en **`macos-15-intel`** que
 compila con `-Werror`, arma el `.app`, comprueba el `LSMinimumSystemVersion` con
@@ -298,3 +300,40 @@ compila con `-Werror`, arma el `.app`, comprueba el `LSMinimumSystemVersion` con
   lienzo nativo, no una copia píxel a píxel.
 - **El resto de herramientas**: cotas, pluma de nodos, informes y el auditor en
   pantalla son la etapa N2 y siguientes.
+
+## 13. Etapa N2, en curso: cotas, pluma de nodos y SVG desde el núcleo
+
+La etapa N2 lleva a la aplicación lo que hacía falta para dibujar de verdad y
+para sacar el plano sin el motor PHP:
+
+| Pieza | Archivo | Estado |
+| --- | --- | --- |
+| Cifras con formato colombiano (`400 cm`, `471,2 cm`, `112.123,9 cm`) | `native/src/format.c` | hecho · **25/25** entre las dos pruebas |
+| SVG con escala física: papel en milímetros, `viewBox` en centímetros, rejilla, franja de datos y cotas rotuladas | `native/src/svg.c` | hecho |
+| Cota como objeto del documento (`tipo: dimension`) | `native/src/document.c` | hecho |
+| `norma-core --svg plano.json` | `native/src/cli.c` | hecho |
+| Herramientas del lienzo `V · M · P · A · D` con borrador y previsualización | `native/macos/CanvasView.m` | escrito |
+| Exportar SVG con panel del sistema (`⌘E`) | `native/macos/AppDelegate.m` | escrito |
+| Recientes, impresión y exportación desde la ventana | — | pendiente |
+
+Lo que da el SVG del núcleo, medido en el plano de prueba A4 a 1:100:
+
+| Dato | Valor |
+| --- | --- |
+| Ancho del papel | `190.00mm` (el mínimo de 190 mm manda sobre el A4) |
+| Alto del papel | `103.40mm` (plano de 79,4 mm + franja de 24 mm) |
+| `viewBox` | `0 0 1900 1034`, en centímetros del plano, no en milímetros |
+| Escala física | `mm_per_cm = 0,1` |
+| Franja | «Escala 1:100 · cm · Normia nativo · esquema de apoyo, no es un plano de obra» |
+| Cota de prueba | `<text …>400 cm</text>` |
+| Arco | `M 400 0 A 150 150 0 0 1 400 300`, **idéntico al que escribe PHP** |
+
+### Lo que N2 todavía no puede prometer
+
+- **La ventana con las herramientas nuevas no se ha compilado**: en el entorno
+  donde se escribe esto no hay AppKit. El contrato se comprueba con
+  `native/tests/macos.mjs` (28/28) y la compilación real la hace el trabajo
+  `macos-nativo` del flujo.
+- **Recientes e impresión** siguen fuera: son la parte que falta de N2.
+- **El paquete se publica como artefacto del flujo**, no como release: así se
+  puede bajar el `.app` sin firmar y abrirlo en un Mac con Intel.

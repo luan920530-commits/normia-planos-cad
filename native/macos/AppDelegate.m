@@ -14,6 +14,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "normia/svg.h"
+
 #include "normia/document.h"
 
 static const char *kAppName = "Normia Estudio";
@@ -123,6 +125,8 @@ static const char *kAppName = "Normia Estudio";
     NSMenuItem *saveAs = [fileMenu addItemWithTitle:@"Guardar como…" action:@selector(savePlanAs:) keyEquivalent:@"S"];
     saveAs.keyEquivalentModifierMask = NSEventModifierFlagCommand | NSEventModifierFlagShift;
     [fileMenu addItem:[NSMenuItem separatorItem]];
+    [fileMenu addItemWithTitle:@"Exportar SVG…" action:@selector(exportSvg:) keyEquivalent:@"E"];
+    [fileMenu addItem:[NSMenuItem separatorItem]];
     [fileMenu addItemWithTitle:@"Cerrar ventana" action:@selector(performClose:) keyEquivalent:@"w"];
     fileItem.submenu = fileMenu;
     [menubar addItem:fileItem];
@@ -134,6 +138,8 @@ static const char *kAppName = "Normia Estudio";
     redo.keyEquivalentModifierMask = NSEventModifierFlagCommand | NSEventModifierFlagShift;
     [editMenu addItem:[NSMenuItem separatorItem]];
     [editMenu addItemWithTitle:@"Borrar lo seleccionado" action:@selector(deleteSelection:) keyEquivalent:@""];
+    [editMenu addItem:[NSMenuItem separatorItem]];
+    [editMenu addItemWithTitle:@"Cancelar herramienta" action:@selector(cancelTool:) keyEquivalent:@"."];
     editItem.submenu = editMenu;
     [menubar addItem:editItem];
 
@@ -328,6 +334,41 @@ static const char *kAppName = "Normia Estudio";
                                           keyCode:51]];
 }
 
+- (void)exportSvg:(id)sender
+{
+    (void) sender;
+    NSSavePanel *panel = [NSSavePanel savePanel];
+    panel.allowedContentTypes = @[ UTTypeSVG ];
+    panel.nameFieldStringValue = [NSString stringWithFormat:@"%@.svg", self.planName ?: @"plano"];
+    panel.message = @"Exportar el plano en SVG con escala física";
+    if ([panel runModal] != NSModalResponseOK || panel.URL == nil) {
+        return;
+    }
+    norma_svg_options options;
+    options.grid = 1;
+    options.band = 1;
+    options.title = self.planName.UTF8String;
+    char *svg = norma_document_to_svg(&_document, &options);
+    if (svg == NULL) {
+        [self showError:@"No se pudo componer el SVG" detail:@"El documento no produjo ningún texto."];
+        return;
+    }
+    const NSString *text = @(svg);
+    free(svg);
+    NSError *error = nil;
+    if (![text writeToFile:panel.URL.path atomically:YES encoding:NSUTF8StringEncoding error:&error]) {
+        [self showError:@"No se pudo guardar el SVG" detail:error.localizedDescription];
+        return;
+    }
+    [self canvasStatus:self.canvas message:[NSString stringWithFormat:@"SVG exportado · %@", panel.URL.lastPathComponent]];
+}
+
+- (void)cancelTool:(id)sender
+{
+    (void) sender;
+    [self.canvas cancelDraft];
+}
+
 - (void)zoomToFit:(id)sender
 {
     (void) sender;
@@ -339,9 +380,12 @@ static const char *kAppName = "Normia Estudio";
     (void) sender;
     NSAlert *alert = [[NSAlert alloc] init];
     alert.messageText = @"Cómo se usa el lienzo";
-    alert.informativeText = @"M arma la herramienta de muro: un clic por nodo y Esc para terminar.\n"
-                            @"Clic en un muro lo selecciona; si aciertas en un nodo, arrastrarlo lo mueve.\n"
-                            @"Retroceso borra lo seleccionado y ⌘Z deshace.\n\n"
+    alert.informativeText = @"V vuelve a la selección: clic en un muro lo elige y, si aciertas en un nodo, arrastrarlo lo mueve.\n"
+                            @"M · muro por tramos de dos clics.\n"
+                            @"P · pluma de nodos: un clic por nodo, Enter o doble clic cierra.\n"
+                            @"A · arco de tres puntos: inicio, paso y fin.\n"
+                            @"D · cota entre dos puntos, con la cifra y la unidad.\n"
+                            @"Esc cancela la herramienta; Retroceso quita el último nodo o borra lo seleccionado; ⌘Z deshace.\n\n"
                             @"Los planos son esquemas de apoyo: no sustituyen la verificación de un "
                             @"profesional ni la normativa vigente.";
     [alert runModal];

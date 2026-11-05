@@ -108,6 +108,38 @@ report.check('El lienzo responde al teclado y se adapta a la ventana',
   /acceptsFirstResponder/.test(canvas) && /zoomToFit/.test(canvas)
   && /NSViewWidthSizable \| NSViewHeightSizable/.test(delegate), 'primera respuesta · ajuste');
 
+/* --------------------------- 4b · herramientas de N2 --------------------------- */
+
+report.check('La pluma de nodos cierra con Enter o doble clic y quita el último nodo',
+  /CanvasToolPen/.test(canvas) && /keyCode == 36 \|\| event\.keyCode == 76/.test(canvas)
+  && /clickCount >= 2/.test(canvas) && /_draftCount -= 1/.test(canvas),
+  'Enter · doble clic · Retroceso');
+
+report.check('El arco de tres puntos se arma con el núcleo, no con una aproximación',
+  /CanvasToolArc/.test(canvas) && /norma_arc_from_points\(_draft\[0\], _draft\[1\], _draft\[2\]\)/.test(canvas)
+  && /El arco no es válido/.test(canvas), 'tres puntos');
+
+report.check('La cota se rotula con la cifra y la unidad del plano',
+  /CanvasToolDimension/.test(canvas) && /norma_format_measure_cm/.test(canvas)
+  && /norma_document_add_dimension/.test(canvas), 'norma_format_measure_cm');
+
+report.check('Cada herramienta tiene su tecla y Esc vuelve a la selección',
+  /isEqualToString:@"m"/.test(canvas) && /isEqualToString:@"p"/.test(canvas)
+  && /isEqualToString:@"a"/.test(canvas) && /isEqualToString:@"d"/.test(canvas)
+  && /isEqualToString:@"v"/.test(canvas) && /event\.keyCode == 53/.test(canvas),
+  'M · P · A · D · V · Esc');
+
+report.check('Exportar SVG usa el núcleo con escala física y los paneles del sistema',
+  /exportSvg:/.test(delegate) && /norma_document_to_svg/.test(delegate) && /UTTypeSVG/.test(delegate)
+  && /Exportar SVG…/.test(delegate), '⌘E');
+
+report.check('Hay una orden para cancelar la herramienta en curso',
+  /cancelTool:/.test(delegate) && /cancelDraft/.test(canvasHeader), 'Esc · ⌘.');
+
+report.check('El lienzo pinta las cotas con su línea, sus marcas y su cifra',
+  /drawLabel:/.test(canvas) && /strcmp\(element->type, "dimension"\)/.test(canvas)
+  && /node_count - 1/.test(canvas), 'línea · marcas · texto');
+
 /* ------------------------------ 5 · sistema mínimo ----------------------------- */
 
 report.check('El paquete declara macOS 12 Monterey como mínimo',

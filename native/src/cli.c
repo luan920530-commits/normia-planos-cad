@@ -14,6 +14,7 @@
 #include <string.h>
 
 #include "normia/plan.h"
+#include "normia/svg.h"
 #include "normia/units.h"
 
 #define NORMA_CORE_VERSION "0.1.0"
@@ -26,8 +27,9 @@ static void usage(FILE *out, const char *program)
             "  %s --check              comprueba el núcleo y termina\n"
             "  %s --version            muestra la versión\n"
             "  %s --stats plano.json   cifras del plano, en JSON\n"
+            "  %s --svg plano.json     SVG del plano, por la salida estándar\n"
             "  %s --help               esta ayuda\n",
-            NORMA_CORE_VERSION, program, program, program, program);
+            NORMA_CORE_VERSION, program, program, program, program, program);
 }
 
 /** Lee un archivo completo. Devuelve NULL y explica el motivo si falla. */
@@ -105,6 +107,41 @@ static int command_stats(const char *path)
     return 0;
 }
 
+static int command_svg(const char *path)
+{
+    size_t length = 0;
+    char *text = read_file(path, &length);
+    if (text == NULL) {
+        return 1;
+    }
+    norma_document document;
+    norma_document_init(&document);
+    char error[256];
+    const int ok = norma_document_from_json(&document, text, length, error, sizeof(error));
+    free(text);
+    if (!ok) {
+        fprintf(stderr, "%s\n", error);
+        return 2;
+    }
+    const char *name = strrchr(path, '/');
+    char title[128];
+    snprintf(title, sizeof(title), "%s", name != NULL ? name + 1 : path);
+    char *dot = strrchr(title, '.');
+    if (dot != NULL) {
+        *dot = '\0';
+    }
+    norma_svg_options options = {1, 1, title};
+    char *svg = norma_document_to_svg(&document, &options);
+    norma_document_free(&document);
+    if (svg == NULL) {
+        fprintf(stderr, "No se pudo componer el SVG.\n");
+        return 3;
+    }
+    fputs(svg, stdout);
+    free(svg);
+    return 0;
+}
+
 int main(int argc, char **argv)
 {
     const char *program = argc > 0 ? argv[0] : "norma-core";
@@ -123,6 +160,13 @@ int main(int argc, char **argv)
     }
     if (strcmp(command, "--check") == 0) {
         return command_check();
+    }
+    if (strcmp(command, "--svg") == 0) {
+        if (argc < 3) {
+            fprintf(stderr, "Falta el archivo del plano.\n");
+            return 64;
+        }
+        return command_svg(argv[2]);
     }
     if (strcmp(command, "--stats") == 0) {
         if (argc < 3) {

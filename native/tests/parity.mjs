@@ -116,7 +116,6 @@ echo json_encode([
   phpError = String(error?.message || error);
 }
 await app.close();
-fs.rmSync(fixture, { force: true });
 
 report.check('El motor PHP da las cifras del mismo plano', php !== null, php ? 'ok' : phpError.slice(0, 160));
 
@@ -164,7 +163,76 @@ if (nativo && php) {
     `${show(nativo.wall_length_cm)} cm en «cm» · ${show(enMilimetros.wall_length_cm)} cm en «mm»`);
 }
 
-/* ------------------- 4 · el núcleo no se rompe con basura ------------------ */
+/* ------------------- 4 · el SVG también tiene que coincidir ------------------ */
+
+// El trazado del muro curvo: el mismo `d` que compone PHP para el SVG, y la
+// misma escala física. Si el núcleo nativo dibuja distinto, se ve aquí.
+const fixtureSvg = path.join(os.tmpdir(), `normia-paridad-svg-${process.pid}.json`);
+const planoCurvo = JSON.parse(JSON.stringify(plano));
+planoCurvo.design.elements = [planoCurvo.design.elements[1]];
+fs.writeFileSync(fixtureSvg, JSON.stringify(planoCurvo), 'utf8');
+let svgNativo = '';
+try {
+  svgNativo = runCore(['--svg', fixtureSvg]);
+} catch (error) {
+  svgNativo = String(error.stdout || '');
+}
+const app2 = await startApp(VERSION);
+let phpSvg = null;
+try {
+  const resultado = await app2.run(`
+$design = json_decode((string) file_get_contents(${JSON.stringify(fixture)}), true)['design'];
+$muro = $design['elements'][1];
+$hoja = App\\Services\\SvgExporter::sheet($design);
+echo json_encode([
+    'path' => App\\Services\\PathGeometry::pathData($muro['points'], $muro['curves'] ?? null),
+    'plano_ancho_mm' => $hoja['planWidthMm'],
+    'plano_alto_mm' => $hoja['planHeightMm'],
+    'mm_por_cm' => $hoja['mmPerCm'],
+    'escala' => $hoja['scale'],
+]);
+`);
+  const text = String(resultado.text || '');
+  phpSvg = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1));
+} catch (error) {
+  phpSvg = null;
+  report.check('El motor PHP compone el trazado del SVG', false, String(error?.message || error).slice(0, 120));
+}
+await app2.close();
+fs.rmSync(fixtureSvg, { force: true });
+fs.rmSync(fixture, { force: true });
+
+if (phpSvg) {
+  const dNativo = (svgNativo.match(/<path d="([^"]+)"/) || [])[1] || '';
+  report.check('El trazado del arco es el mismo texto en C y en PHP',
+    dNativo !== '' && dNativo === phpSvg.path,
+    `C: ${dNativo} · PHP: ${phpSvg.path}`);
+
+  const ancho = Number((svgNativo.match(/width="([0-9.]+)mm"/) || [])[1]);
+  const alto = Number((svgNativo.match(/height="([0-9.]+)mm"/) || [])[1]);
+  report.check('La hoja física mide lo mismo que la que calcula PHP',
+    Number.isFinite(ancho) && Math.abs(ancho - Math.max(190, phpSvg.plano_ancho_mm)) < 0.01
+      && alto > phpSvg.plano_alto_mm,
+    `C: ${ancho} mm · PHP: ${phpSvg.plano_ancho_mm} mm de plano`);
+
+  report.check('La escala impresa es la misma',
+    svgNativo.includes(`Escala ${phpSvg.escala}`) && Math.abs(phpSvg.mm_por_cm - 0.1) < 1e-12,
+    `${phpSvg.escala} · ${phpSvg.mm_por_cm} mm/cm`);
+}
+
+// La cifra de la cota se escribe como en el navegador: coma decimal y unidad.
+const cotaFixture = path.join(os.tmpdir(), `normia-paridad-cota-${process.pid}.json`);
+const planoCota = JSON.parse(JSON.stringify(plano));
+planoCota.design.elements = [
+  { id: 'c', type: 'dimension', points: [{ x: 0, y: 0 }, { x: 4212.389, y: 0 }], layerId: 'capa' },
+];
+fs.writeFileSync(cotaFixture, JSON.stringify(planoCota), 'utf8');
+const svgCota = runCore(['--svg', cotaFixture]);
+fs.rmSync(cotaFixture, { force: true });
+report.check('La cota se rotula con coma decimal y punto de miles, como en la web',
+  />4\.212,4 cm<\/text>/.test(svgCota), (svgCota.match(/>([0-9.,]+ cm)</) || [])[1] || 'sin cota');
+
+/* ------------------- 5 · el núcleo no se rompe con basura ------------------ */
 
 const basura = path.join(os.tmpdir(), `normia-basura-${process.pid}.json`);
 fs.writeFileSync(basura, '{"hola": 1}', 'utf8');

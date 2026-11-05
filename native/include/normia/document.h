@@ -89,6 +89,12 @@ void norma_document_begin_edit(norma_document *document);
 long norma_document_add_wall(norma_document *document, const norma_point *nodes, size_t count,
                              const norma_arc *through, const char *layer);
 
+/**
+ * Añade una cota entre dos puntos. La cifra que se rotula la calcula el núcleo
+ * con la unidad del plano: nunca se escribe a mano en el modelo.
+ */
+long norma_document_add_dimension(norma_document *document, norma_point a, norma_point b, const char *layer);
+
 /** Añade una señal o un equipo en un punto. Devuelve el índice o -1. */
 long norma_document_add_marker(norma_document *document, const char *type, double x, double y, const char *layer);
 

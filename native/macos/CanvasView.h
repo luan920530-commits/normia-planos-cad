@@ -29,6 +29,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (void)documentDidLoad;
 - (void)zoomToFit;
+/** Cancela la herramienta en curso sin tocar el documento. */
+- (void)cancelDraft;
 
 @end
 

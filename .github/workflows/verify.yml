@@ -124,7 +124,28 @@ jobs:
           plutil -lint "$APP/Contents/Info.plist"
 
       - name: Arrancar la aplicación sin ventana
-        run: native/macos/build/NormiaEstudio.app/Contents/MacOS/NormiaEstudio --check
+        run: |
+          native/macos/build/NormiaEstudio.app/Contents/MacOS/NormiaEstudio --check
+          # El mismo binario, exportando un plano de prueba a SVG desde el núcleo.
+          printf '%s' '{"version":1,"name":"prueba","elements":[{"type":"wall","layer":"obra","nodes":[{"x":0,"y":0},{"x":400,"y":0}]}]}' > "$RUNNER_TEMP/plano.json"
+          native/build/norma-core --svg "$RUNNER_TEMP/plano.json" > "$RUNNER_TEMP/plano.svg"
+          grep -q 'width="190.00mm"' "$RUNNER_TEMP/plano.svg"
+          grep -q '400 cm' "$RUNNER_TEMP/plano.svg"
+
+      # El paquete se publica como artefacto del flujo: así se puede abrir en un
+      # Mac con Intel sin depender de una release ni de firma de código.
+      - name: Empaquetar la aplicación para descargarla
+        run: |
+          ditto -c -k --sequesterRsrc --keepParent \
+            native/macos/build/NormiaEstudio.app \
+            "NormiaEstudio-nativo-${{ github.sha }}.zip"
+          shasum -a 256 "NormiaEstudio-nativo-${{ github.sha }}.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NormiaEstudio-nativo-macos
+          path: NormiaEstudio-nativo-${{ github.sha }}.zip
+          if-no-files-found: error
 
   paquete:
     name: Paquete y demo

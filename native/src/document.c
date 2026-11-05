@@ -197,6 +197,22 @@ long norma_document_add_wall(norma_document *document, const norma_point *nodes,
     return (long) (document->count - 1);
 }
 
+long norma_document_add_dimension(norma_document *document, norma_point a, norma_point b, const char *layer)
+{
+    if (document == NULL) {
+        return -1;
+    }
+    const norma_point nodes[2] = {a, b};
+    const long index = norma_document_add_wall(document, nodes, 2, NULL, layer);
+    if (index < 0) {
+        return -1;
+    }
+    norma_element *element = &document->elements[index];
+    snprintf(element->id, sizeof(element->id), "cota_%d", document->identifier);
+    set_text(element->type, sizeof(element->type), "dimension", "dimension");
+    return index;
+}
+
 long norma_document_add_marker(norma_document *document, const char *type, double x, double y, const char *layer)
 {
     if (document == NULL || type == NULL || type[0] == '\0') {

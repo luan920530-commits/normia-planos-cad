@@ -1,33 +1,53 @@
 /*
  * Normia nativo · lienzo.
  *
- * Dibujo con Core Graphics y edición con el ratón:
- *   · clic elige el elemento más cercano dentro de la tolerancia;
- *   · arrastrar mueve un nodo (o el equipo completo);
- *   · la tecla M arma la herramienta de muro: dos clics por tramo, Esc termina;
- *   · Retroceso borra lo seleccionado, ⌘Z deshace (lo atiende el menú).
+ * Herramientas (etapa N2):
+ *   · selección: clic elige el elemento más cercano; arrastrar mueve un nodo o
+ *     el trazo completo;
+ *   · M · muro por tramos de dos clics;
+ *   · P · pluma de nodos: un clic por nodo, Enter o doble clic cierra;
+ *   · A · arco de tres puntos: inicio, punto de paso y fin;
+ *   · D · cota entre dos puntos, rotulada con la cifra y la unidad;
+ *   · Esc cancela la herramienta y Retroceso borra lo seleccionado.
  *
- * La geometría y las medidas viven en el núcleo en C: aquí no se calcula
- * ninguna cifra, solo se pintan las que el documento ya tiene.
+ * La geometría, las medidas y el formato de las cifras viven en el núcleo en C:
+ * aquí solo se pintan y se editan.
  */
 #import "CanvasView.h"
 
 #include <math.h>
 #include <string.h>
 
+#include "normia/format.h"
+
 static const CGFloat kToleranceScreen = 8.0;
+static const int kMaxDraftNodes = 64;
+
+typedef NS_ENUM(NSInteger, CanvasTool) {
+    CanvasToolSelect = 0,
+    CanvasToolWall,
+    CanvasToolPen,
+    CanvasToolArc,
+    CanvasToolDimension,
+};
 
 @interface CanvasView ()
-@property(nonatomic) BOOL wallTool;
+@property(nonatomic) CanvasTool tool;
 @property(nonatomic) BOOL draggingNode;
-@property(nonatomic) BOOL hasPending;
-@property(nonatomic) norma_point pending;
-@property(nonatomic) NSInteger selectedElement;
-/** Punto donde empezó el arrastre, para mover el elemento completo. */
 @property(nonatomic) norma_point dragOrigin;
+@property(nonatomic) NSInteger selectedElement;
+@property(nonatomic) norma_point cursorPoint;
 @end
 
-@implementation CanvasView
+@implementation CanvasView {
+    /* El borrador de la herramienta en curso. Una matriz no puede ser
+       propiedad de Objective-C, así que vive aquí dentro. */
+    norma_point _draft[kMaxDraftNodes];
+    int _draftCount;
+    BOOL _hasCursor;
+    /** Evita apilar un deshacer por cada clic: solo cuenta el arrastre real. */
+    BOOL _editBegun;
+}
 
 - (instancetype)initWithFrame:(NSRect)frame
 {
@@ -35,6 +55,7 @@ static const CGFloat kToleranceScreen = 8.0;
     if (self != nil) {
         _selectedNode = -1;
         _selectedElement = -1;
+        _tool = CanvasToolSelect;
         self.wantsLayer = YES;
         // `acceptsFirstResponder` es de solo lectura: se responde YES en su
         // método (abajo), que es como AppKit pregunta si el lienzo toma el teclado.
@@ -57,9 +78,9 @@ static const CGFloat kToleranceScreen = 8.0;
 {
     _selectedElement = -1;
     _selectedNode = -1;
-    _wallTool = NO;
-    _hasPending = NO;
-    [self zoomToFit];
+    _tool = CanvasToolSelect;
+    _draftCount = 0;
+    _hasCursor = NO;
     [self setNeedsDisplay:YES];
 }
 
@@ -67,9 +88,6 @@ static const CGFloat kToleranceScreen = 8.0;
 
 - (void)zoomToFit
 {
-    if (self.document == NULL || self.document->width <= 0.0 || self.document->height <= 0.0) {
-        return;
-    }
     [self setNeedsDisplay:YES];
 }
 
@@ -90,7 +108,15 @@ static const CGFloat kToleranceScreen = 8.0;
     return factor < 0.05 ? 0.05 : factor;
 }
 
-/** Punto del plano a partir de un punto de la ventana. */
+- (CGAffineTransform)planTransform
+{
+    const CGFloat scale = [self scale];
+    const CGFloat offsetX = (NSWidth(self.bounds) - (CGFloat) self.document->width * scale) / 2.0;
+    const CGFloat offsetY = (NSHeight(self.bounds) - (CGFloat) self.document->height * scale) / 2.0;
+    CGAffineTransform transform = CGAffineTransformMakeTranslation(offsetX, offsetY);
+    return CGAffineTransformScale(transform, scale, scale);
+}
+
 - (norma_point)planPointForEvent:(NSEvent *)event
 {
     const NSPoint local = [self convertPoint:event.locationInWindow fromView:nil];
@@ -102,13 +128,13 @@ static const CGFloat kToleranceScreen = 8.0;
     return point;
 }
 
-- (CGAffineTransform)planTransform
+/** Punto del plano a coordenadas de la ventana. */
+- (NSPoint)viewPointForPlan:(norma_point)point
 {
     const CGFloat scale = [self scale];
     const CGFloat offsetX = (NSWidth(self.bounds) - (CGFloat) self.document->width * scale) / 2.0;
     const CGFloat offsetY = (NSHeight(self.bounds) - (CGFloat) self.document->height * scale) / 2.0;
-    CGAffineTransform transform = CGAffineTransformMakeTranslation(offsetX, offsetY);
-    return CGAffineTransformScale(transform, scale, scale);
+    return NSMakePoint(offsetX + (CGFloat) point.x * scale, offsetY + (CGFloat) point.y * scale);
 }
 
 /* -------------------------------- dibujo --------------------------------- */
@@ -122,17 +148,18 @@ static const CGFloat kToleranceScreen = 8.0;
         return;
     }
     CGContextRef context = NSGraphicsContext.currentContext.CGContext;
+    const CGFloat zoom = [self scale];
+
     CGContextSaveGState(context);
     CGContextConcatCTM(context, [self planTransform]);
 
-    // Hoja del plano.
+    // Hoja y rejilla.
     CGContextSetRGBFillColor(context, 1.0, 1.0, 1.0, 1.0);
     CGContextFillRect(context, CGRectMake(0, 0, self.document->width, self.document->height));
     CGContextSetRGBStrokeColor(context, 0.55, 0.58, 0.62, 1.0);
-    CGContextSetLineWidth(context, 1.0 / [self scale]);
+    CGContextSetLineWidth(context, 1.0 / zoom);
     CGContextStrokeRect(context, CGRectMake(0, 0, self.document->width, self.document->height));
 
-    // Rejilla de 20 cm, como el editor.
     const double grid = 20.0;
     CGContextSetRGBStrokeColor(context, 0.88, 0.90, 0.93, 1.0);
     for (double x = grid; x < self.document->width; x += grid) {
@@ -148,36 +175,47 @@ static const CGFloat kToleranceScreen = 8.0;
     for (size_t index = 0; index < self.document->count; index += 1) {
         const norma_element *element = &self.document->elements[index];
         const BOOL selected = (NSInteger) index == _selectedElement;
+        const BOOL isDimension = strcmp(element->type, "dimension") == 0;
+
         if (selected) {
             CGContextSetRGBStrokeColor(context, 0.22, 0.52, 1.0, 1.0);
-            CGContextSetLineWidth(context, 3.0 / [self scale]);
+            CGContextSetLineWidth(context, 3.0 / zoom);
+        } else if (isDimension) {
+            CGContextSetRGBStrokeColor(context, 0.28, 0.33, 0.40, 1.0);
+            CGContextSetLineWidth(context, 1.0 / zoom);
         } else if (strcmp(element->type, "wall") == 0) {
             CGContextSetRGBStrokeColor(context, 0.12, 0.15, 0.20, 1.0);
-            CGContextSetLineWidth(context, 1.6 / [self scale]);
+            CGContextSetLineWidth(context, 1.6 / zoom);
         } else {
             CGContextSetRGBStrokeColor(context, 0.85, 0.22, 0.24, 1.0);
-            CGContextSetLineWidth(context, 1.4 / [self scale]);
+            CGContextSetLineWidth(context, 1.4 / zoom);
         }
 
         if (element->node_count >= 2) {
             CGContextBeginPath(context);
             CGContextMoveToPoint(context, element->nodes[0].x, element->nodes[0].y);
             for (size_t node = 0; node + 1 < element->node_count; node += 1) {
-                const norma_point next = element->nodes[node + 1];
                 const norma_arc *arc = &element->arcs[node];
                 if (arc->valid) {
-                    // El arco va por el punto de paso: se aplana en tramos
-                    // cortos para que Core Graphics lo dibuje igual que el SVG.
                     const int steps = 24;
                     for (int step = 1; step <= steps; step += 1) {
                         const norma_point point = norma_arc_point_at(arc, (double) step / (double) steps);
                         CGContextAddLineToPoint(context, point.x, point.y);
                     }
                 } else {
-                    CGContextAddLineToPoint(context, next.x, next.y);
+                    CGContextAddLineToPoint(context, element->nodes[node + 1].x, element->nodes[node + 1].y);
                 }
             }
             CGContextStrokePath(context);
+            if (isDimension) {
+                // Marcas en los extremos, como en el editor web.
+                for (size_t end = 0; end < 2; end += 1) {
+                    const norma_point point = element->nodes[end == 0 ? 0 : element->node_count - 1];
+                    CGContextMoveToPoint(context, point.x, point.y - 6.0);
+                    CGContextAddLineToPoint(context, point.x, point.y + 6.0);
+                }
+                CGContextStrokePath(context);
+            }
         } else {
             const CGRect marker = CGRectMake(element->x - 12.0, element->y - 12.0, 24.0, 24.0);
             CGContextStrokeEllipseInRect(context, marker);
@@ -189,8 +227,7 @@ static const CGFloat kToleranceScreen = 8.0;
         }
     }
 
-    // Nodo seleccionado y punto pendiente del muro.
-    const CGFloat handle = 4.0 / [self scale];
+    const CGFloat handle = 4.0 / zoom;
     if (_selectedElement >= 0 && _selectedElement < (NSInteger) self.document->count && _selectedNode >= 0) {
         const norma_element *element = &self.document->elements[_selectedElement];
         if ((size_t) _selectedNode < element->node_count) {
@@ -199,15 +236,88 @@ static const CGFloat kToleranceScreen = 8.0;
             CGContextFillRect(context, CGRectMake(node.x - handle, node.y - handle, handle * 2.0, handle * 2.0));
         }
     }
-    if (_hasPending) {
-        CGContextSetRGBFillColor(context, 0.95, 0.45, 0.10, 1.0);
-        CGContextFillRect(context, CGRectMake(_pending.x - handle, _pending.y - handle, handle * 2.0, handle * 2.0));
+
+    // Borrador de la herramienta en curso.
+    CGContextSetRGBFillColor(context, 0.95, 0.45, 0.10, 1.0);
+    for (int index = 0; index < _draftCount; index += 1) {
+        CGContextFillRect(context, CGRectMake(_draft[index].x - handle, _draft[index].y - handle,
+                                              handle * 2.0, handle * 2.0));
+    }
+    if (_draftCount > 0 && _hasCursor) {
+        CGContextSetRGBStrokeColor(context, 0.95, 0.45, 0.10, 0.9);
+        CGContextSetLineWidth(context, 1.0 / zoom);
+        CGContextBeginPath(context);
+        CGContextMoveToPoint(context, _draft[_draftCount - 1].x, _draft[_draftCount - 1].y);
+        CGContextAddLineToPoint(context, _cursorPoint.x, _cursorPoint.y);
+        CGContextStrokePath(context);
     }
 
     CGContextRestoreGState(context);
+
+    // Las cifras se dibujan en coordenadas de la ventana: si se hicieran dentro
+    // de la transformación, el texto crecería con el zoom.
+    for (size_t index = 0; index < self.document->count; index += 1) {
+        const norma_element *element = &self.document->elements[index];
+        if (strcmp(element->type, "dimension") != 0 || element->node_count < 2) {
+            continue;
+        }
+        const norma_point a = element->nodes[0];
+        const norma_point b = element->nodes[element->node_count - 1];
+        char caption[64];
+        norma_format_measure_cm(norma_distance(a, b), self.document->unit, caption, sizeof(caption));
+        [self drawLabel:@(caption) atPlan:((norma_point) {(a.x + b.x) / 2.0, (a.y + b.y) / 2.0})];
+    }
+}
+
+- (void)drawLabel:(NSString *)text atPlan:(norma_point)point
+{
+    NSFont *font = [NSFont systemFontOfSize:11.0 weight:NSFontWeightMedium];
+    NSDictionary *attributes = @{
+        NSFontAttributeName: font,
+        NSForegroundColorAttributeName: [NSColor colorWithCalibratedRed:0.28 green:0.33 blue:0.40 alpha:1.0],
+    };
+    const NSSize size = [text sizeWithAttributes:attributes];
+    const NSPoint anchor = [self viewPointForPlan:point];
+    [text drawAtPoint:NSMakePoint(anchor.x - size.width / 2.0, anchor.y - size.height - 4.0) withAttributes:attributes];
 }
 
 /* -------------------------------- edición -------------------------------- */
+
+/** Cierra el borrador: muro con nodos, arco de tres puntos o cota. */
+- (void)commitDraft
+{
+    if (self.document == NULL || _draftCount < 2) {
+        _draftCount = 0;
+        return;
+    }
+    norma_document_begin_edit(self.document);
+    long index = -1;
+    if (_tool == CanvasToolDimension) {
+        index = norma_document_add_dimension(self.document, _draft[0], _draft[1], NULL);
+
+        char caption[64];
+        norma_format_measure_cm(norma_distance(_draft[0], _draft[1]), self.document->unit, caption, sizeof(caption));
+        [self.delegate canvasStatus:self message:[NSString stringWithFormat:@"Cota de %s", caption]];
+    } else if (_tool == CanvasToolArc) {
+        norma_arc arc = norma_arc_from_points(_draft[0], _draft[1], _draft[2]);
+        if (arc.valid) {
+            const norma_point nodes[2] = {_draft[0], _draft[2]};
+            const norma_arc arcs[1] = {arc};
+            index = norma_document_add_wall(self.document, nodes, 2, arcs, NULL);
+        } else {
+            [self.delegate canvasStatus:self message:@"El arco no es válido: los tres puntos están en línea." ];
+        }
+    } else {
+        index = norma_document_add_wall(self.document, _draft, (size_t) _draftCount, NULL, NULL);
+    }
+    if (index >= 0) {
+        _selectedElement = index;
+        _selectedNode = -1;
+        [self.delegate canvasDidChange:self];
+    }
+    _draftCount = 0;
+    [self setNeedsDisplay:YES];
+}
 
 - (void)mouseDown:(NSEvent *)event
 {
@@ -215,23 +325,34 @@ static const CGFloat kToleranceScreen = 8.0;
         return;
     }
     const norma_point point = [self planPointForEvent:event];
-    if (_wallTool) {
-        if (!_hasPending) {
-            _pending = point;
-            _hasPending = YES;
+
+    if (_tool == CanvasToolDimension || _tool == CanvasToolArc || _tool == CanvasToolWall) {
+        if (_draftCount < kMaxDraftNodes) {
+            _draft[_draftCount] = point;
+            _draftCount += 1;
+        }
+        if ((_tool == CanvasToolDimension && _draftCount == 2)
+            || (_tool == CanvasToolArc && _draftCount == 3)
+            || (_tool == CanvasToolWall && _draftCount == 2)) {
+            [self commitDraft];
+        } else {
+            [self.delegate canvasStatus:self message:[self hintForTool]];
             [self setNeedsDisplay:YES];
-            [self.delegate canvasStatus:self message:@"Segundo clic para cerrar el tramo. Esc termina."];
-            return;
         }
-        const norma_point nodes[2] = {_pending, point};
-        norma_document_begin_edit(self.document);
-        const long index = norma_document_add_wall(self.document, nodes, 2, NULL, NULL);
-        _pending = point;
-        if (index >= 0) {
-            _selectedElement = index;
-            _selectedNode = 1;
+        return;
+    }
+
+    if (_tool == CanvasToolPen) {
+        if (_draftCount < kMaxDraftNodes) {
+            _draft[_draftCount] = point;
+            _draftCount += 1;
         }
-        [self.delegate canvasDidChange:self];
+        if (event.clickCount >= 2 && _draftCount > 2) {
+            _draftCount -= 1; /* el doble clic no añade un nodo de más */
+            [self commitDraft];
+        } else {
+            [self.delegate canvasStatus:self message:[self hintForTool]];
+        }
         [self setNeedsDisplay:YES];
         return;
     }
@@ -243,23 +364,34 @@ static const CGFloat kToleranceScreen = 8.0;
     _draggingNode = NO;
     if (hit >= 0) {
         const norma_element *element = &self.document->elements[hit];
-        // Elegir el nodo más cercano si el clic cayó sobre él.
         for (size_t node = 0; node < element->node_count; node += 1) {
-            const double distance = norma_distance(point, element->nodes[node]);
-            if (distance <= planTolerance) {
+            if (norma_distance(point, element->nodes[node]) <= planTolerance) {
                 _selectedNode = (NSInteger) node;
-                _draggingNode = YES;
-                _dragOrigin = point;
                 break;
             }
         }
-        if (!_draggingNode) {
-            norma_document_begin_edit(self.document);
-            _draggingNode = YES;
-            _dragOrigin = point;
-        }
+        _draggingNode = YES;
+        _editBegun = NO;
+        _dragOrigin = point;
     }
     [self setNeedsDisplay:YES];
+}
+
+- (NSString *)hintForTool
+{
+    switch (_tool) {
+    case CanvasToolWall:
+        return @"Muro: segundo clic para cerrar el tramo. Esc termina.";
+    case CanvasToolPen:
+        return @"Pluma: un clic por nodo. Enter o doble clic cierra el trazo; Retroceso quita el último nodo.";
+    case CanvasToolArc:
+        return @"Arco: tercer clic para cerrar la curva por el punto de paso.";
+    case CanvasToolDimension:
+        return @"Cota: segundo clic para medir el tramo.";
+    case CanvasToolSelect:
+    default:
+        return @"";
+    }
 }
 
 - (void)mouseDragged:(NSEvent *)event
@@ -268,6 +400,10 @@ static const CGFloat kToleranceScreen = 8.0;
         return;
     }
     const norma_point point = [self planPointForEvent:event];
+    if (!_editBegun) {
+        norma_document_begin_edit(self.document);
+        _editBegun = YES;
+    }
     const size_t element = (size_t) _selectedElement;
     if (element >= self.document->count) {
         return;
@@ -276,7 +412,6 @@ static const CGFloat kToleranceScreen = 8.0;
     if (_selectedNode >= 0 && (size_t) _selectedNode < item->node_count) {
         norma_document_move_node(self.document, element, (size_t) _selectedNode, point.x, point.y);
     } else if (item->node_count >= 2) {
-        // Arrastrar el trazo entero: se desplazan todos sus nodos a la vez.
         const double dx = point.x - _dragOrigin.x;
         const double dy = point.y - _dragOrigin.y;
         for (size_t node = 0; node < item->node_count; node += 1) {
@@ -293,24 +428,80 @@ static const CGFloat kToleranceScreen = 8.0;
     [self setNeedsDisplay:YES];
 }
 
+- (void)mouseUp:(NSEvent *)event
+{
+    (void) event;
+    _draggingNode = NO;
+    _editBegun = NO;
+}
+
+- (void)mouseMoved:(NSEvent *)event
+{
+    if (_draftCount == 0) {
+        return;
+    }
+    _cursorPoint = [self planPointForEvent:event];
+    _hasCursor = YES;
+    [self setNeedsDisplay:YES];
+}
+
+- (void)viewDidMoveToWindow
+{
+    [super viewDidMoveToWindow];
+    // Sin esto, AppKit no entrega `mouseMoved:` y el borrador no se previsualiza.
+    self.window.acceptsMouseMovedEvents = YES;
+}
+
+- (void)updateTrackingAreas
+{
+    [super updateTrackingAreas];
+    for (NSTrackingArea *area in self.trackingAreas) {
+        [self removeTrackingArea:area];
+    }
+    NSTrackingArea *area = [[NSTrackingArea alloc] initWithRect:self.bounds
+                                                        options:(NSTrackingMouseMoved | NSTrackingActiveInKeyWindow
+                                                                 | NSTrackingInVisibleRect)
+                                                          owner:self
+                                                       userInfo:nil];
+    [self addTrackingArea:area];
+}
+
 - (void)keyDown:(NSEvent *)event
 {
     const NSString *characters = event.charactersIgnoringModifiers.lowercaseString;
     if ([characters isEqualToString:@"m"]) {
-        _wallTool = YES;
-        _hasPending = NO;
-        [self.delegate canvasStatus:self message:@"Herramienta de muro: dos clics por tramo. Esc termina."];
-        [self setNeedsDisplay:YES];
-        return;
-    }
-    if (event.keyCode == 53) { // Esc
-        _wallTool = NO;
-        _hasPending = NO;
+        _tool = CanvasToolWall;
+        _draftCount = 0;
+    } else if ([characters isEqualToString:@"p"]) {
+        _tool = CanvasToolPen;
+        _draftCount = 0;
+    } else if ([characters isEqualToString:@"a"]) {
+        _tool = CanvasToolArc;
+        _draftCount = 0;
+    } else if ([characters isEqualToString:@"d"]) {
+        _tool = CanvasToolDimension;
+        _draftCount = 0;
+    } else if ([characters isEqualToString:@"v"]) {
+        _tool = CanvasToolSelect;
+        _draftCount = 0;
+    } else if (event.keyCode == 53) { // Esc
+        _tool = CanvasToolSelect;
+        _draftCount = 0;
+        _hasCursor = NO;
         [self.delegate canvasStatus:self message:@""];
         [self setNeedsDisplay:YES];
         return;
-    }
-    if (event.keyCode == 51 || event.keyCode == 117) { // Retroceso y Suprimir
+    } else if (event.keyCode == 36 || event.keyCode == 76) { // Return y Enter
+        if (_tool == CanvasToolPen && _draftCount >= 2) {
+            [self commitDraft];
+        }
+        return;
+    } else if (event.keyCode == 51 || event.keyCode == 117) { // Retroceso y Suprimir
+        if (_tool == CanvasToolPen && _draftCount > 0) {
+            _draftCount -= 1;
+            [self setNeedsDisplay:YES];
+            return;
+        }
         if (_selectedElement >= 0) {
             norma_document_begin_edit(self.document);
             norma_document_remove(self.document, (size_t) _selectedElement);
@@ -320,8 +511,21 @@ static const CGFloat kToleranceScreen = 8.0;
             [self setNeedsDisplay:YES];
         }
         return;
+    } else {
+        [super keyDown:event];
+        return;
     }
-    [super keyDown:event];
+    [self.delegate canvasStatus:self message:[self hintForTool]];
+    [self setNeedsDisplay:YES];
+}
+
+- (void)cancelDraft
+{
+    _draftCount = 0;
+    _hasCursor = NO;
+    _tool = CanvasToolSelect;
+    [self.delegate canvasStatus:self message:@""];
+    [self setNeedsDisplay:YES];
 }
 
 @end

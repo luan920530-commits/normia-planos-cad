@@ -4,9 +4,11 @@ El comienzo de la aplicación **100 % nativa**, sin Electron y sin navegador por
 medio. Este directorio es la etapa **N0**: el motor de cálculo y el lector del
 plano, en C11, sin dependencias, compilando en macOS, Linux y Windows.
 
-Están la **N0** (motor y paridad con PHP) y la **N1** (documento editable y la
-ventana nativa de macOS con su lienzo, sin WebView). Lo que todavía no hay:
-auditor, aforo y rutas en C (N3), y Windows y Linux (N4). El alcance completo
+Están la **N0** (motor y paridad con PHP), la **N1** (documento editable y la
+ventana nativa de macOS con su lienzo, sin WebView) y la **N2** en curso: cotas,
+pluma de nodos, arcos y exportación SVG desde el núcleo. Lo que todavía no hay:
+recientes e impresión en la ventana, auditor, aforo y rutas en C (N3), y Windows
+y Linux (N4). El alcance completo
 está en [`docs/APP-NATIVA.md`](../docs/APP-NATIVA.md).
 
 ## Por qué se empieza por el núcleo
@@ -28,15 +30,18 @@ es lo que comprueba `tests/parity.mjs`.
 | Programa | `src/cli.c` | `--check`, `--version`, `--stats plano.json` |
 | Escritor de JSON | `include/normia/jsonw.h`, `src/jsonw.c` | Compone el sobre oficial sin bibliotecas |
 | Documento | `include/normia/document.h`, `src/document.c` | Muros con nodos y arcos, equipos, deshacer y rehacer, selección por proximidad, guardar y abrir |
-| Ventana de macOS | `macos/` | AppKit puro: menú en español, lienzo con Core Graphics, abrir y guardar con los paneles del sistema, macOS 12 |
+| Cifras | `include/normia/format.h`, `src/format.c` | Formato colombiano de medidas: `400 cm`, `471,2 cm`, `112.123,9 cm`, `4.712,4 mm` |
+| SVG | `include/normia/svg.h`, `src/svg.c` | Plano en SVG con escala física: papel en milímetros, `viewBox` en centímetros, rejilla, franja de datos y cotas rotuladas |
+| Ventana de macOS | `macos/` | AppKit puro: menú en español, lienzo con Core Graphics, herramientas `V · M · P · A · D`, cotas, exportar SVG (⌘E), abrir y guardar con los paneles del sistema, macOS 12 |
 
 ## Compilar y probar
 
 ```sh
 make -C native            # construye native/build/norma-core
-make -C native test       # núcleo (23) y documento (27)
-node native/tests/parity.mjs 8.3   # paridad contra el motor PHP (12)
-node native/tests/macos.mjs        # contrato de la ventana nativa (21)
+make -C native test       # núcleo (23), documento (27) y SVG (25)
+node native/tests/core.mjs         # compila en estricto y corre los tres (7)
+node native/tests/parity.mjs 8.3   # paridad contra el motor PHP (16)
+node native/tests/macos.mjs        # contrato de la ventana nativa (28)
 ```
 
 Y en macOS, con las herramientas de Xcode:
@@ -53,6 +58,7 @@ El programa:
 native/build/norma-core --check
 # Normia · núcleo nativo 0.1.0 · ok
 
+native/build/norma-core --svg paquetes/plano.json   # SVG por la salida estándar
 native/build/norma-core --stats paquetes/plano.json
 # {"core":"0.1.0","canvas":{"width":1123,"height":794,"unit":"cm","scale":"1:100"},
 #  "elements":4,"walls":3,"curved_walls":1,"wall_length_cm":1121.2388980384690, …}
@@ -96,13 +102,23 @@ El documento en C es lo que se edita:
 | `norma_document_hit_test` | Selección por proximidad, con tolerancia |
 | `norma_document_undo` / `redo` | Deshacer y rehacer por edición (64 niveles) |
 | `norma_document_to_json` / `from_json` | Sobre oficial de ida y vuelta |
+| `norma_document_add_dimension` | Cota entre dos puntos, con su cifra y su unidad (N2) |
+| `norma_document_to_svg` | SVG con escala física, rejilla, franja y cotas (N2) |
+| `norma_format_measure_cm` | Cifra de una medida en es-CO, con su unidad (N2) |
 
 **Comprobado de verdad, en macOS**: el trabajo **Ventana nativa de macOS** del
 flujo de verificación (`macos-15-intel`) compila el `.app` con `clang` y
 `-Werror`, lee su `LSMinimumSystemVersion` con `PlistBuddy` —da **12.0**— y
-**arranca la aplicación con `--check`**. Lo que sigue sin poder probarse desde
+**arranca la aplicación con `--check`**, y que el mismo binario del núcleo
+**exporta un SVG con escala física** (`--svg`, comprobado con `grep` sobre el
+ancho del papel y la cifra de una cota). Lo que sigue sin poder probarse desde
 este entorno (Linux, sin pantalla) es la ventana en sí: el ratón, el teclado y el
 dibujo en pantalla los ve una persona en su Mac.
+
+El `.app` se publica como **artefacto del trabajo «Ventana nativa de macOS»**
+(`NormiaEstudio-nativo-macos`): así se descarga y se abre en un Mac con Intel sin
+firma ni release. Al abrirlo por primera vez, macOS pide permiso en
+*Ajustes del Sistema › Privacidad y seguridad* porque llega sin firmar.
 
 ## Lo que sigue
 
@@ -110,7 +126,7 @@ dibujo en pantalla los ve una persona en su Mac.
 | --- | --- | --- |
 | **N0** | Núcleo en C con paridad verificada | **hecho** |
 | **N1** | Ventana nativa en macOS (AppKit/CoreGraphics), sin WebView: lienzo, selección, muros, deshacer, guardar y abrir | **hecho** en código; compila y arranca en el flujo de macOS |
-| N2 | Cotas, pluma de nodos, recientes, impresión y exportación SVG desde el núcleo | siguiente |
+| **N2** | Cotas, pluma de nodos, arcos y exportación SVG desde el núcleo | **en curso** (código escrito); faltan recientes e impresión |
 | N3 | Auditor, aforo y rutas en C, con golden propio contra PHP | pendiente |
 | N4 | Windows (Win32) y Linux (GTK) | pendiente |
 
