@@ -18,7 +18,7 @@ FRAMEWORKS := -framework Cocoa -framework UniformTypeIdentifiers
 
 all: $(BIN)
 
-$(BIN): $(OBJC) Info.plist $(wildcard ../include/normia/*.h) $(CORE)
+$(BIN): $(OBJC) Info.plist $(wildcard ../include/normia/*.h) $(CORE) $(wildcard ../../resources/*.json)
 	@mkdir -p $(APP)/Contents/MacOS $(APP)/Contents/Resources
 	clang -fobjc-arc -std=c11 $(CFLAGS) -I../include \
 		$(OBJC) $(CORE) $(FRAMEWORKS) -lm -o $(BIN)
@@ -26,7 +26,7 @@ $(BIN): $(OBJC) Info.plist $(wildcard ../include/normia/*.h) $(CORE)
 	@# Los catálogos viajan dentro del paquete: sin ellos el cajón de revisión
 	@# mide el plano pero no puede revisar señalización ni extintores.
 	@mkdir -p $(APP)/Contents/Resources/resources
-	@cp ../resources/*.json $(APP)/Contents/Resources/resources/
+	@cp ../../resources/*.json $(APP)/Contents/Resources/resources/
 	@echo "· Aplicación armada: $(APP)"
 
 check: $(BIN)
