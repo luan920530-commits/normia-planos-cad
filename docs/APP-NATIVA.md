@@ -586,6 +586,10 @@ lo que sigue viendo una persona.
 - **Pintar los pictogramas del catálogo en el lienzo** (el catálogo, la
   validación del SVG y la hoja de señales ya están; el lienzo usa el marcador
   genérico).
+- **El panel del auditor dentro de la ventana**: el cálculo completo está en el
+  núcleo y se consulta con `norma-core --audit plano.json`, pero la ventana
+  todavía no lista los hallazgos ni los lleva al plano. Decirlo así es parte de
+  la entrega: el motor ya mide, la cara que lo muestra es lo siguiente.
 
 Y una ausencia **decidida**, no pendiente: el **simulacro** (tiempo objetivo por
 ruta, punto de encuentro y comparación con un tiempo medido) no entra en la
@@ -593,5 +597,3 @@ edición nativa (DEC-14, 2026-11-05). Se queda en la web, donde ya existe el
 informe y la animación; la ventana nativa conserva del simulacro lo que alimenta
 un plano —la ruta medida, la llegada a la salida y los cruces de muro—, no la
 puesta en escena.
-- **Pintar los pictogramas en el lienzo** de la ventana de macOS: hoy se dibujan en
-  el SVG exportado; el lienzo nativo todavía usa el marcador genérico.

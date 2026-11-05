@@ -49,16 +49,16 @@ es lo que comprueba `tests/parity.mjs`.
 | Rutas | `include/normia/routes.h`, `src/routes.c` | Longitud de cada trazo (medida declarada o dibujo), llegada a la salida y cruces de muro fuera de vano |
 | Escenarios | `include/normia/scenarios.h`, `src/scenarios.c` | Ocupación temporal: capacidad, ancho exigido y tiempos del evento, sin tocar el aforo del piso |
 | Extintores | `include/normia/extinguisher.h`, `src/extinguisher.c` | NTC 2885 + Resolución 2400 y NFPA 10: recorrido por clase y riesgo, área por número de A, zonas descubiertas con su motivo y acciones cuantificadas (añadir, reubicar, subir rótulo) |
-| Ventana de macOS | `macos/` | AppKit puro: menú en español, lienzo con Core Graphics, herramientas `V · M · P · A · D`, cotas, **lienzo abierto con zoom y desplazamiento**, abrir reciente, imprimir (⌘P), exportar SVG (⌘E) y PDF, abrir y guardar con los paneles del sistema, macOS 12 |
+| Ventana de macOS | `macos/` | AppKit puro: menú en español, lienzo con Core Graphics, herramientas `V · M · P · A · D · R`, cotas, rutas de evacuación, **lienzo abierto con zoom y desplazamiento**, abrir reciente, imprimir (⌘P), exportar SVG (⌘E) y PDF, abrir y guardar con los paneles del sistema, macOS 12 |
 
 ## Compilar y probar
 
 ```sh
 make -C native            # construye native/build/norma-core
-make -C native test       # núcleo (23), documento (27), SVG (25), auditor (50), señalización (30) y extintores (32)
+make -C native test       # núcleo (23), documento (31), SVG (25), auditor (50), señalización (30) y extintores (32)
 node native/tests/core.mjs         # compila en estricto y corre los cuatro (8)
-node native/tests/parity.mjs 8.3   # paridad contra el motor PHP (45)
-node native/tests/macos.mjs        # contrato de la ventana nativa (42)
+node native/tests/parity.mjs 8.3   # paridad contra el motor PHP (56)
+node native/tests/macos.mjs        # contrato de la ventana nativa (46)
 ```
 
 Y en macOS, con las herramientas de Xcode:
