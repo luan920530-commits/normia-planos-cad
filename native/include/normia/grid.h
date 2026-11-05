@@ -63,6 +63,13 @@ typedef struct {
 } norma_grid;
 
 /**
+ * Puntos del trazo de un elemento con los arcos resueltos y el giro aplicado,
+ * igual que `PlanGrid::visualPoints` en la web. El llamador libera con `free`.
+ * Devuelve 1 si hay al menos dos puntos.
+ */
+int norma_grid_visual_points(const norma_element *element, norma_point **points, size_t *count);
+
+/**
  * Arma la rejilla del documento. Devuelve 1 si la construyó y 0 si no hay
  * lienzo o memoria. El llamador libera con `norma_grid_free`.
  */

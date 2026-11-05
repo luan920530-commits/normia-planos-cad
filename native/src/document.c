@@ -431,6 +431,10 @@ static void write_box(norma_buffer *buffer, const norma_element *element)
     if (element->is_exit) {
         norma_buffer_raw(buffer, ",\"isExit\":true");
     }
+    if (element->label[0] != '\0') {
+        norma_buffer_raw(buffer, ",\"label\":");
+        norma_buffer_string(buffer, element->label);
+    }
     if (element->ext_agent[0] != '\0') {
         norma_buffer_raw(buffer, ",\"extAgent\":");
         norma_buffer_string(buffer, element->ext_agent);
@@ -685,6 +689,7 @@ int norma_document_from_json(norma_document *document, const char *text, size_t 
         set_text(element.id, sizeof(element.id), norma_json_string(norma_json_get(source, "id")), "objeto");
         set_text(element.type, sizeof(element.type), norma_json_string(norma_json_get(source, "type")), "sign");
         set_text(element.layer, sizeof(element.layer), norma_json_string(norma_json_get(source, "layerId")), document->layer);
+        set_text(element.label, sizeof(element.label), norma_json_string(norma_json_get(source, "label")), "");
         if (!load_points(source, &element)) {
             element.node_count = 0;
         }

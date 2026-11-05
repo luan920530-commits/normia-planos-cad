@@ -22,6 +22,7 @@
 #include "normia/extinguisher.h"
 #include "normia/firstaid.h"
 #include "normia/library.h"
+#include "normia/routes.h"
 #include "normia/scenarios.h"
 #include "normia/signage.h"
 #include "normia/jsonw.h"
@@ -218,6 +219,11 @@ static int command_audit(const char *path)
     norma_audit_egress(&document, aforo.used, travel.has_longest ? travel.longest_m : -1.0, NULL, &egress);
     norma_findings_init(&findings);
     norma_audit_egress_findings(&document, &travel, &aforo, &egress, NULL, &findings);
+    /* Rutas dibujadas: longitud, llegada a la salida y cruces de muro. */
+    norma_route routes[NORMA_MAX_ROUTES];
+    const size_t route_count = norma_routes_analyze(&document, egress.exit_count > 0, routes,
+                                                    NORMA_MAX_ROUTES);
+    norma_routes_findings(routes, route_count, egress.exit_count > 0, &findings);
     /* Catálogo de señalización: si no está, el auditor no se inventa códigos. */
     norma_library library;
     norma_signage signage;
@@ -331,6 +337,23 @@ static int command_audit(const char *path)
                room > 0 ? "," : "", travel.rooms[room].area_m2,
                (unsigned long) travel.rooms[room].cells,
                travel.rooms[room].center.x, travel.rooms[room].center.y);
+    }
+    printf("]},\"routes\":{\"count\":%lu,\"items\":[", (unsigned long) route_count);
+    for (size_t index = 0; index < route_count; index += 1) {
+        const norma_route *route = &routes[index];
+        printf("%s{\"id\":", index > 0 ? "," : "");
+        write_json_string(route->id);
+        printf(",\"label\":");
+        write_json_string(route->label);
+        printf(",\"lengthM\":%.17g,\"lengthSource\":", route->length_m);
+        write_json_string(route->length_source);
+        printf(",\"endsAtExit\":%s,\"distanceToExitM\":", route->ends_at_exit ? "true" : "false");
+        if (route->has_distance_to_exit) {
+            printf("%.17g", route->distance_to_exit_m);
+        } else {
+            printf("null");
+        }
+        printf(",\"wallCrossings\":%d}", route->wall_crossings);
     }
     printf("]},\"signs\":{\"catalogLoaded\":%s,\"catalog\":%lu,\"iso\":%lu,\"services\":%lu,"
            "\"placed\":%lu,\"unknown\":%lu,\"exitSigns\":%lu,\"fireSigns\":%lu,\"codes\":[",

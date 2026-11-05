@@ -17,6 +17,7 @@
 #include "normia/travel.h"
 #include "normia/document.h"
 #include "normia/grid.h"
+#include "normia/routes.h"
 #include "normia/scenarios.h"
 
 static int checks = 0;
@@ -455,6 +456,90 @@ static void test_scenarios(void)
     norma_document_free(&document);
 }
 
+/** Añade una ruta al documento (el tipo lo pone la herramienta Ruta). */
+static long add_route(norma_document *document, const char *id, const char *label,
+                      const norma_point *points, size_t count)
+{
+    const long index = norma_document_add_wall(document, points, count, NULL, NULL);
+    if (index < 0) {
+        return -1;
+    }
+    norma_element *element = &document->elements[index];
+    snprintf(element->type, sizeof(element->type), "route");
+    snprintf(element->id, sizeof(element->id), "%s", id);
+    snprintf(element->label, sizeof(element->label), "%s", label);
+    return index;
+}
+
+static void test_routes(void)
+{
+    norma_document document;
+    build_warehouse(&document);
+    norma_route routes[NORMA_MAX_ROUTES];
+    norma_findings findings;
+
+    /* Sin rutas dibujadas el auditor lo dice. */
+    size_t count = norma_routes_analyze(&document, 1, routes, NORMA_MAX_ROUTES);
+    norma_findings_init(&findings);
+    norma_routes_findings(routes, count, 1, &findings);
+    check("Un plano sin rutas avisa de que falta dibujarlas",
+          count == 0 && findings.count == 1 && strcmp(findings.items[0].code, "no_route") == 0,
+          count == 0 ? "no_route" : "ruta inesperada");
+    norma_findings_free(&findings);
+
+    /* Ruta que llega a la salida (300..360, 2880..2900 → centro 330, 2890). */
+    const norma_point buena[2] = {{330.0, 200.0}, {330.0, 2890.0}};
+    add_route(&document, "ruta1", "Ruta principal", buena, 2);
+    /* Ruta que se queda corta y atraviesa el muro de arriba. */
+    const norma_point mala[2] = {{500.0, 500.0}, {500.0, 50.0}};
+    add_route(&document, "ruta2", "Ruta corta", mala, 2);
+
+    count = norma_routes_analyze(&document, 1, routes, NORMA_MAX_ROUTES);
+    char detail[200];
+    snprintf(detail, sizeof(detail), "%zu rutas · %.2f m la primera", count, routes[0].length_m);
+    check("Se leen las dos rutas y su longitud dibujada",
+          count == 2 && routes[0].length_m > 26.0 && routes[0].length_m < 27.5
+              && strcmp(routes[0].length_source, "geometry") == 0,
+          detail);
+    check("La ruta que termina en la salida se da por buena",
+          routes[0].ends_at_exit == 1 && routes[0].wall_crossings == 0, "llega a la salida");
+    check("La ruta que se queda corta y cruza el muro se detecta",
+          routes[1].ends_at_exit == 0 && routes[1].wall_crossings == 1,
+          "1 cruce y sin salida");
+
+    norma_findings_init(&findings);
+    norma_routes_findings(routes, count, 1, &findings);
+    norma_findings_sort(&findings);
+    const norma_finding *crossing = find_code(&findings, "route_through_wall");
+    const norma_finding *no_exit = find_code(&findings, "route_no_exit");
+    check("La ruta que atraviesa un muro es un hallazgo alto",
+          crossing != NULL && strcmp(crossing->severity, "high") == 0
+              && crossing->has_value && strcmp(crossing->value, "1") == 0,
+          crossing != NULL ? crossing->value : "sin hallazgo");
+    check("El hallazgo del cruce nombra la ruta", crossing != NULL
+          && crossing->element_count == 1 && strcmp(crossing->element_ids[0], "ruta2") == 0,
+          crossing != NULL ? crossing->element_ids[0] : "sin hallazgo");
+    check("La ruta que no llega a la salida dice a cuánto queda",
+          no_exit != NULL && strstr(no_exit->detail, " m de la salida marcada") != NULL
+              && no_exit->has_position,
+          no_exit != NULL ? no_exit->value : "sin hallazgo");
+    check("Con una salida marcada la ruta buena no genera aviso de salida",
+          findings.count == 2, "dos hallazgos");
+    norma_findings_free(&findings);
+
+    /* La medida declarada manda sobre el trazo (NORMIA-006 §6.1). */
+    document.elements[document.count - 2].measured_m = 40.0;
+    count = norma_routes_analyze(&document, 1, routes, NORMA_MAX_ROUTES);
+    char measured[80];
+    snprintf(measured, sizeof(measured), "%.2f m · %s", routes[0].length_m, routes[0].length_source);
+    check("Una ruta con medida declarada usa la medida y no el trazo",
+          count == 2 && near(routes[0].length_m, 40.0, 0.001)
+              && strcmp(routes[0].length_source, "measured") == 0,
+          measured);
+
+    norma_document_free(&document);
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IOLBF, 0);
@@ -467,6 +552,7 @@ int main(void)
     test_egress();
     test_travel_and_findings();
     test_scenarios();
+    test_routes();
 
     printf("\n%d/%d comprobaciones correctas.\n", checks - failures, checks);
     return failures == 0 ? 0 : 1;

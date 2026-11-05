@@ -32,6 +32,8 @@ typedef struct {
     char id[32];
     char type[24];   /* "wall", "sign", "extinguisher"… */
     char layer[32];
+    /** Nombre que la persona le puso al objeto (vacío si no tiene). */
+    char label[64];
     norma_point nodes[NORMA_MAX_NODES];
     norma_arc arcs[NORMA_MAX_NODES > 1 ? NORMA_MAX_NODES - 1 : 1];
     size_t node_count;

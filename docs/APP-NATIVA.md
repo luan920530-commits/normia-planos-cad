@@ -360,8 +360,8 @@ igual que en la web.
 | Primeros auxilios | `native/src/firstaid.c` | Botiquín, camilla y DEA: recuento y alcance medido sobre la rejilla |
 | Extintores | `native/src/extinguisher.c` | Tablas NTC 2885 / NFPA 10 y Resolución 2400: recorrido por clase y riesgo, área por número de A, cobertura por recorrido real y zonas descubiertas con su motivo |
 | Programa | `native/src/cli.c` | `norma-core --audit plano.json` incluye salidas, recorrido, señalización, primeros auxilios y hallazgos; `--sign-board hoja.svg` dibuja el catálogo completo |
-| Pruebas | `native/tests/test_audit.c` · `test_signs.c` · `test_extinguishers.c` | **41/41**, **30/30** y **32/32** |
-| Paridad | `native/tests/parity.mjs` | **53/53** |
+| Pruebas | `native/tests/test_audit.c` · `test_signs.c` · `test_extinguishers.c` | **50/50**, **30/30** y **32/32** |
+| Paridad | `native/tests/parity.mjs` | **56/56** |
 
 El caso de prueba y sus cifras, idénticas en C y en PHP: una habitación de
 6 × 4 m con un vano de 80 cm y una vía de 4 m de ancho al sur, con 5 000
@@ -548,10 +548,30 @@ incluido el aviso `scenario_more` y el orden de los eventos por número de
 personas. Lo que no hace: no aprueba el evento, no verifica el permiso, la
 sillería ni las tarimas, ni la ocupación real en la puerta.
 
+#### Rutas de evacuación dibujadas (2026-11-05)
+
+El auditor nativo lee los trazos de la herramienta Ruta y los mide como la web:
+**la medida declarada manda; si no hay, el trazo dibujado** (NORMIA-006 §6.1), con
+los arcos resueltos, no la cuerda entre extremos. De cada ruta informa la
+longitud y su fuente (`measured` o `geometry`), si termina en una salida marcada
+(tolerancia de **80 cm**), a cuánto queda del vano más cercano y cuántas veces
+cruza un muro fuera de un vano.
+
+| Hallazgo | Gravedad | Cuándo |
+| --- | --- | --- |
+| `no_route` | media | El plano no tiene ninguna ruta de evacuación dibujada |
+| `route_no_exit` | media | El final de la ruta queda lejos de la salida marcada más cercana |
+| `route_through_wall` | alta | El trazado cruza un muro fuera de un vano: por ahí no pasa nadie |
+
+En la nave de prueba, la ruta que llega a la salida mide **28,87 m** sin cruces, y
+la que se queda corta queda a **4,61 m** del vano y cruza el muro una vez; los dos
+hallazgos y el informe de rutas coinciden al decimal con `PlanAudit::analyze()`.
+
 ### Lo que N3 todavía no tiene
 
 - **Los hallazgos** de simulacro (tiempo objetivo por ruta, punto de encuentro y
   comparación con un tiempo medido).
-- **Dibujar las rutas** de evacuación sobre el lienzo nativo (el cálculo ya está).
+- **Dibujar y editar las rutas** sobre el lienzo nativo (el cálculo y el trazado
+  del archivo ya están; falta la herramienta de dibujo en la ventana).
 - **Pintar los pictogramas en el lienzo** de la ventana de macOS: hoy se dibujan en
   el SVG exportado; el lienzo nativo todavía usa el marcador genérico.

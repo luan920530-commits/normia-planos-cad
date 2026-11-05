@@ -113,6 +113,8 @@ static norma_point cell_center(size_t ix, size_t iy, double cell, double width, 
     return point;
 }
 
+int norma_grid_visual_points(const norma_element *element, norma_point **points, size_t *count);
+
 /**
  * Puntos del trazo con los arcos resueltos y el giro aplicado.
  *
@@ -528,4 +530,12 @@ void norma_grid_free(norma_grid *grid)
     grid->exterior = NULL;
     grid->nx = 0;
     grid->ny = 0;
+}
+
+int norma_grid_visual_points(const norma_element *element, norma_point **points, size_t *count)
+{
+    if (element == NULL || points == NULL || count == NULL) {
+        return 0;
+    }
+    return visual_points(element, points, count);
 }

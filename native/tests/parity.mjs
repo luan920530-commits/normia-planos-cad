@@ -852,6 +852,61 @@ if (miosEscenarios[0] && suyosEscenarios) {
     eventos.map((f) => f.value).join(' · ') || 'sin hallazgo');
 }
 
+/* ----------------- 4h · rutas de evacuación dibujadas --------------------- */
+
+// La misma nave, ahora con dos rutas: una que llega a la salida y otra que se
+// queda corta y atraviesa el muro del fondo.
+const planoConRutas = JSON.parse(JSON.stringify(planoNaveExtintores));
+planoConRutas.design.elements.push(
+  { id: 'ruta1', type: 'route', layerId: 'capa', stroke: 3, label: 'Ruta principal',
+    points: [{ x: 1000, y: 1000 }, { x: 2000, y: 1200 }, { x: 3850, y: 1450 }] },
+  { id: 'ruta2', type: 'route', layerId: 'capa', stroke: 3, label: 'Ruta corta',
+    points: [{ x: 3000, y: 1000 }, { x: 3950, y: 1000 }] },
+);
+const fixtureRutas = path.join(os.tmpdir(), `normia-paridad-rutas-${process.pid}.json`);
+fs.writeFileSync(fixtureRutas, JSON.stringify(planoConRutas), 'utf8');
+const míasRutas = JSON.parse(runCore(['--audit', fixtureRutas, '--resources', resources]));
+
+const app9 = await startApp(VERSION);
+let suyasRutas = null;
+try {
+  const resultado = await app9.run(`
+$design = json_decode((string) file_get_contents(${JSON.stringify(fixtureRutas)}), true)['design'];
+$report = App\\Services\\PlanAudit::analyze($design);
+echo json_encode(['routes' => $report['routes'], 'findings' => $report['findings']]);
+`);
+  const text = String(resultado.text || '');
+  suyasRutas = JSON.parse(text.slice(text.indexOf('{')));
+} catch (error) {
+  report.check('El motor PHP revisa las rutas de evacuación', false,
+    String(error?.message || error).slice(0, 120));
+}
+await app9.close();
+fs.rmSync(fixtureRutas, { force: true });
+
+if (suyasRutas) {
+  const campos = ['id', 'label', 'lengthM', 'lengthSource', 'endsAtExit', 'distanceToExitM',
+    'wallCrossings'];
+  const iguales = míasRutas.routes.items.length === suyasRutas.routes.length
+    && míasRutas.routes.items.every((mía, index) => campos.every(
+      (campo) => JSON.stringify(mía[campo]) === JSON.stringify(suyasRutas.routes[index][campo])));
+  report.check('La longitud, la llegada a la salida y los cruces de cada ruta coinciden con PHP',
+    iguales, míasRutas.routes.items.map((r) => `${r.lengthM} m · ${r.wallCrossings} cruces`).join(' · '));
+
+  const comparable = comparar(míasRutas.findings, suyasRutas.findings,
+    ['no_route', 'route_no_exit', 'route_through_wall']);
+  report.check('Los hallazgos de rutas coinciden palabra por palabra',
+    comparable.igual && comparable.mío.length === 2,
+    comparable.mío.map((f) => f.code).join(' · ') || 'sin hallazgos');
+
+  const fixtureSinRutas = path.join(os.tmpdir(), `normia-paridad-sin-rutas-${process.pid}.json`);
+  fs.writeFileSync(fixtureSinRutas, JSON.stringify(planoAreaExtintores), 'utf8');
+  const vacío = JSON.parse(runCore(['--audit', fixtureSinRutas, '--resources', resources]));
+  fs.rmSync(fixtureSinRutas, { force: true });
+  report.check('Un plano sin rutas avisa de que falta dibujarlas',
+    vacío.findings.some((f) => f.code === 'no_route'), 'no_route');
+}
+
 /* ------------------- 5 · el núcleo no se rompe con basura ------------------ */
 
 const basura = path.join(os.tmpdir(), `normia-basura-${process.pid}.json`);
