@@ -181,7 +181,7 @@ report.check('La lista del cajón sigue el orden del auditor y lleva al punto',
   'título · detalle · Ver en el plano');
 
 report.check('Los hallazgos con punto se dibujan en el plano',
-  /setFindingPoints:/.test(canvas) && /setFindingPoints:\(const norma_point \*\)points count:/.test(canvasHeader)
+  /setFindingPoints:/.test(canvas) && /setFindingPoints:\(const norma_point \* _Nullable\)points count:/.test(canvasHeader)
   && /CGContextStrokeEllipseInRect/.test(canvas) && /focusOnPoint:\(norma_point\)point/.test(canvasHeader),
   'anillos rojos');
 
