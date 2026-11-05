@@ -160,6 +160,9 @@ static const NSUInteger kRecentLimit = 10;
     NSMenuItem *viewItem = [[NSMenuItem alloc] init];
     NSMenu *viewMenu = [[NSMenu alloc] initWithTitle:@"Ver"];
     [viewMenu addItemWithTitle:@"Ajustar a la ventana" action:@selector(zoomToFit:) keyEquivalent:@"0"];
+    [viewMenu addItemWithTitle:@"Acercar" action:@selector(zoomIn:) keyEquivalent:@"+"];
+    [viewMenu addItemWithTitle:@"Alejar" action:@selector(zoomOut:) keyEquivalent:@"-"];
+    [viewMenu addItemWithTitle:@"Zoom 100 %" action:@selector(zoomReset:) keyEquivalent:@"1"];
     [viewMenu addItem:[NSMenuItem separatorItem]];
     [viewMenu addItemWithTitle:@"Pantalla completa" action:@selector(toggleFullScreen:) keyEquivalent:@"f"];
     viewItem.submenu = viewMenu;
@@ -521,6 +524,24 @@ static const NSUInteger kRecentLimit = 10;
     [self.canvas cancelDraft];
 }
 
+- (void)zoomIn:(id)sender
+{
+    (void) sender;
+    [self.canvas zoomIn];
+}
+
+- (void)zoomOut:(id)sender
+{
+    (void) sender;
+    [self.canvas zoomOut];
+}
+
+- (void)zoomReset:(id)sender
+{
+    (void) sender;
+    [self.canvas zoomReset];
+}
+
 - (void)zoomToFit:(id)sender
 {
     (void) sender;
@@ -538,7 +559,9 @@ static const NSUInteger kRecentLimit = 10;
                             @"A · arco de tres puntos: inicio, paso y fin.\n"
                             @"D · cota entre dos puntos, con la cifra y la unidad.\n"
                             @"Esc cancela la herramienta; Retroceso quita el último nodo o borra lo seleccionado; ⌘Z deshace.\n"
-                            @"⌘P imprime el plano en A4 horizontal y Archivo › Exportar PDF guarda esa misma hoja.\n\n"
+                            @"⌘P imprime el plano en A4 horizontal y Archivo › Exportar PDF guarda esa misma hoja.\n"
+                            @"El lienzo es tan grande como haga falta: rueda del ratón o pellizco para acercar, "
+                            @"arrastrar con el botón central o derecho para moverse, ⌘0 ajusta la hoja y ⌘1 deja el zoom al 100 %.\n\n"
                             @"Los planos son esquemas de apoyo: no sustituyen la verificación de un "
                             @"profesional ni la normativa vigente.";
     [alert runModal];

@@ -172,6 +172,43 @@ report.check('Exportar PDF guarda la misma hoja que se imprime',
   /exportPdf:/.test(delegate) && /dataWithPDFInsideRect:self\.canvas\.bounds/.test(delegate)
   && /UTTypePDF/.test(delegate) && /Exportar PDF…/.test(delegate), '⌘E · PDF');
 
+/* --------------------------- 4d · lienzo infinito --------------------------- */
+
+report.check('El lienzo se desplaza y se acerca como un CAD, no como una hoja fija',
+  /scrollWheel:/.test(canvas) && /magnifyWithEvent:/.test(canvas)
+  && /otherMouseDragged:/.test(canvas) && /rightMouseDragged:/.test(canvas),
+  'rueda · pellizco · botón central');
+
+report.check('La vista guarda escala y desplazamiento, no un ajuste calculado cada vez',
+  /double _zoom;/.test(canvas) && /double _panX;/.test(canvas)
+  && /zoomBy:\(double\)factor atPoint:\(NSPoint\)anchor/.test(canvas)
+  && /_panX = \(double\) anchor\.x - planX \* zoom;/.test(canvas),
+  'zoom anclado al cursor');
+
+report.check('El zoom tiene límites sensatos y el 100 % vuelve a la escala real',
+  /zoom < 0\.02/.test(canvas) && /zoom > 40\.0/.test(canvas)
+  && /- \(void\)zoomReset/.test(canvas) && /_zoom = 1\.0;/.test(canvas)
+  && /zoomIn/.test(canvasHeader) && /zoomOut/.test(canvasHeader),
+  '2 % – 4000 %');
+
+report.check('La hoja A4 sigue dibujándose como referencia de impresión',
+  /CGContextFillRect\(context, CGRectMake\(0, 0, self\.document->width, self\.document->height\)\)/.test(canvas),
+  'papel, no límite');
+
+report.check('La rejilla cubre todo el espacio de trabajo y se agranda al alejarse',
+  /while \(grid \* \(double\) zoom < 9\.0\)/.test(canvas) && /minX/.test(canvas)
+  && /maxX/.test(canvas) && /floor\(minX \/ grid\) \* grid/.test(canvas),
+  'rejilla adaptativa');
+
+report.check('Acercar, alejar y zoom 100 % están en el menú Ver con sus atajos',
+  /\[self\.canvas zoomIn\]/.test(delegate) && /\[self\.canvas zoomOut\]/.test(delegate)
+  && /\[self\.canvas zoomReset\]/.test(delegate) && /Zoom 100 %/.test(delegate)
+  && /action:@selector\(zoomIn:\) keyEquivalent:@"\+"/.test(delegate),
+  '⌘+ ⌘- ⌘1 ⌘0');
+
+report.check('Al cambiar el zoom se dice en la barra de estado',
+  /Zoom %\.0f %%/.test(canvas), 'porcentaje');
+
 /* ------------------------------ 5 · sistema mínimo ----------------------------- */
 
 report.check('El paquete declara macOS 12 Monterey como mínimo',

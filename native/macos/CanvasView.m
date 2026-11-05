@@ -37,6 +37,10 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
 @property(nonatomic) norma_point dragOrigin;
 @property(nonatomic) NSInteger selectedElement;
 @property(nonatomic) norma_point cursorPoint;
+- (void)ensureView;
+- (void)clampZoom:(double *)zoom;
+- (void)zoomBy:(double)factor atPoint:(NSPoint)anchor;
+- (void)panByDeltaX:(CGFloat)dx deltaY:(CGFloat)dy;
 @end
 
 @implementation CanvasView {
@@ -47,6 +51,11 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
     BOOL _hasCursor;
     /** Evita apilar un deshacer por cada clic: solo cuenta el arrastre real. */
     BOOL _editBegun;
+    /* Vista del lienzo infinito: escala y desplazamiento en puntos de ventana. */
+    double _zoom;
+    double _panX;
+    double _panY;
+    BOOL _viewReady;
 }
 
 - (instancetype)initWithFrame:(NSRect)frame
@@ -81,60 +90,202 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
     _tool = CanvasToolSelect;
     _draftCount = 0;
     _hasCursor = NO;
+    _viewReady = NO; /* plano nuevo: se vuelve a ajustar a la ventana */
     [self setNeedsDisplay:YES];
 }
 
 /* -------------------------------- vista ---------------------------------- */
 
+/**
+ * Ajusta la hoja a la ventana con un margen.
+ *
+ * El lienzo es infinito como en un CAD: aquí solo se decide dónde empieza a
+ * mirarse. El papel A4 sigue siendo la referencia de impresión y exportación.
+ */
 - (void)zoomToFit
 {
+    if (self.document == NULL) {
+        return;
+    }
+    const double margin = 36.0;
+    const double availableWidth = (double) NSWidth(self.bounds) - margin * 2.0;
+    const double availableHeight = (double) NSHeight(self.bounds) - margin * 2.0;
+    double zoom = 1.0;
+    if (availableWidth > 10.0 && availableHeight > 10.0) {
+        zoom = fmin(availableWidth / self.document->width, availableHeight / self.document->height);
+    }
+    [self clampZoom:&zoom];
+    _zoom = zoom;
+    _panX = ((double) NSWidth(self.bounds) - self.document->width * zoom) / 2.0;
+    _panY = ((double) NSHeight(self.bounds) - self.document->height * zoom) / 2.0;
+    _viewReady = YES;
     [self setNeedsDisplay:YES];
 }
 
-/** Escala que hace que el lienzo quepa en la ventana, con margen. */
+/** Límites de zoom: ni una hoja diminuta ni un plano que no se puede seguir. */
+- (void)clampZoom:(double *)zoom
+{
+    if (*zoom < 0.02) {
+        *zoom = 0.02;
+    } else if (*zoom > 40.0) {
+        *zoom = 40.0;
+    }
+}
+
+/** La vista se arma en el primer dibujo: el tamaño de la ventana ya se conoce. */
+- (void)ensureView
+{
+    if (!_viewReady) {
+        [self zoomToFit];
+    }
+}
+
+/** Escala del plano a la ventana: la del zoom actual, no la del ajuste. */
 - (CGFloat)scale
 {
     if (self.document == NULL) {
         return 1.0;
     }
-    const CGFloat availableWidth = NSWidth(self.bounds) - 80.0;
-    const CGFloat availableHeight = NSHeight(self.bounds) - 80.0;
-    if (availableWidth <= 0.0 || availableHeight <= 0.0) {
-        return 1.0;
-    }
-    const CGFloat width = (CGFloat) self.document->width;
-    const CGFloat height = (CGFloat) self.document->height;
-    const CGFloat factor = fmin(availableWidth / width, availableHeight / height);
-    return factor < 0.05 ? 0.05 : factor;
+    [self ensureView];
+    return (CGFloat) _zoom;
+}
+
+/** Escala del plano a la ventana, sin efectos: sirve para el borrador. */
+- (double)currentZoom
+{
+    [self ensureView];
+    return _zoom;
 }
 
 - (CGAffineTransform)planTransform
 {
-    const CGFloat scale = [self scale];
-    const CGFloat offsetX = (NSWidth(self.bounds) - (CGFloat) self.document->width * scale) / 2.0;
-    const CGFloat offsetY = (NSHeight(self.bounds) - (CGFloat) self.document->height * scale) / 2.0;
-    CGAffineTransform transform = CGAffineTransformMakeTranslation(offsetX, offsetY);
-    return CGAffineTransformScale(transform, scale, scale);
+    CGAffineTransform transform = CGAffineTransformMakeTranslation((CGFloat) _panX, (CGFloat) _panY);
+    return CGAffineTransformScale(transform, (CGFloat) _zoom, (CGFloat) _zoom);
 }
 
 - (norma_point)planPointForEvent:(NSEvent *)event
 {
     const NSPoint local = [self convertPoint:event.locationInWindow fromView:nil];
-    const CGFloat scale = [self scale];
-    const CGFloat offsetX = (NSWidth(self.bounds) - (CGFloat) self.document->width * scale) / 2.0;
-    const CGFloat offsetY = (NSHeight(self.bounds) - (CGFloat) self.document->height * scale) / 2.0;
-    norma_point point = {((double) local.x - (double) offsetX) / (double) scale,
-                         ((double) local.y - (double) offsetY) / (double) scale};
+    [self ensureView];
+    const norma_point point = {((double) local.x - _panX) / _zoom, ((double) local.y - _panY) / _zoom};
     return point;
 }
 
 /** Punto del plano a coordenadas de la ventana. */
 - (NSPoint)viewPointForPlan:(norma_point)point
 {
-    const CGFloat scale = [self scale];
-    const CGFloat offsetX = (NSWidth(self.bounds) - (CGFloat) self.document->width * scale) / 2.0;
-    const CGFloat offsetY = (NSHeight(self.bounds) - (CGFloat) self.document->height * scale) / 2.0;
-    return NSMakePoint(offsetX + (CGFloat) point.x * scale, offsetY + (CGFloat) point.y * scale);
+    [self ensureView];
+    return NSMakePoint((CGFloat) (_panX + point.x * _zoom), (CGFloat) (_panY + point.y * _zoom));
+}
+
+/** Acerca o aleja manteniendo quieto el punto del plano que está bajo el cursor. */
+- (void)zoomBy:(double)factor atPoint:(NSPoint)anchor
+{
+    if (self.document == NULL) {
+        return;
+    }
+    [self ensureView];
+    const double planX = ((double) anchor.x - _panX) / _zoom;
+    const double planY = ((double) anchor.y - _panY) / _zoom;
+    double zoom = _zoom * factor;
+    [self clampZoom:&zoom];
+    if (zoom == _zoom) {
+        return;
+    }
+    _zoom = zoom;
+    _panX = (double) anchor.x - planX * zoom;
+    _panY = (double) anchor.y - planY * zoom;
+    [self setNeedsDisplay:YES];
+    [self.delegate canvasStatus:self
+                        message:[NSString stringWithFormat:@"Zoom %.0f %% · lienzo abierto: la hoja A4 es la referencia de impresión",
+                                                           _zoom * 100.0]];
+}
+
+- (void)zoomIn
+{
+    const NSPoint center = NSMakePoint(NSWidth(self.bounds) / 2.0, NSHeight(self.bounds) / 2.0);
+    [self zoomBy:1.25 atPoint:center];
+}
+
+- (void)zoomOut
+{
+    const NSPoint center = NSMakePoint(NSWidth(self.bounds) / 2.0, NSHeight(self.bounds) / 2.0);
+    [self zoomBy:1.0 / 1.25 atPoint:center];
+}
+
+/** Escala real: un centímetro del plano ocupa un punto de la pantalla. */
+- (void)zoomReset
+{
+    if (self.document == NULL) {
+        return;
+    }
+    [self ensureView];
+    const NSPoint center = NSMakePoint(NSWidth(self.bounds) / 2.0, NSHeight(self.bounds) / 2.0);
+    const double planX = ((double) center.x - _panX) / _zoom;
+    const double planY = ((double) center.y - _panY) / _zoom;
+    _zoom = 1.0;
+    _panX = (double) center.x - planX;
+    _panY = (double) center.y - planY;
+    [self setNeedsDisplay:YES];
+    [self.delegate canvasStatus:self message:@"Zoom 100 % · un centímetro del plano, un punto de pantalla"];
+}
+
+/* ------------------------------- navegación ------------------------------- */
+
+/** Rueda del ratón: acerca y aleja; con trackpad, desplaza el lienzo. */
+- (void)scrollWheel:(NSEvent *)event
+{
+    if (self.document == NULL) {
+        return;
+    }
+    [self ensureView];
+    const BOOL precise = event.hasPreciseScrollingDeltas;
+    const BOOL zooming = precise ? ((event.modifierFlags & NSEventModifierFlagCommand) != 0) : YES;
+    if (zooming) {
+        const double step = precise ? 0.01 : 0.05;
+        const double factor = fmax(0.2, 1.0 + (double) event.scrollingDeltaY * step);
+        const NSPoint local = [self convertPoint:event.locationInWindow fromView:nil];
+        [self zoomBy:factor atPoint:local];
+        return;
+    }
+    _panX += (double) event.scrollingDeltaX;
+    _panY += (double) event.scrollingDeltaY;
+    [self setNeedsDisplay:YES];
+}
+
+/** Pellizco del trackpad: zoom sobre el cursor, como en un CAD. */
+- (void)magnifyWithEvent:(NSEvent *)event
+{
+    const NSPoint local = [self convertPoint:event.locationInWindow fromView:nil];
+    [self zoomBy:1.0 + (double) event.magnification atPoint:local];
+}
+
+/** Botón central o derecho: arrastrar el lienzo sin mover nada del plano. */
+- (void)otherMouseDown:(NSEvent *)event
+{
+    (void) event;
+    self.window.acceptsMouseMovedEvents = YES;
+}
+
+- (void)otherMouseDragged:(NSEvent *)event
+{
+    [self panByDeltaX:event.deltaX deltaY:event.deltaY];
+}
+
+- (void)rightMouseDragged:(NSEvent *)event
+{
+    [self panByDeltaX:event.deltaX deltaY:event.deltaY];
+}
+
+- (void)panByDeltaX:(CGFloat)dx deltaY:(CGFloat)dy
+{
+    if (self.document == NULL) {
+        return;
+    }
+    [self ensureView];
+    _panX += (double) dx;
+    _panY += (double) dy;
+    [self setNeedsDisplay:YES];
 }
 
 /* -------------------------------- dibujo --------------------------------- */
@@ -152,29 +303,46 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
         return;
     }
     CGContextRef context = NSGraphicsContext.currentContext.CGContext;
-    const CGFloat zoom = [self scale];
+    [self ensureView];
+    const CGFloat zoom = (CGFloat) _zoom;
+
+    // Rejilla de referencia en todo el espacio de trabajo: el lienzo es
+    // infinito y se puede dibujar fuera de la hoja. Al alejarse, la rejilla se
+    // agranda para no dibujar miles de líneas.
+    if (!self.printing) {
+        double grid = 20.0;
+        while (grid * (double) zoom < 9.0) {
+            grid *= 5.0;
+        }
+        const double minX = (0.0 - _panX) / _zoom;
+        const double maxX = ((double) NSWidth(self.bounds) - _panX) / _zoom;
+        const double minY = (0.0 - _panY) / _zoom;
+        const double maxY = ((double) NSHeight(self.bounds) - _panY) / _zoom;
+        CGContextSetRGBStrokeColor(context, 0.22, 0.24, 0.28, 1.0);
+        CGContextSetLineWidth(context, 1.0);
+        CGContextBeginPath(context);
+        for (double x = floor(minX / grid) * grid; x <= maxX; x += grid) {
+            const double viewX = _panX + x * _zoom;
+            CGContextMoveToPoint(context, (CGFloat) viewX, 0.0);
+            CGContextAddLineToPoint(context, (CGFloat) viewX, NSHeight(self.bounds));
+        }
+        for (double y = floor(minY / grid) * grid; y <= maxY; y += grid) {
+            const double viewY = _panY + y * _zoom;
+            CGContextMoveToPoint(context, 0.0, (CGFloat) viewY);
+            CGContextAddLineToPoint(context, NSWidth(self.bounds), (CGFloat) viewY);
+        }
+        CGContextStrokePath(context);
+    }
 
     CGContextSaveGState(context);
     CGContextConcatCTM(context, [self planTransform]);
 
-    // Hoja y rejilla.
+    // La hoja de papel: la referencia de impresión, no el límite del dibujo.
     CGContextSetRGBFillColor(context, 1.0, 1.0, 1.0, 1.0);
     CGContextFillRect(context, CGRectMake(0, 0, self.document->width, self.document->height));
     CGContextSetRGBStrokeColor(context, 0.55, 0.58, 0.62, 1.0);
     CGContextSetLineWidth(context, 1.0 / zoom);
     CGContextStrokeRect(context, CGRectMake(0, 0, self.document->width, self.document->height));
-
-    const double grid = 20.0;
-    CGContextSetRGBStrokeColor(context, 0.88, 0.90, 0.93, 1.0);
-    for (double x = grid; x < self.document->width; x += grid) {
-        CGContextMoveToPoint(context, x, 0);
-        CGContextAddLineToPoint(context, x, self.document->height);
-    }
-    for (double y = grid; y < self.document->height; y += grid) {
-        CGContextMoveToPoint(context, 0, y);
-        CGContextAddLineToPoint(context, self.document->width, y);
-    }
-    CGContextStrokePath(context);
 
     for (size_t index = 0; index < self.document->count; index += 1) {
         const norma_element *element = &self.document->elements[index];

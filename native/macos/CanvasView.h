@@ -33,7 +33,14 @@ NS_ASSUME_NONNULL_BEGIN
 @property(nonatomic) BOOL printing;
 
 - (void)documentDidLoad;
+/** Ajusta la hoja a la ventana (el lienzo sigue abierto por los lados). */
 - (void)zoomToFit;
+- (void)zoomIn;
+- (void)zoomOut;
+/** Zoom 100 %: un centímetro del plano, un punto de pantalla. */
+- (void)zoomReset;
+/** Escala actual del plano en la ventana. */
+- (double)currentZoom;
 /** Cancela la herramienta en curso sin tocar el documento. */
 - (void)cancelDraft;
 
