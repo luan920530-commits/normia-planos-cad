@@ -1195,6 +1195,13 @@ macOS trae las herramientas de evacuación.
   documento **31/31**, ventana de macOS **46/46** y paridad C/PHP **56/56**. El
   flujo compila el núcleo con `-Werror` en Linux y compila, arranca y exporta el
   `.app` en un runner de macOS.
+- **Los instaladores salieron completos** al empujar el tag: macOS Intel y Apple
+  Silicon (`.dmg`, `.pkg`, `.zip`), Linux (`.AppImage`), Windows (`.exe`) y el APK,
+  con su `SHA256SUMS.txt` en la release `v1.29.0`.
+- **El fallo de Windows quedó resuelto**: la comprobación del paquete borraba una
+  carpeta temporal con un `.node` todavía bloqueado y `EPERM` tumbaba el trabajo.
+  Ahora el borrado reintenta y, si no puede, avisa sin declarar malo un paquete que
+  funciona. Windows compila y verifica el instalador en esta entrega.
 
 ## Cambios de la versión 1.28.0
 
