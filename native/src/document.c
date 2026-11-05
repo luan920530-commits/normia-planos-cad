@@ -424,6 +424,13 @@ static void write_box(norma_buffer *buffer, const norma_element *element)
         norma_buffer_raw(buffer, ",\"widthM\":");
         norma_buffer_number(buffer, element->width_m);
     }
+    if (element->measured_m > 0.0) {
+        norma_buffer_raw(buffer, ",\"measuredM\":");
+        norma_buffer_number(buffer, element->measured_m);
+    }
+    if (element->is_exit) {
+        norma_buffer_raw(buffer, ",\"isExit\":true");
+    }
 }
 
 static void write_element(norma_buffer *buffer, const norma_element *element)
@@ -616,6 +623,8 @@ int norma_document_from_json(norma_document *document, const char *text, size_t 
         element.rotation = norma_json_number(norma_json_get(source, "rotation"), 0.0);
         element.stroke = norma_json_number(norma_json_get(source, "stroke"), 2.0);
         element.width_m = norma_json_number(norma_json_get(source, "widthM"), 2.0);
+        element.measured_m = norma_json_number(norma_json_get(source, "measuredM"), 0.0);
+        element.is_exit = norma_json_bool_at(source, "isExit", 0);
         document->elements[document->count] = element;
         document->count += 1;
         document->identifier += 1;

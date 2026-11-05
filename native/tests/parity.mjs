@@ -250,7 +250,7 @@ const planoRecinto = {
       { id: 'izquierda', type: 'wall', layerId: 'capa', stroke: 20, points: [{ x: 100, y: 100 }, { x: 100, y: 500 }] },
       { id: 'abajo_1', type: 'wall', layerId: 'capa', stroke: 20, points: [{ x: 100, y: 500 }, { x: 380, y: 500 }] },
       { id: 'abajo_2', type: 'wall', layerId: 'capa', stroke: 20, points: [{ x: 460, y: 500 }, { x: 700, y: 500 }] },
-      { id: 'puerta', type: 'door', layerId: 'capa', x: 380, y: 480, w: 80, h: 20 },
+      { id: 'puerta', type: 'door', layerId: 'capa', x: 380, y: 480, w: 80, h: 20, isExit: true },
       { id: 'via', type: 'road', layerId: 'capa', x: 0, y: 700, w: 1123, h: 60, widthM: 4 },
     ],
   },
@@ -271,6 +271,8 @@ $design = json_decode((string) file_get_contents(${JSON.stringify(fixtureAforo)}
 echo json_encode([
     'libre' => App\\Services\\PlanAudit::freeArea($design),
     'aforo' => App\\Services\\PlanAudit::aforo($design),
+    'egress' => App\\Services\\PlanAudit::analyze($design)['egress'],
+    'travel' => App\\Services\\PlanAudit::analyze($design)['travel'],
 ]);
 `);
   const text = String(resultado.text || '');
@@ -303,6 +305,21 @@ if (nativoAforo && phpAforo) {
     c.source === php.source && c.source === 'declared', c.source);
   report.check('La superficie publicada del aforo coincide',
     Math.abs(c.freeAreaM2 - php.freeAreaM2) < 1e-9, `C: ${c.freeAreaM2} · PHP: ${php.freeAreaM2}`);
+
+  const datos = nativoAforo.egress;
+  const salida = phpAforo.egress;
+  report.check('Las salidas marcadas se cuentan igual',
+    datos.exitCount === 1 && datos.doorCount === 1,
+    `${datos.exitCount} salida · ${datos.doorCount} puerta`);
+  report.check('El ancho útil de la salida coincide al centímetro',
+    Math.abs(datos.availableWidthM - salida.availableWidthM) < 1e-9,
+    `C: ${datos.availableWidthM} m · PHP: ${salida.availableWidthM} m`);
+  report.check('El ancho que pide el criterio coincide',
+    Math.abs(datos.requiredWidthM - salida.requiredWidthM) < 1e-9,
+    `C: ${datos.requiredWidthM} m · PHP: ${salida.requiredWidthM} m`);
+  report.check('El tiempo de cola en la salida coincide al décimo de segundo',
+    Math.abs(datos.queueTimeS - salida.queueTimeS) < 1e-9,
+    `C: ${datos.queueTimeS} s · PHP: ${salida.queueTimeS} s`);
 }
 
 /* ------------------- 5 · el núcleo no se rompe con basura ------------------ */

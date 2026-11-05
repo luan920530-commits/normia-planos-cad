@@ -34,17 +34,17 @@ es lo que comprueba `tests/parity.mjs`.
 | Cifras | `include/normia/format.h`, `src/format.c` | Formato colombiano de medidas: `400 cm`, `471,2 cm`, `112.123,9 cm`, `4.712,4 mm` |
 | SVG | `include/normia/svg.h`, `src/svg.c` | Plano en SVG con escala física: papel en milímetros, `viewBox` en centímetros, rejilla, franja de datos y cotas rotuladas |
 | Rejilla | `include/normia/grid.h`, `src/grid.c` | Celdas de 20 cm, muros con holgura, vanos de puertas y exterior descontado |
-| Aforo | `include/normia/audit.h`, `src/audit.c` | Superficie libre × densidad, con capacidad, declarado, permitido, usado y exceso |
-| Ventana de macOS | `macos/` | AppKit puro: menú en español, lienzo con Core Graphics, herramientas `V · M · P · A · D`, cotas, abrir reciente, imprimir (⌘P), exportar SVG (⌘E) y PDF, abrir y guardar con los paneles del sistema, macOS 12 |
+| Aforo y salidas | `include/normia/audit.h`, `src/audit.c` | Superficie libre × densidad, con capacidad, declarado, permitido, usado y exceso; ancho de salida y tiempos de marcha y cola |
+| Ventana de macOS | `macos/` | AppKit puro: menú en español, lienzo con Core Graphics, herramientas `V · M · P · A · D`, cotas, **lienzo abierto con zoom y desplazamiento**, abrir reciente, imprimir (⌘P), exportar SVG (⌘E) y PDF, abrir y guardar con los paneles del sistema, macOS 12 |
 
 ## Compilar y probar
 
 ```sh
 make -C native            # construye native/build/norma-core
-make -C native test       # núcleo (23), documento (27), SVG (25) y aforo (17)
+make -C native test       # núcleo (23), documento (27), SVG (25) y aforo (25)
 node native/tests/core.mjs         # compila en estricto y corre los cuatro (8)
-node native/tests/parity.mjs 8.3   # paridad contra el motor PHP (22)
-node native/tests/macos.mjs        # contrato de la ventana nativa (35)
+node native/tests/parity.mjs 8.3   # paridad contra el motor PHP (26)
+node native/tests/macos.mjs        # contrato de la ventana nativa (42)
 ```
 
 Y en macOS, con las herramientas de Xcode:
@@ -62,7 +62,7 @@ native/build/norma-core --check
 # Normia · núcleo nativo 0.1.0 · ok
 
 native/build/norma-core --svg paquetes/plano.json    # SVG por la salida estándar
-native/build/norma-core --audit paquetes/plano.json  # superficie libre y aforo
+native/build/norma-core --audit paquetes/plano.json  # superficie libre, aforo y salidas
 native/build/norma-core --stats paquetes/plano.json
 # {"core":"0.1.0","canvas":{"width":1123,"height":794,"unit":"cm","scale":"1:100"},
 #  "elements":4,"walls":3,"curved_walls":1,"wall_length_cm":1121.2388980384690, …}

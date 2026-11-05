@@ -314,7 +314,8 @@ para sacar el plano sin el motor PHP:
 | `norma-core --svg plano.json` | `native/src/cli.c` | hecho |
 | Herramientas del lienzo `V · M · P · A · D` con borrador y previsualización | `native/macos/CanvasView.m` | escrito |
 | Exportar SVG con panel del sistema (`⌘E`) | `native/macos/AppDelegate.m` | escrito |
-| Abrir reciente (10 archivos, preferencia del sistema, se limpia sola) | `native/macos/AppDelegate.m` | hecho · **35/35** |
+| Abrir reciente (10 archivos, preferencia del sistema, se limpia sola) | `native/macos/AppDelegate.m` | hecho · **42/42** |
+| Lienzo abierto: zoom 2 %–4000 % sobre el cursor, desplazamiento con el botón central o derecho y rejilla adaptativa | `native/macos/CanvasView.m` | hecho |
 | Imprimir en A4 horizontal y exportar PDF con el fondo en blanco | `native/macos/AppDelegate.m`, `CanvasView.m` | hecho |
 
 Lo que da el SVG del núcleo, medido en el plano de prueba A4 a 1:100:
@@ -351,8 +352,10 @@ igual que en la web.
 | Rejilla | `native/src/grid.c` | Celdas de 20 cm; los muros se bloquean con medio trazo, la holgura de 4 cm y media celda; los vanos de las puertas abren el paso; el exterior se inunda desde el borde con los vanos cerrados; vías, andenes, cebras, parqueaderos y linderos no cuentan como piso |
 | Aforo | `native/src/audit.c` | superficie libre × densidad (0,2 pers./m²), con tope de 10 000; distingue capacidad calculada, aforo declarado, aforo que rige, gente para la salida y **exceso** |
 | Programa | `native/src/cli.c` | `norma-core --audit plano.json`, en JSON |
-| Pruebas | `native/tests/test_audit.c` | **17/17** |
-| Paridad | `native/tests/parity.mjs` | **22/22** |
+| Salidas | `native/src/audit.c` | Ancho de vano (medida declarada o geometría), ancho útil con el factor de despeje 0,9, ancho que pide el criterio (5 mm por persona), **cola** con flujo de 1,3 pers./s/m y **marcha** con 1 m/s |
+| Programa | `native/src/cli.c` | `norma-core --audit plano.json` incluye el bloque de salidas |
+| Pruebas | `native/tests/test_audit.c` | **25/25** |
+| Paridad | `native/tests/parity.mjs` | **26/26** |
 
 El caso de prueba y sus cifras, idénticas en C y en PHP: una habitación de
 6 × 4 m con un vano de 80 cm y una vía de 4 m de ancho al sur, con 5 000
@@ -381,7 +384,23 @@ que estar **cerrados**; si se dejan abiertos, el exterior entra por la puerta y
 la superficie útil se cuenta dos veces. Se vio comparando celda a celda el mapa
 del C con el de PHP (0 diferencias después de la corrección).
 
+### El lienzo abierto (2026-11-04)
+
+El lienzo de la ventana nativa ya no es una hoja fija: **la vista guarda escala y
+desplazamiento**, así que se puede acercar (2 % a 4000 %), alejar y moverse como
+en un CAD, y dibujar fuera del A4. La hoja sigue dibujada como **referencia de
+impresión**, que es lo que se exporta a SVG y a PDF.
+
+- Rueda del ratón o **pellizco** del trackpad: zoom sobre el cursor.
+- Trackpad de dos dedos: desplazamiento; **botón central o derecho**: arrastrar el lienzo.
+- `⌘0` ajusta la hoja, `⌘1` deja el zoom real (1 cm = 1 punto), `⌘+` y `⌘-` acercan y alejan.
+- La rejilla cubre todo el espacio de trabajo y se agranda al alejarse, para no
+  dibujar miles de líneas.
+
 ### Lo que N3 todavía no tiene
 
-- **Recorridos, tiempos de salida y hallazgos** del auditor: son el resto de N3.
+- **El recorrido más largo hasta cada salida** (el campo de recorridos sobre la
+  rejilla): es lo que falta para el tiempo de marcha automático y para los
+  hallazgos de distancia máxima.
+- **Hallazgos y rutas dibujadas** del auditor.
 - **Rutas de evacuación dibujadas** sobre el lienzo nativo.

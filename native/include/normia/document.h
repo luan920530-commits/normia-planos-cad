@@ -46,6 +46,10 @@ typedef struct {
     double stroke;
     /** Ancho declarado del elemento del entorno, en metros (andenes y vías). */
     double width_m;
+    /** Medida declarada por la persona, en metros (NORMIA-006 §6.1). */
+    double measured_m;
+    /** Puerta marcada como salida de emergencia. */
+    int is_exit;
 } norma_element;
 
 typedef struct {

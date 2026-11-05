@@ -186,6 +186,63 @@ static void test_aforo_room(void)
     norma_document_free(&document);
 }
 
+static void test_egress(void)
+{
+    norma_document document;
+    build_room(&document);
+    /* La puerta del recinto es la salida de emergencia. */
+    for (size_t index = 0; index < document.count; index += 1) {
+        if (strcmp(document.elements[index].type, "door") == 0) {
+            document.elements[index].is_exit = 1;
+        }
+    }
+    norma_egress egress;
+    norma_audit_egress(&document, 5000, -1.0, NULL, &egress);
+    check("Una puerta marcada es una salida", egress.exit_count == 1 && egress.door_count == 1, "1 de 1");
+
+    char detail[160];
+    snprintf(detail, sizeof(detail), "%.2f m útiles de %.1f m de vano", egress.available_width_m, egress.exit_width_m);
+    check("El ancho útil es el vano por el factor de despeje", near(egress.available_width_m, 0.72, 1e-9), detail);
+    snprintf(detail, sizeof(detail), "%.2f m", egress.required_width_m);
+    check("Cinco mil personas piden veinticinco metros de ancho", near(egress.required_width_m, 25.0, 1e-9), detail);
+
+    snprintf(detail, sizeof(detail), "%.1f s", egress.queue_time_s);
+    check("La cola en la salida se calcula con el flujo de referencia",
+          near(egress.queue_time_s, 5341.9, 1e-9), detail);
+    check("Sin recorrido medido no se inventa el tiempo de marcha",
+          egress.walk_time_s < 0.0 && egress.estimated_time_s < 0.0, "sin recorrido");
+
+    norma_audit_egress(&document, 5000, 4.48, NULL, &egress);
+    snprintf(detail, sizeof(detail), "%.1f s de marcha · %.1f s en total", egress.walk_time_s, egress.estimated_time_s);
+    check("Con el recorrido medido se suman marcha y cola",
+          near(egress.walk_time_s, 4.5, 1e-9) && near(egress.estimated_time_s, 5346.4, 1e-9), detail);
+
+    /* Una medida declarada manda sobre la geometría dibujada. */
+    const long extra = norma_document_add_marker(&document, "door", 900.0, 200.0, NULL);
+    if (extra >= 0) {
+        norma_element *element = &document.elements[extra];
+        element->x = 880.0;
+        element->y = 180.0;
+        element->w = 200.0;
+        element->h = 20.0;
+        element->is_exit = 1;
+        element->measured_m = 1.2;
+    }
+    norma_audit_egress(&document, 5000, -1.0, NULL, &egress);
+    snprintf(detail, sizeof(detail), "%ld salidas · %.2f m de vano", egress.exit_count, egress.exit_width_m);
+    check("Dos salidas suman su vano y la medida declarada manda",
+          egress.exit_count == 2 && near(egress.exit_width_m, 2.0, 1e-9), detail);
+
+    norma_egress_criteria criteria;
+    norma_egress_criteria_default(&criteria);
+    criteria.door_clearance_factor = 0.0;
+    norma_audit_egress(&document, 5000, 4.48, &criteria, &egress);
+    check("Sin ancho útil no hay tiempo de cola, y no se inventa un cero",
+          egress.queue_time_s < 0.0 && egress.estimated_time_s < 0.0, "sin cola");
+
+    norma_document_free(&document);
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IOLBF, 0);
@@ -195,6 +252,7 @@ int main(void)
     test_open_canvas();
     test_aforo_from_area();
     test_aforo_room();
+    test_egress();
 
     printf("\n%d/%d comprobaciones correctas.\n", checks - failures, checks);
     return failures == 0 ? 0 : 1;

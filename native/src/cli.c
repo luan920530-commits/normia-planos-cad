@@ -130,22 +130,35 @@ static int command_audit(const char *path)
     }
     norma_grid grid;
     norma_aforo aforo;
+    norma_egress egress;
     if (!norma_audit_aforo(&document, 0, NULL, NULL, &aforo, &grid, error, sizeof(error))) {
         norma_document_free(&document);
         fprintf(stderr, "%s\n", error);
         return 3;
+    }
+    norma_audit_egress(&document, aforo.used, -1.0, NULL, &egress);
+    /* Un tiempo que no se puede calcular sale como null, no como un cero falso. */
+    char queue[64];
+    if (egress.queue_time_s >= 0.0) {
+        snprintf(queue, sizeof(queue), "%.17g", egress.queue_time_s);
+    } else {
+        snprintf(queue, sizeof(queue), "null");
     }
     /* Las superficies salen redondeadas a dos decimales, como en el informe. */
     printf("{\"core\":\"%s\",\"canvas\":{\"width\":%.17g,\"height\":%.17g,\"unit\":\"%s\",\"scale\":\"%s\"},"
            "\"grid\":{\"cell\":%.17g,\"cellM\":%.17g,\"nx\":%lu,\"ny\":%lu,\"clearance\":%.17g},"
            "\"freeAreaM2\":%.17g,\"exteriorAreaM2\":%.17g,"
            "\"aforo\":{\"maxPersons\":%ld,\"declared\":%ld,\"permitted\":%ld,\"used\":%ld,"
-           "\"excess\":%ld,\"source\":\"%s\",\"freeAreaM2\":%.17g,\"density\":%.17g,\"cap\":%ld}}\n",
+           "\"excess\":%ld,\"source\":\"%s\",\"freeAreaM2\":%.17g,\"density\":%.17g,\"cap\":%ld},"
+           "\"egress\":{\"exitCount\":%ld,\"doorCount\":%ld,\"exitWidthM\":%.17g,\"availableWidthM\":%.17g,"
+           "\"requiredWidthM\":%.17g,\"queueTimeS\":%s,\"speedMps\":%.17g}}\n",
            NORMA_CORE_VERSION, document.width, document.height, norma_unit_name(document.unit), document.scale,
            grid.cell, grid.cell_m, (unsigned long) grid.nx, (unsigned long) grid.ny, grid.clearance,
            aforo.free_area_m2, round(grid.exterior_area_m2 * 100.0) / 100.0,
            aforo.max_persons, aforo.declared, aforo.permitted, aforo.used,
-           aforo.excess, aforo.source, aforo.free_area_m2, aforo.density, aforo.cap);
+           aforo.excess, aforo.source, aforo.free_area_m2, aforo.density, aforo.cap,
+           egress.exit_count, egress.door_count, egress.exit_width_m, egress.available_width_m,
+           egress.required_width_m, queue, egress.speed_mps);
     norma_grid_free(&grid);
     norma_document_free(&document);
     return 0;
