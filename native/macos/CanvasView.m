@@ -678,7 +678,7 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
 
 - (void)keyDown:(NSEvent *)event
 {
-    const NSString *characters = event.charactersIgnoringModifiers.lowercaseString;
+    NSString *characters = [event.charactersIgnoringModifiers lowercaseString];
     if (![self selectToolWithKey:characters]) {
         if (event.keyCode == 53) { // Esc
             _tool = CanvasToolSelect;
