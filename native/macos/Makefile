@@ -10,7 +10,7 @@
 
 APP := build/NormiaEstudio.app
 BIN := $(APP)/Contents/MacOS/NormiaEstudio
-CORE := ../src/units.c ../src/geometry.c ../src/json.c ../src/jsonw.c ../src/format.c ../src/plan.c ../src/document.c ../src/svg.c
+CORE := ../src/units.c ../src/geometry.c ../src/json.c ../src/jsonw.c ../src/format.c ../src/plan.c ../src/document.c ../src/svg.c ../src/grid.c ../src/audit.c ../src/travel.c ../src/findings.c
 OBJC := main.m AppDelegate.m CanvasView.m
 CFLAGS ?= -O2 -Wall -Wextra -Wno-unused-parameter
 # Cocoa dibuja la ventana; UniformTypeIdentifiers da UTTypeJSON para los paneles.

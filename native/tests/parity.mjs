@@ -322,6 +322,92 @@ if (nativoAforo && phpAforo) {
     `C: ${datos.queueTimeS} s · PHP: ${salida.queueTimeS} s`);
 }
 
+/* ---------------- 4c · recorridos y hallazgos: el mismo informe ------------- */
+
+// Una nave de 40 × 30 m con una salida de 60 cm: recorrido largo, ancho corto,
+// una sola salida, aforo declarado por encima y una zona sellada sin salida.
+const planoNave = {
+  application: 'normia-planos-cad',
+  format: 'normia-plan',
+  schema_version: 3,
+  project: { name: 'Nave' },
+  design: {
+    canvas: { width: 4000, height: 3000, grid: 20, unit: 'cm', scale: '1:100', occupancy: 300 },
+    layers: [{ id: 'capa', name: 'Planta', visible: true, locked: false }],
+    elements: [
+      { id: 'n', type: 'wall', layerId: 'capa', stroke: 20, points: [{ x: 100, y: 100 }, { x: 3900, y: 100 }] },
+      { id: 'e', type: 'wall', layerId: 'capa', stroke: 20, points: [{ x: 3900, y: 100 }, { x: 3900, y: 2900 }] },
+      { id: 'o', type: 'wall', layerId: 'capa', stroke: 20, points: [{ x: 100, y: 100 }, { x: 100, y: 2900 }] },
+      { id: 's1', type: 'wall', layerId: 'capa', stroke: 20, points: [{ x: 100, y: 2900 }, { x: 300, y: 2900 }] },
+      { id: 's2', type: 'wall', layerId: 'capa', stroke: 20, points: [{ x: 360, y: 2900 }, { x: 3900, y: 2900 }] },
+      { id: 'salida', type: 'door', layerId: 'capa', x: 300, y: 2880, w: 60, h: 20, isExit: true },
+      { id: 'q1', type: 'wall', layerId: 'capa', stroke: 20, points: [{ x: 3000, y: 1200 }, { x: 3700, y: 1200 }] },
+      { id: 'q2', type: 'wall', layerId: 'capa', stroke: 20, points: [{ x: 3700, y: 1200 }, { x: 3700, y: 2400 }] },
+      { id: 'q3', type: 'wall', layerId: 'capa', stroke: 20, points: [{ x: 3000, y: 2400 }, { x: 3700, y: 2400 }] },
+      { id: 'q4', type: 'wall', layerId: 'capa', stroke: 20, points: [{ x: 3000, y: 1200 }, { x: 3000, y: 2400 }] },
+    ],
+  },
+};
+const fixtureNave = path.join(os.tmpdir(), `normia-paridad-nave-${process.pid}.json`);
+fs.writeFileSync(fixtureNave, JSON.stringify(planoNave), 'utf8');
+let nativoNave = null;
+try {
+  nativoNave = JSON.parse(runCore(['--audit', fixtureNave]));
+} catch (error) {
+  report.check('El núcleo mide recorridos y arma hallazgos', false, String(error?.message || error).slice(0, 120));
+}
+const app4 = await startApp(VERSION);
+let phpNave = null;
+try {
+  const resultado = await app4.run(`
+$design = json_decode((string) file_get_contents(${JSON.stringify(fixtureNave)}), true)['design'];
+$report = App\\Services\\PlanAudit::analyze($design);
+echo json_encode(['travel' => $report['travel'], 'findings' => $report['findings']]);
+`);
+  const text = String(resultado.text || '');
+  phpNave = JSON.parse(text.slice(text.indexOf('{"travel"')));
+} catch (error) {
+  phpNave = null;
+  report.check('El motor PHP mide recorridos', false, String(error?.message || error).slice(0, 120));
+}
+await app4.close();
+fs.rmSync(fixtureNave, { force: true });
+
+if (nativoNave && phpNave) {
+  const c = nativoNave.travel;
+  const php = phpNave.travel;
+  report.check('El recorrido más largo coincide al centímetro',
+    Math.abs(c.longestM - php.longestM) < 1e-9, `C: ${c.longestM} m · PHP: ${php.longestM} m`);
+  report.check('El punto más alejado es el mismo del plano',
+    c.farthest.x === php.farthest.x && c.farthest.y === php.farthest.y,
+    `C: (${c.farthest.x}, ${c.farthest.y}) · PHP: (${php.farthest.x}, ${php.farthest.y})`);
+  report.check('La superficie alcanzable y la que no tiene salida coinciden',
+    Math.abs(c.reachableAreaM2 - php.reachableAreaM2) < 1e-9
+      && Math.abs(c.unreachableAreaM2 - php.unreachableAreaM2) < 1e-9,
+    `C: ${c.reachableAreaM2} / ${c.unreachableAreaM2} m² · PHP: ${php.reachableAreaM2} / ${php.unreachableAreaM2} m²`);
+
+  // Los hallazgos que el núcleo ya sabe emitir se comparan palabra por palabra.
+  const codes = ['no_exit', 'too_few_exits', 'narrow_exit', 'travel_too_long', 'unreachable_area',
+    'occupancy_over_capacity', 'occupancy_missing', 'width_short'];
+  const mine = nativoNave.findings.filter((f) => codes.includes(f.code));
+  const theirs = phpNave.findings.filter((f) => codes.includes(f.code));
+  report.check('Salen los mismos hallazgos de evacuación y aforo, en el mismo orden',
+    JSON.stringify(mine.map((f) => `${f.code}/${f.severity}`)) === JSON.stringify(theirs.map((f) => `${f.code}/${f.severity}`)),
+    `${mine.length} hallazgos: ${mine.map((f) => f.code).join(' · ')}`);
+  const mismatched = mine.filter((f) => {
+    const pair = theirs.find((g) => g.code === f.code && g.title === f.title);
+    return !pair || pair.detail !== f.detail || pair.value !== f.value
+      || JSON.stringify(pair.elements) !== JSON.stringify(f.elements)
+      || JSON.stringify(pair.position) !== JSON.stringify(f.position);
+  });
+  report.check('Cada hallazgo dice lo mismo: título, detalle, elementos, punto y valor',
+    mine.length > 0 && mismatched.length === 0,
+    mismatched.length === 0 ? `${mine.length} idénticos` : `distintos: ${mismatched.map((f) => f.code).join(', ')}`);
+  report.check('Cuenta las zonas sin salida alcanzable',
+    mine.some((f) => f.code === 'unreachable_area' && /m²/.test(f.value || '')),
+    (mine.find((f) => f.code === 'unreachable_area') || {}).value || 'sin zona');
+}
+
 /* ------------------- 5 · el núcleo no se rompe con basura ------------------ */
 
 const basura = path.join(os.tmpdir(), `normia-basura-${process.pid}.json`);

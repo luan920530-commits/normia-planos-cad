@@ -81,3 +81,63 @@ void norma_format_measure_cm(double value_cm, norma_unit unit, char *out, size_t
 {
     norma_format_measure(norma_from_cm(value_cm, unit), unit, out, size);
 }
+
+void norma_format_fixed(double value, int decimals, char *out, size_t size)
+{
+    if (out == NULL || size == 0) {
+        return;
+    }
+    out[0] = '\0';
+    if (decimals < 0) {
+        decimals = 0;
+    } else if (decimals > 4) {
+        decimals = 4;
+    }
+    if (!isfinite(value)) {
+        snprintf(out, size, "0");
+        return;
+    }
+    double factor = 1.0;
+    for (int index = 0; index < decimals; index += 1) {
+        factor *= 10.0;
+    }
+    /* `number_format` de PHP redondea alejándose del cero. */
+    const double scaled_value = fabs(value) * factor;
+    const long long scaled = (long long) floor(scaled_value + 0.5);
+    const int negative = value < 0.0 && scaled != 0;
+    const long long divisor = (long long) factor;
+    const long long whole = scaled / divisor;
+    const long long fraction = scaled % divisor;
+
+    char digits[32];
+    snprintf(digits, sizeof(digits), "%lld", whole);
+    const int length = (int) strlen(digits);
+    char buffer[64];
+    size_t position = 0;
+    if (negative) {
+        buffer[position++] = '-';
+    }
+    for (int index = 0; index < length; index += 1) {
+        buffer[position++] = digits[index];
+        const int remaining = length - index - 1;
+        if (remaining > 0 && remaining % 3 == 0) {
+            buffer[position++] = '.';
+        }
+    }
+    if (decimals > 0) {
+        buffer[position++] = ',';
+        /* Los decimales se escriben de derecha a izquierda, sin depender de
+           anchos de formato que el compilador no puede acotar. */
+        long long rest = fraction;
+        char fraction_text[8];
+        for (int index = decimals - 1; index >= 0; index -= 1) {
+            fraction_text[index] = (char) ('0' + (int) (rest % 10));
+            rest /= 10;
+        }
+        for (int index = 0; index < decimals && position + 1 < sizeof(buffer); index += 1) {
+            buffer[position++] = fraction_text[index];
+        }
+    }
+    buffer[position] = '\0';
+    snprintf(out, size, "%s", buffer);
+}

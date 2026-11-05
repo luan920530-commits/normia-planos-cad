@@ -13,6 +13,8 @@
 #include <string.h>
 
 #include "normia/audit.h"
+#include "normia/findings.h"
+#include "normia/travel.h"
 #include "normia/document.h"
 #include "normia/grid.h"
 
@@ -243,6 +245,135 @@ static void test_egress(void)
     norma_document_free(&document);
 }
 
+/* Una nave de 40 × 30 m con una salida angosta en una esquina: obliga a que el
+ * recorrido pase de 30 m, el ancho no alcance y la salida sea la única. */
+static void build_warehouse(norma_document *document)
+{
+    norma_document_init(document);
+    document->width = 4000.0;
+    document->height = 3000.0;
+    document->occupancy = 300;
+    const norma_point top[2] = {{100.0, 100.0}, {3900.0, 100.0}};
+    const norma_point right[2] = {{3900.0, 100.0}, {3900.0, 2900.0}};
+    const norma_point left[2] = {{100.0, 100.0}, {100.0, 2900.0}};
+    const norma_point bottom_left[2] = {{100.0, 2900.0}, {300.0, 2900.0}};
+    const norma_point bottom_right[2] = {{360.0, 2900.0}, {3900.0, 2900.0}};
+    const norma_point *walls[5] = {top, right, left, bottom_left, bottom_right};
+    for (int index = 0; index < 5; index += 1) {
+        const long wall = norma_document_add_wall(document, walls[index], 2, NULL, NULL);
+        if (wall >= 0) {
+            document->elements[wall].stroke = 20.0;
+        }
+    }
+    const long door = norma_document_add_marker(document, "door", 0.0, 0.0, NULL);
+    if (door >= 0) {
+        norma_element *element = &document->elements[door];
+        element->x = 300.0;
+        element->y = 2880.0;
+        element->w = 60.0;
+        element->h = 20.0;
+        element->is_exit = 1;
+    }
+}
+
+static void test_travel_and_findings(void)
+{
+    norma_document document;
+    build_warehouse(&document);
+    norma_grid grid;
+    char error[256];
+    if (!norma_grid_build(&document, NULL, &grid, error, sizeof(error))) {
+        check("La rejilla de la nave se arma", 0, error);
+        norma_document_free(&document);
+        return;
+    }
+    norma_travel travel;
+    norma_travel_field(&document, &grid, NULL, &travel);
+    char detail[160];
+    snprintf(detail, sizeof(detail), "%.2f m hasta el punto más lejano", travel.longest_m);
+    check("El recorrido de la nave pasa de treinta metros", travel.computed && travel.has_longest
+          && travel.longest_m > 30.0, detail);
+    check("Lo que tiene salida se separa de lo que no",
+          near(travel.reachable_area_m2 + travel.unreachable_area_m2, grid.free_area_m2, 0.011),
+          "suma la superficie libre");
+
+    norma_aforo aforo;
+    norma_audit_aforo_from_area(grid.free_area_m2, &document, 0, NULL, &aforo);
+    norma_egress egress;
+    norma_audit_egress(&document, aforo.used, travel.longest_m, NULL, &egress);
+
+    norma_findings findings;
+    norma_findings_init(&findings);
+    norma_audit_egress_findings(&document, &travel, &aforo, &egress, NULL, &findings);
+    check("La nave produce cinco hallazgos de evacuación y aforo", findings.count == 5, "5");
+
+    const char *expected[5] = {"travel_too_long", "occupancy_over_capacity", "width_short",
+                               "too_few_exits", "narrow_exit"};
+    int order = findings.count == 5;
+    for (size_t index = 0; index < findings.count && index < 5; index += 1) {
+        if (strcmp(findings.items[index].code, expected[index]) != 0) {
+            order = 0;
+        }
+    }
+    check("Los hallazgos salen por gravedad y luego por título", order, "orden estable");
+
+    const norma_finding *travel_finding = NULL;
+    const norma_finding *narrow_finding = NULL;
+    for (size_t index = 0; index < findings.count; index += 1) {
+        if (strcmp(findings.items[index].code, "travel_too_long") == 0) {
+            travel_finding = &findings.items[index];
+        } else if (strcmp(findings.items[index].code, "narrow_exit") == 0) {
+            narrow_finding = &findings.items[index];
+        }
+    }
+    check("El hallazgo de recorrido dice cuánto mide y cuánto admite el criterio",
+          travel_finding != NULL
+          && strstr(travel_finding->detail, "admite 30,00 m") != NULL
+          && strcmp(travel_finding->severity, "high") == 0,
+          travel_finding != NULL ? travel_finding->value : "sin hallazgo");
+    check("El hallazgo de la salida angosta cita el ancho medido y el mínimo",
+          narrow_finding != NULL
+          && strstr(narrow_finding->detail, "mide 0,60 m de vano") != NULL
+          && strstr(narrow_finding->detail, "pide 0,80 m") != NULL
+          && narrow_finding->has_position,
+          narrow_finding != NULL ? narrow_finding->value : "sin hallazgo");
+
+    norma_finding_counts counts;
+    norma_findings_count(&findings, &counts);
+    snprintf(detail, sizeof(detail), "%ld altas · %ld medias", counts.high, counts.medium);
+    check("El recuento por gravedad coincide con la lista",
+          counts.high == 1 && counts.medium == 4 && counts.low == 0 && counts.info == 0, detail);
+    norma_findings_free(&findings);
+
+    /* Sin salidas marcadas: un solo hallazgo alto, y no se inventa el recorrido. */
+    document.elements[document.count - 1].is_exit = 0;
+    norma_grid_free(&grid);
+    if (norma_grid_build(&document, NULL, &grid, error, sizeof(error))) {
+        norma_travel_field(&document, &grid, NULL, &travel);
+        check("Sin salidas no se calcula el recorrido", travel.computed == 0 && travel.has_longest == 0,
+              "sin recorrido");
+        norma_audit_aforo_from_area(grid.free_area_m2, &document, 0, NULL, &aforo);
+        norma_audit_egress(&document, aforo.used, -1.0, NULL, &egress);
+        norma_findings_init(&findings);
+        norma_audit_egress_findings(&document, &travel, &aforo, &egress, NULL, &findings);
+        int has_no_exit = 0;
+        int has_travel = 0;
+        for (size_t index = 0; index < findings.count; index += 1) {
+            if (strcmp(findings.items[index].code, "no_exit") == 0) {
+                has_no_exit = 1;
+            }
+            if (strcmp(findings.items[index].code, "travel_too_long") == 0) {
+                has_travel = 1;
+            }
+        }
+        check("Sin salidas el hallazgo es «Sin salidas» y no uno de recorrido",
+              has_no_exit == 1 && has_travel == 0, "no_exit");
+        norma_findings_free(&findings);
+        norma_grid_free(&grid);
+    }
+    norma_document_free(&document);
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IOLBF, 0);
@@ -253,6 +384,7 @@ int main(void)
     test_aforo_from_area();
     test_aforo_room();
     test_egress();
+    test_travel_and_findings();
 
     printf("\n%d/%d comprobaciones correctas.\n", checks - failures, checks);
     return failures == 0 ? 0 : 1;

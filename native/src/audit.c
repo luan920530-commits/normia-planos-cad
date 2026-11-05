@@ -100,6 +100,7 @@ void norma_egress_criteria_default(norma_egress_criteria *criteria)
     criteria->width_mm_per_person = 5.0;
     criteria->travel_speed_mps = 1.0;
     criteria->flow_persons_per_second_per_meter = 1.3;
+    criteria->min_room_area_m2 = 2.0;
 }
 
 /** Redondeo de la app con el número de decimales que usa cada cifra. */

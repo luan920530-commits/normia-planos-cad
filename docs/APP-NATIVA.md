@@ -353,9 +353,11 @@ igual que en la web.
 | Aforo | `native/src/audit.c` | superficie libre × densidad (0,2 pers./m²), con tope de 10 000; distingue capacidad calculada, aforo declarado, aforo que rige, gente para la salida y **exceso** |
 | Programa | `native/src/cli.c` | `norma-core --audit plano.json`, en JSON |
 | Salidas | `native/src/audit.c` | Ancho de vano (medida declarada o geometría), ancho útil con el factor de despeje 0,9, ancho que pide el criterio (5 mm por persona), **cola** con flujo de 1,3 pers./s/m y **marcha** con 1 m/s |
-| Programa | `native/src/cli.c` | `norma-core --audit plano.json` incluye el bloque de salidas |
-| Pruebas | `native/tests/test_audit.c` | **25/25** |
-| Paridad | `native/tests/parity.mjs` | **26/26** |
+| Recorridos | `native/src/travel.c` | Dijkstra de ocho vecinos desde el vano de cada salida: recorrido más largo, punto más lejano, superficie alcanzable y **zonas sin salida** agrupadas por vecindad |
+| Hallazgos | `native/src/findings.c` | Salidas, recorrido, zonas sin salida, aforo y ancho, con la gravedad, el título, el detalle, los elementos y el punto del plano |
+| Programa | `native/src/cli.c` | `norma-core --audit plano.json` incluye salidas, recorrido y hallazgos |
+| Pruebas | `native/tests/test_audit.c` | **34/34** |
+| Paridad | `native/tests/parity.mjs` | **32/32** |
 
 El caso de prueba y sus cifras, idénticas en C y en PHP: una habitación de
 6 × 4 m con un vano de 80 cm y una vía de 4 m de ancho al sur, con 5 000
@@ -397,10 +399,18 @@ impresión**, que es lo que se exporta a SVG y a PDF.
 - La rejilla cubre todo el espacio de trabajo y se agranda al alejarse, para no
   dibujar miles de líneas.
 
+### El informe, palabra por palabra
+
+Los ocho hallazgos que ya emite el núcleo —`no_exit`, `too_few_exits`,
+`narrow_exit`, `travel_too_long`, `unreachable_area`, `occupancy_over_capacity`,
+`occupancy_missing` y `width_short`— salen **con el mismo título, el mismo
+detalle, los mismos elementos, el mismo punto del plano y el mismo valor** que en
+la edición web. La prueba compara los textos carácter a carácter, no solo la
+lista de códigos.
+
 ### Lo que N3 todavía no tiene
 
-- **El recorrido más largo hasta cada salida** (el campo de recorridos sobre la
-  rejilla): es lo que falta para el tiempo de marcha automático y para los
-  hallazgos de distancia máxima.
-- **Hallazgos y rutas dibujadas** del auditor.
+- **Los demás hallazgos** del auditor web: señalización, extintores, primeros
+  auxilios, escenarios, simulacro y rutas dibujadas.
+- **Dibujar las rutas** sobre el lienzo nativo.
 - **Rutas de evacuación dibujadas** sobre el lienzo nativo.

@@ -17,8 +17,11 @@
 #include <math.h>
 
 #include "normia/audit.h"
+#include "normia/findings.h"
+#include "normia/jsonw.h"
 #include "normia/grid.h"
 #include "normia/svg.h"
+#include "normia/travel.h"
 #include "normia/units.h"
 
 #define NORMA_CORE_VERSION "0.1.0"
@@ -65,6 +68,18 @@ static char *read_file(const char *path, size_t *length)
     text[read] = '\0';
     *length = read;
     return text;
+}
+
+/** Escribe una cadena JSON en la salida estándar, con comillas y escapes. */
+static void write_json_string(const char *text)
+{
+    norma_buffer buffer;
+    norma_buffer_init(&buffer);
+    norma_buffer_string(&buffer, text != NULL ? text : "");
+    if (!buffer.failed && buffer.text != NULL) {
+        fputs(buffer.text, stdout);
+    }
+    norma_buffer_free(&buffer);
 }
 
 static int command_check(void)
@@ -131,12 +146,19 @@ static int command_audit(const char *path)
     norma_grid grid;
     norma_aforo aforo;
     norma_egress egress;
+    norma_travel travel;
+    norma_findings findings;
+    norma_finding_counts counts;
     if (!norma_audit_aforo(&document, 0, NULL, NULL, &aforo, &grid, error, sizeof(error))) {
         norma_document_free(&document);
         fprintf(stderr, "%s\n", error);
         return 3;
     }
-    norma_audit_egress(&document, aforo.used, -1.0, NULL, &egress);
+    norma_travel_field(&document, &grid, NULL, &travel);
+    norma_audit_egress(&document, aforo.used, travel.has_longest ? travel.longest_m : -1.0, NULL, &egress);
+    norma_findings_init(&findings);
+    norma_audit_egress_findings(&document, &travel, &aforo, &egress, NULL, &findings);
+    norma_findings_count(&findings, &counts);
     /* Un tiempo que no se puede calcular sale como null, no como un cero falso. */
     char queue[64];
     if (egress.queue_time_s >= 0.0) {
@@ -145,20 +167,93 @@ static int command_audit(const char *path)
         snprintf(queue, sizeof(queue), "null");
     }
     /* Las superficies salen redondeadas a dos decimales, como en el informe. */
+    char longest[64];
+    char farthest[128];
+    char walk[64];
+    char total[64];
+    if (travel.has_longest) {
+        snprintf(longest, sizeof(longest), "%.17g", travel.longest_m);
+    } else {
+        snprintf(longest, sizeof(longest), "null");
+    }
+    if (travel.has_farthest) {
+        snprintf(farthest, sizeof(farthest), "{\"x\":%.17g,\"y\":%.17g}", travel.farthest.x, travel.farthest.y);
+    } else {
+        snprintf(farthest, sizeof(farthest), "null");
+    }
+    if (egress.walk_time_s >= 0.0) {
+        snprintf(walk, sizeof(walk), "%.17g", egress.walk_time_s);
+    } else {
+        snprintf(walk, sizeof(walk), "null");
+    }
+    if (egress.estimated_time_s >= 0.0) {
+        snprintf(total, sizeof(total), "%.17g", egress.estimated_time_s);
+    } else {
+        snprintf(total, sizeof(total), "null");
+    }
+
     printf("{\"core\":\"%s\",\"canvas\":{\"width\":%.17g,\"height\":%.17g,\"unit\":\"%s\",\"scale\":\"%s\"},"
            "\"grid\":{\"cell\":%.17g,\"cellM\":%.17g,\"nx\":%lu,\"ny\":%lu,\"clearance\":%.17g},"
            "\"freeAreaM2\":%.17g,\"exteriorAreaM2\":%.17g,"
            "\"aforo\":{\"maxPersons\":%ld,\"declared\":%ld,\"permitted\":%ld,\"used\":%ld,"
            "\"excess\":%ld,\"source\":\"%s\",\"freeAreaM2\":%.17g,\"density\":%.17g,\"cap\":%ld},"
            "\"egress\":{\"exitCount\":%ld,\"doorCount\":%ld,\"exitWidthM\":%.17g,\"availableWidthM\":%.17g,"
-           "\"requiredWidthM\":%.17g,\"queueTimeS\":%s,\"speedMps\":%.17g}}\n",
+           "\"requiredWidthM\":%.17g,\"walkTimeS\":%s,\"queueTimeS\":%s,\"estimatedTimeS\":%s,\"speedMps\":%.17g},"
+           "\"travel\":{\"computed\":%s,\"longestM\":%s,\"farthest\":%s,\"freeAreaM2\":%.17g,"
+           "\"exteriorAreaM2\":%.17g,\"reachableAreaM2\":%.17g,\"unreachableAreaM2\":%.17g,\"cellM\":%.17g,"
+           "\"limitM\":%.17g,\"rooms\":[",
            NORMA_CORE_VERSION, document.width, document.height, norma_unit_name(document.unit), document.scale,
            grid.cell, grid.cell_m, (unsigned long) grid.nx, (unsigned long) grid.ny, grid.clearance,
            aforo.free_area_m2, round(grid.exterior_area_m2 * 100.0) / 100.0,
            aforo.max_persons, aforo.declared, aforo.permitted, aforo.used,
            aforo.excess, aforo.source, aforo.free_area_m2, aforo.density, aforo.cap,
            egress.exit_count, egress.door_count, egress.exit_width_m, egress.available_width_m,
-           egress.required_width_m, queue, egress.speed_mps);
+           egress.required_width_m, walk, queue, total, egress.speed_mps,
+           travel.computed ? "true" : "false", longest, farthest,
+           travel.free_area_m2, travel.exterior_area_m2, travel.reachable_area_m2,
+           travel.unreachable_area_m2, travel.cell_m, 30.0);
+    for (size_t room = 0; room < travel.room_count; room += 1) {
+        printf("%s{\"areaM2\":%.17g,\"cells\":%lu,\"center\":{\"x\":%.17g,\"y\":%.17g}}",
+               room > 0 ? "," : "", travel.rooms[room].area_m2,
+               (unsigned long) travel.rooms[room].cells,
+               travel.rooms[room].center.x, travel.rooms[room].center.y);
+    }
+    printf("]},\"findingsCount\":{\"high\":%ld,\"medium\":%ld,\"low\":%ld,\"info\":%ld},"
+           "\"findings\":[",
+           counts.high, counts.medium, counts.low, counts.info);
+    for (size_t index = 0; index < findings.count; index += 1) {
+        const norma_finding *finding = &findings.items[index];
+        printf("%s{\"code\":", index > 0 ? "," : "");
+        write_json_string(finding->code);
+        printf(",\"severity\":");
+        write_json_string(finding->severity);
+        printf(",\"title\":");
+        write_json_string(finding->title);
+        printf(",\"detail\":");
+        write_json_string(finding->detail);
+        printf(",\"elements\":[");
+        for (size_t element = 0; element < finding->element_count; element += 1) {
+            if (element > 0) {
+                printf(",");
+            }
+            write_json_string(finding->element_ids[element]);
+        }
+        printf("],\"position\":");
+        if (finding->has_position) {
+            printf("{\"x\":%.17g,\"y\":%.17g}", finding->position.x, finding->position.y);
+        } else {
+            printf("null");
+        }
+        printf(",\"value\":");
+        if (finding->has_value) {
+            write_json_string(finding->value);
+        } else {
+            printf("null");
+        }
+        printf("}");
+    }
+    norma_findings_free(&findings);
+    printf("]}\n"); /* cierra findings y el objeto raíz */
     norma_grid_free(&grid);
     norma_document_free(&document);
     return 0;

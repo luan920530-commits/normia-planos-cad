@@ -25,6 +25,13 @@ void norma_format_measure_cm(double value_cm, norma_unit unit, char *out, size_t
 /** Cifra de una longitud ya expresada en la unidad del plano. */
 void norma_format_measure(double value, norma_unit unit, char *out, size_t size);
 
+/**
+ * Cifra con decimales fijos y sin unidad, como `number_format` de PHP:
+ * `norma_format_fixed(20.4, 2, …)` → `"20,40"`. Es el formato de los informes
+ * del auditor, donde la unidad va en el texto y no pegada a la cifra.
+ */
+void norma_format_fixed(double value, int decimals, char *out, size_t size);
+
 #ifdef __cplusplus
 }
 #endif

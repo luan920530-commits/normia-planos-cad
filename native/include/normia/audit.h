@@ -73,6 +73,8 @@ typedef struct {
     double width_mm_per_person;                /* 5 */
     double travel_speed_mps;                   /* 1 */
     double flow_persons_per_second_per_meter;  /* 1,3 */
+    /** Zona libre sin salida que merece un aviso, en m² (2). */
+    double min_room_area_m2;
 } norma_egress_criteria;
 
 typedef struct {
