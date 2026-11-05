@@ -97,9 +97,28 @@ jobs:
       - name: Compilar la aplicación nativa
         run: |
           set -o pipefail
+          # Los registros de los trabajos no siempre se pueden descargar, así que
+          # el motivo de un fallo se publica como anotación del propio paso.
+          anotar() {
+            local archivo="$1" titulo="$2"
+            [ -f "$archivo" ] || return 0
+            tail -n 25 "$archivo" | while IFS= read -r linea; do
+              echo "::error title=${titulo}::${linea//$'\r'/}"
+            done
+          }
           make -C native clean
+          set +e
           make -C native CFLAGS="-std=c11 -O2 -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wstrict-prototypes -Werror" 2>&1 | tee "$RUNNER_TEMP/compilacion.log"
-          make -C native test
+          NUCLEO=${PIPESTATUS[0]}
+          make -C native test 2>&1 | tee "$RUNNER_TEMP/pruebas.log"
+          PRUEBAS=${PIPESTATUS[0]}
+          set -e
+          if [ "$NUCLEO" -ne 0 ] || [ "$PRUEBAS" -ne 0 ]; then
+            anotar "$RUNNER_TEMP/compilacion.log" "núcleo"
+            anotar "$RUNNER_TEMP/pruebas.log" "pruebas nativas"
+            echo "::error title=make::el núcleo o sus pruebas fallaron (núcleo $NUCLEO · pruebas $PRUEBAS)"
+            exit 1
+          fi
           # Si clang se queja, el motivo se copia a las anotaciones del trabajo.
           set +e
           make -C native/macos CFLAGS="-O2 -Wall -Wextra -Werror -Wno-unused-parameter" > "$RUNNER_TEMP/macos.log" 2>&1
