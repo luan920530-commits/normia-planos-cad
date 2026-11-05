@@ -679,38 +679,38 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
 - (void)keyDown:(NSEvent *)event
 {
     const NSString *characters = event.charactersIgnoringModifiers.lowercaseString;
-    if ([self selectToolWithKey:characters]) {
-        // La tecla eligió herramienta: abajo se anuncia cuál.
-    } else if (event.keyCode == 53) { // Esc
-        _tool = CanvasToolSelect;
-        _draftCount = 0;
-        _hasCursor = NO;
-        [self.delegate canvasStatus:self message:@""];
-        [self setNeedsDisplay:YES];
-        return;
-    } else if (event.keyCode == 36 || event.keyCode == 76) { // Return y Enter
-        if ((_tool == CanvasToolPen || _tool == CanvasToolRoute) && _draftCount >= 2) {
-            [self commitDraft];
-        }
-        return;
-    } else if (event.keyCode == 51 || event.keyCode == 117) { // Retroceso y Suprimir
-        if ((_tool == CanvasToolPen || _tool == CanvasToolRoute) && _draftCount > 0) {
-            _draftCount -= 1;
+    if (![self selectToolWithKey:characters]) {
+        if (event.keyCode == 53) { // Esc
+            _tool = CanvasToolSelect;
+            _draftCount = 0;
+            _hasCursor = NO;
+            [self.delegate canvasStatus:self message:@""];
             [self setNeedsDisplay:YES];
             return;
+        } else if (event.keyCode == 36 || event.keyCode == 76) { // Return y Enter
+            if ((_tool == CanvasToolPen || _tool == CanvasToolRoute) && _draftCount >= 2) {
+                [self commitDraft];
+            }
+            return;
+        } else if (event.keyCode == 51 || event.keyCode == 117) { // Retroceso y Suprimir
+            if ((_tool == CanvasToolPen || _tool == CanvasToolRoute) && _draftCount > 0) {
+                _draftCount -= 1;
+                [self setNeedsDisplay:YES];
+                return;
+            }
+            if (_selectedElement >= 0) {
+                norma_document_begin_edit(self.document);
+                norma_document_remove(self.document, (size_t) _selectedElement);
+                _selectedElement = -1;
+                _selectedNode = -1;
+                [self.delegate canvasDidChange:self];
+                [self setNeedsDisplay:YES];
+            }
+            return;
+        } else {
+            [super keyDown:event];
+            return;
         }
-        if (_selectedElement >= 0) {
-            norma_document_begin_edit(self.document);
-            norma_document_remove(self.document, (size_t) _selectedElement);
-            _selectedElement = -1;
-            _selectedNode = -1;
-            [self.delegate canvasDidChange:self];
-            [self setNeedsDisplay:YES];
-        }
-        return;
-    } else {
-        [super keyDown:event];
-        return;
     }
     [self.delegate canvasStatus:self message:[self hintForTool]];
     [self setNeedsDisplay:YES];
@@ -718,8 +718,8 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
 
 - (BOOL)selectToolWithKey:(NSString *)key
 {
-    const NSString *caracter = key.lowercaseString;
-    CanvasTool tool;
+    NSString *caracter = [key lowercaseString];
+    CanvasTool tool = CanvasToolSelect;
     if ([caracter isEqualToString:@"m"]) {
         tool = CanvasToolWall;
     } else if ([caracter isEqualToString:@"p"]) {
