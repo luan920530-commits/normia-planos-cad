@@ -289,8 +289,10 @@ compila con `-Werror`, arma el `.app`, comprueba el `LSMinimumSystemVersion` con
 ### Lo que esta etapa no puede prometer
 
 - **La ventana en pantalla**: no se puede probar desde el entorno donde se
-  escribió (Linux sin pantalla ni Xcode). Se compila y se arranca en el flujo de
-  macOS; el primer uso real con ratón y teclado lo hace una persona.
+  escribió (Linux sin pantalla ni Xcode). Lo que sí está comprobado, en un runner
+  de `macos-15-intel`: el `.app` **compila con `clang` y `-Werror`**, su
+  `LSMinimumSystemVersion` es **12.0** y la aplicación **arranca con `--check`**.
+  El primer uso real con ratón y teclado lo hace una persona.
 - **Firma y notarización**: la `.app` sale sin firmar, como el estudio.
 - **Paridad visual exacta** con el editor web: colores y grosores son los del
   lienzo nativo, no una copia píxel a píxel.

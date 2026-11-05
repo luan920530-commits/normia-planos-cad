@@ -97,10 +97,12 @@ El documento en C es lo que se edita:
 | `norma_document_undo` / `redo` | Deshacer y rehacer por edición (64 niveles) |
 | `norma_document_to_json` / `from_json` | Sobre oficial de ida y vuelta |
 
-Lo que **no** se puede comprobar aquí: la ventana en sí. Este entorno es Linux sin
-pantalla ni Xcode, así que la aplicación se compila y se arranca con `--check`
-en el trabajo **Ventana nativa de macOS** del flujo de verificación
-(`macos-15-intel`), y el primer arranque con ventana lo ve una persona en su Mac.
+**Comprobado de verdad, en macOS**: el trabajo **Ventana nativa de macOS** del
+flujo de verificación (`macos-15-intel`) compila el `.app` con `clang` y
+`-Werror`, lee su `LSMinimumSystemVersion` con `PlistBuddy` —da **12.0**— y
+**arranca la aplicación con `--check`**. Lo que sigue sin poder probarse desde
+este entorno (Linux, sin pantalla) es la ventana en sí: el ratón, el teclado y el
+dibujo en pantalla los ve una persona en su Mac.
 
 ## Lo que sigue
 
