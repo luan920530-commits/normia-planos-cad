@@ -54,6 +54,24 @@ if (!target) {
   process.exit(2);
 }
 
+/**
+ * Borra una carpeta temporal sin tumbar la comprobación.
+ *
+ * En Windows los `.node` que el intérprete carga se quedan bloqueados un momento
+ * después de `exit()` y `rmSync` fallaba con `EPERM` en mitad de la limpieza: el
+ * paquete estaba bien y el trabajo decía que no. Con reintentos se resuelve solo,
+ * y si un archivo sigue bloqueado se avisa y se deja la carpeta al sistema
+ * temporal en vez de inventar un fallo del paquete.
+ */
+function limpiarTemporal(dir) {
+  if (!dir) return;
+  try {
+    fs.rmSync(dir, { recursive: true, force: true, maxRetries: 12, retryDelay: 250 });
+  } catch (error) {
+    console.log(`::warning title=temporal::no se pudo borrar ${dir}: ${error?.code || error?.message || error}`);
+  }
+}
+
 const resources = path.resolve(target);
 const appDir = path.join(resources, 'app');
 const runtimeDir = path.join(resources, 'runtime');
@@ -106,7 +124,7 @@ try {
   problems.push(`el intérprete del paquete no arrancó: ${error?.message || error}`);
 } finally {
   try { php?.exit?.(); } catch { /* nada que cerrar */ }
-  if (isolated) fs.rmSync(isolated, { recursive: true, force: true });
+  limpiarTemporal(isolated);
 }
 
 /* 3. La aplicación completa. */
@@ -133,7 +151,7 @@ if (flags.includes('--completo')) {
   } catch (error) {
     problems.push(`el servidor del paquete no respondió: ${error?.message || error}`);
   } finally {
-    fs.rmSync(dataDir, { recursive: true, force: true });
+    limpiarTemporal(dataDir);
   }
 }
 
