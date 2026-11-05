@@ -232,6 +232,79 @@ fs.rmSync(cotaFixture, { force: true });
 report.check('La cota se rotula con coma decimal y punto de miles, como en la web',
   />4\.212,4 cm<\/text>/.test(svgCota), (svgCota.match(/>([0-9.,]+ cm)</) || [])[1] || 'sin cota');
 
+/* -------------- 4b · superficie libre y aforo: los mismos números ------------- */
+
+// Un recinto cerrado con un vano: el exterior tiene que descontarse y el aforo
+// tiene que salir de la superficie libre, no del lienzo completo.
+const planoRecinto = {
+  application: 'normia-planos-cad',
+  format: 'normia-plan',
+  schema_version: 3,
+  project: { name: 'Aforo' },
+  design: {
+    canvas: { width: 1123, height: 794, grid: 20, unit: 'cm', scale: '1:100', occupancy: 5000 },
+    layers: [{ id: 'capa', name: 'Planta', visible: true, locked: false }],
+    elements: [
+      { id: 'arriba', type: 'wall', layerId: 'capa', stroke: 20, points: [{ x: 100, y: 100 }, { x: 700, y: 100 }] },
+      { id: 'derecha', type: 'wall', layerId: 'capa', stroke: 20, points: [{ x: 700, y: 100 }, { x: 700, y: 500 }] },
+      { id: 'izquierda', type: 'wall', layerId: 'capa', stroke: 20, points: [{ x: 100, y: 100 }, { x: 100, y: 500 }] },
+      { id: 'abajo_1', type: 'wall', layerId: 'capa', stroke: 20, points: [{ x: 100, y: 500 }, { x: 380, y: 500 }] },
+      { id: 'abajo_2', type: 'wall', layerId: 'capa', stroke: 20, points: [{ x: 460, y: 500 }, { x: 700, y: 500 }] },
+      { id: 'puerta', type: 'door', layerId: 'capa', x: 380, y: 480, w: 80, h: 20 },
+      { id: 'via', type: 'road', layerId: 'capa', x: 0, y: 700, w: 1123, h: 60, widthM: 4 },
+    ],
+  },
+};
+const fixtureAforo = path.join(os.tmpdir(), `normia-paridad-aforo-${process.pid}.json`);
+fs.writeFileSync(fixtureAforo, JSON.stringify(planoRecinto), 'utf8');
+let nativoAforo = null;
+try {
+  nativoAforo = JSON.parse(runCore(['--audit', fixtureAforo]));
+} catch (error) {
+  report.check('El núcleo mide la superficie libre y el aforo', false, String(error?.message || error).slice(0, 120));
+}
+const app3 = await startApp(VERSION);
+let phpAforo = null;
+try {
+  const resultado = await app3.run(`
+$design = json_decode((string) file_get_contents(${JSON.stringify(fixtureAforo)}), true)['design'];
+echo json_encode([
+    'libre' => App\\Services\\PlanAudit::freeArea($design),
+    'aforo' => App\\Services\\PlanAudit::aforo($design),
+]);
+`);
+  const text = String(resultado.text || '');
+  phpAforo = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1));
+} catch (error) {
+  phpAforo = null;
+  report.check('El motor PHP calcula la superficie libre y el aforo', false, String(error?.message || error).slice(0, 120));
+}
+await app3.close();
+fs.rmSync(fixtureAforo, { force: true });
+
+if (nativoAforo && phpAforo) {
+  report.check('La superficie libre del recinto coincide al centímetro cuadrado',
+    Math.abs(nativoAforo.freeAreaM2 - phpAforo.libre.freeAreaM2) < 1e-9,
+    `C: ${nativoAforo.freeAreaM2} m² · PHP: ${phpAforo.libre.freeAreaM2} m²`);
+  report.check('El exterior descontado coincide',
+    Math.abs(nativoAforo.exteriorAreaM2 - phpAforo.libre.exteriorAreaM2) < 1e-9,
+    `C: ${nativoAforo.exteriorAreaM2} m² · PHP: ${phpAforo.libre.exteriorAreaM2} m²`);
+  report.check('La celda calculada es la misma',
+    Math.abs(nativoAforo.grid.cell - phpAforo.libre.cellM * 100) < 1e-9,
+    `C: ${nativoAforo.grid.cell} cm · PHP: ${phpAforo.libre.cellM} m`);
+
+  const c = nativoAforo.aforo;
+  const php = phpAforo.aforo;
+  report.check('El aforo máximo, el declarado y el exceso coinciden',
+    c.maxPersons === php.maxPersons && c.declared === php.declared && c.excess === php.excess
+      && c.permitted === php.permitted && c.used === php.used,
+    `C: ${c.maxPersons}/${c.declared}/${c.excess} · PHP: ${php.maxPersons}/${php.declared}/${php.excess}`);
+  report.check('La fuente del aforo se rotula igual: declarado o estimado',
+    c.source === php.source && c.source === 'declared', c.source);
+  report.check('La superficie publicada del aforo coincide',
+    Math.abs(c.freeAreaM2 - php.freeAreaM2) < 1e-9, `C: ${c.freeAreaM2} · PHP: ${php.freeAreaM2}`);
+}
+
 /* ------------------- 5 · el núcleo no se rompe con basura ------------------ */
 
 const basura = path.join(os.tmpdir(), `normia-basura-${process.pid}.json`);

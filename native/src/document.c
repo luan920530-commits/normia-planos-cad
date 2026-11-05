@@ -394,6 +394,38 @@ static int has_arcs(const norma_element *element)
     return 0;
 }
 
+static void write_box(norma_buffer *buffer, const norma_element *element)
+{
+    if (element->x != 0.0) {
+        norma_buffer_raw(buffer, ",\"x\":");
+        norma_buffer_number(buffer, element->x);
+    }
+    if (element->y != 0.0) {
+        norma_buffer_raw(buffer, ",\"y\":");
+        norma_buffer_number(buffer, element->y);
+    }
+    if (element->w != 0.0) {
+        norma_buffer_raw(buffer, ",\"w\":");
+        norma_buffer_number(buffer, element->w);
+    }
+    if (element->h != 0.0) {
+        norma_buffer_raw(buffer, ",\"h\":");
+        norma_buffer_number(buffer, element->h);
+    }
+    if (element->rotation != 0.0) {
+        norma_buffer_raw(buffer, ",\"rotation\":");
+        norma_buffer_number(buffer, element->rotation);
+    }
+    if (element->stroke != 2.0) {
+        norma_buffer_raw(buffer, ",\"stroke\":");
+        norma_buffer_number(buffer, element->stroke);
+    }
+    if (element->width_m != 2.0) {
+        norma_buffer_raw(buffer, ",\"widthM\":");
+        norma_buffer_number(buffer, element->width_m);
+    }
+}
+
 static void write_element(norma_buffer *buffer, const norma_element *element)
 {
     norma_buffer_raw(buffer, "{\"id\":");
@@ -433,6 +465,7 @@ static void write_element(norma_buffer *buffer, const norma_element *element)
         norma_buffer_raw(buffer, ",\"y\":");
         norma_buffer_number(buffer, element->y);
     }
+    write_box(buffer, element);
     norma_buffer_raw(buffer, "}");
 }
 
@@ -459,6 +492,10 @@ char *norma_document_to_json(const norma_document *document, const char *name)
     norma_buffer_number(&buffer, document->height);
     norma_buffer_raw(&buffer, ",\"grid\":20,\"unit\":");
     norma_buffer_string(&buffer, norma_unit_name(document->unit));
+    if (document->occupancy > 0) {
+        norma_buffer_raw(&buffer, ",\"occupancy\":");
+        norma_buffer_number(&buffer, (double) document->occupancy);
+    }
     norma_buffer_raw(&buffer, ",\"scale\":");
     norma_buffer_string(&buffer, document->scale);
     norma_buffer_raw(&buffer, ",\"background\":\"#ffffff\"},\"layers\":[{\"id\":");
@@ -544,6 +581,8 @@ int norma_document_from_json(norma_document *document, const char *text, size_t 
     document->width = norma_json_number(norma_json_get(canvas, "width"), 1123.0);
     document->height = norma_json_number(norma_json_get(canvas, "height"), 794.0);
     document->unit = norma_unit_from_name(norma_json_string(norma_json_get(canvas, "unit")));
+    const double occupancy = norma_json_number(norma_json_get(canvas, "occupancy"), 0.0);
+    document->occupancy = occupancy > 0.0 ? (long) occupancy : 0;
     set_text(document->scale, sizeof(document->scale), norma_json_string(norma_json_get(canvas, "scale")), "1:100");
 
     const norma_json *layers = norma_json_get(design, "layers");
@@ -568,10 +607,15 @@ int norma_document_from_json(norma_document *document, const char *text, size_t 
         set_text(element.type, sizeof(element.type), norma_json_string(norma_json_get(source, "type")), "sign");
         set_text(element.layer, sizeof(element.layer), norma_json_string(norma_json_get(source, "layerId")), document->layer);
         if (!load_points(source, &element)) {
-            element.x = norma_json_number(norma_json_get(source, "x"), 0.0);
-            element.y = norma_json_number(norma_json_get(source, "y"), 0.0);
             element.node_count = 0;
         }
+        element.x = norma_json_number(norma_json_get(source, "x"), 0.0);
+        element.y = norma_json_number(norma_json_get(source, "y"), 0.0);
+        element.w = norma_json_number(norma_json_get(source, "w"), 0.0);
+        element.h = norma_json_number(norma_json_get(source, "h"), 0.0);
+        element.rotation = norma_json_number(norma_json_get(source, "rotation"), 0.0);
+        element.stroke = norma_json_number(norma_json_get(source, "stroke"), 2.0);
+        element.width_m = norma_json_number(norma_json_get(source, "widthM"), 2.0);
         document->elements[document->count] = element;
         document->count += 1;
         document->identifier += 1;

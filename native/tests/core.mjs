@@ -1,8 +1,8 @@
 /*
  * Pruebas del núcleo en C dentro de la suite general.
  *
- * Compila con las advertencias estrictas de siempre y ejecuta los tres
- * binarios de prueba: el núcleo de cálculo, el documento y el SVG. Lo que se
+ * Compila con las advertencias estrictas de siempre y ejecuta los cuatro
+ * binarios de prueba: el núcleo de cálculo, el documento, el SVG y el aforo. Lo que se
  * comprueba aquí es que los tres corren y que cada uno llega al final de su
  * lista; las cifras exactas las revisa cada programa por dentro.
  */
@@ -25,7 +25,7 @@ report.check('El núcleo compila sin una sola advertencia',
 
 const tested = run(['test']);
 const salida = `${tested.stdout}${tested.stderr}`;
-report.check('Las pruebas del núcleo, del documento y del SVG pasan',
+report.check('Las pruebas del núcleo, del documento, del SVG y del aforo pasan',
   tested.status === 0, 'make test');
 
 /* Cada programa cierra con «N/M comprobaciones correctas»: se busca el que cae
@@ -39,7 +39,8 @@ const seccion = (titulo) => {
 };
 
 for (const [titulo, etiqueta] of [['Pruebas del núcleo', 'Núcleo de cálculo'],
-  ['Pruebas del documento', 'Documento'], ['Pruebas del SVG', 'SVG con escala física']]) {
+  ['Pruebas del documento', 'Documento'], ['Pruebas del SVG', 'SVG con escala física'],
+  ['Pruebas de la rejilla y el aforo', 'Rejilla y aforo']]) {
   const cifras = seccion(titulo);
   report.check(`${etiqueta}: todas sus comprobaciones correctas`,
     cifras !== null && cifras.hechas === cifras.total && cifras.total > 0,

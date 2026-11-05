@@ -339,3 +339,49 @@ Lo que da el SVG del núcleo, medido en el plano de prueba A4 a 1:100:
   teclado es una persona: aquí solo se comprueba su contrato y que compilen.
 - **El paquete se publica como artefacto del flujo**, no como release: así se
   puede bajar el `.app` sin firmar y abrirlo en un Mac con Intel.
+
+## 14. Etapa N3, primera pieza: la rejilla y el aforo en C
+
+El auditor completo (recorridos, hallazgos, rutas) es la etapa N3. Antes hay que
+tener lo que todo lo demás usa: **la superficie libre** y **el aforo**, medidos
+igual que en la web.
+
+| Pieza | Archivo | Qué hace |
+| --- | --- | --- |
+| Rejilla | `native/src/grid.c` | Celdas de 20 cm; los muros se bloquean con medio trazo, la holgura de 4 cm y media celda; los vanos de las puertas abren el paso; el exterior se inunda desde el borde con los vanos cerrados; vías, andenes, cebras, parqueaderos y linderos no cuentan como piso |
+| Aforo | `native/src/audit.c` | superficie libre × densidad (0,2 pers./m²), con tope de 10 000; distingue capacidad calculada, aforo declarado, aforo que rige, gente para la salida y **exceso** |
+| Programa | `native/src/cli.c` | `norma-core --audit plano.json`, en JSON |
+| Pruebas | `native/tests/test_audit.c` | **17/17** |
+| Paridad | `native/tests/parity.mjs` | **22/22** |
+
+El caso de prueba y sus cifras, idénticas en C y en PHP: una habitación de
+6 × 4 m con un vano de 80 cm y una vía de 4 m de ancho al sur, con 5 000
+personas declaradas.
+
+| Dato | C | PHP |
+| --- | --- | --- |
+| Superficie libre | 20,4 m² | 20,4 m² |
+| Exterior descontado | 63,28 m² | 63,28 m² |
+| Celda | 20 cm | 0,2 m |
+| Capacidad | 4 personas | 4 personas |
+| Declaradas | 5 000 | 5 000 |
+| Exceso | 4 996 | 4 996 |
+| Gente para la salida | 5 000 | 5 000 |
+
+Dos cosas que se distinguen a propósito, y que el núcleo deja por escrito:
+
+- **Lo calculado no es lo declarado.** Si se declara más gente de la que cabe, el
+  exceso se informa y la salida se calcula con la gente declarada: recortarla en
+  silencio daría un tiempo optimista.
+- **Sin densidad no se inventa capacidad.** Si el criterio se pone en 0, el
+  máximo es el tope declarado, no una cifra inventada.
+
+Un fallo real que encontró esta pieza: al inundar el exterior, los vanos tienen
+que estar **cerrados**; si se dejan abiertos, el exterior entra por la puerta y
+la superficie útil se cuenta dos veces. Se vio comparando celda a celda el mapa
+del C con el de PHP (0 diferencias después de la corrección).
+
+### Lo que N3 todavía no tiene
+
+- **Recorridos, tiempos de salida y hallazgos** del auditor: son el resto de N3.
+- **Rutas de evacuación dibujadas** sobre el lienzo nativo.

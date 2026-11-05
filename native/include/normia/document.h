@@ -35,9 +35,17 @@ typedef struct {
     norma_point nodes[NORMA_MAX_NODES];
     norma_arc arcs[NORMA_MAX_NODES > 1 ? NORMA_MAX_NODES - 1 : 1];
     size_t node_count;
-    /* Elementos de un solo punto (señales y equipos). */
+    /* Caja del elemento: la usan puertas y elementos del entorno (vías,
+       andenes, parqueaderos y linderos), igual que en la web. */
     double x;
     double y;
+    double w;
+    double h;
+    double rotation;
+    /** Grosor del trazo en centímetros: el auditor bloquea medio trazo a cada lado. */
+    double stroke;
+    /** Ancho declarado del elemento del entorno, en metros (andenes y vías). */
+    double width_m;
 } norma_element;
 
 typedef struct {
@@ -51,6 +59,8 @@ typedef struct {
     norma_unit unit;
     char scale[16];
     char layer[32];
+    /** Ocupación declarada del plano (personas). 0 = sin declarar. */
+    long occupancy;
     norma_element *elements;
     size_t count;
     size_t capacity;

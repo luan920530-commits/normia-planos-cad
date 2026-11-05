@@ -14,6 +14,10 @@
 #include <string.h>
 
 #include "normia/plan.h"
+#include <math.h>
+
+#include "normia/audit.h"
+#include "normia/grid.h"
 #include "normia/svg.h"
 #include "normia/units.h"
 
@@ -28,8 +32,9 @@ static void usage(FILE *out, const char *program)
             "  %s --version            muestra la versión\n"
             "  %s --stats plano.json   cifras del plano, en JSON\n"
             "  %s --svg plano.json     SVG del plano, por la salida estándar\n"
+            "  %s --audit plano.json   superficie libre y aforo, en JSON\n"
             "  %s --help               esta ayuda\n",
-            NORMA_CORE_VERSION, program, program, program, program, program);
+            NORMA_CORE_VERSION, program, program, program, program, program, program);
 }
 
 /** Lee un archivo completo. Devuelve NULL y explica el motivo si falla. */
@@ -107,6 +112,45 @@ static int command_stats(const char *path)
     return 0;
 }
 
+static int command_audit(const char *path)
+{
+    size_t length = 0;
+    char *text = read_file(path, &length);
+    if (text == NULL) {
+        return 1;
+    }
+    norma_document document;
+    norma_document_init(&document);
+    char error[256];
+    const int ok = norma_document_from_json(&document, text, length, error, sizeof(error));
+    free(text);
+    if (!ok) {
+        fprintf(stderr, "%s\n", error);
+        return 2;
+    }
+    norma_grid grid;
+    norma_aforo aforo;
+    if (!norma_audit_aforo(&document, 0, NULL, NULL, &aforo, &grid, error, sizeof(error))) {
+        norma_document_free(&document);
+        fprintf(stderr, "%s\n", error);
+        return 3;
+    }
+    /* Las superficies salen redondeadas a dos decimales, como en el informe. */
+    printf("{\"core\":\"%s\",\"canvas\":{\"width\":%.17g,\"height\":%.17g,\"unit\":\"%s\",\"scale\":\"%s\"},"
+           "\"grid\":{\"cell\":%.17g,\"cellM\":%.17g,\"nx\":%lu,\"ny\":%lu,\"clearance\":%.17g},"
+           "\"freeAreaM2\":%.17g,\"exteriorAreaM2\":%.17g,"
+           "\"aforo\":{\"maxPersons\":%ld,\"declared\":%ld,\"permitted\":%ld,\"used\":%ld,"
+           "\"excess\":%ld,\"source\":\"%s\",\"freeAreaM2\":%.17g,\"density\":%.17g,\"cap\":%ld}}\n",
+           NORMA_CORE_VERSION, document.width, document.height, norma_unit_name(document.unit), document.scale,
+           grid.cell, grid.cell_m, (unsigned long) grid.nx, (unsigned long) grid.ny, grid.clearance,
+           aforo.free_area_m2, round(grid.exterior_area_m2 * 100.0) / 100.0,
+           aforo.max_persons, aforo.declared, aforo.permitted, aforo.used,
+           aforo.excess, aforo.source, aforo.free_area_m2, aforo.density, aforo.cap);
+    norma_grid_free(&grid);
+    norma_document_free(&document);
+    return 0;
+}
+
 static int command_svg(const char *path)
 {
     size_t length = 0;
@@ -160,6 +204,13 @@ int main(int argc, char **argv)
     }
     if (strcmp(command, "--check") == 0) {
         return command_check();
+    }
+    if (strcmp(command, "--audit") == 0) {
+        if (argc < 3) {
+            fprintf(stderr, "Falta el archivo del plano.\n");
+            return 64;
+        }
+        return command_audit(argv[2]);
     }
     if (strcmp(command, "--svg") == 0) {
         if (argc < 3) {

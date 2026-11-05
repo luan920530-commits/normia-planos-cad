@@ -14,7 +14,7 @@ CPPFLAGS += -Iinclude
 LDLIBS += -lm
 
 BUILD := build
-SOURCES := src/units.c src/geometry.c src/json.c src/jsonw.c src/format.c src/plan.c src/document.c src/svg.c
+SOURCES := src/units.c src/geometry.c src/json.c src/jsonw.c src/format.c src/plan.c src/document.c src/svg.c src/grid.c src/audit.c
 OBJECTS := $(SOURCES:src/%.c=$(BUILD)/%.o)
 HEADERS := $(wildcard include/normia/*.h)
 
@@ -38,13 +38,18 @@ $(BUILD)/tests-document: tests/test_document.c $(OBJECTS) $(HEADERS) | $(BUILD)
 $(BUILD)/tests-svg: tests/test_svg.c $(OBJECTS) $(HEADERS) | $(BUILD)
 	$(CC) $(CPPFLAGS) $(CFLAGS) tests/test_svg.c $(OBJECTS) -o $@ $(LDLIBS)
 
-test: $(BUILD)/tests $(BUILD)/tests-document $(BUILD)/tests-svg $(BUILD)/norma-core
+$(BUILD)/tests-audit: tests/test_audit.c $(OBJECTS) $(HEADERS) | $(BUILD)
+	$(CC) $(CPPFLAGS) $(CFLAGS) tests/test_audit.c $(OBJECTS) -o $@ $(LDLIBS)
+
+test: $(BUILD)/tests $(BUILD)/tests-document $(BUILD)/tests-svg $(BUILD)/tests-audit $(BUILD)/norma-core
 	@echo "· Pruebas del núcleo"
 	@$(BUILD)/tests
 	@echo "· Pruebas del documento"
 	@$(BUILD)/tests-document
 	@echo "· Pruebas del SVG"
 	@$(BUILD)/tests-svg
+	@echo "· Pruebas de la rejilla y el aforo"
+	@$(BUILD)/tests-audit
 	@echo "· El programa responde a --check"
 	@$(BUILD)/norma-core --check
 
