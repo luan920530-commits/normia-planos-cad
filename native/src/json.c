@@ -429,6 +429,14 @@ const norma_json *norma_json_at(const norma_json *array, size_t index)
     return array->items[index];
 }
 
+const char *norma_json_key_at(const norma_json *object, size_t index)
+{
+    if (object == NULL || object->type != NORMA_JSON_OBJECT || index >= object->length) {
+        return NULL;
+    }
+    return object->keys != NULL ? object->keys[index] : NULL;
+}
+
 size_t norma_json_size(const norma_json *value)
 {
     if (value == NULL) {

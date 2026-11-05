@@ -78,6 +78,19 @@ static void append(norma_buffer *buffer, const char *text, size_t size)
     buffer->text[buffer->length] = '\0';
 }
 
+void norma_buffer_raw_n(norma_buffer *buffer, const char *text, size_t length)
+{
+    if (buffer == NULL || text == NULL) {
+        return;
+    }
+    if (!reserve(buffer, length)) {
+        return;
+    }
+    memcpy(buffer->text + buffer->length, text, length);
+    buffer->length += length;
+    buffer->text[buffer->length] = '\0';
+}
+
 void norma_buffer_raw(norma_buffer *buffer, const char *text)
 {
     if (text != NULL) {

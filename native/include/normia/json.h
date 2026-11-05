@@ -59,6 +59,9 @@ const norma_json *norma_json_at(const norma_json *array, size_t index);
 /** Cantidad de elementos de un arreglo u objeto. */
 size_t norma_json_size(const norma_json *value);
 
+/** Clave del elemento `index` de un objeto; `NULL` fuera de rango. */
+const char *norma_json_key_at(const norma_json *object, size_t index);
+
 /** Número con valor por omisión si el nodo no es numérico. */
 double norma_json_number(const norma_json *value, double fallback);
 

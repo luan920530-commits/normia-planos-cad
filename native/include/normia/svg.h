@@ -16,6 +16,7 @@
 #include <stddef.h>
 
 #include "normia/document.h"
+#include "normia/library.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -28,6 +29,13 @@ typedef struct {
     int band;
     /** Nombre del plano en la franja. */
     const char *title;
+    /**
+     * Catálogo local de señalización. Si viene, las señales y los equipos se
+     * dibujan con su pictograma real; si no, el marcador genérico. Se pasa
+     * aparte para que el módulo del SVG no tenga que saber de rutas ni de
+     * archivos.
+     */
+    const norma_library *library;
 } norma_svg_options;
 
 /** Milímetros de papel por centímetro del plano, según `1:N`. */

@@ -7,9 +7,11 @@ plano, en C11, sin dependencias, compilando en macOS, Linux y Windows.
 Están la **N0** (motor y paridad con PHP), la **N1** (documento editable y la
 ventana nativa de macOS con su lienzo, sin WebView) y la **N2**: cotas, pluma de
 nodos, arcos, exportación SVG desde el núcleo, **recientes**, **impresión** y
-**PDF**. De la **N3** ya está la primera pieza: **rejilla de cálculo y aforo**,
-con paridad contra PHP. Lo que todavía no hay: recorridos, hallazgos y rutas en C
-(resto de N3), y Windows y Linux (N4). El alcance completo
+**PDF**. De la **N3** ya están la **rejilla de cálculo y aforo**, las **salidas**, los
+**recorridos**, los **hallazgos de evacuación**, la **señalización** (con las 395
+señales del catálogo local) y los **primeros auxilios**, todos con paridad contra
+PHP. Lo que todavía no hay: extintores, escenarios y simulacro, las rutas dibujadas
+en el lienzo, y Windows y Linux (N4). El alcance completo
 está en [`docs/APP-NATIVA.md`](../docs/APP-NATIVA.md).
 
 ## Por qué se empieza por el núcleo
@@ -37,15 +39,18 @@ es lo que comprueba `tests/parity.mjs`.
 | Aforo y salidas | `include/normia/audit.h`, `src/audit.c` | Superficie libre × densidad, con capacidad, declarado, permitido, usado y exceso; ancho de salida y tiempos de marcha y cola |
 | Recorridos | `include/normia/travel.h`, `src/travel.c` | Dijkstra desde cada salida: recorrido más largo, punto más lejano, superficie alcanzable y zonas sin salida |
 | Hallazgos | `include/normia/findings.h`, `src/findings.c` | Los ocho hallazgos de evacuación y aforo, con gravedad, detalle, elementos y punto |
+| Catálogo de señalización | `include/normia/library.h`, `src/library.c` | Las 395 señales locales (332 ISO 7010 + 63 propias): tipo ↔ código, validación del SVG y `<svg>` anidado para el plano exportado |
+| Señalización | `include/normia/signage.h`, `src/signage.c` | Salida sin pictograma, falta de «usted está aquí» y falta de señalización contra incendios |
+| Primeros auxilios | `include/normia/firstaid.h`, `src/firstaid.c` | Botiquín, camilla y DEA: recuento y alcance desde el punto más lejano del espacio libre |
 | Ventana de macOS | `macos/` | AppKit puro: menú en español, lienzo con Core Graphics, herramientas `V · M · P · A · D`, cotas, **lienzo abierto con zoom y desplazamiento**, abrir reciente, imprimir (⌘P), exportar SVG (⌘E) y PDF, abrir y guardar con los paneles del sistema, macOS 12 |
 
 ## Compilar y probar
 
 ```sh
 make -C native            # construye native/build/norma-core
-make -C native test       # núcleo (23), documento (27), SVG (25) y auditor (34)
+make -C native test       # núcleo (23), documento (27), SVG (25), auditor (34) y señalización (30)
 node native/tests/core.mjs         # compila en estricto y corre los cuatro (8)
-node native/tests/parity.mjs 8.3   # paridad contra el motor PHP (32)
+node native/tests/parity.mjs 8.3   # paridad contra el motor PHP (41)
 node native/tests/macos.mjs        # contrato de la ventana nativa (42)
 ```
 
@@ -64,7 +69,8 @@ native/build/norma-core --check
 # Normia · núcleo nativo 0.1.0 · ok
 
 native/build/norma-core --svg paquetes/plano.json    # SVG por la salida estándar
-native/build/norma-core --audit paquetes/plano.json  # aforo, salidas, recorridos y hallazgos
+native/build/norma-core --audit paquetes/plano.json  # aforo, salidas, recorridos, señalización y hallazgos
+native/build/norma-core --sign-board hoja.svg        # hoja con las 395 señalizaciones, en SVG
 native/build/norma-core --stats paquetes/plano.json
 # {"core":"0.1.0","canvas":{"width":1123,"height":794,"unit":"cm","scale":"1:100"},
 #  "elements":4,"walls":3,"curved_walls":1,"wall_length_cm":1121.2388980384690, …}

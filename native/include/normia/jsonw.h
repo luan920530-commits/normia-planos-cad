@@ -32,6 +32,12 @@ void norma_buffer_free(norma_buffer *buffer);
 /** Añade texto tal cual. */
 void norma_buffer_raw(norma_buffer *buffer, const char *text);
 
+/**
+ * Añade un bloque de bytes tal cual, sin terminador: sirve para insertar el
+ * interior de un pictograma sin copiarlo a una cadena aparte.
+ */
+void norma_buffer_raw_n(norma_buffer *buffer, const char *text, size_t length);
+
 /** Añade una cadena JSON, con comillas y escapes. */
 void norma_buffer_string(norma_buffer *buffer, const char *text);
 

@@ -7,6 +7,7 @@
  *   norma-core --check              comprueba el núcleo y termina.
  *   norma-core --version            versión del núcleo.
  *   norma-core --stats plano.json   cifras del plano, en JSON.
+ *   norma-core --sign-board x.svg   hoja con las 395 señalizaciones, en SVG.
  *   norma-core --help               esta ayuda.
  */
 #include <stdio.h>
@@ -18,6 +19,9 @@
 
 #include "normia/audit.h"
 #include "normia/findings.h"
+#include "normia/firstaid.h"
+#include "normia/library.h"
+#include "normia/signage.h"
 #include "normia/jsonw.h"
 #include "normia/grid.h"
 #include "normia/svg.h"
@@ -36,8 +40,58 @@ static void usage(FILE *out, const char *program)
             "  %s --stats plano.json   cifras del plano, en JSON\n"
             "  %s --svg plano.json     SVG del plano, por la salida estándar\n"
             "  %s --audit plano.json   superficie libre y aforo, en JSON\n"
-            "  %s --help               esta ayuda\n",
-            NORMA_CORE_VERSION, program, program, program, program, program, program);
+            "  %s --sign-board x.svg   hoja con todas las señalizaciones, en SVG\n"
+            "  %s --help               esta ayuda\n\n"
+            "Opciones:\n"
+            "  --resources DIR         carpeta de catálogos (por omisión, ./resources)\n",
+            NORMA_CORE_VERSION, program, program, program, program, program, program, program);
+}
+
+/** Carpeta de catálogos pedida con `--resources` o con el entorno. */
+static const char *g_resources = NULL;
+
+/**
+ * Carga los catálogos de señalización probando, en orden, la carpeta pedida,
+ * la del entorno y las rutas relativas habituales (raíz del repo o `native/`).
+ * Si no se encuentra ninguno, el auditor sigue funcionando y dice que no hay
+ * catálogo en vez de inventar códigos.
+ */
+static int load_library(norma_library *library, char *error, size_t error_size)
+{
+    const char *candidates[8];
+    size_t count = 0;
+    if (g_resources != NULL && g_resources[0] != '\0') {
+        candidates[count++] = g_resources;
+    }
+    const char *from_env = getenv("NORMA_RESOURCES");
+    if (from_env != NULL && from_env[0] != '\0') {
+        candidates[count++] = from_env;
+    }
+    candidates[count++] = "resources";
+    candidates[count++] = "../resources";
+    candidates[count++] = "../../resources";
+    candidates[count++] = "../../../resources";
+    char last[256] = "No se encontró la carpeta «resources» con los catálogos de señalización.";
+    for (size_t index = 0; index < count; index += 1) {
+        if (norma_library_load(candidates[index], library, error, error_size)) {
+            return 1;
+        }
+        snprintf(last, sizeof(last), "%s", error);
+    }
+    snprintf(error, error_size, "%s", last);
+    return 0;
+}
+
+/** Señales ISO del catálogo, sin las propias (`SVC_…`). */
+static size_t signage_iso_count(const norma_library *library)
+{
+    size_t count = 0;
+    for (size_t index = 0; index < library->count; index += 1) {
+        if (strncmp(library->items[index].code, "SVC_", 4) != 0) {
+            count += 1;
+        }
+    }
+    return count;
 }
 
 /** Lee un archivo completo. Devuelve NULL y explica el motivo si falla. */
@@ -158,6 +212,22 @@ static int command_audit(const char *path)
     norma_audit_egress(&document, aforo.used, travel.has_longest ? travel.longest_m : -1.0, NULL, &egress);
     norma_findings_init(&findings);
     norma_audit_egress_findings(&document, &travel, &aforo, &egress, NULL, &findings);
+    /* Catálogo de señalización: si no está, el auditor no se inventa códigos. */
+    norma_library library;
+    norma_signage signage;
+    char library_error[256] = "";
+    const int has_library = load_library(&library, library_error, sizeof(library_error));
+    if (has_library) {
+        norma_signage_collect(&document, &library, &signage);
+        norma_signage_findings(&document, &signage, NULL, &findings);
+    } else {
+        memset(&signage, 0, sizeof(signage));
+    }
+    /* Primeros auxilios: botiquín, camilla y DEA, medidos sobre la misma rejilla. */
+    norma_firstaid first_aid;
+    norma_firstaid_analyze(&document, &grid, aforo.used, aforo.source, NULL, &first_aid, &findings);
+    /* Las tres familias se ordenan juntas: gravedad y, dentro de ella, título. */
+    norma_findings_sort(&findings);
     norma_findings_count(&findings, &counts);
     /* Un tiempo que no se puede calcular sale como null, no como un cero falso. */
     char queue[64];
@@ -218,7 +288,36 @@ static int command_audit(const char *path)
                (unsigned long) travel.rooms[room].cells,
                travel.rooms[room].center.x, travel.rooms[room].center.y);
     }
-    printf("]},\"findingsCount\":{\"high\":%ld,\"medium\":%ld,\"low\":%ld,\"info\":%ld},"
+    printf("]},\"signs\":{\"catalogLoaded\":%s,\"catalog\":%lu,\"iso\":%lu,\"services\":%lu,"
+           "\"placed\":%lu,\"unknown\":%lu,\"exitSigns\":%lu,\"fireSigns\":%lu,\"codes\":[",
+           has_library ? "true" : "false",
+           (unsigned long) signage.catalog_total, (unsigned long) signage.catalog_iso,
+           (unsigned long) signage.catalog_services,
+           (unsigned long) signage.count, (unsigned long) signage.unknown,
+           (unsigned long) signage.exit_sign_count, (unsigned long) signage.fire_sign_count);
+    for (size_t index = 0; index < signage.count; index += 1) {
+        if (index > 0) {
+            printf(",");
+        }
+        write_json_string(signage.items[index].code);
+    }
+    printf("]},\"firstAid\":{\"people\":%ld,\"source\":\"%s\",\"kits\":%lu,\"stretchers\":%lu,"
+           "\"aeds\":%lu,\"cells\":%lu,\"kitMaxM\":",
+           first_aid.people, first_aid.source, (unsigned long) first_aid.kit_count,
+           (unsigned long) first_aid.stretcher_count, (unsigned long) first_aid.aed_count,
+           (unsigned long) first_aid.cells);
+    if (first_aid.has_kit_max) {
+        printf("%.17g", first_aid.kit_max_m);
+    } else {
+        printf("null");
+    }
+    printf(",\"aedMaxM\":");
+    if (first_aid.has_aed_max) {
+        printf("%.17g", first_aid.aed_max_m);
+    } else {
+        printf("null");
+    }
+    printf("},\"findingsCount\":{\"high\":%ld,\"medium\":%ld,\"low\":%ld,\"info\":%ld},"
            "\"findings\":[",
            counts.high, counts.medium, counts.low, counts.info);
     for (size_t index = 0; index < findings.count; index += 1) {
@@ -254,6 +353,10 @@ static int command_audit(const char *path)
     }
     norma_findings_free(&findings);
     printf("]}\n"); /* cierra findings y el objeto raíz */
+    norma_signage_free(&signage);
+    if (has_library) {
+        norma_library_free(&library);
+    }
     norma_grid_free(&grid);
     norma_document_free(&document);
     return 0;
@@ -282,8 +385,15 @@ static int command_svg(const char *path)
     if (dot != NULL) {
         *dot = '\0';
     }
-    norma_svg_options options = {1, 1, title};
+    /* Con el catálogo a mano, las señales salen con su pictograma real. */
+    norma_library library;
+    char library_error[256];
+    const int has_library = load_library(&library, library_error, sizeof(library_error));
+    norma_svg_options options = {1, 1, title, has_library ? &library : NULL};
     char *svg = norma_document_to_svg(&document, &options);
+    if (has_library) {
+        norma_library_free(&library);
+    }
     norma_document_free(&document);
     if (svg == NULL) {
         fprintf(stderr, "No se pudo componer el SVG.\n");
@@ -294,6 +404,97 @@ static int command_svg(const char *path)
     return 0;
 }
 
+/**
+ * Hoja con **todas** las señalizaciones del catálogo: se dibuja cada pictograma
+ * con el mismo `<svg>` anidado que usa la exportación del plano, así se ve de un
+ * vistazo que las 395 entran y se exportan. La hoja no certifica nada: sirve
+ * para revisar qué hay disponible antes de ubicarlo en el plano.
+ */
+static int command_sign_board(const char *path)
+{
+    norma_library library;
+    char error[256];
+    if (!load_library(&library, error, sizeof(error))) {
+        fprintf(stderr, "%s\n", error);
+        return 2;
+    }
+    const size_t columns = 10;
+    const size_t rows = (library.count + columns - 1) / columns;
+    const double cell = 100.0;
+    const double margin = 40.0;
+    const double top = 96.0;
+    const double width = (double) columns * cell + margin * 2.0;
+    const double height = top + (double) rows * cell + 64.0;
+
+    norma_buffer buffer;
+    norma_buffer_init(&buffer);
+    char text[256];
+    snprintf(text, sizeof(text),
+             "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"%.0fmm\" height=\"%.0fmm\" "
+             "viewBox=\"0 0 %.0f %.0f\">",
+             width * 0.264583, height * 0.264583, width, height);
+    norma_buffer_raw(&buffer, text);
+    norma_buffer_raw(&buffer, "<rect width=\"100%\" height=\"100%\" fill=\"#ffffff\"/>");
+    snprintf(text, sizeof(text),
+             "<text x=\"%.0f\" y=\"44\" font-family=\"Helvetica, Arial, sans-serif\" font-size=\"22\" "
+             "font-weight=\"600\" fill=\"#0f172a\">Señalización disponible · %lu pictogramas</text>",
+             margin, (unsigned long) library.count);
+    norma_buffer_raw(&buffer, text);
+    snprintf(text, sizeof(text),
+             "<text x=\"%.0f\" y=\"70\" font-family=\"Helvetica, Arial, sans-serif\" font-size=\"13\" "
+             "fill=\"#475569\">%lu ISO 7010 · %lu propias de orientación, servicios, tránsito y brigada · "
+             "catálogo local</text>",
+             margin, (unsigned long) signage_iso_count(&library),
+             (unsigned long) (library.count - signage_iso_count(&library)));
+    norma_buffer_raw(&buffer, text);
+
+    for (size_t index = 0; index < library.count; index += 1) {
+        const norma_sign *sign = &library.items[index];
+        const size_t column = index % columns;
+        const size_t row = index / columns;
+        const double x = margin + (double) column * cell;
+        const double y = top + (double) row * cell;
+        if (!norma_library_nested_svg(sign, x + 18.0, y + 4.0, 64.0, 64.0, sign->color, &buffer)) {
+            norma_library_free(&library);
+            norma_buffer_free(&buffer);
+            fprintf(stderr, "No se pudo dibujar «%s».\n", sign->code);
+            return 3;
+        }
+        snprintf(text, sizeof(text),
+                 "<text x=\"%.0f\" y=\"%.0f\" font-family=\"Helvetica, Arial, sans-serif\" font-size=\"13\" "
+                 "text-anchor=\"middle\" fill=\"#0f172a\">%.24s</text>",
+                 x + cell / 2.0, y + 88.0, sign->code);
+        norma_buffer_raw(&buffer, text);
+    }
+    snprintf(text, sizeof(text),
+             "<text x=\"%.0f\" y=\"%.0f\" font-family=\"Helvetica, Arial, sans-serif\" font-size=\"11\" "
+             "fill=\"#64748b\">Pictogramas ISO 7010 © Karl Norling (MIT) y señales propias (GPL-3.0). "
+             "Ubica cada señal solo si el equipo o el recorrido existe; compruébalo en sitio.</text>",
+             margin, height - 22.0);
+    norma_buffer_raw(&buffer, text);
+    norma_buffer_raw(&buffer, "</svg>\n");
+
+    FILE *file = fopen(path, "wb");
+    if (file == NULL) {
+        norma_library_free(&library);
+        norma_buffer_free(&buffer);
+        fprintf(stderr, "No se pudo escribir «%s».\n", path);
+        return 4;
+    }
+    fputs(norma_buffer_text(&buffer), file);
+    fclose(file);
+    norma_buffer_free(&buffer);
+
+    printf("{\"file\":");
+    write_json_string(path);
+    printf(",\"signs\":%lu,\"iso\":%lu,\"services\":%lu,\"columns\":%lu,\"rows\":%lu}\n",
+           (unsigned long) library.count, (unsigned long) signage_iso_count(&library),
+           (unsigned long) (library.count - signage_iso_count(&library)),
+           (unsigned long) columns, (unsigned long) rows);
+    norma_library_free(&library);
+    return 0;
+}
+
 int main(int argc, char **argv)
 {
     const char *program = argc > 0 ? argv[0] : "norma-core";
@@ -301,7 +502,22 @@ int main(int argc, char **argv)
         usage(stderr, program);
         return 64;
     }
-    const char *command = argv[1];
+    /* `--resources DIR` vale en cualquier posición y no se pasa como archivo. */
+    char *args[16];
+    int count = 0;
+    for (int index = 1; index < argc && count < 15; index += 1) {
+        if (strcmp(argv[index], "--resources") == 0 && index + 1 < argc) {
+            g_resources = argv[index + 1];
+            index += 1;
+            continue;
+        }
+        args[count++] = argv[index];
+    }
+    if (count == 0) {
+        usage(stderr, program);
+        return 64;
+    }
+    const char *command = args[0];
     if (strcmp(command, "--help") == 0 || strcmp(command, "-h") == 0) {
         usage(stdout, program);
         return 0;
@@ -314,25 +530,32 @@ int main(int argc, char **argv)
         return command_check();
     }
     if (strcmp(command, "--audit") == 0) {
-        if (argc < 3) {
+        if (count < 2) {
             fprintf(stderr, "Falta el archivo del plano.\n");
             return 64;
         }
-        return command_audit(argv[2]);
+        return command_audit(args[1]);
+    }
+    if (strcmp(command, "--sign-board") == 0) {
+        if (count < 2) {
+            fprintf(stderr, "Falta el archivo SVG de destino.\n");
+            return 64;
+        }
+        return command_sign_board(args[1]);
     }
     if (strcmp(command, "--svg") == 0) {
-        if (argc < 3) {
+        if (count < 2) {
             fprintf(stderr, "Falta el archivo del plano.\n");
             return 64;
         }
-        return command_svg(argv[2]);
+        return command_svg(args[1]);
     }
     if (strcmp(command, "--stats") == 0) {
-        if (argc < 3) {
+        if (count < 2) {
             fprintf(stderr, "Falta el archivo del plano.\n");
             return 64;
         }
-        return command_stats(argv[2]);
+        return command_stats(args[1]);
     }
     fprintf(stderr, "Orden no reconocida: %s\n\n", command);
     usage(stderr, program);

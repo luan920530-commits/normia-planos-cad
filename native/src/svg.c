@@ -220,8 +220,27 @@ static void write_dimension(norma_buffer *buffer, const norma_document *document
     norma_buffer_raw(buffer, "</text>\n");
 }
 
-static void write_marker(norma_buffer *buffer, const norma_element *element)
+/**
+ * Señal o equipo: si el catálogo local reconoce su tipo, se inserta el
+ * pictograma real dentro de la caja del elemento; si no, queda el marcador
+ * genérico del núcleo. Nunca se inventa un dibujo que no esté en el catálogo.
+ */
+static void write_marker(norma_buffer *buffer, const norma_element *element, const norma_library *library)
 {
+    if (library != NULL) {
+        char code[64];
+        const char *resolved = norma_library_code_for_type(library, element->type, code, sizeof(code));
+        const norma_sign *sign = resolved != NULL ? norma_library_sign(library, resolved) : NULL;
+        if (sign != NULL) {
+            const double width = element->w > 0.0 ? element->w : 40.0;
+            const double height = element->h > 0.0 ? element->h : width;
+            const double x = element->w > 0.0 ? element->x : element->x - width / 2.0;
+            const double y = element->h > 0.0 ? element->y : element->y - height / 2.0;
+            if (norma_library_nested_svg(sign, x, y, width, height, sign->color, buffer)) {
+                return;
+            }
+        }
+    }
     char value[32];
     norma_buffer_raw(buffer, "    <g stroke=\"#d97706\" fill=\"none\" stroke-width=\"1.2\">\n      <circle cx=\"");
     norma_svg_number(element->x, value, sizeof(value));
@@ -359,7 +378,7 @@ char *norma_document_to_svg(const norma_document *document, const norma_svg_opti
         if (strcmp(element->type, "dimension") == 0 && element->node_count >= 2) {
             write_dimension(&buffer, document, element);
         } else if (element->node_count < 2) {
-            write_marker(&buffer, element);
+            write_marker(&buffer, element, options != NULL ? options->library : NULL);
         }
     }
 

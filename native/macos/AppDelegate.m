@@ -457,6 +457,9 @@ static const NSUInteger kRecentLimit = 10;
     options.grid = 1;
     options.band = 1;
     options.title = self.planName.UTF8String;
+    /* El catálogo de señalización todavía no viaja dentro del paquete de la
+       ventana: sin él, las señales se exportan con el marcador genérico. */
+    options.library = NULL;
     char *svg = norma_document_to_svg(&_document, &options);
     if (svg == NULL) {
         [self showError:@"No se pudo componer el SVG" detail:@"El documento no produjo ningún texto."];

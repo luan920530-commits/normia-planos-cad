@@ -408,6 +408,164 @@ if (nativoNave && phpNave) {
     (mine.find((f) => f.code === 'unreachable_area') || {}).value || 'sin zona');
 }
 
+/* -------- 4d · señalización y primeros auxilios: el mismo informe -------- */
+
+// Piso 1: 10 × 7 m, con salida señalizada, marcador «usted está aquí», señal de
+// extintor, botiquín y DEA a menos de 30 m. No debe quedar hallazgo de
+// señalización y sí el aviso de camilla.
+const planoSeñales = {
+  application: 'normia-planos-cad',
+  format: 'normia-plan',
+  schema_version: 3,
+  project: { name: 'Señalización' },
+  design: {
+    canvas: { width: 1200, height: 900, grid: 20, unit: 'cm', scale: '1:100', occupancy: 40 },
+    layers: [{ id: 'capa', name: 'Planta', visible: true, locked: false }],
+    elements: [
+      { id: 'n', type: 'wall', layerId: 'capa', stroke: 20, points: [{ x: 100, y: 100 }, { x: 1100, y: 100 }] },
+      { id: 's', type: 'wall', layerId: 'capa', stroke: 20, points: [{ x: 100, y: 800 }, { x: 1100, y: 800 }] },
+      { id: 'o', type: 'wall', layerId: 'capa', stroke: 20, points: [{ x: 100, y: 100 }, { x: 100, y: 800 }] },
+      { id: 'e1', type: 'wall', layerId: 'capa', stroke: 20, points: [{ x: 1100, y: 100 }, { x: 1100, y: 350 }] },
+      { id: 'e2', type: 'wall', layerId: 'capa', stroke: 20, points: [{ x: 1100, y: 440 }, { x: 1100, y: 800 }] },
+      { id: 'salida', type: 'door', layerId: 'capa', x: 1090, y: 350, w: 20, h: 90, isExit: true },
+      { id: 'sg1', type: 'iso_e002', layerId: 'capa', x: 1000, y: 300, w: 40, h: 40 },
+      { id: 'aqui', type: 'sig_aqui', layerId: 'capa', x: 500, y: 400, w: 40, h: 40 },
+      { id: 'ext', type: 'iso_f001', layerId: 'capa', x: 200, y: 200, w: 40, h: 40 },
+      { id: 'bot', type: 'cad_emg_firstaid', layerId: 'capa', x: 200, y: 700, w: 60, h: 60 },
+      { id: 'dea', type: 'cad_emg_aed', layerId: 'capa', x: 900, y: 700, w: 60, h: 60 },
+    ],
+  },
+};
+
+// Piso 2: 58 × 38 m, 620 personas, un botiquín en una esquina, un DEA en la
+// otra, sin camilla y sin señalización: botiquín y DEA fuera de alcance.
+const planoGrande = {
+  application: 'normia-planos-cad',
+  format: 'normia-plan',
+  schema_version: 3,
+  project: { name: 'Nave de primeros auxilios' },
+  design: {
+    canvas: { width: 6000, height: 4000, grid: 20, unit: 'cm', scale: '1:100', occupancy: 620 },
+    layers: [{ id: 'capa', name: 'Planta', visible: true, locked: false }],
+    elements: [
+      { id: 'n', type: 'wall', layerId: 'capa', stroke: 20, points: [{ x: 100, y: 100 }, { x: 5900, y: 100 }] },
+      { id: 's', type: 'wall', layerId: 'capa', stroke: 20, points: [{ x: 100, y: 3900 }, { x: 5900, y: 3900 }] },
+      { id: 'o', type: 'wall', layerId: 'capa', stroke: 20, points: [{ x: 100, y: 100 }, { x: 100, y: 3900 }] },
+      { id: 'e', type: 'wall', layerId: 'capa', stroke: 20, points: [{ x: 5900, y: 100 }, { x: 5900, y: 3900 }] },
+      { id: 'salida', type: 'door', layerId: 'capa', x: 5800, y: 1900, w: 100, h: 100, isExit: true },
+      { id: 'bot', type: 'cad_emg_firstaid', layerId: 'capa', x: 200, y: 200, w: 60, h: 60 },
+      { id: 'dea', type: 'cad_emg_aed', layerId: 'capa', x: 5400, y: 3600, w: 60, h: 60 },
+    ],
+  },
+};
+
+const fixtures = [planoSeñales, planoGrande].map((plano, index) => {
+  const file = path.join(os.tmpdir(), `normia-paridad-senales-${index}-${process.pid}.json`);
+  fs.writeFileSync(file, JSON.stringify(plano), 'utf8');
+  return file;
+});
+const resources = path.join(repoRoot, 'resources');
+const míos = fixtures.map((file) => {
+  try {
+    return JSON.parse(runCore(['--audit', file, '--resources', resources]));
+  } catch (error) {
+    report.check('El núcleo audita un plano con señalización y primeros auxilios', false,
+      String(error?.message || error).slice(0, 120));
+    return null;
+  }
+});
+
+// La hoja de señalización: los 395 pictogramas, dibujados con el mismo código
+// que usa la exportación del plano.
+const hoja = path.join(os.tmpdir(), `normia-hoja-senales-${process.pid}.svg`);
+let hojaOk = false;
+let hojaDetail = '';
+try {
+  const salida = JSON.parse(runCore(['--sign-board', hoja, '--resources', resources]));
+  const svg = fs.readFileSync(hoja, 'utf8');
+  const dibujos = (svg.match(/preserveAspectRatio="xMidYMid meet"/g) || []).length;
+  hojaOk = salida.signs === 395 && salida.iso === 332 && salida.services === 63 && dibujos === 395;
+  hojaDetail = `${salida.signs} señales · ${dibujos} pictogramas dibujados`;
+} catch (error) {
+  hojaDetail = String(error?.message || error).slice(0, 120);
+}
+fs.rmSync(hoja, { force: true });
+report.check('La hoja de señalización dibuja las 395 del catálogo local', hojaOk, hojaDetail);
+
+const app5 = await startApp(VERSION);
+let suyos = null;
+try {
+  const resultado = await app5.run(`
+$salida = [];
+foreach (${JSON.stringify(fixtures)} as $file) {
+  $design = json_decode((string) file_get_contents($file), true)['design'];
+  $report = App\\Services\\PlanAudit::analyze($design);
+  $firstAid = App\\Services\\FirstAidInventory::analyze($design, 0);
+  $salida[] = ['findings' => $report['findings'], 'coverage' => $firstAid['coverage'],
+    'kits' => $firstAid['kits']['count'], 'aeds' => $firstAid['aeds']['count']];
+}
+echo json_encode($salida);
+`);
+  const text = String(resultado.text || '');
+  suyos = JSON.parse(text.slice(text.indexOf('[')));
+} catch (error) {
+  report.check('El motor PHP audita la señalización', false, String(error?.message || error).slice(0, 120));
+}
+await app5.close();
+fixtures.forEach((file) => fs.rmSync(file, { force: true }));
+
+const comparar = (lista, otra, códigos) => {
+  const mío = lista.filter((f) => códigos.includes(f.code));
+  const suyo = otra.filter((f) => códigos.includes(f.code));
+  const plano = (f) => `${f.code}/${f.severity}/${f.title}/${f.detail}/${f.elements.join(',')}`
+    + `/${JSON.stringify(f.position)}/${f.value}`;
+  return { mío, suyo, igual: JSON.stringify(mío.map(plano)) === JSON.stringify(suyo.map(plano)) };
+};
+
+if (míos[0] && suyos) {
+  const signs = míos[0].signs;
+  report.check('El catálogo de señalización se lee completo: 332 ISO + 63 propias',
+    signs.catalogLoaded === true && signs.catalog === 395 && signs.iso === 332 && signs.services === 63,
+    `${signs.catalog} señales`);
+  report.check('Las señales del plano se resuelven a su código del catálogo',
+    JSON.stringify(signs.codes) === JSON.stringify(['E002', 'SVC_AQUI', 'F001']),
+    signs.codes.join(' · '));
+
+  const señalización = comparar(míos[0].findings, suyos[0].findings,
+    ['exit_without_sign', 'no_you_are_here', 'no_fire_sign']);
+  report.check('La señalización no produce hallazgos cuando el plano está señalizado',
+    señalización.mío.length === 0 && señalización.suyo.length === 0 && señalización.igual,
+    `${señalización.mío.length} hallazgos`);
+
+  const sinSeñales = comparar(míos[1].findings, suyos[1].findings,
+    ['exit_without_sign', 'no_you_are_here', 'no_fire_sign']);
+  report.check('Sin señalización salen los mismos tres hallazgos, con el mismo texto',
+    sinSeñales.mío.length === 3 && sinSeñales.igual,
+    `${sinSeñales.mío.map((f) => f.code).join(' · ')}`);
+
+  const primeros = comparar(míos[0].findings, suyos[0].findings,
+    ['no_first_aid_kit', 'first_aid_kit_far', 'no_stretcher', 'no_aed', 'aed_far']);
+  report.check('Los hallazgos de primeros auxilios coinciden palabra por palabra',
+    primeros.mío.length > 0 && primeros.igual,
+    `${primeros.mío.length} hallazgos: ${primeros.mío.map((f) => f.code).join(' · ')}`);
+
+  const lejanos = comparar(míos[1].findings, suyos[1].findings,
+    ['no_first_aid_kit', 'first_aid_kit_far', 'no_stretcher', 'no_aed', 'aed_far']);
+  report.check('El botiquín y el DEA fuera de alcance se avisan con la misma cifra',
+    lejanos.mío.some((f) => f.code === 'first_aid_kit_far') && lejanos.igual,
+    `${lejanos.mío.map((f) => `${f.code} ${f.value || ''}`.trim()).join(' · ')}`);
+
+  for (let index = 0; index < 2; index += 1) {
+    const c = míos[index].firstAid;
+    const p = suyos[index].coverage;
+    const mismo = (c.kitMaxM === null ? p.kitMaxM === null : Math.abs(c.kitMaxM - p.kitMaxM) < 1e-9)
+      && (c.aedMaxM === null ? p.aedMaxM === null : Math.abs(c.aedMaxM - p.aedMaxM) < 1e-9)
+      && c.cells === p.cells && c.kits === suyos[index].kits && c.aeds === suyos[index].aeds;
+    report.check(`La cobertura de primeros auxilios del piso ${index + 1} coincide con PHP`, mismo,
+      `C: ${c.kitMaxM} m / ${c.aedMaxM} m · PHP: ${p.kitMaxM} m / ${p.aedMaxM} m`);
+  }
+}
+
 /* ------------------- 5 · el núcleo no se rompe con basura ------------------ */
 
 const basura = path.join(os.tmpdir(), `normia-basura-${process.pid}.json`);

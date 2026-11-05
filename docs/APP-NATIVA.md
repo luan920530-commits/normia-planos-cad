@@ -355,9 +355,12 @@ igual que en la web.
 | Salidas | `native/src/audit.c` | Ancho de vano (medida declarada o geometría), ancho útil con el factor de despeje 0,9, ancho que pide el criterio (5 mm por persona), **cola** con flujo de 1,3 pers./s/m y **marcha** con 1 m/s |
 | Recorridos | `native/src/travel.c` | Dijkstra de ocho vecinos desde el vano de cada salida: recorrido más largo, punto más lejano, superficie alcanzable y **zonas sin salida** agrupadas por vecindad |
 | Hallazgos | `native/src/findings.c` | Salidas, recorrido, zonas sin salida, aforo y ancho, con la gravedad, el título, el detalle, los elementos y el punto del plano |
-| Programa | `native/src/cli.c` | `norma-core --audit plano.json` incluye salidas, recorrido y hallazgos |
-| Pruebas | `native/tests/test_audit.c` | **34/34** |
-| Paridad | `native/tests/parity.mjs` | **32/32** |
+| Catálogo | `native/src/library.c` | Las **395** señalizaciones locales (332 ISO 7010 + 63 propias), el tipo del editor ↔ el código, la validación del SVG y el `<svg>` anidado |
+| Señalización | `native/src/signage.c` | Salida sin pictograma cerca, falta de «usted está aquí» y falta de señalización contra incendios |
+| Primeros auxilios | `native/src/firstaid.c` | Botiquín, camilla y DEA: recuento y alcance medido sobre la rejilla |
+| Programa | `native/src/cli.c` | `norma-core --audit plano.json` incluye salidas, recorrido, señalización, primeros auxilios y hallazgos; `--sign-board hoja.svg` dibuja el catálogo completo |
+| Pruebas | `native/tests/test_audit.c` · `test_signs.c` | **34/34** y **30/30** |
+| Paridad | `native/tests/parity.mjs` | **41/41** |
 
 El caso de prueba y sus cifras, idénticas en C y en PHP: una habitación de
 6 × 4 m con un vano de 80 cm y una vía de 4 m de ancho al sur, con 5 000
@@ -408,9 +411,49 @@ detalle, los mismos elementos, el mismo punto del plano y el mismo valor** que e
 la edición web. La prueba compara los textos carácter a carácter, no solo la
 lista de códigos.
 
+#### Señalización y primeros auxilios (2026-11-05)
+
+La biblioteca nativa lee los **mismos dos catálogos** que la edición web —332
+pictogramas ISO 7010 y 63 señales propias de orientación, servicios, tránsito y
+brigada— y los usa para tres cosas: resolver el tipo del editor a su código
+(`iso_e002` → `E002`, `sig_aqui` → `SVC_AQUI`), validar el SVG con las mismas
+reglas de seguridad y **dibujar el pictograma real** dentro del plano exportado.
+No se copió ningún trazo al código: el catálogo se lee del archivo local, así que
+una señal nueva entra en las dos ediciones sin recompilar.
+
+`norma-core --sign-board hoja.svg` compone una hoja con **las 395** señalizaciones
+dibujadas con el mismo código de inserción que usa la exportación del plano: es la
+forma de comprobar de un vistazo que no falta ninguna.
+
+Los hallazgos nuevos, con los umbrales de `resources/audit-criteria.json`:
+
+| Hallazgo | Gravedad | Criterio de la app |
+| --- | --- | --- |
+| `exit_without_sign` | baja | Ninguna señal E001/E002 a menos de **1,50 m** del centro de la salida marcada |
+| `no_you_are_here` | baja | Falta el marcador `SVC_AQUI` (`signs.youAreHereCode`) |
+| `no_fire_sign` | informativa | No hay ningún pictograma F001, F002 ni F005 |
+| `no_first_aid_kit` | media | El piso no tiene ningún botiquín dibujado |
+| `first_aid_kit_far` | media | El punto más lejano del espacio libre queda a más de **30 m** del botiquín más cercano |
+| `no_stretcher` | media | No hay camilla y el criterio pide una por piso |
+| `no_aed` | media si la afluencia calculada llega a **500** personas, baja si no | No hay DEA dibujado |
+| `aed_far` | baja | El punto más lejano queda a más de **100 m** del DEA |
+
+Las distancias se miden **en línea recta** desde el centro de cada celda libre hasta
+el centro del recurso, igual que en la edición web: sirven para saber si un recurso
+está al alcance, no para simular una carrera. El detalle del hallazgo de primeros
+auxilios usa **un decimal** (67,1 m) porque así lo escribe la edición web; el resto
+del auditor usa dos.
+
+Lo que el plano **no** puede afirmar, y el texto del hallazgo dice: no comprueba el
+contenido del botiquín ni su vigencia, ni la carga del DEA, ni el mantenimiento del
+equipo. Los umbrales son criterios configurables de la aplicación, con las normas a
+la vista (ISO 7010 y NTC 1461 para el pictograma; Ley 1831 de 2017 y Resolución
+3316 de 2019 para el DEA), y no un dictamen de cumplimiento.
+
 ### Lo que N3 todavía no tiene
 
-- **Los demás hallazgos** del auditor web: señalización, extintores, primeros
-  auxilios, escenarios, simulacro y rutas dibujadas.
-- **Dibujar las rutas** sobre el lienzo nativo.
-- **Rutas de evacuación dibujadas** sobre el lienzo nativo.
+- **Los demás hallazgos** del auditor web: extintores, escenarios de ocupación
+  temporal y simulacro.
+- **Dibujar las rutas** de evacuación sobre el lienzo nativo (el cálculo ya está).
+- **Pintar los pictogramas en el lienzo** de la ventana de macOS: hoy se dibujan en
+  el SVG exportado; el lienzo nativo todavía usa el marcador genérico.
