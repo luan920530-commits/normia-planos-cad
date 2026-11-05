@@ -232,7 +232,7 @@ dígito**:
 | Lectura del sobre `normia-plan`, muros y superficie | `native/src/plan.c` | hecho |
 | Programa `norma-core --check / --stats` | `native/src/cli.c` | hecho |
 | Pruebas del núcleo | `native/tests/test_core.c` | **23/23** |
-| Paridad contra PHP | `native/tests/parity.mjs` | **60/60** |
+| Paridad contra PHP | `native/tests/parity.mjs` | **64/64** |
 
 Resultados de la prueba de paridad con un plano de tres muros (uno curvo):
 
@@ -278,9 +278,9 @@ selección por proximidad y el **sobre oficial** de ida y vuelta.
 | Prueba | Qué comprueba | Resultado |
 | --- | --- | --- |
 | `native/tests/test_core.c` | unidades, arcos, JSON, plano | **23/23** |
-| `native/tests/test_document.c` | muros, deshacer, selección, guardar y abrir, unidades, rutas | **31/31** |
+| `native/tests/test_document.c` | muros, deshacer, selección, guardar y abrir, unidades, rutas | **33/33** |
 | `native/tests/test_svg.c` | cifras es-CO y SVG con escala física (etapa N2) | **25/25** |
-| `native/tests/parity.mjs` | paridad C contra PHP, dígito a dígito, también en el SVG, el auditor y la revisión | **60/60** |
+| `native/tests/parity.mjs` | paridad C contra PHP, dígito a dígito, también en el SVG, el auditor y la revisión | **64/64** |
 | `native/tests/macos.mjs` | contrato de la ventana: AppKit, sin WebView, menú en español, atajos, sobre oficial, macOS 12, herramientas, ruta y cajón de revisión | **52/52** |
 | `native/tests/core.mjs` | compilación estricta y los tres programas de prueba del núcleo | **7/7** |
 
@@ -341,7 +341,7 @@ Lo que da el SVG del núcleo, medido en el plano de prueba A4 a 1:100:
 - **El paquete se publica como artefacto del flujo**, no como release: así se
   puede bajar el `.app` sin firmar y abrirlo en un Mac con Intel.
 
-## 14. Etapa N3, hecha: rejilla, aforo, salidas, recorridos, extintores y rutas
+## 14. Etapa N3, hecha: rejilla, aforo, salidas, recorridos, extintores, rutas y simulacro
 
 La etapa N3 lleva el auditor completo al núcleo en C. Lo primero fue el cimiento
 que todo lo demás usa: **la superficie libre** y **el aforo**, medidos igual que
@@ -359,9 +359,11 @@ en la web.
 | Señalización | `native/src/signage.c` | Salida sin pictograma cerca, falta de «usted está aquí» y falta de señalización contra incendios |
 | Primeros auxilios | `native/src/firstaid.c` | Botiquín, camilla y DEA: recuento y alcance medido sobre la rejilla |
 | Extintores | `native/src/extinguisher.c` | Tablas NTC 2885 / NFPA 10 y Resolución 2400: recorrido por clase y riesgo, área por número de A, cobertura por recorrido real y zonas descubiertas con su motivo |
-| Programa | `native/src/cli.c` | `norma-core --audit plano.json` incluye salidas, recorrido, señalización, primeros auxilios y hallazgos; `--sign-board hoja.svg` dibuja el catálogo completo |
-| Pruebas | `native/tests/test_audit.c` · `test_signs.c` · `test_extinguishers.c` | **57/57**, **30/30** y **32/32** (documento **31/31**, ventana **52/52**) |
-| Paridad | `native/tests/parity.mjs` | **60/60** |
+| Camino | `native/src/grid.c` (`norma_grid_path`) | Dijkstra de ocho vecinos sobre la rejilla, sin cortar esquinas, con el exterior permitido o no según el tramo; puntos simplificados por línea de vista y longitud en metros redondeada al centímetro |
+| Simulacro | `native/src/drill.c` | Tiempo objetivo por ruta (reacción + camino + tramo al punto de encuentro), objetivo del piso, tiempo medido y su diferencia; tres hallazgos propios |
+| Programa | `native/src/cli.c` | `norma-core --audit plano.json` incluye salidas, recorrido, señalización, primeros auxilios, simulacro y hallazgos; `--sign-board hoja.svg` dibuja el catálogo completo |
+| Pruebas | `native/tests/test_audit.c` · `test_signs.c` · `test_extinguishers.c` | **67/67**, **30/30** y **32/32** (documento **33/33**, ventana **52/52**) |
+| Paridad | `native/tests/parity.mjs` | **64/64** |
 
 El caso de prueba y sus cifras, idénticas en C y en PHP: una habitación de
 6 × 4 m con un vano de 80 cm y una vía de 4 m de ancho al sur, con 5 000
@@ -606,15 +608,89 @@ Dos reglas que se ven en pantalla:
 Los catálogos viajan dentro del `.app` (`Contents/Resources/resources`), así que la
 revisión funciona **sin red y sin instalar nada**.
 
+#### El simulacro (2026-11-05)
+
+El informe de la web separa dos tiempos que casi nunca son el mismo: el
+**objetivo**, que se calcula con el plano, y el **medido**, que se anota con
+cronómetro después del ejercicio. El núcleo nativo hace lo mismo, y por eso el
+simulacro no duplica el motor de la web: reutiliza la rejilla y las rutas que ya
+existían.
+
+**El camino se camina, no se mide en línea recta.** `norma_grid_path()` busca el
+recorrido más corto sobre las mismas celdas de 20 cm del aforo, con los ocho
+vecinos de siempre, sin cortar esquinas en diagonal y con los muros descontados.
+Los puntos se simplifican por línea de vista (paso de 0,4 celdas) y la longitud se
+redondea al centímetro antes de dividir por la velocidad (1 m/s por omisión), que
+es exactamente lo que hace `EvacuationDrill` en PHP: **el resultado coincide al
+decimal**, no solo en el orden de magnitud.
+
+Para cada ruta del plano:
+
+1. Se toma el **inicio del trazo** dibujado y se busca la **salida marcada más
+   cercana a su final**; el recorrido termina en el centro del hueco de esa salida
+   (`y + h`), no en el centro de la caja.
+2. Se suma el **camino caminable** por dentro del piso. Si no hay camino —el
+   inicio está en un cuarto sin vano o fuera del espacio libre—, la ruta no tiene
+   simulación y se avisa.
+3. Si el plano tiene **punto de encuentro**, se añade el tramo desde la salida
+   hasta él, ya por fuera del piso. Manda el objeto `cad_emg_meeting`; si no está,
+   vale la señal **E007** del catálogo, resuelta por tipo como cualquier otro
+   pictograma.
+4. `llegada = reacción + camino / velocidad`. El **objetivo del piso** es la ruta
+   más lenta, porque el plan no está bien si hay que esperar a los últimos.
+
+La reacción y el cronómetro se declaran en el documento, dentro de
+`canvas.drill`, y solo se guarda lo que no es el valor por omisión:
+
+```json
+"canvas": { "drill": { "reactionS": 45, "measuredS": 95 } }
+```
+
+`reactionS` vale **30 s** si no se declara. `measuredS` no se calcula nunca: es lo
+que se cronometró en el edificio, y sin él no hay comparación. La diferencia se
+informa aparte (`differenceS`) y en ningún caso se mezcla con el objetivo.
+
+`norma-core --audit` lo publica en el bloque `drill`:
+
+```json
+"drill": {
+  "reactionS": 45, "speedMps": 1, "targetS": 77.8, "targetSource": "meeting",
+  "measuredS": 95, "differenceS": 17.2,
+  "meeting": { "found": true, "source": "object", "position": { "x": 4230, "y": 1530 } },
+  "routes": [{ "id": "ruta1", "label": "Ruta norte", "lengthM": 28.87,
+               "endsAtExit": true, "exitId": "salida", "pathM": 32.75, "walkS": 32.8,
+               "meetingM": 3.81, "transferS": 3.8, "arrivalS": 77.8,
+               "targetSource": "meeting", "path": [{ "x": 330, "y": 300 }, "…"] }],
+  "notice": "…"
+}
+```
+
+`targetSource` dice con qué se calculó el objetivo (`exit` o `meeting`), y
+`meeting.source` de dónde salió el punto (`object`, `sign` o `none`). El reloj se
+escribe como se lee en voz alta —`1 min 18 s`— con `norma_drill_clock()`.
+
+Tres hallazgos nuevos, que `--inspect` y la ventana suman a los demás:
+
+| Hallazgo | Gravedad | Cuándo |
+| --- | --- | --- |
+| `no_meeting_point` | baja | El piso tiene rutas pero ningún punto de encuentro (ni objeto ni E007): el simulacro termina en la salida y el tramo de reunión no se puede medir |
+| `drill_route_blocked` | media | El inicio de una ruta no se puede conectar con su salida sin cruzar un muro; el hallazgo cita la ruta |
+| `drill_slower_than_target` | baja | El tiempo medido supera el objetivo en más de **1 s**; el valor del hallazgo es el objetivo en minutos, para poder compararlo |
+
+Lo que el simulacro **no** hace, y conviene decirlo: no mueve figuras —eso es la
+animación de la web—, no simula aglomeraciones ni colas en la puerta, no mide un
+ejercicio real y no reemplaza el tiempo que se toma en sitio. Da el número que el
+plano permite defender, para contrastarlo con el cronómetro.
+
 ### Lo que N3 todavía no tiene
 
 - **Pintar los pictogramas del catálogo en el lienzo** (el catálogo, la
   validación del SVG y la hoja de señales ya están; el lienzo usa el marcador
   genérico).
 
-Y una ausencia **decidida**, no pendiente: el **simulacro** (tiempo objetivo por
-ruta, punto de encuentro y comparación con un tiempo medido) no entra en la
-edición nativa (DEC-14, 2026-11-05). Se queda en la web, donde ya existe el
-informe y la animación; la ventana nativa conserva del simulacro lo que alimenta
-un plano —la ruta medida, la llegada a la salida y los cruces de muro—, no la
-puesta en escena.
+El **simulacro** también está: DEC-14 se revisó el mismo 2026-11-05, cuando el
+autor pidió llevarlo al núcleo. No hubo que duplicar motor, porque la rejilla ya
+sabía buscar el camino: `norma_grid_path()` recorre el espacio libre con los
+vecinos de siempre y el simulacro solo suma tramos. Lo que **no** entra en la
+ventana es la puesta en escena: las figuras moviéndose en modo presentación
+siguen en la web. Ver «El simulacro» más abajo.

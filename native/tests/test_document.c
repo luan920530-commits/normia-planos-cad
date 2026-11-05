@@ -174,6 +174,9 @@ static void test_roundtrip(void)
     norma_document_add_wall(&document, recto, 2, NULL, NULL);
     norma_document_add_wall(&document, curvo, 2, arcos, NULL);
     norma_document_add_marker(&document, "extinguisher", 80.0, 80.0, NULL);
+    /* Simulacro: reacción distinta de la de omisión y cronómetro declarado. */
+    document.drill_reaction_s = 45;
+    document.drill_measured_s = 95;
 
     const double antes = norma_document_length_cm(&document);
     char *json = norma_document_to_json(&document, "Planta nativa");
@@ -198,6 +201,24 @@ static void test_roundtrip(void)
           ok && leido.width == 1123.0 && leido.height == 794.0 && leido.unit == NORMA_UNIT_CM
               && strcmp(leido.scale, "1:100") == 0,
           ok ? leido.scale : error);
+
+    check("El simulacro se guarda dentro del lienzo, no en el sobre",
+          ok && leido.drill_reaction_s == 45 && leido.drill_measured_s == 95
+              && json != NULL && strstr(json, "\"drill\":{\"reactionS\":45,\"measuredS\":95}") != NULL,
+          ok ? "45 s de reacción · 95 s medidos" : error);
+
+    norma_document sin_drill;
+    norma_document_init(&sin_drill);
+    const char *simple = "{\"design\":{\"canvas\":{\"width\":100,\"height\":100},"
+                         "\"elements\":[]}}";
+    const int leido_simple = norma_document_from_json(&sin_drill, simple, strlen(simple), error, sizeof(error));
+    char *guardado = leido_simple ? norma_document_to_json(&sin_drill, "Sin simulacro") : NULL;
+    check("Sin cronómetro ni reacción propia el bloque no se escribe",
+          leido_simple && sin_drill.drill_reaction_s == 30 && sin_drill.drill_measured_s == 0
+              && guardado != NULL && strstr(guardado, "\"drill\"") == NULL,
+          guardado != NULL ? "sin bloque drill" : error);
+    free(guardado);
+    norma_document_free(&sin_drill);
 
     norma_json *parsed = norma_json_parse_cstr(json, error, sizeof(error));
     check("El archivo guardado es JSON válido y con la forma que espera la web",

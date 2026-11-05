@@ -115,6 +115,8 @@ void norma_document_init_with(norma_document *document, double width, double hei
     set_text(document->layer, sizeof(document->layer), NORMA_DEFAULT_LAYER, NORMA_DEFAULT_LAYER);
     document->identifier = 0;
     document->dirty = 0;
+    /* Reacción del simulacro: 30 s por omisión, como en Ajustes del piso. */
+    document->drill_reaction_s = 30;
 }
 
 void norma_document_init(norma_document *document)
@@ -541,6 +543,15 @@ char *norma_document_to_json(const norma_document *document, const char *name)
         norma_buffer_raw(&buffer, ",\"occupancy\":");
         norma_buffer_number(&buffer, (double) document->occupancy);
     }
+    if (document->drill_reaction_s != 30 || document->drill_measured_s > 0) {
+        norma_buffer_raw(&buffer, ",\"drill\":{\"reactionS\":");
+        norma_buffer_number(&buffer, (double) document->drill_reaction_s);
+        if (document->drill_measured_s > 0) {
+            norma_buffer_raw(&buffer, ",\"measuredS\":");
+            norma_buffer_number(&buffer, (double) document->drill_measured_s);
+        }
+        norma_buffer_raw(&buffer, "}");
+    }
     if (document->scenario_count > 0) {
         norma_buffer_raw(&buffer, ",\"scenarios\":[");
         for (size_t index = 0; index < document->scenario_count; index += 1) {
@@ -642,6 +653,12 @@ int norma_document_from_json(norma_document *document, const char *text, size_t 
     document->unit = norma_unit_from_name(norma_json_string(norma_json_get(canvas, "unit")));
     const double occupancy = norma_json_number(norma_json_get(canvas, "occupancy"), 0.0);
     document->occupancy = occupancy > 0.0 ? (long) occupancy : 0;
+    /* Simulacro: reacción declarada y tiempo medido (0 = sin medir). */
+    const norma_json *drill = norma_json_get(canvas, "drill");
+    const double reaction = norma_json_number(norma_json_get(drill, "reactionS"), 30.0);
+    document->drill_reaction_s = reaction > 0.0 ? (long) reaction : 0;
+    const double measured = norma_json_number(norma_json_get(drill, "measuredS"), 0.0);
+    document->drill_measured_s = measured > 0.0 ? (long) measured : 0;
     /* Escenarios de ocupación temporal: se guardan los que tienen personas. */
     const norma_json *scenarios = norma_json_get(canvas, "scenarios");
     const size_t scenario_total = norma_json_size(scenarios);

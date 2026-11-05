@@ -136,6 +136,11 @@ int norma_inspect_document(const norma_document *document, const char *resources
     norma_firstaid_analyze(document, &grid, result->aforo.used, result->aforo.source, NULL,
                            &result->first_aid, findings);
 
+    /* Simulacro: tiempo objetivo por ruta. El medido, si lo hay, es cronómetro. */
+    norma_drill_analyze(document, &grid, result->has_library ? &library : NULL, result->routes,
+                        result->route_count, &result->aforo, NULL, &result->drill);
+    norma_drill_findings(&result->drill, result->route_count > 0, findings);
+
     /* Escenarios de ocupación temporal: se revisan aparte y no tocan el aforo. */
     norma_egress_criteria criteria;
     norma_egress_criteria_default(&criteria);

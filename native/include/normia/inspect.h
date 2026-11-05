@@ -22,6 +22,7 @@
 
 #include "normia/audit.h"
 #include "normia/document.h"
+#include "normia/drill.h"
 #include "normia/extinguisher.h"
 #include "normia/findings.h"
 #include "normia/firstaid.h"
@@ -79,6 +80,7 @@ typedef struct {
     size_t route_count;
     norma_scenario_item scenarios[NORMA_MAX_SCENARIOS];
     size_t scenario_count;
+    norma_drill drill;
 
     int has_library;
     int has_ext_norms;

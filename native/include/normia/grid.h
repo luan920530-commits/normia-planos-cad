@@ -78,6 +78,23 @@ int norma_grid_build(const norma_document *document, const norma_grid_criteria *
 
 void norma_grid_free(norma_grid *grid);
 
+/**
+ * Camino caminable entre dos puntos, como `PlanGrid::path()`: Dijkstra de ocho
+ * vecinos sobre las celdas libres (con la diagonal que no corta esquinas),
+ * partiendo del centro de la celda libre más cercana a cada extremo, y luego
+ * simplificado con línea de vista para que no queden escalones de rejilla.
+ *
+ * `allow_exterior` a 1 deja usar el espacio de fuera del piso: es lo que hace
+ * falta para ir de una salida al punto de encuentro sin atravesar la
+ * edificación. Los puntos se redondean a dos decimales; `meters` es la longitud
+ * del camino ya simplificado.
+ *
+ * Devuelve 1 si encontró camino. `points` necesita sitio para `room` puntos; con
+ * 0 se puede preguntar solo la longitud (sin copiar puntos).
+ */
+int norma_grid_path(const norma_grid *grid, norma_point from, norma_point to, int allow_exterior,
+                    norma_point *points, size_t room, size_t *count, double *meters);
+
 #ifdef __cplusplus
 }
 #endif

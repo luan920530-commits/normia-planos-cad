@@ -20,6 +20,7 @@
 #include <errno.h>
 #include <unistd.h>
 
+#include "normia/drill.h"
 #include "normia/inspect.h"
 #include "normia/routes.h"
 #include "normia/scenarios.h"
@@ -616,6 +617,116 @@ static void test_inspect(void)
     norma_document_free(&document);
 }
 
+static void test_drill(void)
+{
+    norma_document document;
+    build_warehouse(&document);
+    /* Ruta desde dentro hasta el vano de salida (centro 330, 2900). */
+    const norma_point ruta[2] = {{330.0, 300.0}, {330.0, 2890.0}};
+    const long index = norma_document_add_wall(&document, ruta, 2, NULL, NULL);
+    document.elements[index].type[0] = 'r';
+    snprintf(document.elements[index].type, sizeof(document.elements[index].type), "route");
+    snprintf(document.elements[index].label, sizeof(document.elements[index].label), "Ruta norte");
+    document.drill_reaction_s = 45;
+
+    norma_grid grid;
+    char error[256];
+    check("La rejilla de la nave se arma para el simulacro",
+          norma_grid_build(&document, NULL, &grid, error, sizeof(error)) == 1, error);
+
+    norma_aforo aforo;
+    norma_audit_aforo(&document, 0, NULL, NULL, &aforo, &grid, error, sizeof(error));
+    norma_route routes[NORMA_MAX_ROUTES];
+    const size_t count = norma_routes_analyze(&document, 1, routes, NORMA_MAX_ROUTES);
+    norma_drill drill;
+    norma_drill_analyze(&document, &grid, NULL, routes, count, &aforo, NULL, &drill);
+
+    char detail[200];
+    snprintf(detail, sizeof(detail), "%zu rutas · camino %.2f m · objetivo %.1f s", drill.route_count,
+             drill.routes[0].path_m, drill.target_s);
+    check("El simulacro mide el camino caminable, no la línea recta",
+          drill.route_count == 1 && drill.routes[0].has_path
+              && drill.routes[0].path_m > 25.0 && drill.routes[0].path_m < 27.0,
+          detail);
+    check("El objetivo suma la reacción declarada al tiempo de camino",
+          drill.has_target && drill.reaction_s == 45
+              && drill.target_s > 70.0 && drill.target_s < 73.0,
+          detail);
+
+    norma_findings findings;
+    norma_findings_init(&findings);
+    norma_drill_findings(&drill, 1, &findings);
+    const norma_finding *sin_encuentro = find_code(&findings, "no_meeting_point");
+    check("Sin punto de encuentro el simulacro avisa y termina en la salida",
+          sin_encuentro != NULL && strcmp(sin_encuentro->severity, "low") == 0
+              && strcmp(drill.routes[0].target_source, "exit") == 0,
+          sin_encuentro != NULL ? sin_encuentro->code : "sin hallazgo");
+    norma_findings_free(&findings);
+
+    /* Punto de encuentro fuera del edificio: el tramo de salida va por fuera. */
+    const long meet = norma_document_add_marker(&document, "cad_emg_meeting", 2000.0, 3200.0, NULL);
+    check("El punto de encuentro se dibuja en el plano", meet >= 0, "cad_emg_meeting");
+    norma_drill_analyze(&document, &grid, NULL, routes, count, &aforo, NULL, &drill);
+    snprintf(detail, sizeof(detail), "encuentro %s · tramo %.2f m · objetivo %.1f s",
+             drill.meeting_source, drill.routes[0].meeting_m, drill.target_s);
+    check("Con punto de encuentro el objetivo incluye el tramo de fuera",
+          drill.meeting_found && strcmp(drill.meeting_source, "object") == 0
+              && drill.routes[0].has_meeting_track && drill.routes[0].meeting_m > 0.0
+              && strcmp(drill.routes[0].target_source, "meeting") == 0
+              && drill.target_s > 75.0,
+          detail);
+
+    /* Cronómetro: por encima del objetivo avisa; el valor va en minutos. */
+    document.drill_measured_s = (long) drill.target_s + 12;
+    norma_drill_analyze(&document, &grid, NULL, routes, count, &aforo, NULL, &drill);
+    char clock[48];
+    norma_drill_clock(drill.target_s, clock, sizeof(clock));
+    norma_findings_init(&findings);
+    norma_drill_findings(&drill, 1, &findings);
+    const norma_finding *lento = find_code(&findings, "drill_slower_than_target");
+    check("Un simulacro medido por encima del objetivo genera aviso",
+          lento != NULL && strcmp(lento->severity, "low") == 0 && lento->has_value
+              && strcmp(lento->value, clock) == 0,
+          lento != NULL ? lento->detail : "sin hallazgo");
+    check("El reloj del informe habla en minutos y segundos",
+          strstr(clock, " min ") != NULL && strstr(clock, " s") != NULL, clock);
+    norma_findings_free(&findings);
+
+    /* Un cuarto cerrado sin vano: la ruta que empieza dentro no tiene camino. */
+    const norma_point caja[4][2] = {
+        {{1000.0, 1000.0}, {1600.0, 1000.0}},
+        {{1600.0, 1000.0}, {1600.0, 1600.0}},
+        {{1600.0, 1600.0}, {1000.0, 1600.0}},
+        {{1000.0, 1600.0}, {1000.0, 1000.0}},
+    };
+    for (int side = 0; side < 4; side += 1) {
+        const long wall = norma_document_add_wall(&document, caja[side], 2, NULL, NULL);
+        if (wall >= 0) {
+            document.elements[wall].stroke = 20.0;
+        }
+    }
+    const norma_point fuera[2] = {{1300.0, 1300.0}, {330.0, 2890.0}};
+    const long blocked = norma_document_add_wall(&document, fuera, 2, NULL, NULL);
+    snprintf(document.elements[blocked].type, sizeof(document.elements[blocked].type), "route");
+    snprintf(document.elements[blocked].label, sizeof(document.elements[blocked].label), "Ruta rara");
+    /* La rejilla se arma con los muros del plano: hay que rehacerla. */
+    norma_grid_free(&grid);
+    check("La rejilla se rearma con el cuarto cerrado",
+          norma_grid_build(&document, NULL, &grid, error, sizeof(error)) == 1, error);
+    const size_t count2 = norma_routes_analyze(&document, 1, routes, NORMA_MAX_ROUTES);
+    norma_drill_analyze(&document, &grid, NULL, routes, count2, &aforo, NULL, &drill);
+    norma_findings_init(&findings);
+    norma_drill_findings(&drill, 1, &findings);
+    const norma_finding *bloqueada = find_code(&findings, "drill_route_blocked");
+    check("Una ruta que empieza fuera del piso no tiene camino y se avisa",
+          bloqueada != NULL && strcmp(bloqueada->severity, "medium") == 0
+              && bloqueada->element_count == 1,
+          bloqueada != NULL ? bloqueada->element_ids[0] : "sin hallazgo");
+    norma_findings_free(&findings);
+    norma_grid_free(&grid);
+    norma_document_free(&document);
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IOLBF, 0);
@@ -631,6 +742,8 @@ int main(void)
     test_routes();
     printf("\nRevisión completa\n");
     test_inspect();
+    printf("\nSimulacro\n");
+    test_drill();
 
     printf("\n%d/%d comprobaciones correctas.\n", checks - failures, checks);
     return failures == 0 ? 0 : 1;

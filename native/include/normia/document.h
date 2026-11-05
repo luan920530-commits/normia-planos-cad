@@ -93,6 +93,13 @@ typedef struct {
     /** Ajustes de extintores del plano: perfil normativo y riesgo predominante. */
     char ext_profile[24];
     char ext_hazard[16];
+    /**
+     * Simulacro: tiempo de reacción declarado en segundos (30 si no se dice) y
+     * tiempo medido en un simulacro real (0 = no se midió). Son dos cosas
+     * distintas: uno se declara, el otro se cronometra.
+     */
+    long drill_reaction_s;
+    long drill_measured_s;
     /** Escenarios de ocupación temporal declarados (0 = ninguno). */
     norma_scenario scenarios[NORMA_MAX_SCENARIOS];
     size_t scenario_count;

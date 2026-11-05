@@ -18,6 +18,7 @@
 #include <math.h>
 
 #include "normia/audit.h"
+#include "normia/drill.h"
 #include "normia/findings.h"
 #include "normia/inspect.h"
 #include "normia/extinguisher.h"
@@ -272,6 +273,7 @@ static int command_audit(const char *path)
     const size_t route_count = norma_routes_analyze(&document, egress.exit_count > 0, routes,
                                                     NORMA_MAX_ROUTES);
     norma_routes_findings(routes, route_count, egress.exit_count > 0, &findings);
+
     /* Catálogo de señalización: si no está, el auditor no se inventa códigos. */
     norma_library library;
     norma_signage signage;
@@ -302,6 +304,13 @@ static int command_audit(const char *path)
     } else {
         memset(&ext_result, 0, sizeof(ext_result));
     }
+    /* Simulacro: tiempo objetivo por ruta con el camino caminable. El catálogo
+       —si está— es lo que permite reconocer la señal E007 del punto de encuentro. */
+    norma_drill drill;
+    norma_drill_analyze(&document, &grid, has_library ? &library : NULL, routes, route_count, &aforo,
+                        NULL, &drill);
+    norma_drill_findings(&drill, route_count > 0, &findings);
+
     /* Primeros auxilios: botiquín, camilla y DEA, medidos sobre la misma rejilla. */
     norma_firstaid first_aid;
     norma_firstaid_analyze(&document, &grid, aforo.used, aforo.source, NULL, &first_aid, &findings);
@@ -512,6 +521,89 @@ static int command_audit(const char *path)
     } else {
         printf("null");
     }
+    printf("},\"drill\":{\"reactionS\":%ld,\"speedMps\":%.17g,\"targetS\":", drill.reaction_s,
+           drill.speed_mps);
+    if (drill.has_target) {
+        printf("%.17g", drill.target_s);
+    } else {
+        printf("null");
+    }
+    printf(",\"targetSource\":");
+    write_json_string(drill.has_target && drill.target_source != NULL ? drill.target_source : NULL);
+    printf(",\"measuredS\":");
+    if (drill.measured_s > 0) {
+        printf("%ld", drill.measured_s);
+    } else {
+        printf("null");
+    }
+    printf(",\"differenceS\":");
+    if (drill.has_difference) {
+        printf("%.17g", drill.difference_s);
+    } else {
+        printf("null");
+    }
+    printf(",\"meeting\":{\"found\":%s,\"source\":", drill.meeting_found ? "true" : "false");
+    write_json_string(drill.meeting_source);
+    printf(",\"position\":");
+    if (drill.has_meeting) {
+        printf("{\"x\":%.17g,\"y\":%.17g}", drill.meeting.x, drill.meeting.y);
+    } else {
+        printf("null");
+    }
+    printf("},\"routes\":[");
+    for (size_t index = 0; index < drill.route_count; index += 1) {
+        const norma_drill_route *item = &drill.routes[index];
+        printf("%s{\"id\":", index > 0 ? "," : "");
+        write_json_string(item->id);
+        printf(",\"label\":");
+        write_json_string(item->label);
+        printf(",\"lengthM\":%.17g,\"endsAtExit\":%s,\"exitId\":", item->length_m,
+               item->ends_at_exit ? "true" : "false");
+        write_json_string(item->exit_id[0] != '\0' ? item->exit_id : NULL);
+        printf(",\"pathM\":");
+        if (item->has_path) {
+            printf("%.17g", item->path_m);
+        } else {
+            printf("null");
+        }
+        printf(",\"walkS\":");
+        if (item->has_path) {
+            printf("%.17g", item->walk_s);
+        } else {
+            printf("null");
+        }
+        printf(",\"meetingM\":");
+        if (item->has_meeting_track) {
+            printf("%.17g", item->meeting_m);
+        } else {
+            printf("null");
+        }
+        printf(",\"transferS\":");
+        if (item->has_meeting_track) {
+            printf("%.17g", item->transfer_s);
+        } else {
+            printf("null");
+        }
+        printf(",\"arrivalS\":");
+        if (item->has_arrival) {
+            printf("%.17g", item->arrival_s);
+        } else {
+            printf("null");
+        }
+        printf(",\"targetSource\":");
+        write_json_string(item->target_source);
+        printf(",\"path\":[");
+        for (size_t point = 0; point < item->point_count; point += 1) {
+            printf("%s{\"x\":%.17g,\"y\":%.17g}", point > 0 ? "," : "", item->points[point].x,
+                   item->points[point].y);
+        }
+        printf("]}");
+    }
+    printf("],\"notice\":");
+    write_json_string("Tiempo objetivo calculado con las rutas dibujadas, la velocidad de "
+                      "referencia del criterio y el tiempo de reacción declarado; el camino se "
+                      "mide sobre el espacio libre y los muros no se atraviesan. No mide un "
+                      "simulacro real ni cuenta participantes.");
     printf("},\"findingsCount\":{\"high\":%ld,\"medium\":%ld,\"low\":%ld,\"info\":%ld},"
            "\"findings\":",
            counts.high, counts.medium, counts.low, counts.info);

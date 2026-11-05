@@ -43,43 +43,44 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 24. [Guía de primeros pasos](#guía-de-primeros-pasos)
 25. [Complementos](#complementos)
 26. [Unidades y medidas](#unidades-y-medidas)
-27. [Cambios de la versión 1.29.0](#cambios-de-la-versión-1290)
-28. [Cambios de la versión 1.28.0](#cambios-de-la-versión-1280)
-29. [Cambios de la versión 1.27.0](#cambios-de-la-versión-1270)
-30. [Cambios de la versión 1.26.0](#cambios-de-la-versión-1260)
-31. [Cambios de la versión 1.25.0](#cambios-de-la-versión-1250)
-32. [Cambios de la versión 1.24.0](#cambios-de-la-versión-1240)
-33. [Cambios de la versión 1.23.0](#cambios-de-la-versión-1230)
-34. [Cambios de la versión 1.22.0](#cambios-de-la-versión-1220)
-35. [Cambios de la versión 1.21.0](#cambios-de-la-versión-1210)
-36. [Cambios de la versión 1.20.0](#cambios-de-la-versión-1200)
-37. [Cambios de la versión 1.19.0](#cambios-de-la-versión-1190)
-38. [Cambios de la versión 1.18.0](#cambios-de-la-versión-1180)
-39. [Cambios de la versión 1.17.0](#cambios-de-la-versión-1170)
-40. [Cambios de la versión 1.16.0](#cambios-de-la-versión-1160)
-41. [Cambios de la versión 1.15.9](#cambios-de-la-versión-1159)
-42. [Cambios de la versión 1.15.8](#cambios-de-la-versión-1158)
-43. [Cambios de la versión 1.15.7](#cambios-de-la-versión-1157)
-44. [Cambios de la versión 1.15.6](#cambios-de-la-versión-1156)
-45. [Cambios de la versión 1.15.5](#cambios-de-la-versión-1155)
-46. [Cambios de la versión 1.15.4](#cambios-de-la-versión-1154)
-47. [Cambios de la versión 1.15.3](#cambios-de-la-versión-1153)
-48. [Cambios de la versión 1.15.2](#cambios-de-la-versión-1152)
-49. [Cambios de la versión 1.15.1](#cambios-de-la-versión-1151)
-50. [Cambios de la versión 1.15.0](#cambios-de-la-versión-1150)
-51. [Cambios de la versión 1.14.2](#cambios-de-la-versión-1142)
-52. [Cambios de la versión 1.14.1](#cambios-de-la-versión-1141)
-53. [Cambios de la versión 1.14.0](#cambios-de-la-versión-1140)
-54. [Cambios de la versión 1.13.0](#cambios-de-la-versión-1130)
-55. [Cambios de la versión 1.12.0](#cambios-de-la-versión-1120)
-56. [Cambios de la versión 1.11.1](#cambios-de-la-versión-1111)
-57. [Cambios de la versión 1.11.0](#cambios-de-la-versión-1110)
-58. [Cambios de la versión 1.10.0](#cambios-de-la-versión-1100)
-59. [Cambios de la versión 1.9.0](#cambios-de-la-versión-190)
-60. [Cambios de la versión 1.8.0](#cambios-de-la-versión-180)
-60. [Paquetes y verificación](#paquetes-y-verificación)
-61. [Limitaciones](#limitaciones)
-62. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
+27. [Cambios de la versión 1.30.0](#cambios-de-la-versión-1300)
+28. [Cambios de la versión 1.29.0](#cambios-de-la-versión-1290)
+29. [Cambios de la versión 1.28.0](#cambios-de-la-versión-1280)
+30. [Cambios de la versión 1.27.0](#cambios-de-la-versión-1270)
+31. [Cambios de la versión 1.26.0](#cambios-de-la-versión-1260)
+32. [Cambios de la versión 1.25.0](#cambios-de-la-versión-1250)
+33. [Cambios de la versión 1.24.0](#cambios-de-la-versión-1240)
+34. [Cambios de la versión 1.23.0](#cambios-de-la-versión-1230)
+35. [Cambios de la versión 1.22.0](#cambios-de-la-versión-1220)
+36. [Cambios de la versión 1.21.0](#cambios-de-la-versión-1210)
+37. [Cambios de la versión 1.20.0](#cambios-de-la-versión-1200)
+38. [Cambios de la versión 1.19.0](#cambios-de-la-versión-1190)
+39. [Cambios de la versión 1.18.0](#cambios-de-la-versión-1180)
+40. [Cambios de la versión 1.17.0](#cambios-de-la-versión-1170)
+41. [Cambios de la versión 1.16.0](#cambios-de-la-versión-1160)
+42. [Cambios de la versión 1.15.9](#cambios-de-la-versión-1159)
+43. [Cambios de la versión 1.15.8](#cambios-de-la-versión-1158)
+44. [Cambios de la versión 1.15.7](#cambios-de-la-versión-1157)
+45. [Cambios de la versión 1.15.6](#cambios-de-la-versión-1156)
+46. [Cambios de la versión 1.15.5](#cambios-de-la-versión-1155)
+47. [Cambios de la versión 1.15.4](#cambios-de-la-versión-1154)
+48. [Cambios de la versión 1.15.3](#cambios-de-la-versión-1153)
+49. [Cambios de la versión 1.15.2](#cambios-de-la-versión-1152)
+50. [Cambios de la versión 1.15.1](#cambios-de-la-versión-1151)
+51. [Cambios de la versión 1.15.0](#cambios-de-la-versión-1150)
+52. [Cambios de la versión 1.14.2](#cambios-de-la-versión-1142)
+53. [Cambios de la versión 1.14.1](#cambios-de-la-versión-1141)
+54. [Cambios de la versión 1.14.0](#cambios-de-la-versión-1140)
+55. [Cambios de la versión 1.13.0](#cambios-de-la-versión-1130)
+56. [Cambios de la versión 1.12.0](#cambios-de-la-versión-1120)
+57. [Cambios de la versión 1.11.1](#cambios-de-la-versión-1111)
+58. [Cambios de la versión 1.11.0](#cambios-de-la-versión-1110)
+59. [Cambios de la versión 1.10.0](#cambios-de-la-versión-1100)
+60. [Cambios de la versión 1.9.0](#cambios-de-la-versión-190)
+61. [Cambios de la versión 1.8.0](#cambios-de-la-versión-180)
+61. [Paquetes y verificación](#paquetes-y-verificación)
+62. [Limitaciones](#limitaciones)
+63. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
 
 ---
 
@@ -866,7 +867,7 @@ Resultados esperados de la última ejecución completa:
 ✓ Modo estudio PHP 8.1 · 35/35
 ✓ Modo estudio PHP 8.3 · 35/35
 ✓ Núcleo en C (compilación estricta) · 3.9s
-✓ Núcleo nativo (paridad C/PHP) · 60/60
+✓ Núcleo nativo (paridad C/PHP) · 64/64
 ✓ Ventana nativa (macOS) · 52/52
 ✓ Escritorio (instaladores) · 37/37
 ✓ Android (APK) · 52/52
@@ -1019,7 +1020,7 @@ importar después en un proyecto de la edición completa sin conversiones.
 - **¿Y una app 100 % nativa, sin Electron?** Va en camino, y ya se puede ver: la
   **ventana nativa de macOS en AppKit** dibuja con Core Graphics —sin WebView, sin
   JavaScript— y su motor es un **núcleo en C11** sin dependencias que da las mismas
-  cifras que el PHP **hasta el último dígito** (60/60 de paridad, 57/57 del auditor
+  cifras que el PHP **hasta el último dígito** (64/64 de paridad, 67/67 del auditor
   propio). Trae el auditor completo —superficie, aforo, salidas, recorridos,
   señalización, primeros auxilios, extintores con acciones cuantificadas,
   escenarios y rutas—, las herramientas de dibujo `M · P · A · D · R`, zoom de CAD,
@@ -1148,6 +1149,46 @@ siguen **pendientes** DEC-7 y DEC-9 a DEC-12. Están implementadas las etapas 1 
 mediana y escala física al exportar); las etapas 5 a 10 no han empezado. Ni una
 tabla nueva: `user_version` sigue en 7.
 
+## Cambios de la versión 1.30.0
+
+**El simulacro entra en el núcleo nativo: el plano ya dice cuánto debería tardar
+la evacuación, y el cronómetro dice cuánto tardó.**
+
+DEC-14 queda revisada. La decisión de dejar el simulacro solo en la web suponía
+que llevarlo a la nativa obligaba a duplicar el motor de camino caminable; no era
+cierto: la rejilla del aforo ya tenía las celdas libres, los muros con su holgura,
+los vanos de puerta y el exterior. Lo único que faltaba era **buscar el camino**,
+y eso es una sola función.
+
+- **Camino caminable en C** (`norma_grid_path()`, `native/src/grid.c`): Dijkstra
+  de ocho vecinos con montículo binario sobre la rejilla de 20 cm, sin cortar
+  esquinas en diagonal, con **exterior permitido o no** según el tramo. Los puntos
+  se simplifican por línea de vista (paso de 0,4 celdas) y la longitud se redondea
+  al centímetro, igual que `PlanGrid::path()` en PHP.
+- **Tiempo objetivo por ruta** (`native/src/drill.c`): reacción declarada (30 s por
+  omisión) + camino / velocidad (1 m/s por omisión). El recorrido va del inicio del
+  trazo a la **salida marcada más cercana a su final**, entrando por el centro del
+  vano, y sigue hasta el **punto de encuentro** si el plano lo dibuja: manda el
+  objeto de punto de encuentro y, si no está, la señal **E007** del catálogo. El
+  objetivo del piso es la **ruta más lenta**, porque el plan no está bien si hay
+  que esperar a los últimos.
+- **Tiempo medido, aparte**: `canvas.drill.measuredS` es lo que se cronometró en el
+  edificio. No se calcula nunca, no se promedia con el objetivo y solo se resta; el
+  reloj se escribe como se lee en voz alta (`1 min 18 s`).
+- **Tres hallazgos nuevos**: `no_meeting_point` (baja, hay rutas pero ningún punto
+  de encuentro), `drill_route_blocked` (media, el inicio del trazo no se conecta
+  con su salida sin cruzar un muro) y `drill_slower_than_target` (baja, el medido
+  supera el objetivo en más de 1 s).
+- **Dónde se ve**: el bloque `drill` de `norma-core --audit` (objetivo, medido,
+  diferencia, encuentro y el camino de cada ruta, punto por punto) y la lista del
+  cajón de revisión de la ventana, con los tres códigos sumados a los demás.
+- **Paridad comprobada**: `parity.mjs` compara el simulacro **campo por campo**
+  contra `EvacuationDrill`/`PlanAudit::analyze()` con el mismo plano —camino,
+  tiempo de cada ruta, encuentro, objetivo, medido y el texto del aviso—, no solo
+  la lista de códigos.
+- **Pruebas**: auditor **67/67**, señalización **30/30**, extintores **32/32**,
+  documento **33/33**, ventana de macOS **52/52** y paridad C/PHP **64/64**.
+
 ## Cambios de la versión 1.29.0
 
 **El auditor completo en C, y las rutas se dibujan en la ventana nativa.**
@@ -1195,10 +1236,6 @@ macOS trae las herramientas de evacuación.
   `parity.mjs` compara las dos listas con `PlanAudit::analyze()`. Editar el plano
   invalida la revisión en vez de mostrar cifras viejas, y los catálogos viajan
   dentro del `.app`.
-- **El simulacro no entra en la nativa** (DEC-14): se queda en la web, donde ya
-  existe el informe y la animación. La ventana nativa conserva lo que alimenta un
-  plano —ruta medida, llegada a la salida y cruces de muro—, no la puesta en
-  escena.
 - **Pruebas**: auditor **57/57**, señalización **30/30**, extintores **32/32**,
   documento **31/31**, ventana de macOS **52/52** y paridad C/PHP **60/60**. El
   flujo compila el núcleo con `-Werror` en Linux y compila, arranca y exporta el

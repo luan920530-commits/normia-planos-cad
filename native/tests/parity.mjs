@@ -934,13 +934,9 @@ await app10.close();
 fs.rmSync(fixtureRevision, { force: true });
 
 if (suyaRevision) {
-  // El simulacro no entra en la nativa (DEC-14): PHP añade su hallazgo de punto
-  // de encuentro y la ventana no. Se compara todo lo demás.
-  const soloSimulacro = ['no_meeting_point', 'drill_route_blocked', 'drill_slower_than_target'];
-  const suyaSinSimulacro = suyaRevision.findings.filter((f) => !soloSimulacro.includes(f.code));
-  report.check('La revisión del núcleo trae los mismos hallazgos que el informe PHP, sin el simulacro',
-    míaRevision.findings.length === suyaSinSimulacro.length,
-    `${míaRevision.findings.length} hallazgos · PHP ${suyaRevision.findings.length} con el simulacro`);
+  report.check('La revisión del núcleo trae los mismos hallazgos que el informe PHP',
+    míaRevision.findings.length === suyaRevision.findings.length,
+    `${míaRevision.findings.length} hallazgos · PHP ${suyaRevision.findings.length}`);
   const todos = míaRevision.findings.map((f) => f.code);
   const comparable = comparar(míaRevision.findings, suyaRevision.findings, todos);
   report.check('Cada hallazgo del cajón de revisión coincide palabra por palabra con PHP',
@@ -951,6 +947,67 @@ if (suyaRevision) {
   report.check('La revisión dice si encontró el catálogo y las tablas de extintores',
     míaRevision.summary.hasLibrary === true && míaRevision.summary.hasExtinguisherNorms === true,
     'catálogo y tablas cargados');
+}
+
+/* --------------------- 4j · simulacro: el tiempo objetivo -------------------- */
+
+// El mismo piso con un punto de encuentro dibujado, 45 s de reacción y 95 s
+// medidos con cronómetro: el informe tiene que separar el cálculo del cronómetro.
+const planoSimulacro = JSON.parse(JSON.stringify(planoConRutas));
+planoSimulacro.design.canvas.drill = { reactionS: 45, measuredS: 95 };
+planoSimulacro.design.elements.push({ id: 'encuentro', type: 'cad_emg_meeting', layerId: 'capa',
+  x: 4200, y: 1500, w: 60, h: 60 });
+const fixtureSimulacro = path.join(os.tmpdir(), `normia-paridad-simulacro-${process.pid}.json`);
+fs.writeFileSync(fixtureSimulacro, JSON.stringify(planoSimulacro), 'utf8');
+const míoSimulacro = JSON.parse(runCore(['--audit', fixtureSimulacro, '--resources', resources])).drill;
+const míoSimulacroFindings = JSON.parse(runCore(['--inspect', fixtureSimulacro, '--resources', resources])).findings;
+
+const app11 = await startApp(VERSION);
+let suyoSimulacro = null;
+try {
+  const resultado = await app11.run(`
+$design = json_decode((string) file_get_contents(${JSON.stringify(fixtureSimulacro)}), true)['design'];
+$report = App\\Services\\PlanAudit::analyze($design);
+echo json_encode(['drill' => $report['drill'], 'findings' => $report['findings']]);
+`);
+  const text = String(resultado.text || '');
+  suyoSimulacro = JSON.parse(text.slice(text.indexOf('{')));
+} catch (error) {
+  report.check('El motor PHP calcula el tiempo objetivo del simulacro', false,
+    String(error?.message || error).slice(0, 120));
+}
+await app11.close();
+fs.rmSync(fixtureSimulacro, { force: true });
+
+if (suyoSimulacro) {
+  const suyo = suyoSimulacro.drill;
+  const campos = ['id', 'lengthM', 'pathM', 'walkS', 'meetingM', 'transferS', 'arrivalS',
+    'targetSource', 'endsAtExit', 'exitId'];
+  const rutasIguales = míoSimulacro.routes.length === suyo.routes.length
+    && míoSimulacro.routes.every((mía, index) => campos.every(
+      (campo) => JSON.stringify(mía[campo]) === JSON.stringify(suyo.routes[index][campo])));
+  report.check('El camino caminable y el tiempo de cada ruta coinciden con PHP, ruta por ruta',
+    rutasIguales, míoSimulacro.routes.map((r) => `${r.pathM} m · ${r.walkS} s`).join(' · '));
+
+  report.check('El objetivo, el punto de encuentro y el tramo de fuera coinciden con PHP',
+    míoSimulacro.targetS === suyo.targetS && míoSimulacro.targetSource === suyo.targetSource
+    && míoSimulacro.reactionS === suyo.reactionS
+    && míoSimulacro.meeting.found === suyo.meeting.found
+    && míoSimulacro.meeting.source === suyo.meeting.source
+    && JSON.stringify(míoSimulacro.meeting.position) === JSON.stringify(suyo.meeting.position),
+    `${míoSimulacro.targetS} s · ${míoSimulacro.targetSource} · ${míoSimulacro.meeting.source}`);
+
+  report.check('El tiempo medido y su diferencia se informan aparte del calculado',
+    míoSimulacro.measuredS === suyo.measuredS && míoSimulacro.differenceS === suyo.differenceS
+    && míoSimulacro.measuredS === 95 && míoSimulacro.differenceS === suyo.differenceS,
+    `${míoSimulacro.measuredS} s medidos · ${míoSimulacro.differenceS} s de diferencia`);
+
+  const comparableSimulacro = comparar(míoSimulacroFindings, suyoSimulacro.findings,
+    ['drill_route_blocked', 'no_meeting_point', 'drill_slower_than_target']);
+  report.check('El aviso del cronómetro coincide palabra por palabra con PHP',
+    comparableSimulacro.igual && comparableSimulacro.mío.length === 1
+    && comparableSimulacro.mío[0].value === '1 min 18 s',
+    comparableSimulacro.mío.map((f) => `${f.code} · ${f.value}`).join(' · ') || 'sin hallazgo');
 }
 
 /* ------------------- 5 · el núcleo no se rompe con basura ------------------ */

@@ -1460,8 +1460,8 @@ Por qué este orden y no otro:
 **DEC-8 quedó aprobada el 2026-11-02** y se implementó en la 1.22.0 (§29). Las
 otras cinco (DEC-7, DEC-9, DEC-10, DEC-11 y DEC-12) siguen sin aprobar. Las
 anteriores, DEC-1 a DEC-6, sí (§10.2). **DEC-14, sobre el alcance del simulacro en
-la edición nativa, quedó decidida el 2026-11-05** y se cierra en este mismo
-apartado.
+la edición nativa, quedó decidida el 2026-11-05, revisada el mismo día y cerrada
+en este apartado.**
 
 **DEC-7 · No crear el tipo «ventana» todavía.**
 Recomendación: **sí**, la ventana se dibuja como muro con rótulo hasta que haya un
@@ -1496,15 +1496,23 @@ valor del escenario está en el cálculo, no en el registro histórico.
 vigencia, cierre inmutable y `floor_version_id`— sigue siendo diseño para cuando se
 apruebe DEC-11 y DEC-12.
 
-**DEC-14 · El simulacro no entra en la edición nativa (2026-11-05).**
-Decisión del autor: el simulacro —tiempo objetivo por ruta, punto de encuentro y
-comparación con un tiempo medido— **se queda solo en la edición web**. La ventana
-nativa es una herramienta de dibujo y de cálculo de planos; el simulacro se
-prepara y se presenta en la web, donde ya existe la animación y el informe. La
-edición nativa conserva lo que sí alimenta un plano: rutas medidas, llegada a la
-salida y cruces de muro. Alternativa descartada: llevarlo también al núcleo nativo
-—duplica el motor de camino caminable y no cambia ningún plano.
-**Implementada como alcance en la N3; ver `docs/APP-NATIVA.md` §14.**
+**DEC-14 · El simulacro en la edición nativa (2026-11-05; revisada el mismo día).**
+Decisión original del autor: el simulacro —tiempo objetivo por ruta, punto de
+encuentro y comparación con un tiempo medido— **se quedaba solo en la edición
+web**, porque la ventana nativa es una herramienta de dibujo y de cálculo y la
+puesta en escena ya existía en la web. La alternativa descartada entonces era
+llevarlo al núcleo nativo: «duplica el motor de camino caminable y no cambia
+ningún plano».
+
+**Revisada el mismo 2026-11-05**, cuando el autor pidió tenerlo también en la
+nativa: el supuesto de la alternativa no se cumplió, porque el camino caminable
+**no había que duplicarlo** —la rejilla del aforo ya tenía las celdas, los muros,
+los vanos y el exterior—. Se añadió una sola búsqueda de camino
+(`norma_grid_path()`, Dijkstra de 8 vecinos) y el simulacro solo suma tramos. Lo
+que sigue siendo de la web es la **animación** de las figuras en modo
+presentación; el núcleo nativo calcula el objetivo, lo compara con el cronómetro y
+publica los tres hallazgos nuevos. **Implementada en la 1.30.0; ver
+`docs/APP-NATIVA.md`.**
 
 **DEC-12 · Una sola migración para todas las tablas nuevas (`user_version` 8).**
 Recomendación: **sí**, con respaldo previo y prueba de restauración. Alternativa:

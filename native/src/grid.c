@@ -539,3 +539,339 @@ int norma_grid_visual_points(const norma_element *element, norma_point **points,
     }
     return visual_points(element, points, count);
 }
+
+/* ------------------------------- caminos --------------------------------- */
+
+/** Centro de una celda, recortado al lienzo, como `PlanGrid::cellCenter`. */
+static norma_point path_cell_center(const norma_grid *grid, int ix, int iy)
+{
+    norma_point center;
+    center.x = (double) (ix + 0.5) * grid->cell;
+    center.y = (double) (iy + 0.5) * grid->cell;
+    if (center.x > grid->width) {
+        center.x = grid->width;
+    }
+    if (center.y > grid->height) {
+        center.y = grid->height;
+    }
+    return center;
+}
+
+/** ¿Se puede pisar esta celda? Fuera del piso solo cuando se permite el exterior. */
+static int path_allowed(const norma_grid *grid, size_t index, int allow_exterior)
+{
+    if (index >= grid->nx * grid->ny) {
+        return 0;
+    }
+    if (grid->blocked[index] != 0) {
+        return 0;
+    }
+    return allow_exterior != 0 ? 1 : grid->exterior[index] == 0;
+}
+
+/**
+ * Celda libre más cercana a un punto, buscando en anillos de radio creciente,
+ * igual que `PlanGrid::nearestAllowedCell`.
+ */
+static int path_nearest_cell(const norma_grid *grid, norma_point point, int allow_exterior, int *out_x,
+                             int *out_y)
+{
+    const int nx = (int) grid->nx;
+    const int ny = (int) grid->ny;
+    int cx = (int) floor(point.x / grid->cell);
+    int cy = (int) floor(point.y / grid->cell);
+    if (cx < 0) {
+        cx = 0;
+    }
+    if (cy < 0) {
+        cy = 0;
+    }
+    if (cx > nx - 1) {
+        cx = nx - 1;
+    }
+    if (cy > ny - 1) {
+        cy = ny - 1;
+    }
+    const size_t start_index = (size_t) cy * grid->nx + (size_t) cx;
+    if (path_allowed(grid, start_index, allow_exterior)) {
+        *out_x = cx;
+        *out_y = cy;
+        return 1;
+    }
+    for (int radius = 1; radius <= 12; radius += 1) {
+        int best_x = -1;
+        int best_y = -1;
+        double best_gap = 0.0;
+        const int from_y = cy - radius < 0 ? 0 : cy - radius;
+        const int to_y = cy + radius > ny - 1 ? ny - 1 : cy + radius;
+        const int from_x = cx - radius < 0 ? 0 : cx - radius;
+        const int to_x = cx + radius > nx - 1 ? nx - 1 : cx + radius;
+        for (int iy = from_y; iy <= to_y; iy += 1) {
+            for (int ix = from_x; ix <= to_x; ix += 1) {
+                const int ring = abs(ix - cx) > abs(iy - cy) ? abs(ix - cx) : abs(iy - cy);
+                if (ring != radius) {
+                    continue;
+                }
+                if (!path_allowed(grid, (size_t) iy * grid->nx + (size_t) ix, allow_exterior)) {
+                    continue;
+                }
+                const norma_point center = path_cell_center(grid, ix, iy);
+                const double gap = hypot(center.x - point.x, center.y - point.y);
+                if (best_x < 0 || gap < best_gap) {
+                    best_gap = gap;
+                    best_x = ix;
+                    best_y = iy;
+                }
+            }
+        }
+        if (best_x >= 0) {
+            *out_x = best_x;
+            *out_y = best_y;
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/** ¿Se puede ir en línea recta entre dos puntos sin salir del espacio libre? */
+static int path_line_of_sight(const norma_grid *grid, norma_point a, norma_point b, int allow_exterior)
+{
+    const double length = hypot(b.x - a.x, b.y - a.y);
+    const double step = grid->cell * 0.4 > 1.0 ? grid->cell * 0.4 : 1.0;
+    int samples = (int) ceil(length / step);
+    if (samples < 1) {
+        samples = 1;
+    }
+    for (int index = 0; index <= samples; index += 1) {
+        const double ratio = (double) index / (double) samples;
+        const double x = a.x + (b.x - a.x) * ratio;
+        const double y = a.y + (b.y - a.y) * ratio;
+        int ix = (int) floor(x / grid->cell);
+        int iy = (int) floor(y / grid->cell);
+        if (ix < 0) {
+            ix = 0;
+        }
+        if (iy < 0) {
+            iy = 0;
+        }
+        if (ix > (int) grid->nx - 1) {
+            ix = (int) grid->nx - 1;
+        }
+        if (iy > (int) grid->ny - 1) {
+            iy = (int) grid->ny - 1;
+        }
+        if (!path_allowed(grid, (size_t) iy * grid->nx + (size_t) ix, allow_exterior)) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+/* Montículo mínimo de (coste, índice), con borrado perezoso como en PHP. */
+typedef struct {
+    double cost;
+    size_t index;
+} path_node;
+
+static void path_push(path_node *heap, size_t *size, double cost, size_t index)
+{
+    size_t position = *size;
+    heap[position].cost = cost;
+    heap[position].index = index;
+    *size += 1;
+    while (position > 0) {
+        const size_t parent = (position - 1) / 2;
+        if (heap[parent].cost <= heap[position].cost) {
+            break;
+        }
+        const path_node swap = heap[parent];
+        heap[parent] = heap[position];
+        heap[position] = swap;
+        position = parent;
+    }
+}
+
+static path_node path_pop(path_node *heap, size_t *size)
+{
+    const path_node top = heap[0];
+    *size -= 1;
+    heap[0] = heap[*size];
+    size_t position = 0;
+    for (;;) {
+        const size_t left = position * 2 + 1;
+        const size_t right = left + 1;
+        size_t smallest = position;
+        if (left < *size && heap[left].cost < heap[smallest].cost) {
+            smallest = left;
+        }
+        if (right < *size && heap[right].cost < heap[smallest].cost) {
+            smallest = right;
+        }
+        if (smallest == position) {
+            break;
+        }
+        const path_node swap = heap[position];
+        heap[position] = heap[smallest];
+        heap[smallest] = swap;
+        position = smallest;
+    }
+    return top;
+}
+
+int norma_grid_path(const norma_grid *grid, norma_point from, norma_point to, int allow_exterior,
+                    norma_point *points, size_t room, size_t *count, double *meters)
+{
+    if (count != NULL) {
+        *count = 0;
+    }
+    if (meters != NULL) {
+        *meters = 0.0;
+    }
+    if (grid == NULL || grid->blocked == NULL || grid->exterior == NULL || grid->nx == 0 || grid->ny == 0) {
+        return 0;
+    }
+    int start_x = 0;
+    int start_y = 0;
+    int goal_x = 0;
+    int goal_y = 0;
+    if (!path_nearest_cell(grid, from, allow_exterior, &start_x, &start_y)
+        || !path_nearest_cell(grid, to, allow_exterior, &goal_x, &goal_y)) {
+        return 0;
+    }
+    const size_t total = grid->nx * grid->ny;
+    const size_t start_index = (size_t) start_y * grid->nx + (size_t) start_x;
+    const size_t goal_index = (size_t) goal_y * grid->nx + (size_t) goal_x;
+
+    double *dist = (double *) malloc(total * sizeof(double));
+    long *parent = (long *) malloc(total * sizeof(long));
+    path_node *heap = (path_node *) malloc(total * 2 * sizeof(path_node));
+    if (dist == NULL || parent == NULL || heap == NULL) {
+        free(dist);
+        free(parent);
+        free(heap);
+        return 0;
+    }
+    for (size_t index = 0; index < total; index += 1) {
+        dist[index] = INFINITY;
+        parent[index] = -1;
+    }
+    dist[start_index] = 0.0;
+    size_t heap_size = 0;
+    path_push(heap, &heap_size, 0.0, start_index);
+    static const int steps[8][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}, {1, 1}, {1, -1}, {-1, 1}, {-1, -1}};
+    while (heap_size > 0) {
+        const path_node node = path_pop(heap, &heap_size);
+        const size_t current = node.index;
+        if (node.cost > dist[current] + 0.0001) {
+            continue;
+        }
+        if (current == goal_index) {
+            break;
+        }
+        const int ix = (int) (current % grid->nx);
+        const int iy = (int) (current / grid->nx);
+        for (size_t step = 0; step < 8; step += 1) {
+            const int dx = steps[step][0];
+            const int dy = steps[step][1];
+            const int jx = ix + dx;
+            const int jy = iy + dy;
+            if (jx < 0 || jy < 0 || jx > (int) grid->nx - 1 || jy > (int) grid->ny - 1) {
+                continue;
+            }
+            const size_t next = (size_t) jy * grid->nx + (size_t) jx;
+            if (!path_allowed(grid, next, allow_exterior)) {
+                continue;
+            }
+            /* La diagonal no puede cortar la esquina de un muro. */
+            if (dx != 0 && dy != 0) {
+                if (!path_allowed(grid, (size_t) iy * grid->nx + (size_t) (ix + dx), allow_exterior)
+                    || !path_allowed(grid, (size_t) (iy + dy) * grid->nx + (size_t) ix, allow_exterior)) {
+                    continue;
+                }
+            }
+            const double weight = (dx != 0 && dy != 0) ? 1.41421356 : 1.0;
+            const double candidate = dist[current] + weight * grid->cell;
+            if (candidate + 0.0001 < dist[next]) {
+                dist[next] = candidate;
+                parent[next] = (long) current;
+                path_push(heap, &heap_size, candidate, next);
+            }
+        }
+    }
+    const int found = isfinite(dist[goal_index]);
+    if (found) {
+        /* La cadena de padres se recorre del final al principio. */
+        size_t cells = 0;
+        for (long cursor = (long) goal_index; cursor >= 0; cursor = parent[cursor]) {
+            cells += 1;
+            if ((size_t) cursor == start_index) {
+                break;
+            }
+        }
+        const size_t raw_count = cells + 2;
+        norma_point *raw = (norma_point *) malloc(raw_count * sizeof(norma_point));
+        if (raw == NULL) {
+            free(dist);
+            free(parent);
+            free(heap);
+            return 0;
+        }
+        raw[0] = from;
+        size_t slot = cells;
+        for (long cursor = (long) goal_index; cursor >= 0 && slot > 0; cursor = parent[cursor]) {
+            slot -= 1;
+            raw[1 + slot] = path_cell_center(grid, (int) ((size_t) cursor % grid->nx),
+                                             (int) ((size_t) cursor / grid->nx));
+            if ((size_t) cursor == start_index) {
+                break;
+            }
+        }
+        raw[raw_count - 1] = to;
+
+        /* Simplificación con línea de vista: se conservan las esquinas. */
+        norma_point *simple = (norma_point *) malloc(raw_count * sizeof(norma_point));
+        if (simple == NULL) {
+            free(raw);
+            free(dist);
+            free(parent);
+            free(heap);
+            return 0;
+        }
+        size_t simple_count = 0;
+        simple[simple_count++] = raw[0];
+        size_t index = 0;
+        while (index + 1 < raw_count) {
+            size_t jump = index + 1;
+            for (size_t candidate = raw_count - 1; candidate > index + 1; candidate -= 1) {
+                if (path_line_of_sight(grid, raw[index], raw[candidate], allow_exterior)) {
+                    jump = candidate;
+                    break;
+                }
+            }
+            simple[simple_count++] = raw[jump];
+            index = jump;
+        }
+        double length_cm = 0.0;
+        for (size_t step = 1; step < simple_count; step += 1) {
+            length_cm += hypot(simple[step].x - simple[step - 1].x, simple[step].y - simple[step - 1].y);
+        }
+        size_t written = 0;
+        for (size_t step = 0; step < simple_count && points != NULL && step < room; step += 1) {
+            points[step].x = round(simple[step].x * 100.0) / 100.0;
+            points[step].y = round(simple[step].y * 100.0) / 100.0;
+            written += 1;
+        }
+        if (count != NULL) {
+            *count = points != NULL ? written : simple_count;
+        }
+        if (meters != NULL) {
+            *meters = round(length_cm) / 100.0;
+        }
+        free(simple);
+        free(raw);
+    }
+    free(dist);
+    free(parent);
+    free(heap);
+    return found;
+}
