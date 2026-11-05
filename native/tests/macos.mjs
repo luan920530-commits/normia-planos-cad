@@ -190,8 +190,8 @@ report.check('Editar el plano invalida la revisión en vez de mostrar cifras vie
   'se vuelve a pedir con ⌘R');
 
 report.check('El paquete lleva los catálogos que el cajón necesita',
-  /Contents\/Resources\/resources/.test(makefile) && /cp \.\.\/resources\/\*\.json/.test(makefile),
-  'Resources/resources');
+  /Contents\/Resources\/resources/.test(makefile) && /cp \.\.\/\.\.\/resources\/\*\.json/.test(makefile),
+  'Resources/resources desde la raíz del repositorio');
 
 /* ------------------------ 4c · recientes, papel y PDF ------------------------ */
 
