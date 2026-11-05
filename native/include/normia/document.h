@@ -50,6 +50,16 @@ typedef struct {
     double measured_m;
     /** Puerta marcada como salida de emergencia. */
     int is_exit;
+    /* Datos de norma de un extintor (NTC 2885 / NFPA 10). Se guardan tal como
+       vienen del plano: los valores que falten los completa el análisis con los
+       del catálogo, igual que `DesignValidator::extinguisherFields()` en la web. */
+    char ext_agent[24];
+    char ext_rating[24];
+    char ext_hazard[16];
+    double ext_capacity_lb;
+    double ext_mount_cm;
+    /** 1 si el plano declaró la altura de montaje (0 cm es «sin dato»). */
+    int has_ext_mount;
 } norma_element;
 
 typedef struct {
@@ -65,6 +75,9 @@ typedef struct {
     char layer[32];
     /** Ocupación declarada del plano (personas). 0 = sin declarar. */
     long occupancy;
+    /** Ajustes de extintores del plano: perfil normativo y riesgo predominante. */
+    char ext_profile[24];
+    char ext_hazard[16];
     norma_element *elements;
     size_t count;
     size_t capacity;

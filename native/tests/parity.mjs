@@ -566,6 +566,124 @@ if (míos[0] && suyos) {
   }
 }
 
+/* ------------- 4e · extintores: el mismo dictamen de ubicación ------------- */
+
+// Nave de 40 × 30 m con tres equipos distintos (ABC de 20 lb, CO₂ de 10 lb y
+// ABC de 10 lb con riesgo leve), sin señal de extintor.
+const planoNaveExtintores = {
+  application: 'normia-planos-cad',
+  format: 'normia-plan',
+  schema_version: 3,
+  project: { name: 'Extintores' },
+  design: {
+    canvas: { width: 4000, height: 3000, grid: 20, unit: 'cm', scale: '1:100', occupancy: 120 },
+    extinguishers: { profile: 'colombia', hazard: 'ordinary' },
+    layers: [{ id: 'capa', name: 'Planta', visible: true, locked: false }],
+    elements: [
+      { id: 'n', type: 'wall', layerId: 'capa', stroke: 20, points: [{ x: 100, y: 100 }, { x: 3900, y: 100 }] },
+      { id: 's', type: 'wall', layerId: 'capa', stroke: 20, points: [{ x: 100, y: 2900 }, { x: 3900, y: 2900 }] },
+      { id: 'o', type: 'wall', layerId: 'capa', stroke: 20, points: [{ x: 100, y: 100 }, { x: 100, y: 2900 }] },
+      { id: 'e', type: 'wall', layerId: 'capa', stroke: 20, points: [{ x: 3900, y: 100 }, { x: 3900, y: 2900 }] },
+      { id: 'salida', type: 'door', layerId: 'capa', x: 3800, y: 1400, w: 100, h: 100, isExit: true },
+      { id: 'ext1', type: 'cad_eds_extinguisher', layerId: 'capa', x: 400, y: 400, w: 40, h: 40,
+        extAgent: 'pqs_abc', extCapacityLb: 20, extRating: '4-A:60-B:C', extHazard: 'ordinary', extMountCm: 120 },
+      { id: 'ext2', type: 'cad_fire_ext_co2', layerId: 'capa', x: 3000, y: 2200, w: 40, h: 40,
+        extAgent: 'co2', extCapacityLb: 10, extRating: '10-B:C', extHazard: 'ordinary', extMountCm: 120 },
+      { id: 'ext3', type: 'cad_drg_extinguisher', layerId: 'capa', x: 2000, y: 1500, w: 40, h: 40,
+        extAgent: 'pqs_abc', extCapacityLb: 10, extRating: '2-A:10-B:C', extHazard: 'light', extMountCm: 160 },
+    ],
+  },
+};
+
+// Piso de 20 × 20 m con un solo 1-A: el recorrido alcanza más área de la que
+// admite el rótulo, así que el límite que se incumple es el de área.
+const planoAreaExtintores = {
+  application: 'normia-planos-cad',
+  format: 'normia-plan',
+  schema_version: 3,
+  project: { name: 'Área de extintores' },
+  design: {
+    canvas: { width: 2400, height: 2400, grid: 20, unit: 'cm', scale: '1:100', occupancy: 10 },
+    extinguishers: { profile: 'colombia', hazard: 'ordinary' },
+    layers: [{ id: 'capa', name: 'Planta', visible: true, locked: false }],
+    elements: [
+      { id: 'n', type: 'wall', layerId: 'capa', stroke: 20, points: [{ x: 200, y: 200 }, { x: 2200, y: 200 }] },
+      { id: 's', type: 'wall', layerId: 'capa', stroke: 20, points: [{ x: 200, y: 2200 }, { x: 2200, y: 2200 }] },
+      { id: 'o', type: 'wall', layerId: 'capa', stroke: 20, points: [{ x: 200, y: 200 }, { x: 200, y: 2200 }] },
+      { id: 'e', type: 'wall', layerId: 'capa', stroke: 20, points: [{ x: 2200, y: 200 }, { x: 2200, y: 2200 }] },
+      { id: 'salida', type: 'door', layerId: 'capa', x: 2100, y: 1100, w: 100, h: 100, isExit: true },
+      { id: 'ext1', type: 'cad_eds_extinguisher', layerId: 'capa', x: 1180, y: 1180, w: 40, h: 40,
+        extAgent: 'pqs_abc', extCapacityLb: 5, extRating: '1-A:10-B:C', extHazard: 'ordinary', extMountCm: 120 },
+    ],
+  },
+};
+
+const fixturesExt = [planoNaveExtintores, planoAreaExtintores].map((plano, index) => {
+  const file = path.join(os.tmpdir(), `normia-paridad-ext-${index}-${process.pid}.json`);
+  fs.writeFileSync(file, JSON.stringify(plano), 'utf8');
+  return file;
+});
+const miosExt = fixturesExt.map((file) => {
+  try {
+    return JSON.parse(runCore(['--audit', file, '--resources', resources]));
+  } catch (error) {
+    report.check('El núcleo calcula la cobertura de extintores', false,
+      String(error?.message || error).slice(0, 120));
+    return null;
+  }
+});
+
+const app6 = await startApp(VERSION);
+let suyosExt = null;
+try {
+  const resultado = await app6.run(`
+$salida = [];
+foreach (${JSON.stringify(fixturesExt)} as $file) {
+  $design = json_decode((string) file_get_contents($file), true)['design'];
+  $report = App\\Services\\PlanAudit::analyze($design);
+  $coverage = App\\Services\\ExtinguisherCoverage::analyze($design, false);
+  $salida[] = ['findings' => $report['findings'], 'summary' => $coverage['summary'],
+    'zones' => count($coverage['zones']), 'units' => count($coverage['units'])];
+}
+echo json_encode($salida);
+`);
+  const text = String(resultado.text || '');
+  suyosExt = JSON.parse(text.slice(text.indexOf('[')));
+} catch (error) {
+  report.check('El motor PHP calcula la cobertura de extintores', false,
+    String(error?.message || error).slice(0, 120));
+}
+await app6.close();
+fixturesExt.forEach((file) => fs.rmSync(file, { force: true }));
+
+const CODES_EXT = ['ext_missing', 'ext_ratio_short', 'ext_travel_too_long', 'ext_coverage_gap',
+  'ext_class_gap', 'ext_no_class_a', 'ext_wrong_class', 'ext_without_sign', 'ext_height',
+  'ext_obsolete_rating'];
+
+if (miosExt[0] && suyosExt) {
+  for (let index = 0; index < 2; index += 1) {
+    const comparable = comparar(miosExt[index].findings, suyosExt[index].findings, CODES_EXT);
+    report.check(`Los hallazgos de extintores del piso ${index + 1} coinciden palabra por palabra`,
+      comparable.mío.length > 0 && comparable.igual,
+      comparable.mío.map((f) => f.code).join(' · ') || 'sin hallazgos');
+  }
+
+  const c = miosExt[0].extinguishers;
+  const p = suyosExt[0].summary;
+  const redondear = (valor) => Math.round(valor * 10) / 10;
+  report.check('La superficie y la cobertura de extintores coinciden con PHP',
+    c.units === p.count && redondear(c.floorAreaM2) === p.floorAreaM2
+      && redondear(c.coveredAreaM2) === p.coveredAreaM2 && redondear(c.coveredPct) === p.coveredPct
+      && redondear(c.uncoveredAreaM2) === p.uncoveredAreaM2 && c.requiredByArea === p.requiredByArea
+      && c.unitsWithGap === p.unitsWithGap && c.zones === suyosExt[0].zones,
+    `C: ${c.coveredAreaM2} de ${c.floorAreaM2} m² · PHP: ${p.coveredAreaM2} de ${p.floorAreaM2} m²`);
+
+  report.check('El área del rótulo es la que manda en el segundo piso',
+    miosExt[1].findings.some((f) => f.code === 'ext_coverage_gap')
+      && !miosExt[1].findings.some((f) => f.code === 'ext_travel_too_long'),
+    `cubre ${miosExt[1].extinguishers.coveredAreaM2} de ${miosExt[1].extinguishers.floorAreaM2} m²`);
+}
+
 /* ------------------- 5 · el núcleo no se rompe con basura ------------------ */
 
 const basura = path.join(os.tmpdir(), `normia-basura-${process.pid}.json`);

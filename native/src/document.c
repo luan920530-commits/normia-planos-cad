@@ -431,6 +431,26 @@ static void write_box(norma_buffer *buffer, const norma_element *element)
     if (element->is_exit) {
         norma_buffer_raw(buffer, ",\"isExit\":true");
     }
+    if (element->ext_agent[0] != '\0') {
+        norma_buffer_raw(buffer, ",\"extAgent\":");
+        norma_buffer_string(buffer, element->ext_agent);
+    }
+    if (element->ext_rating[0] != '\0') {
+        norma_buffer_raw(buffer, ",\"extRating\":");
+        norma_buffer_string(buffer, element->ext_rating);
+    }
+    if (element->ext_hazard[0] != '\0') {
+        norma_buffer_raw(buffer, ",\"extHazard\":");
+        norma_buffer_string(buffer, element->ext_hazard);
+    }
+    if (element->ext_capacity_lb > 0.0) {
+        norma_buffer_raw(buffer, ",\"extCapacityLb\":");
+        norma_buffer_number(buffer, element->ext_capacity_lb);
+    }
+    if (element->has_ext_mount) {
+        norma_buffer_raw(buffer, ",\"extMountCm\":");
+        norma_buffer_number(buffer, element->ext_mount_cm);
+    }
 }
 
 static void write_element(norma_buffer *buffer, const norma_element *element)
@@ -592,6 +612,12 @@ int norma_document_from_json(norma_document *document, const char *text, size_t 
     document->occupancy = occupancy > 0.0 ? (long) occupancy : 0;
     set_text(document->scale, sizeof(document->scale), norma_json_string(norma_json_get(canvas, "scale")), "1:100");
 
+    const norma_json *extinguishers = norma_json_get(design, "extinguishers");
+    set_text(document->ext_profile, sizeof(document->ext_profile),
+             norma_json_string(norma_json_get(extinguishers, "profile")), "");
+    set_text(document->ext_hazard, sizeof(document->ext_hazard),
+             norma_json_string(norma_json_get(extinguishers, "hazard")), "");
+
     const norma_json *layers = norma_json_get(design, "layers");
     const norma_json *first_layer = norma_json_at(layers, 0);
     set_text(document->layer, sizeof(document->layer), norma_json_string(norma_json_get(first_layer, "id")), NORMA_DEFAULT_LAYER);
@@ -625,6 +651,15 @@ int norma_document_from_json(norma_document *document, const char *text, size_t 
         element.width_m = norma_json_number(norma_json_get(source, "widthM"), 2.0);
         element.measured_m = norma_json_number(norma_json_get(source, "measuredM"), 0.0);
         element.is_exit = norma_json_bool_at(source, "isExit", 0);
+        set_text(element.ext_agent, sizeof(element.ext_agent),
+                 norma_json_string(norma_json_get(source, "extAgent")), "");
+        set_text(element.ext_rating, sizeof(element.ext_rating),
+                 norma_json_string(norma_json_get(source, "extRating")), "");
+        set_text(element.ext_hazard, sizeof(element.ext_hazard),
+                 norma_json_string(norma_json_get(source, "extHazard")), "");
+        element.ext_capacity_lb = norma_json_number(norma_json_get(source, "extCapacityLb"), 0.0);
+        element.ext_mount_cm = norma_json_number(norma_json_get(source, "extMountCm"), 0.0);
+        element.has_ext_mount = norma_json_get(source, "extMountCm") != NULL;
         document->elements[document->count] = element;
         document->count += 1;
         document->identifier += 1;

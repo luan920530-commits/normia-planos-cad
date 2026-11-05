@@ -19,6 +19,7 @@
 
 #include "normia/audit.h"
 #include "normia/findings.h"
+#include "normia/extinguisher.h"
 #include "normia/firstaid.h"
 #include "normia/library.h"
 #include "normia/signage.h"
@@ -50,6 +51,9 @@ static void usage(FILE *out, const char *program)
 /** Carpeta de catálogos pedida con `--resources` o con el entorno. */
 static const char *g_resources = NULL;
 
+/** Carpeta que sí contenía los catálogos, para reutilizarla en las tablas. */
+static char g_resources_found[256];
+
 /**
  * Carga los catálogos de señalización probando, en orden, la carpeta pedida,
  * la del entorno y las rutas relativas habituales (raíz del repo o `native/`).
@@ -74,6 +78,7 @@ static int load_library(norma_library *library, char *error, size_t error_size)
     char last[256] = "No se encontró la carpeta «resources» con los catálogos de señalización.";
     for (size_t index = 0; index < count; index += 1) {
         if (norma_library_load(candidates[index], library, error, error_size)) {
+            snprintf(g_resources_found, sizeof(g_resources_found), "%s", candidates[index]);
             return 1;
         }
         snprintf(last, sizeof(last), "%s", error);
@@ -223,6 +228,19 @@ static int command_audit(const char *path)
     } else {
         memset(&signage, 0, sizeof(signage));
     }
+    /* Extintores: recorrido y área sobre la misma rejilla, con las tablas locales. */
+    norma_ext_norms ext_norms;
+    norma_ext_result ext_result;
+    char ext_error[256] = "";
+    const int has_ext_norms = norma_ext_norms_load(g_resources_found, document.ext_profile,
+                                                   document.ext_hazard, &ext_norms, ext_error,
+                                                   sizeof(ext_error));
+    if (has_ext_norms) {
+        norma_ext_analyze(&document, &grid, has_library ? &library : NULL, &ext_norms, &ext_result);
+        norma_ext_findings(&ext_result, &ext_norms, &findings);
+    } else {
+        memset(&ext_result, 0, sizeof(ext_result));
+    }
     /* Primeros auxilios: botiquín, camilla y DEA, medidos sobre la misma rejilla. */
     norma_firstaid first_aid;
     norma_firstaid_analyze(&document, &grid, aforo.used, aforo.source, NULL, &first_aid, &findings);
@@ -301,7 +319,28 @@ static int command_audit(const char *path)
         }
         write_json_string(signage.items[index].code);
     }
-    printf("]},\"firstAid\":{\"people\":%ld,\"source\":\"%s\",\"kits\":%lu,\"stretchers\":%lu,"
+    printf("]},\"extinguishers\":{\"tablesLoaded\":%s,\"profile\":",
+           has_ext_norms ? "true" : "false");
+    if (has_ext_norms) {
+        write_json_string(ext_norms.profile);
+    } else {
+        printf("null");
+    }
+    printf(",\"hazard\":");
+    if (has_ext_norms) {
+        write_json_string(ext_norms.hazard);
+    } else {
+        printf("null");
+    }
+    printf(",\"units\":%lu,\"floorAreaM2\":%.17g,\"coveredAreaM2\":%.17g,\"coveredPct\":%.17g,"
+           "\"uncoveredAreaM2\":%.17g,\"requiredByArea\":%ld,\"zones\":%lu,"
+           "\"unitsWithGap\":%lu,\"classes\":%d,\"missingClasses\":%d},\"firstAid\":{",
+           (unsigned long) ext_result.unit_count, ext_result.summary.floor_area_m2,
+           ext_result.summary.covered_area_m2, ext_result.summary.covered_pct,
+           ext_result.summary.uncovered_area_m2, ext_result.summary.required_by_area,
+           (unsigned long) ext_result.zone_count, (unsigned long) ext_result.summary.units_with_gap,
+           ext_result.summary.classes, ext_result.summary.missing_classes);
+    printf("\"people\":%ld,\"source\":\"%s\",\"kits\":%lu,\"stretchers\":%lu,"
            "\"aeds\":%lu,\"cells\":%lu,\"kitMaxM\":",
            first_aid.people, first_aid.source, (unsigned long) first_aid.kit_count,
            (unsigned long) first_aid.stretcher_count, (unsigned long) first_aid.aed_count,
@@ -354,6 +393,9 @@ static int command_audit(const char *path)
     norma_findings_free(&findings);
     printf("]}\n"); /* cierra findings y el objeto raíz */
     norma_signage_free(&signage);
+    if (has_ext_norms) {
+        norma_ext_norms_free(&ext_norms);
+    }
     if (has_library) {
         norma_library_free(&library);
     }

@@ -9,9 +9,9 @@ ventana nativa de macOS con su lienzo, sin WebView) y la **N2**: cotas, pluma de
 nodos, arcos, exportación SVG desde el núcleo, **recientes**, **impresión** y
 **PDF**. De la **N3** ya están la **rejilla de cálculo y aforo**, las **salidas**, los
 **recorridos**, los **hallazgos de evacuación**, la **señalización** (con las 395
-señales del catálogo local) y los **primeros auxilios**, todos con paridad contra
-PHP. Lo que todavía no hay: extintores, escenarios y simulacro, las rutas dibujadas
-en el lienzo, y Windows y Linux (N4). El alcance completo
+señales del catálogo local), los **primeros auxilios** y los **extintores**, todos
+con paridad contra PHP. Lo que todavía no hay: escenarios y simulacro, las acciones
+cuantificadas de extintores, las rutas dibujadas en el lienzo, y Windows y Linux (N4). El alcance completo
 está en [`docs/APP-NATIVA.md`](../docs/APP-NATIVA.md).
 
 ## Por qué se empieza por el núcleo
@@ -42,15 +42,16 @@ es lo que comprueba `tests/parity.mjs`.
 | Catálogo de señalización | `include/normia/library.h`, `src/library.c` | Las 395 señales locales (332 ISO 7010 + 63 propias): tipo ↔ código, validación del SVG y `<svg>` anidado para el plano exportado |
 | Señalización | `include/normia/signage.h`, `src/signage.c` | Salida sin pictograma, falta de «usted está aquí» y falta de señalización contra incendios |
 | Primeros auxilios | `include/normia/firstaid.h`, `src/firstaid.c` | Botiquín, camilla y DEA: recuento y alcance desde el punto más lejano del espacio libre |
+| Extintores | `include/normia/extinguisher.h`, `src/extinguisher.c` | NTC 2885 + Resolución 2400 y NFPA 10: recorrido por clase y riesgo, área por número de A, zonas descubiertas con su motivo |
 | Ventana de macOS | `macos/` | AppKit puro: menú en español, lienzo con Core Graphics, herramientas `V · M · P · A · D`, cotas, **lienzo abierto con zoom y desplazamiento**, abrir reciente, imprimir (⌘P), exportar SVG (⌘E) y PDF, abrir y guardar con los paneles del sistema, macOS 12 |
 
 ## Compilar y probar
 
 ```sh
 make -C native            # construye native/build/norma-core
-make -C native test       # núcleo (23), documento (27), SVG (25), auditor (34) y señalización (30)
+make -C native test       # núcleo (23), documento (27), SVG (25), auditor (34), señalización (30) y extintores (23)
 node native/tests/core.mjs         # compila en estricto y corre los cuatro (8)
-node native/tests/parity.mjs 8.3   # paridad contra el motor PHP (41)
+node native/tests/parity.mjs 8.3   # paridad contra el motor PHP (45)
 node native/tests/macos.mjs        # contrato de la ventana nativa (42)
 ```
 

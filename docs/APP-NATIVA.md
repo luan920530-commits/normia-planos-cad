@@ -358,9 +358,10 @@ igual que en la web.
 | Catálogo | `native/src/library.c` | Las **395** señalizaciones locales (332 ISO 7010 + 63 propias), el tipo del editor ↔ el código, la validación del SVG y el `<svg>` anidado |
 | Señalización | `native/src/signage.c` | Salida sin pictograma cerca, falta de «usted está aquí» y falta de señalización contra incendios |
 | Primeros auxilios | `native/src/firstaid.c` | Botiquín, camilla y DEA: recuento y alcance medido sobre la rejilla |
+| Extintores | `native/src/extinguisher.c` | Tablas NTC 2885 / NFPA 10 y Resolución 2400: recorrido por clase y riesgo, área por número de A, cobertura por recorrido real y zonas descubiertas con su motivo |
 | Programa | `native/src/cli.c` | `norma-core --audit plano.json` incluye salidas, recorrido, señalización, primeros auxilios y hallazgos; `--sign-board hoja.svg` dibuja el catálogo completo |
-| Pruebas | `native/tests/test_audit.c` · `test_signs.c` | **34/34** y **30/30** |
-| Paridad | `native/tests/parity.mjs` | **41/41** |
+| Pruebas | `native/tests/test_audit.c` · `test_signs.c` · `test_extinguishers.c` | **34/34**, **30/30** y **23/23** |
+| Paridad | `native/tests/parity.mjs` | **45/45** |
 
 El caso de prueba y sus cifras, idénticas en C y en PHP: una habitación de
 6 × 4 m con un vano de 80 cm y una vía de 4 m de ancho al sur, con 5 000
@@ -450,10 +451,49 @@ equipo. Los umbrales son criterios configurables de la aplicación, con las norm
 la vista (ISO 7010 y NTC 1461 para el pictograma; Ley 1831 de 2017 y Resolución
 3316 de 2019 para el DEA), y no un dictamen de cumplimiento.
 
+#### Extintores (2026-11-05)
+
+El cálculo de extintores entra completo en el núcleo, con las **dos columnas
+normativas juntas**: Colombia · **NTC 2885:2009 + Resolución 2400 de 1979** (arts.
+220-224) e internacional · **NFPA 10**. Las tablas se leen de
+`resources/extinguisher-criteria.json`, igual que en la web, y el perfil y el
+riesgo se declaran en el plano.
+
+| Hallazgo | Gravedad | Criterio |
+| --- | --- | --- |
+| `ext_missing` | informativa | No hay ningún extintor dibujado |
+| `ext_ratio_short` | media | La Resolución 2400 (art. 221) pide 1 por cada 200 m² de local o fracción |
+| `ext_travel_too_long` | alta si la cobertura baja del 80 %, media si no | Superficie a la que no llega ningún equipo dentro de su distancia máxima |
+| `ext_coverage_gap` | alta si la cobertura baja del 80 %, media si no | La superficie que alcanza el recorrido supera la que admite el rótulo |
+| `ext_class_gap` | media | El equipo más cercano no declara una clase de fuego aplicable |
+| `ext_no_class_a` | media | Ningún equipo con Clase A (`2-A` o superior) en un piso de 20 m² o más |
+| `ext_wrong_class` | media | El rótulo declara una clase que el agente no cubre |
+| `ext_without_sign` | baja | Ninguna señal F001 a menos de 1,50 m del equipo |
+| `ext_height` | baja | La parte superior pasa de 1,53 m (18,14 kg o menos) o de 1,07 m (más pesado) |
+| `ext_obsolete_rating` | informativa | Rótulos 4, 6, 8, 12 o 16-B, que la NFPA 10:2007 (4.4) ya no reconoce |
+
+El recorrido **no es una línea recta**: se propaga por la rejilla con ocho vecinos,
+igual que la evacuación, y el límite sale de la clase de fuego y del riesgo
+(`5-A`/`20-B` no se comportan igual en riesgo leve que en extra). El área se asigna
+primero al equipo más cercano que llegue y, si esa área pasa de lo que admite su
+número de A, se conservan las celdas más cercanas y el resto queda descubierto: es
+lo que haría una revisión con la tabla en la mano.
+
+En la nave de prueba (40 × 30 m, tres equipos distintos) la cobertura es de
+**874,6 m² de 1 037,9 m² (84,3 %)** y salen los mismos seis hallazgos que en PHP,
+con el mismo texto. En el piso de 20 × 20 m con un solo `1-A`, el límite que se
+incumple es el área (**139,4 m²** asignados de 384,3 m²) y el hallazgo lo dice así.
+
+Lo que este cálculo **no** afirma: no comprueba si el extintor existe, está
+cargado, vigente, rotulado ni accesible; no mide la altura real en obra ni la
+distancia de recorrido con obstáculos que no estén dibujados. Es un apoyo de
+diseño, y así se rotula.
+
 ### Lo que N3 todavía no tiene
 
-- **Los demás hallazgos** del auditor web: extintores, escenarios de ocupación
-  temporal y simulacro.
+- **Los hallazgos** de escenarios de ocupación temporal y de simulacro.
+- **Las acciones cuantificadas** de extintores (reubicar, subir capacidad, añadir
+  equipo con la ganancia medida).
 - **Dibujar las rutas** de evacuación sobre el lienzo nativo (el cálculo ya está).
 - **Pintar los pictogramas en el lienzo** de la ventana de macOS: hoy se dibujan en
   el SVG exportado; el lienzo nativo todavía usa el marcador genérico.
