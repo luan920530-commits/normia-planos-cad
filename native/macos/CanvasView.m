@@ -36,8 +36,8 @@ static const CGFloat kToleranceScreen = 8.0;
         _selectedNode = -1;
         _selectedElement = -1;
         self.wantsLayer = YES;
-        // El lienzo responde al teclado sin que haya que pulsar antes.
-        self.acceptsFirstResponder = YES;
+        // `acceptsFirstResponder` es de solo lectura: se responde YES en su
+        // método (abajo), que es como AppKit pregunta si el lienzo toma el teclado.
     }
     return self;
 }

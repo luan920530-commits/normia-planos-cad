@@ -288,7 +288,7 @@ static const char *kAppName = "Normia Estudio";
         return;
     }
     self.filePath = path;
-    self.document.dirty = 0;
+    _document.dirty = 0;
     [self refreshTitle];
     [self canvasStatus:self.canvas message:[NSString stringWithFormat:@"Plano guardado · %@", path.lastPathComponent]];
 }
@@ -322,8 +322,8 @@ static const char *kAppName = "Normia Estudio";
                                         timestamp:0
                                      windowNumber:self.window.windowNumber
                                           context:nil
-                                       characters:@"\u007f"
-                      charactersIgnoringModifiers:@"\u007f"
+                                       characters:@"\x7f"
+                      charactersIgnoringModifiers:@"\x7f"
                                         isARepeat:NO
                                           keyCode:51]];
 }

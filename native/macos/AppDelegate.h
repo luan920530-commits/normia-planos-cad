@@ -3,5 +3,7 @@
  */
 #import <Cocoa/Cocoa.h>
 
-@interface AppDelegate : NSObject <NSApplicationDelegate, NSWindowDelegate>
+@protocol CanvasViewDelegate;
+
+@interface AppDelegate : NSObject <NSApplicationDelegate, NSWindowDelegate, CanvasViewDelegate>
 @end
