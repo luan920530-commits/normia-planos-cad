@@ -142,7 +142,11 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
 - (void)drawRect:(NSRect)dirtyRect
 {
     (void) dirtyRect;
-    [[NSColor colorWithCalibratedWhite:0.16 alpha:1.0] setFill];
+    if (self.printing) {
+        [[NSColor whiteColor] setFill];
+    } else {
+        [[NSColor colorWithCalibratedWhite:0.16 alpha:1.0] setFill];
+    }
     NSRectFill(self.bounds);
     if (self.document == NULL) {
         return;

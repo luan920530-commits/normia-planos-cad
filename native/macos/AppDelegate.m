@@ -27,7 +27,13 @@ static const char *kAppName = "Normia Estudio";
 @property(nonatomic) norma_document document;
 @property(nonatomic, copy) NSString *filePath;
 @property(nonatomic, copy) NSString *planName;
+/** Submenú «Abrir reciente», que se rehace cada vez que se abre. */
+@property(nonatomic, strong) NSMenu *recentMenu;
 @end
+
+/** Preferencia donde viven los últimos planos: archivo del equipo, nunca la app. */
+static NSString *const kRecentKey = @"NormiaRecientes";
+static const NSUInteger kRecentLimit = 10;
 
 @implementation AppDelegate
 
@@ -120,12 +126,20 @@ static const char *kAppName = "Normia Estudio";
     NSMenu *fileMenu = [[NSMenu alloc] initWithTitle:@"Archivo"];
     [fileMenu addItemWithTitle:@"Plano nuevo" action:@selector(newPlan:) keyEquivalent:@"n"];
     [fileMenu addItemWithTitle:@"Abrir…" action:@selector(openPlan:) keyEquivalent:@"o"];
+    NSMenuItem *recentItem = [[NSMenuItem alloc] initWithTitle:@"Abrir reciente" action:nil keyEquivalent:@""];
+    self.recentMenu = [[NSMenu alloc] initWithTitle:@"Abrir reciente"];
+    self.recentMenu.delegate = self;
+    recentItem.submenu = self.recentMenu;
+    [fileMenu addItem:recentItem];
     [fileMenu addItem:[NSMenuItem separatorItem]];
     [fileMenu addItemWithTitle:@"Guardar" action:@selector(savePlan:) keyEquivalent:@"s"];
     NSMenuItem *saveAs = [fileMenu addItemWithTitle:@"Guardar como…" action:@selector(savePlanAs:) keyEquivalent:@"S"];
     saveAs.keyEquivalentModifierMask = NSEventModifierFlagCommand | NSEventModifierFlagShift;
     [fileMenu addItem:[NSMenuItem separatorItem]];
+    [fileMenu addItemWithTitle:@"Imprimir…" action:@selector(printPlan:) keyEquivalent:@"p"];
+    [fileMenu addItem:[NSMenuItem separatorItem]];
     [fileMenu addItemWithTitle:@"Exportar SVG…" action:@selector(exportSvg:) keyEquivalent:@"E"];
+    [fileMenu addItemWithTitle:@"Exportar PDF…" action:@selector(exportPdf:) keyEquivalent:@""];
     [fileMenu addItem:[NSMenuItem separatorItem]];
     [fileMenu addItemWithTitle:@"Cerrar ventana" action:@selector(performClose:) keyEquivalent:@"w"];
     fileItem.submenu = fileMenu;
@@ -158,6 +172,96 @@ static const char *kAppName = "Normia Estudio";
     [menubar addItem:helpItem];
 
     NSApp.mainMenu = menubar;
+}
+
+/* ------------------------------- recientes ------------------------------- */
+
+/** Los últimos planos abiertos o guardados, sin los que ya no están en el disco. */
+- (NSArray<NSString *> *)recentPaths
+{
+    NSArray *stored = [[NSUserDefaults standardUserDefaults] arrayForKey:kRecentKey];
+    NSMutableArray<NSString *> *paths = [NSMutableArray array];
+    for (id item in stored) {
+        if (![item isKindOfClass:[NSString class]]) {
+            continue;
+        }
+        NSString *path = (NSString *) item;
+        if ([[NSFileManager defaultManager] fileExistsAtPath:path]) {
+            [paths addObject:path];
+        }
+    }
+    return paths;
+}
+
+- (void)rememberPath:(NSString *)path
+{
+    if (path.length == 0) {
+        return;
+    }
+    NSMutableArray<NSString *> *paths = [NSMutableArray arrayWithObject:path];
+    for (NSString *other in [self recentPaths]) {
+        if (![other isEqualToString:path]) {
+            [paths addObject:other];
+        }
+        if (paths.count >= kRecentLimit) {
+            break;
+        }
+    }
+    [[NSUserDefaults standardUserDefaults] setObject:paths forKey:kRecentKey];
+}
+
+- (void)rebuildRecentMenu
+{
+    [self.recentMenu removeAllItems];
+    NSArray<NSString *> *paths = [self recentPaths];
+    if (paths.count == 0) {
+        NSMenuItem *empty = [[NSMenuItem alloc] initWithTitle:@"Todavía no hay planos recientes"
+                                                      action:nil keyEquivalent:@""];
+        empty.enabled = NO;
+        [self.recentMenu addItem:empty];
+        return;
+    }
+    for (NSString *path in paths) {
+        NSMenuItem *item = [[NSMenuItem alloc] initWithTitle:path.lastPathComponent
+                                                     action:@selector(openRecent:)
+                                              keyEquivalent:@""];
+        item.representedObject = path;
+        item.toolTip = path;
+        [self.recentMenu addItem:item];
+    }
+    [self.recentMenu addItem:[NSMenuItem separatorItem]];
+    [self.recentMenu addItemWithTitle:@"Limpiar la lista" action:@selector(clearRecents:) keyEquivalent:@""];
+}
+
+- (void)menuNeedsUpdate:(NSMenu *)menu
+{
+    if (menu == self.recentMenu) {
+        [self rebuildRecentMenu];
+    }
+}
+
+- (void)openRecent:(NSMenuItem *)sender
+{
+    NSString *path = sender.representedObject;
+    if (path.length == 0) {
+        return;
+    }
+    if (![[NSFileManager defaultManager] fileExistsAtPath:path]) {
+        [self showError:@"Ese archivo ya no está" detail:path];
+        [self rebuildRecentMenu];
+        return;
+    }
+    if (![self confirmDiscardIfNeeded]) {
+        return;
+    }
+    [self loadPlanAtPath:path];
+}
+
+- (void)clearRecents:(id)sender
+{
+    (void) sender;
+    [[NSUserDefaults standardUserDefaults] removeObjectForKey:kRecentKey];
+    [self rebuildRecentMenu];
 }
 
 /* ------------------------------ documentos ------------------------------- */
@@ -251,6 +355,7 @@ static const char *kAppName = "Normia Estudio";
     }
     self.filePath = path;
     self.planName = path.lastPathComponent.stringByDeletingPathExtension;
+    [self rememberPath:path];
     [self.canvas documentDidLoad];
     [self refreshTitle];
     [self canvasStatus:self.canvas message:[NSString stringWithFormat:@"Plano abierto · %@", self.planName]];
@@ -295,6 +400,7 @@ static const char *kAppName = "Normia Estudio";
     }
     self.filePath = path;
     _document.dirty = 0;
+    [self rememberPath:path];
     [self refreshTitle];
     [self canvasStatus:self.canvas message:[NSString stringWithFormat:@"Plano guardado · %@", path.lastPathComponent]];
 }
@@ -363,6 +469,52 @@ static const char *kAppName = "Normia Estudio";
     [self canvasStatus:self.canvas message:[NSString stringWithFormat:@"SVG exportado · %@", panel.URL.lastPathComponent]];
 }
 
+- (void)printPlan:(id)sender
+{
+    (void) sender;
+    NSPrintInfo *info = [[NSPrintInfo sharedPrintInfo] copy]; /* no tocar el compartido */
+    info.orientation = NSPaperOrientationLandscape;
+    [info setPaperSize:NSMakeSize(842.0, 595.0)]; /* A4 horizontal, en puntos */
+    info.horizontalPagination = NSFitPagination;
+    info.verticalPagination = NSFitPagination;
+    info.horizontallyCentered = YES;
+    info.verticallyCentered = YES;
+    info.topMargin = 24.0;
+    info.bottomMargin = 24.0;
+    info.leftMargin = 24.0;
+    info.rightMargin = 24.0;
+
+    self.canvas.printing = YES;
+    NSPrintOperation *operation = [NSPrintOperation printOperationWithView:self.canvas printInfo:info];
+    operation.showsPrintPanel = YES;
+    operation.showsProgressPanel = YES;
+    [operation runOperation];
+    self.canvas.printing = NO;
+    [self.canvas setNeedsDisplay:YES];
+    [self canvasStatus:self.canvas message:@"Plano enviado a la impresión"];
+}
+
+- (void)exportPdf:(id)sender
+{
+    (void) sender;
+    NSSavePanel *panel = [NSSavePanel savePanel];
+    panel.allowedContentTypes = @[ UTTypePDF ];
+    panel.nameFieldStringValue = [NSString stringWithFormat:@"%@.pdf", self.planName ?: @"plano"];
+    panel.message = @"Exportar el plano en PDF";
+    if ([panel runModal] != NSModalResponseOK || panel.URL == nil) {
+        return;
+    }
+    self.canvas.printing = YES;
+    NSData *pdf = [self.canvas dataWithPDFInsideRect:self.canvas.bounds];
+    self.canvas.printing = NO;
+    [self.canvas setNeedsDisplay:YES];
+    if (pdf == nil || ![pdf writeToFile:panel.URL.path atomically:YES]) {
+        [self showError:@"No se pudo escribir el PDF" detail:panel.URL.path];
+        return;
+    }
+    [self canvasStatus:self.canvas message:[NSString stringWithFormat:@"PDF exportado · %@", panel.URL.lastPathComponent]];
+}
+
 - (void)cancelTool:(id)sender
 {
     (void) sender;
@@ -385,7 +537,8 @@ static const char *kAppName = "Normia Estudio";
                             @"P · pluma de nodos: un clic por nodo, Enter o doble clic cierra.\n"
                             @"A · arco de tres puntos: inicio, paso y fin.\n"
                             @"D · cota entre dos puntos, con la cifra y la unidad.\n"
-                            @"Esc cancela la herramienta; Retroceso quita el último nodo o borra lo seleccionado; ⌘Z deshace.\n\n"
+                            @"Esc cancela la herramienta; Retroceso quita el último nodo o borra lo seleccionado; ⌘Z deshace.\n"
+                            @"⌘P imprime el plano en A4 horizontal y Archivo › Exportar PDF guarda esa misma hoja.\n\n"
                             @"Los planos son esquemas de apoyo: no sustituyen la verificación de un "
                             @"profesional ni la normativa vigente.";
     [alert runModal];

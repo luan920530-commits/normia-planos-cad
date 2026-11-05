@@ -301,7 +301,7 @@ compila con `-Werror`, arma el `.app`, comprueba el `LSMinimumSystemVersion` con
 - **El resto de herramientas**: cotas, pluma de nodos, informes y el auditor en
   pantalla son la etapa N2 y siguientes.
 
-## 13. Etapa N2, en curso: cotas, pluma de nodos y SVG desde el núcleo
+## 13. Etapa N2, hecha: cotas, pluma de nodos, SVG, recientes e impresión
 
 La etapa N2 lleva a la aplicación lo que hacía falta para dibujar de verdad y
 para sacar el plano sin el motor PHP:
@@ -314,7 +314,8 @@ para sacar el plano sin el motor PHP:
 | `norma-core --svg plano.json` | `native/src/cli.c` | hecho |
 | Herramientas del lienzo `V · M · P · A · D` con borrador y previsualización | `native/macos/CanvasView.m` | escrito |
 | Exportar SVG con panel del sistema (`⌘E`) | `native/macos/AppDelegate.m` | escrito |
-| Recientes, impresión y exportación desde la ventana | — | pendiente |
+| Abrir reciente (10 archivos, preferencia del sistema, se limpia sola) | `native/macos/AppDelegate.m` | hecho · **35/35** |
+| Imprimir en A4 horizontal y exportar PDF con el fondo en blanco | `native/macos/AppDelegate.m`, `CanvasView.m` | hecho |
 
 Lo que da el SVG del núcleo, medido en el plano de prueba A4 a 1:100:
 
@@ -334,6 +335,7 @@ Lo que da el SVG del núcleo, medido en el plano de prueba A4 a 1:100:
   donde se escribe esto no hay AppKit. El contrato se comprueba con
   `native/tests/macos.mjs` (28/28) y la compilación real la hace el trabajo
   `macos-nativo` del flujo.
-- **Recientes e impresión** siguen fuera: son la parte que falta de N2.
+- **Recientes e impresión** ya están escritos, pero quien los usa con ratón y
+  teclado es una persona: aquí solo se comprueba su contrato y que compilen.
 - **El paquete se publica como artefacto del flujo**, no como release: así se
   puede bajar el `.app` sin firmar y abrirlo en un Mac con Intel.

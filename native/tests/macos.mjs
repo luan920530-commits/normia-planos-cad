@@ -140,6 +140,38 @@ report.check('El lienzo pinta las cotas con su línea, sus marcas y su cifra',
   /drawLabel:/.test(canvas) && /strcmp\(element->type, "dimension"\)/.test(canvas)
   && /node_count - 1/.test(canvas), 'línea · marcas · texto');
 
+/* ------------------------ 4c · recientes, papel y PDF ------------------------ */
+
+report.check('Los recientes se guardan como preferencia y no dentro del paquete',
+  /NSUserDefaults standardUserDefaults/.test(delegate) && /arrayForKey:kRecentKey/.test(delegate)
+  && /setObject:paths forKey:kRecentKey/.test(delegate), 'NSUserDefaults');
+
+report.check('La lista de recientes es corta y descarta lo que ya no está',
+  /kRecentLimit = 10/.test(delegate) && /fileExistsAtPath:path/.test(delegate)
+  && /paths\.count >= kRecentLimit/.test(delegate), '10 archivos');
+
+report.check('«Abrir reciente» se rehace al abrirse y se puede limpiar',
+  /menuNeedsUpdate:/.test(delegate) && /rebuildRecentMenu/.test(delegate)
+  && /Limpiar la lista/.test(delegate) && /removeObjectForKey:kRecentKey/.test(delegate),
+  'menú dinámico');
+
+report.check('Abrir y guardar recuerdan el archivo, y falta el archivo avisa',
+  (delegate.match(/\[self rememberPath:path\];/g) || []).length === 2
+  && /Ese archivo ya no está/.test(delegate), 'dos llamadas');
+
+report.check('Imprimir abre el panel del sistema en A4 horizontal y ajusta la hoja',
+  /printPlan:/.test(delegate) && /NSPrintOperation printOperationWithView:self\.canvas/.test(delegate)
+  && /NSPaperOrientationLandscape/.test(delegate) && /NSFitPagination/.test(delegate)
+  && /Imprimir…".*printPlan:.*keyEquivalent:@"p"\]/.test(delegate), '⌘P');
+
+report.check('Al imprimir o exportar PDF el fondo es blanco, no el gris de pantalla',
+  /self\.canvas\.printing = YES/.test(delegate) && /printing/.test(canvasHeader)
+  && /if \(self\.printing\)/.test(canvas) && /whiteColor/.test(canvas), 'fondo blanco');
+
+report.check('Exportar PDF guarda la misma hoja que se imprime',
+  /exportPdf:/.test(delegate) && /dataWithPDFInsideRect:self\.canvas\.bounds/.test(delegate)
+  && /UTTypePDF/.test(delegate) && /Exportar PDF…/.test(delegate), '⌘E · PDF');
+
 /* ------------------------------ 5 · sistema mínimo ----------------------------- */
 
 report.check('El paquete declara macOS 12 Monterey como mínimo',

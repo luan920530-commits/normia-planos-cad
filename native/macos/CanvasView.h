@@ -26,6 +26,11 @@ NS_ASSUME_NONNULL_BEGIN
 @property(nonatomic, weak, nullable) id<CanvasViewDelegate> delegate;
 /** Nodo seleccionado dentro del elemento seleccionado, o -1 si es un equipo. */
 @property(nonatomic) NSInteger selectedNode;
+/**
+ * Dibujo para papel o PDF: fondo blanco en vez del gris oscuro de la pantalla,
+ * para no gastar tinta ni entregar un plano con fondo negro.
+ */
+@property(nonatomic) BOOL printing;
 
 - (void)documentDidLoad;
 - (void)zoomToFit;

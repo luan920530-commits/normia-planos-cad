@@ -5,10 +5,10 @@ medio. Este directorio es la etapa **N0**: el motor de cálculo y el lector del
 plano, en C11, sin dependencias, compilando en macOS, Linux y Windows.
 
 Están la **N0** (motor y paridad con PHP), la **N1** (documento editable y la
-ventana nativa de macOS con su lienzo, sin WebView) y la **N2** en curso: cotas,
-pluma de nodos, arcos y exportación SVG desde el núcleo. Lo que todavía no hay:
-recientes e impresión en la ventana, auditor, aforo y rutas en C (N3), y Windows
-y Linux (N4). El alcance completo
+ventana nativa de macOS con su lienzo, sin WebView) y la **N2**: cotas, pluma de
+nodos, arcos, exportación SVG desde el núcleo, **recientes**, **impresión** y
+**PDF**. Lo que todavía no hay: auditor, aforo y rutas en C (N3), y Windows y
+Linux (N4). El alcance completo
 está en [`docs/APP-NATIVA.md`](../docs/APP-NATIVA.md).
 
 ## Por qué se empieza por el núcleo
@@ -32,7 +32,7 @@ es lo que comprueba `tests/parity.mjs`.
 | Documento | `include/normia/document.h`, `src/document.c` | Muros con nodos y arcos, equipos, deshacer y rehacer, selección por proximidad, guardar y abrir |
 | Cifras | `include/normia/format.h`, `src/format.c` | Formato colombiano de medidas: `400 cm`, `471,2 cm`, `112.123,9 cm`, `4.712,4 mm` |
 | SVG | `include/normia/svg.h`, `src/svg.c` | Plano en SVG con escala física: papel en milímetros, `viewBox` en centímetros, rejilla, franja de datos y cotas rotuladas |
-| Ventana de macOS | `macos/` | AppKit puro: menú en español, lienzo con Core Graphics, herramientas `V · M · P · A · D`, cotas, exportar SVG (⌘E), abrir y guardar con los paneles del sistema, macOS 12 |
+| Ventana de macOS | `macos/` | AppKit puro: menú en español, lienzo con Core Graphics, herramientas `V · M · P · A · D`, cotas, abrir reciente, imprimir (⌘P), exportar SVG (⌘E) y PDF, abrir y guardar con los paneles del sistema, macOS 12 |
 
 ## Compilar y probar
 
@@ -41,7 +41,7 @@ make -C native            # construye native/build/norma-core
 make -C native test       # núcleo (23), documento (27) y SVG (25)
 node native/tests/core.mjs         # compila en estricto y corre los tres (7)
 node native/tests/parity.mjs 8.3   # paridad contra el motor PHP (16)
-node native/tests/macos.mjs        # contrato de la ventana nativa (28)
+node native/tests/macos.mjs        # contrato de la ventana nativa (35)
 ```
 
 Y en macOS, con las herramientas de Xcode:
@@ -126,7 +126,7 @@ firma ni release. Al abrirlo por primera vez, macOS pide permiso en
 | --- | --- | --- |
 | **N0** | Núcleo en C con paridad verificada | **hecho** |
 | **N1** | Ventana nativa en macOS (AppKit/CoreGraphics), sin WebView: lienzo, selección, muros, deshacer, guardar y abrir | **hecho** en código; compila y arranca en el flujo de macOS |
-| **N2** | Cotas, pluma de nodos, arcos y exportación SVG desde el núcleo | **en curso** (código escrito); faltan recientes e impresión |
+| **N2** | Cotas, pluma de nodos, arcos, SVG del núcleo, recientes, impresión y PDF | **hecho** en código; compila y exporta en el flujo de macOS |
 | N3 | Auditor, aforo y rutas en C, con golden propio contra PHP | pendiente |
 | N4 | Windows (Win32) y Linux (GTK) | pendiente |
 

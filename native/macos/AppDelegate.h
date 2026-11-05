@@ -7,5 +7,5 @@
 // conformarse a él, y el compilador lo exige con -Werror.
 #import "CanvasView.h"
 
-@interface AppDelegate : NSObject <NSApplicationDelegate, NSWindowDelegate, CanvasViewDelegate>
+@interface AppDelegate : NSObject <NSApplicationDelegate, NSWindowDelegate, CanvasViewDelegate, NSMenuDelegate>
 @end
