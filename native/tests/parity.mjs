@@ -684,6 +684,103 @@ if (miosExt[0] && suyosExt) {
     `cubre ${miosExt[1].extinguishers.coveredAreaM2} de ${miosExt[1].extinguishers.floorAreaM2} m²`);
 }
 
+/* ------------- 4f · extintores: acciones con ganancia medida -------------- */
+
+// Nave de 40 × 30 m con tres equipos de 4-A cerca del mismo rincón: la zona
+// descubierta queda lejos, así que la web propone reubicar los dos más cercanos
+// y añadir otro. La ganancia se comprueba contra el PHP, no a ojo.
+const planoReubicarExtintores = {
+  application: 'normia-planos-cad',
+  format: 'normia-plan',
+  schema_version: 3,
+  project: { name: 'Reubicar extintores' },
+  design: {
+    canvas: { width: 4000, height: 3000, grid: 20, unit: 'cm', scale: '1:100', occupancy: 10 },
+    extinguishers: { profile: 'colombia', hazard: 'ordinary' },
+    layers: [{ id: 'capa', name: 'Planta', visible: true, locked: false }],
+    elements: [
+      { id: 'n', type: 'wall', layerId: 'capa', stroke: 20, points: [{ x: 100, y: 100 }, { x: 3900, y: 100 }] },
+      { id: 's', type: 'wall', layerId: 'capa', stroke: 20, points: [{ x: 100, y: 2900 }, { x: 3900, y: 2900 }] },
+      { id: 'o', type: 'wall', layerId: 'capa', stroke: 20, points: [{ x: 100, y: 100 }, { x: 100, y: 2900 }] },
+      { id: 'e', type: 'wall', layerId: 'capa', stroke: 20, points: [{ x: 3900, y: 100 }, { x: 3900, y: 2900 }] },
+      { id: 'salida', type: 'door', layerId: 'capa', x: 3800, y: 1450, w: 100, h: 100, isExit: true },
+      { id: 'ext1', type: 'cad_eds_extinguisher', layerId: 'capa', x: 1300, y: 500, w: 40, h: 40,
+        extAgent: 'pqs_abc', extCapacityLb: 20, extRating: '4-A:60-B:C', extHazard: 'ordinary', extMountCm: 120 },
+      { id: 'ext2', type: 'cad_eds_extinguisher', layerId: 'capa', x: 1400, y: 1300, w: 40, h: 40,
+        extAgent: 'pqs_abc', extCapacityLb: 5, extRating: '4-A:60-B:C', extHazard: 'ordinary', extMountCm: 120 },
+      { id: 'ext3', type: 'cad_eds_extinguisher', layerId: 'capa', x: 600, y: 2000, w: 40, h: 40,
+        extAgent: 'pqs_abc', extCapacityLb: 5, extRating: '4-A:60-B:C', extHazard: 'ordinary', extMountCm: 120 },
+    ],
+  },
+};
+
+const fixturesAcciones = [planoNaveExtintores, planoReubicarExtintores].map((plano, index) => {
+  const file = path.join(os.tmpdir(), `normia-paridad-acciones-${index}-${process.pid}.json`);
+  fs.writeFileSync(file, JSON.stringify(plano), 'utf8');
+  return file;
+});
+const miasAcciones = fixturesAcciones.map((file) => {
+  try {
+    return JSON.parse(runCore(['--audit', file, '--resources', resources])).extinguishers.recommendations;
+  } catch (error) {
+    report.check('El núcleo propone acciones sobre los extintores', false,
+      String(error?.message || error).slice(0, 120));
+    return null;
+  }
+});
+
+const app7 = await startApp(VERSION);
+let suyasAcciones = null;
+try {
+  const resultado = await app7.run(`
+$salida = [];
+foreach (${JSON.stringify(fixturesAcciones)} as $file) {
+  $design = json_decode((string) file_get_contents($file), true)['design'];
+  $lista = App\\Services\\ExtinguisherCoverage::analyze($design, true)['recommendations'];
+  $salida[] = array_map(static function (array $r): array {
+    return [
+      'action' => $r['action'], 'elementId' => $r['elementId'], 'title' => $r['title'],
+      'detail' => $r['detail'], 'target' => $r['target'], 'type' => $r['type'],
+      'agent' => $r['agent'], 'capacityLb' => $r['capacityLb'], 'rating' => $r['rating'],
+      'gainAreaM2' => $r['gainAreaM2'], 'gainPct' => $r['gainPct'],
+    ];
+  }, $lista);
+}
+echo json_encode($salida);
+`);
+  const text = String(resultado.text || '');
+  suyasAcciones = JSON.parse(text.slice(text.indexOf('[')));
+} catch (error) {
+  report.check('El motor PHP propone acciones sobre los extintores', false,
+    String(error?.message || error).slice(0, 120));
+}
+await app7.close();
+fixturesAcciones.forEach((file) => fs.rmSync(file, { force: true }));
+
+if (miasAcciones[0] && suyasAcciones) {
+  for (let index = 0; index < 2; index += 1) {
+    const mías = miasAcciones[index];
+    const suyas = suyasAcciones[index];
+    const campos = ['action', 'elementId', 'title', 'detail', 'target', 'type', 'agent',
+      'capacityLb', 'rating', 'gainAreaM2', 'gainPct'];
+    const iguales = mías.length === suyas.length && mías.every((mía, item) => campos.every(
+      (campo) => JSON.stringify(mía[campo]) === JSON.stringify(suyas[item][campo])));
+    report.check(`Las acciones de extintores del plano ${index + 1} coinciden con PHP`,
+      iguales && mías.length > 0,
+      mías.map((mía) => `${mía.action} ${mía.gainAreaM2} m²`).join(' · ') || 'sin acciones');
+  }
+
+  report.check('La acción de más ganancia es la que encabeza la lista',
+    miasAcciones[1].length >= 3 && miasAcciones[1][0].action === 'move'
+      && miasAcciones[1].every((mía, index) => index === 0
+        || mía.gainAreaM2 <= miasAcciones[1][index - 1].gainAreaM2),
+    miasAcciones[1].map((mía) => `${mía.action} ${mía.gainAreaM2}`).join(' · '));
+
+  report.check('Las acciones se quedan en cuatro como mucho',
+    miasAcciones.every((lista) => lista.length <= 4),
+    miasAcciones.map((lista) => lista.length).join(' · '));
+}
+
 /* ------------------- 5 · el núcleo no se rompe con basura ------------------ */
 
 const basura = path.join(os.tmpdir(), `normia-basura-${process.pid}.json`);

@@ -156,6 +156,37 @@ void norma_ext_analyze(const norma_document *document, const norma_grid *grid,
                        const norma_library *library, const norma_ext_norms *norms,
                        norma_ext_result *result);
 
+/** Acciones cuantificadas: qué hacer y cuánta superficie ganaría. */
+#define NORMA_EXT_MAX_RECS 4
+
+typedef struct {
+    /** `add`, `move` o `upgrade`. */
+    char action[12];
+    char title[96];
+    char detail[512];
+    /** Equipo al que se refiere (`move` y `upgrade`); vacío en `add`. */
+    char element_id[32];
+    /** Equipo sugerido, listo para dibujarlo en el plano. */
+    norma_element element;
+    int has_element;
+    int has_target;
+    norma_point target;
+    double gain_area_m2;
+    int has_gain_pct;
+    double gain_pct;
+} norma_ext_recommendation;
+
+/**
+ * Acciones cuantificadas sobre las zonas descubiertas: añadir un equipo en el
+ * punto más desfavorable, reubicar el más cercano o subir la clasificación.
+ * La ganancia se mide **volviendo a calcular** la cobertura con el cambio, no
+ * se estima a ojo. Devuelve cuántas escribió (como mucho `capacity`).
+ */
+size_t norma_ext_recommend(const norma_document *document, const norma_grid *grid,
+                           const norma_library *library, const norma_ext_norms *norms,
+                           const norma_ext_result *result, norma_ext_recommendation *out,
+                           size_t room);
+
 /**
  * Hallazgos de extintores, con los textos del auditor web. No los ordena: el
  * llamador ordena la lista completa al final.

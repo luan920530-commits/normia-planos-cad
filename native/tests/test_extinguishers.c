@@ -317,6 +317,119 @@ static void test_measure(const norma_ext_norms *norms, const norma_library *libr
     norma_document_free(&legacy);
 }
 
+static void test_recommendations(const norma_ext_norms *norms, const norma_library *library)
+{
+    /* Las ganancias se comprueban contra el motor PHP en `parity.mjs` (bloque 4f);
+       aquí se vigila que la acción exista, que traiga el equipo listo para dibujar
+       y que la lista venga ordenada por ganancia. */
+    char error[256];
+    norma_ext_result result;
+    norma_grid grid;
+    norma_ext_recommendation recommendations[NORMA_EXT_MAX_RECS];
+
+    /* Nave con tres equipos: la acción esperada es instalar otro. */
+    norma_document nave;
+    build_floor(&nave, 4000.0, 3000.0);
+    add_extinguisher(&nave, "ext1", "cad_eds_extinguisher", 400.0, 400.0, "pqs_abc", 20.0,
+                     "4-A:60-B:C", "ordinary", 120.0);
+    add_extinguisher(&nave, "ext2", "cad_fire_ext_co2", 3000.0, 2200.0, "co2", 10.0,
+                     "10-B:C", "ordinary", 120.0);
+    add_extinguisher(&nave, "ext3", "cad_drg_extinguisher", 2000.0, 1500.0, "pqs_abc", 10.0,
+                     "2-A:10-B:C", "ordinary", 120.0);
+    if (norma_grid_build(&nave, NULL, &grid, error, sizeof(error))) {
+        norma_ext_analyze(&nave, &grid, library, norms, &result);
+        size_t count = norma_ext_recommend(&nave, &grid, library, norms, &result, recommendations,
+                                           NORMA_EXT_MAX_RECS);
+        char summary_text[64];
+        snprintf(summary_text, sizeof(summary_text), "%zu acciones", count);
+        check("Un piso con zona descubierta propone al menos una acción", count >= 1,
+              summary_text);
+        if (count >= 1) {
+            const norma_ext_recommendation *first = &recommendations[0];
+            int ordered = 1;
+            for (size_t index = 1; index < count; index += 1) {
+                if (recommendations[index].gain_area_m2 > recommendations[index - 1].gain_area_m2) {
+                    ordered = 0;
+                }
+            }
+            char detail[160];
+            snprintf(detail, sizeof(detail), "%s · %.1f m² · %s", first->action, first->gain_area_m2,
+                     first->element.ext_rating);
+            check("Las acciones llegan ordenadas de mayor a menor ganancia", ordered, detail);
+            check("La acción de la nave es instalar otro extintor",
+                  strcmp(first->action, "add") == 0 && first->gain_area_m2 > 0.5, detail);
+            check("El equipo sugerido trae rótulo y capacidad para dibujarlo",
+                  first->has_element && first->element.ext_rating[0] != '\0'
+                      && first->element.ext_capacity_lb > 0.0,
+                  first->element.ext_rating);
+            check("La acción se apoya en el punto más desfavorable de la zona",
+                  first->has_target && first->target.x > 0.0 && first->target.y > 0.0, detail);
+            check("La ganancia se expresa también como parte de la zona descubierta",
+                  first->has_gain_pct && first->gain_pct > 0.0 && first->gain_pct <= 100.0, detail);
+        }
+        norma_grid_free(&grid);
+    } else {
+        check("La rejilla de la nave se arma para proponer acciones", 0, error);
+    }
+    norma_document_free(&nave);
+
+    /* Tres 4-A apilados en un rincón: mover y añadir, medido contra PHP. */
+    norma_document esquina;
+    norma_document_init(&esquina);
+    esquina.width = 4000.0;
+    esquina.height = 3000.0;
+    const norma_point top_left[2] = {{100.0, 100.0}, {3900.0, 100.0}};
+    const norma_point bottom_left[2] = {{100.0, 2900.0}, {3900.0, 2900.0}};
+    const norma_point upper[2] = {{100.0, 100.0}, {100.0, 2900.0}};
+    const norma_point right[2] = {{3900.0, 100.0}, {3900.0, 2900.0}};
+    const norma_point *outline[4] = {top_left, bottom_left, upper, right};
+    for (int index = 0; index < 4; index += 1) {
+        const long wall = norma_document_add_wall(&esquina, outline[index], 2, NULL, NULL);
+        if (wall >= 0) {
+            esquina.elements[wall].stroke = 20.0;
+        }
+    }
+    add_extinguisher(&esquina, "ext1", "cad_eds_extinguisher", 1300.0, 500.0, "pqs_abc", 20.0,
+                     "4-A:60-B:C", "ordinary", 120.0);
+    add_extinguisher(&esquina, "ext2", "cad_eds_extinguisher", 1400.0, 1300.0, "pqs_abc", 5.0,
+                     "4-A:60-B:C", "ordinary", 120.0);
+    add_extinguisher(&esquina, "ext3", "cad_eds_extinguisher", 600.0, 2000.0, "pqs_abc", 5.0,
+                     "4-A:60-B:C", "ordinary", 120.0);
+    if (norma_grid_build(&esquina, NULL, &grid, error, sizeof(error))) {
+        norma_ext_analyze(&esquina, &grid, library, norms, &result);
+        const size_t count = norma_ext_recommend(&esquina, &grid, library, norms, &result,
+                                                 recommendations, NORMA_EXT_MAX_RECS);
+        char detail[220];
+        snprintf(detail, sizeof(detail), "%zu acciones · %s %.1f m²", count,
+                 count > 0 ? recommendations[0].action : "—",
+                 count > 0 ? recommendations[0].gain_area_m2 : 0.0);
+        check("Reubicar gana más superficie que instalar equipo nuevo",
+              count >= 2 && strcmp(recommendations[0].action, "move") == 0
+                  && strcmp(recommendations[0].element_id, "ext1") == 0,
+              detail);
+        check("Reubicar conserva la clasificación del equipo movido",
+              count >= 1 && recommendations[0].has_element
+                  && strcmp(recommendations[0].element.ext_rating, "4-A:60-B:C") == 0,
+              count >= 1 ? recommendations[0].element.ext_rating : "sin acción");
+        norma_grid_free(&grid);
+    } else {
+        check("La rejilla del piso en esquina se arma", 0, error);
+    }
+    norma_document_free(&esquina);
+
+    /* Sin extintores no hay nada que reubicar ni subir. */
+    norma_document vacio;
+    build_floor(&vacio, 2000.0, 2000.0);
+    if (norma_grid_build(&vacio, NULL, &grid, error, sizeof(error))) {
+        norma_ext_analyze(&vacio, &grid, library, norms, &result);
+        const size_t count = norma_ext_recommend(&vacio, &grid, library, norms, &result,
+                                                 recommendations, NORMA_EXT_MAX_RECS);
+        check("Un piso sin extintores no propone acciones de equipo", count == 0, "sin acciones");
+        norma_grid_free(&grid);
+    }
+    norma_document_free(&vacio);
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IOLBF, 0);
@@ -333,6 +446,7 @@ int main(void)
 
     test_ratings(&norms);
     test_measure(&norms, has_library ? &library : NULL);
+    test_recommendations(&norms, has_library ? &library : NULL);
 
     if (has_library) {
         norma_library_free(&library);

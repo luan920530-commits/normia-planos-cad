@@ -1023,6 +1023,7 @@ void norma_ext_analyze(const norma_document *document, const norma_grid *grid,
             slots = grown;
             slot_capacity = capacity;
         }
+        slot.area = slot.zone.area_m2;
         slots[slot_count] = slot;
         slot_count += 1;
     }
@@ -1435,4 +1436,357 @@ void norma_ext_findings(const norma_ext_result *result, const norma_ext_norms *n
                                report->rating);
         }
     }
+}
+
+/* ------------------------------ sugerencias ------------------------------- */
+
+/** Ejemplos de rótulo y capacidad que la tabla da para un agente. */
+static const norma_json *examples_for(const norma_ext_norms *norms, const char *agent)
+{
+    return norma_json_get(norma_json_get(norms->root, "examples"), agent);
+}
+
+/** Clasificación mínima que pide la tabla para el riesgo declarado. */
+static void minimum_rating(const norma_ext_norms *norms, char *out, size_t size)
+{
+    const norma_json *profile = profile_object(norms);
+    const norma_json *hazard_a = norma_json_get(
+        norma_json_get(norma_json_get(profile, "classA"), "hazards"), norms->hazard);
+    const norma_json *rows = norma_json_get(
+        norma_json_get(norma_json_get(profile, "classB"), "hazards"), norms->hazard);
+    const int min_a = (int) number_at(hazard_a, "minRatingA", 2.0);
+    const int min_b = (int) number_at(norma_json_at(rows, 0), "minRatingB", 10.0);
+    snprintf(out, size, "%d-A:%d-B:C", min_a, min_b);
+}
+
+/** Primer ejemplo del agente que cumple la clasificación mínima. */
+static int example_for(const norma_ext_norms *norms, const char *agent, const char *minimum,
+                       char rating[24], size_t rating_size, double *capacity)
+{
+    int min_a = 0;
+    int min_b = 0;
+    int classes = 0;
+    norma_ext_parse_rating(minimum, &min_a, &min_b, &classes);
+    const norma_json *examples = examples_for(norms, agent);
+    const size_t total = norma_json_size(examples);
+    for (size_t index = 0; index < total; index += 1) {
+        const norma_json *row = norma_json_at(examples, index);
+        int a = 0;
+        int b = 0;
+        int declared = 0;
+        norma_ext_parse_rating(text_at(row, "rating", ""), &a, &b, &declared);
+        if (a >= min_a && b >= min_b) {
+            set_text(rating, rating_size, text_at(row, "rating", minimum));
+            *capacity = number_at(row, "capacityLb", 10.0);
+            return 1;
+        }
+    }
+    if (total > 0) {
+        const norma_json *row = norma_json_at(examples, 0);
+        set_text(rating, rating_size, text_at(row, "rating", minimum));
+        *capacity = number_at(row, "capacityLb", 10.0);
+        return 1;
+    }
+    set_text(rating, rating_size, minimum);
+    *capacity = 10.0;
+    return 1;
+}
+
+/** Cobertura resultante de sustituir o añadir un equipo. */
+static double simulated_coverage(const norma_document *document, const norma_grid *grid,
+                                 const norma_library *library, const norma_ext_norms *norms,
+                                 const norma_element *replacement, size_t replace_index,
+                                 const norma_element *appended)
+{
+    /* Sustituir deja el mismo número de equipos; añadir suma uno. */
+    const size_t count = document->count + (appended != NULL ? 1 : 0);
+    norma_element *elements = (norma_element *) malloc(count * sizeof(norma_element));
+    if (elements == NULL) {
+        return 0.0;
+    }
+    size_t written = 0;
+    for (size_t index = 0; index < document->count; index += 1) {
+        if (replacement != NULL && index == replace_index) {
+            continue;
+        }
+        elements[written] = document->elements[index];
+        written += 1;
+    }
+    if (replacement != NULL) {
+        elements[written] = *replacement;
+        written += 1;
+    }
+    if (appended != NULL) {
+        elements[written] = *appended;
+        written += 1;
+    }
+    norma_document temp = *document;
+    temp.elements = elements;
+    temp.count = written;
+    norma_ext_result result;
+    norma_ext_analyze(&temp, grid, library, norms, &result);
+    const double covered = result.summary.covered_area_m2;
+    free(elements);
+    return covered;
+}
+
+static size_t find_unit_index(const norma_document *document, const char *id)
+{
+    for (size_t index = 0; index < document->count; index += 1) {
+        if (strcmp(document->elements[index].id, id) == 0) {
+            return index;
+        }
+    }
+    return (size_t) -1;
+}
+
+static int compare_recommendation(const void *a, const void *b)
+{
+    const norma_ext_recommendation *first = (const norma_ext_recommendation *) a;
+    const norma_ext_recommendation *second = (const norma_ext_recommendation *) b;
+    if (first->gain_area_m2 > second->gain_area_m2) {
+        return -1;
+    }
+    if (first->gain_area_m2 < second->gain_area_m2) {
+        return 1;
+    }
+    return 0;
+}
+
+static void fill_gain(norma_ext_recommendation *recommendation, double gain,
+                      double uncovered_area)
+{
+    recommendation->gain_area_m2 = round_to(gain, 10.0);
+    recommendation->has_gain_pct = uncovered_area > 0.0;
+    recommendation->gain_pct = uncovered_area > 0.0
+                                   ? round_to(fmin(100.0, gain / uncovered_area * 100.0), 10.0)
+                                   : 0.0;
+}
+
+size_t norma_ext_recommend(const norma_document *document, const norma_grid *grid,
+                           const norma_library *library, const norma_ext_norms *norms,
+                           const norma_ext_result *result, norma_ext_recommendation *out,
+                           size_t room)
+{
+    if (document == NULL || grid == NULL || norms == NULL || result == NULL || out == NULL
+        || room == 0) {
+        return 0;
+    }
+    if (result->zone_count == 0 || result->unit_count == 0) {
+        return 0;
+    }
+    /* El presupuesto de la simulación es el mismo de la web: volver a medir por
+       cada prueba cuesta celdas × equipos. */
+    const double budget = (double) (grid->nx * grid->ny) * (double) result->unit_count;
+    if (budget > 900000.0) {
+        return 0;
+    }
+    /* La web acumula todas las pruebas y luego se queda con las cuatro de más
+       ganancia; aquí se hace lo mismo con un búfer propio. */
+    size_t capacity = result->unit_count + 4;
+    if (capacity > 40) {
+        capacity = 40;
+    }
+    norma_ext_recommendation *buffer =
+        (norma_ext_recommendation *) calloc(capacity, sizeof(norma_ext_recommendation));
+    if (buffer == NULL) {
+        return 0;
+    }
+    const norma_ext_zone *zone = &result->zones[0];
+    const norma_point target = zone->has_worst ? (norma_point){zone->worst_x, zone->worst_y}
+                                               : (norma_point){zone->cx, zone->cy};
+    const double base = result->summary.covered_area_m2;
+    const double uncovered = result->summary.uncovered_area_m2;
+    size_t written = 0;
+    char detail[512];
+    char first[48];
+    char second[48];
+
+    /* 1 · Añadir otro equipo en el punto más desfavorable. */
+    const norma_ext_unit *preferred = NULL;
+    size_t preferred_index = 0;
+    for (size_t unit = 0; unit < result->unit_count; unit += 1) {
+        if ((result->units[unit].classes & NORMA_FIRE_A) != 0) {
+            preferred = &result->units[unit];
+            preferred_index = find_unit_index(document, preferred->id);
+            break;
+        }
+    }
+    const char *type = preferred != NULL ? preferred->type : "cad_eds_extinguisher";
+    const norma_json *defaults = catalog_default(norms, type);
+    const char *agent = text_at(defaults, "agent", "pqs_abc");
+    if ((agent_classes(norms, agent) & NORMA_FIRE_A) == 0) {
+        defaults = catalog_default(norms, "cad_eds_extinguisher");
+        agent = text_at(defaults, "agent", "pqs_abc");
+    }
+    char minimum[24];
+    minimum_rating(norms, minimum, sizeof(minimum));
+    char rating[24];
+    double suggested_capacity = 10.0;
+    example_for(norms, agent, minimum, rating, sizeof(rating), &suggested_capacity);
+    if (preferred_index == (size_t) -1) {
+        preferred_index = 0;
+    }
+    const norma_element *based = preferred != NULL && preferred_index < document->count
+                                     ? &document->elements[preferred_index]
+                                     : NULL;
+    const double width = based != NULL && based->w > 0.0 ? based->w : 40.0;
+    const double height = based != NULL && based->h > 0.0 ? based->h : 40.0;
+    norma_element candidate;
+    memset(&candidate, 0, sizeof(candidate));
+    set_text(candidate.id, sizeof(candidate.id), "ext_new_sugerido");
+    set_text(candidate.type, sizeof(candidate.type), type);
+    set_text(candidate.layer, sizeof(candidate.layer),
+             based != NULL && based->layer[0] != '\0' ? based->layer : document->layer);
+    candidate.x = round_to(fmin(document->width - width, fmax(0.0, target.x - width / 2.0)), 10.0);
+    candidate.y = round_to(fmin(document->height - height, fmax(0.0, target.y - height / 2.0)), 10.0);
+    candidate.w = width;
+    candidate.h = height;
+    candidate.stroke = 2.0;
+    candidate.ext_capacity_lb = suggested_capacity;
+    candidate.has_ext_mount = 1;
+    candidate.ext_mount_cm = number_at(defaults, "mountCm", 120.0);
+    set_text(candidate.ext_agent, sizeof(candidate.ext_agent), agent);
+    set_text(candidate.ext_rating, sizeof(candidate.ext_rating), rating);
+    set_text(candidate.ext_hazard, sizeof(candidate.ext_hazard), norms->hazard);
+
+    const double after_add = simulated_coverage(document, grid, library, norms, NULL, 0, &candidate);
+    const double gain_add = after_add - base;
+    if (gain_add > 0.5 && written < capacity) {
+        norma_ext_recommendation *recommendation = &buffer[written];
+        memset(recommendation, 0, sizeof(*recommendation));
+        set_text(recommendation->action, sizeof(recommendation->action), "add");
+        set_text(recommendation->title, sizeof(recommendation->title), "Instalar otro extintor");
+        char agent_text[64];
+        lower_ascii(text_at(norma_json_get(norma_json_get(norms->root, "agents"), agent), "label",
+                            "extintor"),
+                    agent_text, sizeof(agent_text));
+        ext_number0(suggested_capacity, first, sizeof(first));
+        ext_number(gain_add, second, sizeof(second));
+        snprintf(detail, sizeof(detail),
+                 "Un %s de %s lb en el punto más desfavorable de la zona descubierta sumaría unos "
+                 "%s m² de cobertura.",
+                 agent_text, first, second);
+        set_text(recommendation->detail, sizeof(recommendation->detail), detail);
+        recommendation->has_target = 1;
+        recommendation->target = target;
+        recommendation->element = candidate;
+        recommendation->has_element = 1;
+        fill_gain(recommendation, gain_add, uncovered);
+        written += 1;
+    }
+
+    /* 2 · Reubicar el equipo más cercano a la zona descubierta. */
+    for (size_t owner = 0; owner < zone->nearest_count && owner < 2; owner += 1) {
+        const size_t index = find_unit_index(document, zone->nearest_ids[owner]);
+        if (index >= document->count) {
+            continue;
+        }
+        norma_element moved = document->elements[index];
+        moved.x = round_to(fmax(0.0, target.x - moved.w / 2.0), 10.0);
+        moved.y = round_to(fmax(0.0, target.y - moved.h / 2.0), 10.0);
+        const double after_move = simulated_coverage(document, grid, library, norms, &moved, index,
+                                                     NULL);
+        const double gain_move = after_move - base;
+        if (gain_move > 0.5 && written < capacity) {
+            norma_ext_recommendation *recommendation = &buffer[written];
+            memset(recommendation, 0, sizeof(*recommendation));
+            set_text(recommendation->action, sizeof(recommendation->action), "move");
+            set_text(recommendation->element_id, sizeof(recommendation->element_id), moved.id);
+            set_text(recommendation->title, sizeof(recommendation->title), "Reubicar el extintor");
+            ext_number0(target.x, first, sizeof(first));
+            ext_number0(target.y, second, sizeof(second));
+            char gain_text[48];
+            ext_number(gain_move, gain_text, sizeof(gain_text));
+            snprintf(detail, sizeof(detail),
+                     "Llevar %s al punto más desfavorable de la zona descubierta (x %s, y %s) "
+                     "sumaría unos %s m² sin comprar equipo nuevo.",
+                     moved.id, first, second, gain_text);
+            set_text(recommendation->detail, sizeof(recommendation->detail), detail);
+            recommendation->has_target = 1;
+            recommendation->target = target;
+            recommendation->element = moved;
+            recommendation->has_element = 1;
+            fill_gain(recommendation, gain_move, uncovered);
+            written += 1;
+        }
+    }
+
+    /* 3 · Subir la clasificación: solo cuando el límite que falla es el área. */
+    for (size_t unit = 0; unit < result->unit_count && written < capacity; unit += 1) {
+        const norma_ext_unit *report = &result->units[unit];
+        if (report->over_area_m2 <= 0.5) {
+            continue;
+        }
+        const size_t index = find_unit_index(document, report->id);
+        if (index >= document->count) {
+            continue;
+        }
+        int current_a = 0;
+        int current_b = 0;
+        int current_classes = 0;
+        norma_ext_parse_rating(report->rating, &current_a, &current_b, &current_classes);
+        const norma_json *examples = examples_for(norms, report->agent);
+        const size_t total = norma_json_size(examples);
+        int upgraded = 0;
+        char new_rating[24] = "";
+        double new_capacity = 0.0;
+        for (size_t row = 0; row < total; row += 1) {
+            const norma_json *example = norma_json_at(examples, row);
+            int a = 0;
+            int b = 0;
+            int declared = 0;
+            norma_ext_parse_rating(text_at(example, "rating", ""), &a, &b, &declared);
+            const int better = a > current_a || (current_a == 0 && a > 0) || b > current_b;
+            if (!better) {
+                continue;
+            }
+            const double example_capacity = number_at(example, "capacityLb", 0.0);
+            if (example_capacity > report->capacity_lb + 0.1) {
+                set_text(new_rating, sizeof(new_rating), text_at(example, "rating", ""));
+                new_capacity = example_capacity;
+                upgraded = 1;
+                break;
+            }
+        }
+        if (!upgraded) {
+            continue;
+        }
+        norma_element changed = document->elements[index];
+        set_text(changed.ext_rating, sizeof(changed.ext_rating), new_rating);
+        changed.ext_capacity_lb = new_capacity;
+        const double after_upgrade = simulated_coverage(document, grid, library, norms, &changed,
+                                                        index, NULL);
+        const double gain_upgrade = after_upgrade - base;
+        if (gain_upgrade <= 0.5) {
+            continue;
+        }
+        norma_ext_recommendation *recommendation = &buffer[written];
+        memset(recommendation, 0, sizeof(*recommendation));
+        set_text(recommendation->action, sizeof(recommendation->action), "upgrade");
+        set_text(recommendation->element_id, sizeof(recommendation->element_id), report->id);
+        set_text(recommendation->title, sizeof(recommendation->title),
+                 "Subir la capacidad del extintor");
+        char rating_text[48];
+        ext_number0(new_capacity, rating_text, sizeof(rating_text));
+        char gain_text[48];
+        ext_number(gain_upgrade, gain_text, sizeof(gain_text));
+        snprintf(detail, sizeof(detail),
+                 "Cambiar %s de %s a %s (%s lb) ampliaría el área asignable y sumaría unos %s m². "
+                 "Confirma que la placa real del equipo corresponde a esa clasificación.",
+                 report->id, report->rating, new_rating, rating_text, gain_text);
+        set_text(recommendation->detail, sizeof(recommendation->detail), detail);
+        recommendation->element = changed;
+        recommendation->has_element = 1;
+        fill_gain(recommendation, gain_upgrade, uncovered);
+        written += 1;
+    }
+
+    qsort(buffer, written, sizeof(norma_ext_recommendation), compare_recommendation);
+    const size_t kept = written < room ? written : room;
+    for (size_t index = 0; index < kept; index += 1) {
+        out[index] = buffer[index];
+    }
+    free(buffer);
+    return kept;
 }

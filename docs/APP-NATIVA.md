@@ -360,8 +360,8 @@ igual que en la web.
 | Primeros auxilios | `native/src/firstaid.c` | Botiquín, camilla y DEA: recuento y alcance medido sobre la rejilla |
 | Extintores | `native/src/extinguisher.c` | Tablas NTC 2885 / NFPA 10 y Resolución 2400: recorrido por clase y riesgo, área por número de A, cobertura por recorrido real y zonas descubiertas con su motivo |
 | Programa | `native/src/cli.c` | `norma-core --audit plano.json` incluye salidas, recorrido, señalización, primeros auxilios y hallazgos; `--sign-board hoja.svg` dibuja el catálogo completo |
-| Pruebas | `native/tests/test_audit.c` · `test_signs.c` · `test_extinguishers.c` | **34/34**, **30/30** y **23/23** |
-| Paridad | `native/tests/parity.mjs` | **45/45** |
+| Pruebas | `native/tests/test_audit.c` · `test_signs.c` · `test_extinguishers.c` | **34/34**, **30/30** y **32/32** |
+| Paridad | `native/tests/parity.mjs` | **49/49** |
 
 El caso de prueba y sus cifras, idénticas en C y en PHP: una habitación de
 6 × 4 m con un vano de 80 cm y una vía de 4 m de ancho al sur, con 5 000
@@ -489,11 +489,40 @@ cargado, vigente, rotulado ni accesible; no mide la altura real en obra ni la
 distancia de recorrido con obstáculos que no estén dibujados. Es un apoyo de
 diseño, y así se rotula.
 
+#### Acciones cuantificadas de extintores (2026-11-05)
+
+Decir «falta cobertura» no basta: el núcleo devuelve también **qué hacer y cuánta
+superficie ganaría**, midiendo la ganancia con el mismo motor, no estimándola.
+Publica hasta cuatro acciones en `extinguishers.recommendations`, ordenadas de
+mayor a menor ganancia:
+
+| Acción | Qué propone | Cómo se mide la ganancia |
+| --- | --- | --- |
+| `add` | Instalar otro equipo en el punto más desfavorable de la zona descubierta | Se añade un equipo de referencia del agente que cubra Clase A y se vuelve a medir la cobertura entera |
+| `move` | Llevar el equipo más cercano (los dos primeros) a ese punto | Se reubica ese equipo y se vuelve a medir |
+| `upgrade` | Subir la clasificación cuando el límite que falla es el área del rótulo | Se cambia el rótulo y la capacidad por el siguiente ejemplo de la tabla y se vuelve a medir |
+
+Cada acción trae `action`, `elementId`, `title`, `detail` en español con la cifra,
+`target` (el punto al que iría), `type`, `agent`, `rating`, `capacityLb`, el
+`element` completo listo para dibujarlo en el lienzo, `gainAreaM2` y `gainPct`
+(qué parte de la zona descubierta se recupera). La simulación se corta con el
+mismo presupuesto que la web (celdas × equipos ≤ 900 000) para que un plano
+enorme no congele la ventana.
+
+En la nave de prueba la acción es **añadir un `2-A:10-B:C` de 10 lb** (+62,2 m²);
+en el piso con los tres equipos apilados en un rincón, **reubicar** el más
+cercano gana **153,2 m²** y el segundo **104,7 m²**, más que instalar otro
+(+68,5 m²). Esas cifras coinciden al decimal con `ExtinguisherCoverage::analyze()`
+en PHP (bloque 4f de `parity.mjs`).
+
+Lo que estas acciones **no** afirman: no dicen qué equipo comprar ni si la placa
+real del extintor corresponde al rótulo que se le escribió —el texto de
+`upgrade` lo pide confirmar—, no sustituyen la revisión en sitio y no certifican
+cumplimiento de la NTC 2885 ni de la NFPA 10.
+
 ### Lo que N3 todavía no tiene
 
 - **Los hallazgos** de escenarios de ocupación temporal y de simulacro.
-- **Las acciones cuantificadas** de extintores (reubicar, subir capacidad, añadir
-  equipo con la ganancia medida).
 - **Dibujar las rutas** de evacuación sobre el lienzo nativo (el cálculo ya está).
 - **Pintar los pictogramas en el lienzo** de la ventana de macOS: hoy se dibujan en
   el SVG exportado; el lienzo nativo todavía usa el marcador genérico.

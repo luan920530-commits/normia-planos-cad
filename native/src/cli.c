@@ -235,9 +235,15 @@ static int command_audit(const char *path)
     const int has_ext_norms = norma_ext_norms_load(g_resources_found, document.ext_profile,
                                                    document.ext_hazard, &ext_norms, ext_error,
                                                    sizeof(ext_error));
+    norma_ext_recommendation recommendations[NORMA_EXT_MAX_RECS];
+    size_t recommendation_count = 0;
     if (has_ext_norms) {
         norma_ext_analyze(&document, &grid, has_library ? &library : NULL, &ext_norms, &ext_result);
         norma_ext_findings(&ext_result, &ext_norms, &findings);
+        recommendation_count = norma_ext_recommend(&document, &grid,
+                                                   has_library ? &library : NULL, &ext_norms,
+                                                   &ext_result, recommendations,
+                                                   NORMA_EXT_MAX_RECS);
     } else {
         memset(&ext_result, 0, sizeof(ext_result));
     }
@@ -319,7 +325,8 @@ static int command_audit(const char *path)
         }
         write_json_string(signage.items[index].code);
     }
-    printf("]},\"extinguishers\":{\"tablesLoaded\":%s,\"profile\":",
+    printf("]},"); /* cierra los códigos y el bloque de señalización */
+    printf("\"extinguishers\":{\"tablesLoaded\":%s,\"profile\":",
            has_ext_norms ? "true" : "false");
     if (has_ext_norms) {
         write_json_string(ext_norms.profile);
@@ -334,12 +341,63 @@ static int command_audit(const char *path)
     }
     printf(",\"units\":%lu,\"floorAreaM2\":%.17g,\"coveredAreaM2\":%.17g,\"coveredPct\":%.17g,"
            "\"uncoveredAreaM2\":%.17g,\"requiredByArea\":%ld,\"zones\":%lu,"
-           "\"unitsWithGap\":%lu,\"classes\":%d,\"missingClasses\":%d},\"firstAid\":{",
+           "\"unitsWithGap\":%lu,\"classes\":%d,\"missingClasses\":%d,\"recommendations\":[",
            (unsigned long) ext_result.unit_count, ext_result.summary.floor_area_m2,
            ext_result.summary.covered_area_m2, ext_result.summary.covered_pct,
            ext_result.summary.uncovered_area_m2, ext_result.summary.required_by_area,
            (unsigned long) ext_result.zone_count, (unsigned long) ext_result.summary.units_with_gap,
            ext_result.summary.classes, ext_result.summary.missing_classes);
+    for (size_t index = 0; index < recommendation_count; index += 1) {
+        const norma_ext_recommendation *item = &recommendations[index];
+        if (index > 0) {
+            printf(",");
+        }
+        printf("{\"action\":");
+        write_json_string(item->action);
+        printf(",\"elementId\":");
+        if (item->element_id[0] != '\0') {
+            write_json_string(item->element_id);
+        } else {
+            printf("null");
+        }
+        printf(",\"title\":");
+        write_json_string(item->title);
+        printf(",\"detail\":");
+        write_json_string(item->detail);
+        printf(",\"target\":");
+        if (item->has_target) {
+            printf("{\"x\":%.17g,\"y\":%.17g}", item->target.x, item->target.y);
+        } else {
+            printf("null");
+        }
+        printf(",\"type\":");
+        write_json_string(item->element.type);
+        printf(",\"agent\":");
+        write_json_string(item->element.ext_agent);
+        printf(",\"capacityLb\":%.17g", item->element.ext_capacity_lb);
+        printf(",\"rating\":");
+        write_json_string(item->element.ext_rating);
+        printf(",\"element\":{\"id\":");
+        write_json_string(item->element.id);
+        printf(",\"type\":");
+        write_json_string(item->element.type);
+        printf(",\"x\":%.17g,\"y\":%.17g,\"w\":%.17g,\"h\":%.17g", item->element.x,
+               item->element.y, item->element.w, item->element.h);
+        printf(",\"extAgent\":");
+        write_json_string(item->element.ext_agent);
+        printf(",\"extRating\":");
+        write_json_string(item->element.ext_rating);
+        printf(",\"extCapacityLb\":%.17g", item->element.ext_capacity_lb);
+        printf(",\"extMountCm\":%.17g}", item->element.ext_mount_cm);
+        printf(",\"gainAreaM2\":%.17g,\"gainPct\":", item->gain_area_m2);
+        if (item->has_gain_pct) {
+            printf("%.17g", item->gain_pct);
+        } else {
+            printf("null");
+        }
+        printf("}");
+    }
+    printf("]},\"firstAid\":{");
     printf("\"people\":%ld,\"source\":\"%s\",\"kits\":%lu,\"stretchers\":%lu,"
            "\"aeds\":%lu,\"cells\":%lu,\"kitMaxM\":",
            first_aid.people, first_aid.source, (unsigned long) first_aid.kit_count,
