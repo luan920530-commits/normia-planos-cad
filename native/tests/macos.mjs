@@ -47,10 +47,11 @@ report.check('El lienzo se dibuja con Core Graphics, no con HTML',
   && !/innerHTML|<canvas|document\.write/.test(all),
   'CGContext');
 
-report.check('La aplicación se compila con las herramientas de macOS y solo enlaza Cocoa',
-  /-fobjc-arc/.test(makefile) && /-framework Cocoa/.test(makefile) && /clang/.test(makefile)
+report.check('La aplicación se compila con las herramientas de macOS y solo enlaza los marcos del sistema',
+  /-fobjc-arc/.test(makefile) && /-framework Cocoa/.test(makefile) && /-framework UniformTypeIdentifiers/.test(makefile)
+  && /clang/.test(makefile)
   && !/-framework (WebKit|Electron)/.test(strip(makefile)) && !/electron-builder/.test(strip(makefile)),
-  'clang · Cocoa');
+  'clang · Cocoa · UniformTypeIdentifiers');
 
 /* ------------------------------ 2 · documentos --------------------------------- */
 

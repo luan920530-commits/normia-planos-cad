@@ -107,7 +107,7 @@ jobs:
           set -e
           cat "$RUNNER_TEMP/macos.log"
           if [ "$ESTADO" -ne 0 ]; then
-            grep -E "error:|warning:" "$RUNNER_TEMP/macos.log" | head -15 | while IFS= read -r linea; do
+            grep -E "error:|warning:|Undefined symbol|ld: |symbol\(s\) not found" "$RUNNER_TEMP/macos.log" | head -15 | while IFS= read -r linea; do
               echo "::error title=clang::${linea//$'\r'/}"
             done
             echo "::error title=clang::la aplicación nativa no compiló (código $ESTADO)"

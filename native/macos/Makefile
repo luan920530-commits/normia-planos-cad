@@ -13,7 +13,8 @@ BIN := $(APP)/Contents/MacOS/NormiaEstudio
 CORE := ../src/units.c ../src/geometry.c ../src/json.c ../src/jsonw.c ../src/plan.c ../src/document.c
 OBJC := main.m AppDelegate.m CanvasView.m
 CFLAGS ?= -O2 -Wall -Wextra -Wno-unused-parameter
-FRAMEWORKS := -framework Cocoa
+# Cocoa dibuja la ventana; UniformTypeIdentifiers da UTTypeJSON para los paneles.
+FRAMEWORKS := -framework Cocoa -framework UniformTypeIdentifiers
 
 all: $(BIN)
 
