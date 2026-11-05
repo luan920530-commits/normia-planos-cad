@@ -17,6 +17,7 @@
 #include "normia/travel.h"
 #include "normia/document.h"
 #include "normia/grid.h"
+#include "normia/scenarios.h"
 
 static int checks = 0;
 static int failures = 0;
@@ -374,6 +375,86 @@ static void test_travel_and_findings(void)
     norma_document_free(&document);
 }
 
+static const norma_finding *find_code(const norma_findings *findings, const char *code)
+{
+    for (size_t index = 0; index < findings->count; index += 1) {
+        if (strcmp(findings->items[index].code, code) == 0) {
+            return &findings->items[index];
+        }
+    }
+    return NULL;
+}
+
+static void test_scenarios(void)
+{
+    norma_document document;
+    build_warehouse(&document);
+    document.scenarios[0].persons = 400;
+    snprintf(document.scenarios[0].name, sizeof(document.scenarios[0].name), "Feria");
+    document.scenarios[1].persons = 20;
+    snprintf(document.scenarios[1].name, sizeof(document.scenarios[1].name), "Charla");
+    document.scenario_count = 2;
+
+    norma_grid grid;
+    char error[256];
+    if (!norma_grid_build(&document, NULL, &grid, error, sizeof(error))) {
+        check("La rejilla de la nave se arma para los escenarios", 0, error);
+        norma_document_free(&document);
+        return;
+    }
+    norma_travel travel;
+    norma_travel_field(&document, &grid, NULL, &travel);
+    norma_aforo aforo;
+    norma_audit_aforo_from_area(grid.free_area_m2, &document, 0, NULL, &aforo);
+    norma_egress egress;
+    norma_audit_egress(&document, aforo.used, travel.has_longest ? travel.longest_m : -1.0, NULL,
+                       &egress);
+
+    norma_egress_criteria criteria;
+    norma_egress_criteria_default(&criteria);
+    norma_scenario_item items[NORMA_MAX_SCENARIOS];
+    const size_t count = norma_scenarios_analyze(&document, &aforo, &egress, &criteria, items,
+                                                NORMA_MAX_SCENARIOS);
+    char detail[200];
+    snprintf(detail, sizeof(detail), "%zu escenarios · capacidad %ld", count, items[0].capacity);
+    check("Los escenarios se calculan con la capacidad del piso", count == 2 && items[0].capacity > 0,
+          detail);
+    check("El escenario por encima de la capacidad se marca con el exceso",
+          items[0].fits == 0 && items[0].excess == items[0].persons - items[0].capacity, detail);
+    check("Un escenario que cabe no se marca", items[1].fits == 1 && items[1].excess == 0,
+          "Charla cabe");
+
+    norma_findings findings;
+    norma_findings_init(&findings);
+    norma_scenarios_findings(items, count, &aforo, &findings);
+    norma_findings_sort(&findings);
+    const norma_finding *over = find_code(&findings, "scenario_over_capacity");
+    snprintf(detail, sizeof(detail), "%zu hallazgos", findings.count);
+    check("El escenario que no cabe produce su hallazgo", over != NULL
+          && strcmp(over->severity, "medium") == 0, detail);
+    check("El hallazgo del escenario cita la capacidad y el exceso",
+          over != NULL && strstr(over->detail, "0,20 pers./m²") != NULL
+              && over->has_value,
+          over != NULL ? over->value : "sin hallazgo");
+    check("El nombre del escenario va en el título del hallazgo",
+          over != NULL && strstr(over->title, "Feria") != NULL,
+          over != NULL ? over->title : "sin hallazgo");
+    norma_findings_free(&findings);
+
+    /* Sin escenarios declarados no hay hallazgos de escenario. */
+    document.scenario_count = 0;
+    const size_t none = norma_scenarios_analyze(&document, &aforo, &egress, &criteria, items,
+                                               NORMA_MAX_SCENARIOS);
+    norma_findings_init(&findings);
+    norma_scenarios_findings(items, none, &aforo, &findings);
+    check("Sin escenarios declarados no se inventa ninguno", none == 0 && findings.count == 0,
+          "sin escenarios");
+    norma_findings_free(&findings);
+
+    norma_grid_free(&grid);
+    norma_document_free(&document);
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IOLBF, 0);
@@ -385,6 +466,7 @@ int main(void)
     test_aforo_room();
     test_egress();
     test_travel_and_findings();
+    test_scenarios();
 
     printf("\n%d/%d comprobaciones correctas.\n", checks - failures, checks);
     return failures == 0 ? 0 : 1;

@@ -523,6 +523,20 @@ char *norma_document_to_json(const norma_document *document, const char *name)
         norma_buffer_raw(&buffer, ",\"occupancy\":");
         norma_buffer_number(&buffer, (double) document->occupancy);
     }
+    if (document->scenario_count > 0) {
+        norma_buffer_raw(&buffer, ",\"scenarios\":[");
+        for (size_t index = 0; index < document->scenario_count; index += 1) {
+            if (index > 0) {
+                norma_buffer_raw(&buffer, ",");
+            }
+            norma_buffer_raw(&buffer, "{\"name\":");
+            norma_buffer_string(&buffer, document->scenarios[index].name);
+            norma_buffer_raw(&buffer, ",\"persons\":");
+            norma_buffer_number(&buffer, (double) document->scenarios[index].persons);
+            norma_buffer_raw(&buffer, "}");
+        }
+        norma_buffer_raw(&buffer, "]");
+    }
     norma_buffer_raw(&buffer, ",\"scale\":");
     norma_buffer_string(&buffer, document->scale);
     norma_buffer_raw(&buffer, ",\"background\":\"#ffffff\"},\"layers\":[{\"id\":");
@@ -610,6 +624,38 @@ int norma_document_from_json(norma_document *document, const char *text, size_t 
     document->unit = norma_unit_from_name(norma_json_string(norma_json_get(canvas, "unit")));
     const double occupancy = norma_json_number(norma_json_get(canvas, "occupancy"), 0.0);
     document->occupancy = occupancy > 0.0 ? (long) occupancy : 0;
+    /* Escenarios de ocupación temporal: se guardan los que tienen personas. */
+    const norma_json *scenarios = norma_json_get(canvas, "scenarios");
+    const size_t scenario_total = norma_json_size(scenarios);
+    for (size_t index = 0; index < scenario_total; index += 1) {
+        const norma_json *entry = norma_json_at(scenarios, index);
+        const double persons = norma_json_number(norma_json_get(entry, "persons"), 0.0);
+        if (persons < 1.0 || document->scenario_count >= NORMA_MAX_SCENARIOS) {
+            continue;
+        }
+        norma_scenario *scenario = &document->scenarios[document->scenario_count];
+        memset(scenario, 0, sizeof(*scenario));
+        set_text(scenario->name, sizeof(scenario->name),
+                 norma_json_string(norma_json_get(entry, "name")), "");
+        size_t start = 0;
+        while (scenario->name[start] == ' ' || scenario->name[start] == '\t'
+               || scenario->name[start] == '\n' || scenario->name[start] == '\r') {
+            start += 1;
+        }
+        if (start > 0) {
+            memmove(scenario->name, scenario->name + start, strlen(scenario->name + start) + 1);
+        }
+        size_t name_length = strlen(scenario->name);
+        while (name_length > 0
+               && (scenario->name[name_length - 1] == ' ' || scenario->name[name_length - 1] == '\t'
+                   || scenario->name[name_length - 1] == '\n'
+                   || scenario->name[name_length - 1] == '\r')) {
+            scenario->name[name_length - 1] = '\0';
+            name_length -= 1;
+        }
+        scenario->persons = (long) persons;
+        document->scenario_count += 1;
+    }
     set_text(document->scale, sizeof(document->scale), norma_json_string(norma_json_get(canvas, "scale")), "1:100");
 
     const norma_json *extinguishers = norma_json_get(design, "extinguishers");

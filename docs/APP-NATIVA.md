@@ -360,8 +360,8 @@ igual que en la web.
 | Primeros auxilios | `native/src/firstaid.c` | Botiquín, camilla y DEA: recuento y alcance medido sobre la rejilla |
 | Extintores | `native/src/extinguisher.c` | Tablas NTC 2885 / NFPA 10 y Resolución 2400: recorrido por clase y riesgo, área por número de A, cobertura por recorrido real y zonas descubiertas con su motivo |
 | Programa | `native/src/cli.c` | `norma-core --audit plano.json` incluye salidas, recorrido, señalización, primeros auxilios y hallazgos; `--sign-board hoja.svg` dibuja el catálogo completo |
-| Pruebas | `native/tests/test_audit.c` · `test_signs.c` · `test_extinguishers.c` | **34/34**, **30/30** y **32/32** |
-| Paridad | `native/tests/parity.mjs` | **49/49** |
+| Pruebas | `native/tests/test_audit.c` · `test_signs.c` · `test_extinguishers.c` | **41/41**, **30/30** y **32/32** |
+| Paridad | `native/tests/parity.mjs` | **53/53** |
 
 El caso de prueba y sus cifras, idénticas en C y en PHP: una habitación de
 6 × 4 m con un vano de 80 cm y una vía de 4 m de ancho al sur, con 5 000
@@ -520,9 +520,38 @@ real del extintor corresponde al rótulo que se le escribió —el texto de
 `upgrade` lo pide confirmar—, no sustituyen la revisión en sitio y no certifican
 cumplimiento de la NTC 2885 ni de la NFPA 10.
 
+#### Escenarios de ocupación temporal (2026-11-05)
+
+Un piso tiene un aforo y un ancho de salida; un evento —una capacitación en la
+bodega, el montaje de una feria, la hora pico de una cafetería— mete más gente en
+el mismo plano y el cálculo del uso habitual deja de servir. El núcleo revisa los
+escenarios que el plano declare en `canvas.scenarios` **sin tocar el aforo del
+piso**: la ocupación declarada, el aforo permitido y el tiempo habitual siguen
+igual, porque son dos preguntas distintas.
+
+| Cifra del escenario | Fórmula |
+| --- | --- |
+| Capacidad | superficie libre × densidad de referencia del piso |
+| Exceso | personas del escenario − capacidad |
+| Ancho exigido | personas × milímetros por persona del criterio |
+| Tiempo estimado | marcha del piso + cola con el ancho útil disponible |
+
+| Hallazgo | Gravedad | Cuándo |
+| --- | --- | --- |
+| `scenario_over_capacity` | media | El escenario declara más personas de las que admite la superficie libre |
+| `scenario_width_short` | media | El ancho útil de las salidas marcadas no alcanza para esas personas |
+| `scenario_more` | informativa | Se revisaron más de cuatro escenarios y alguno se pasa: el informe corto muestra los cuatro más exigentes |
+
+Los hallazgos de escenarios coinciden **palabra por palabra** con
+`OccupancyScenarios::analyze()` en dos pisos de prueba (tres y seis escenarios),
+incluido el aviso `scenario_more` y el orden de los eventos por número de
+personas. Lo que no hace: no aprueba el evento, no verifica el permiso, la
+sillería ni las tarimas, ni la ocupación real en la puerta.
+
 ### Lo que N3 todavía no tiene
 
-- **Los hallazgos** de escenarios de ocupación temporal y de simulacro.
+- **Los hallazgos** de simulacro (tiempo objetivo por ruta, punto de encuentro y
+  comparación con un tiempo medido).
 - **Dibujar las rutas** de evacuación sobre el lienzo nativo (el cálculo ya está).
 - **Pintar los pictogramas en el lienzo** de la ventana de macOS: hoy se dibujan en
   el SVG exportado; el lienzo nativo todavía usa el marcador genérico.

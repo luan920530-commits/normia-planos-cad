@@ -781,6 +781,77 @@ if (miasAcciones[0] && suyasAcciones) {
     miasAcciones.map((lista) => lista.length).join(' · '));
 }
 
+/* ---------- 4g · escenarios de ocupación temporal, cifra por cifra -------- */
+
+// Los mismos dos pisos de la nave, con tres y con seis escenarios declarados.
+const conEscenarios = (escenarios) => {
+  const plano = JSON.parse(JSON.stringify(planoNaveExtintores));
+  plano.design.canvas.scenarios = escenarios;
+  return plano;
+};
+const fixturesEscenarios = [
+  conEscenarios([{ name: 'Feria', persons: 400 }, { name: 'Capacitación', persons: 60 },
+    { name: 'Hora pico', persons: 500 }]),
+  conEscenarios([{ name: 'Feria', persons: 400 }, { name: 'Boda', persons: 300 },
+    { name: 'Taller', persons: 250 }, { name: 'Feria 2', persons: 200 },
+    { name: 'Concierto', persons: 900 }, { name: 'Charla', persons: 150 }]),
+].map((plano, index) => {
+  const file = path.join(os.tmpdir(), `normia-paridad-escenarios-${index}-${process.pid}.json`);
+  fs.writeFileSync(file, JSON.stringify(plano), 'utf8');
+  return file;
+});
+const miosEscenarios = fixturesEscenarios.map((file) => {
+  try {
+    return JSON.parse(runCore(['--audit', file, '--resources', resources]));
+  } catch (error) {
+    report.check('El núcleo revisa los escenarios de ocupación', false,
+      String(error?.message || error).slice(0, 120));
+    return null;
+  }
+});
+
+const app8 = await startApp(VERSION);
+let suyosEscenarios = null;
+try {
+  const resultado = await app8.run(`
+$salida = [];
+foreach (${JSON.stringify(fixturesEscenarios)} as $file) {
+  $design = json_decode((string) file_get_contents($file), true)['design'];
+  $report = App\\Services\\PlanAudit::analyze($design);
+  $salida[] = ['findings' => array_values(array_filter($report['findings'],
+    static fn (array $f): bool => str_starts_with((string) $f['code'], 'scenario'))),
+    'count' => $report['scenarios']['count']];
+}
+echo json_encode($salida);
+`);
+  const text = String(resultado.text || '');
+  suyosEscenarios = JSON.parse(text.slice(text.indexOf('[')));
+} catch (error) {
+  report.check('El motor PHP revisa los escenarios de ocupación', false,
+    String(error?.message || error).slice(0, 120));
+}
+await app8.close();
+fixturesEscenarios.forEach((file) => fs.rmSync(file, { force: true }));
+
+if (miosEscenarios[0] && suyosEscenarios) {
+  for (let index = 0; index < 2; index += 1) {
+    const míos = miosEscenarios[index].findings.filter((f) => f.code.startsWith('scenario'));
+    const comparable = comparar(míos, suyosEscenarios[index].findings,
+      ['scenario_over_capacity', 'scenario_width_short', 'scenario_more']);
+    report.check(`Los hallazgos de escenarios del plano ${index + 1} coinciden palabra por palabra`,
+      comparable.igual, míos.map((f) => f.code).join(' · ') || 'sin hallazgos');
+  }
+  report.check('Los escenarios se cuentan igual que en PHP',
+    miosEscenarios[0].scenarios.count === suyosEscenarios[0].count
+      && miosEscenarios[1].scenarios.count === suyosEscenarios[1].count,
+    `C: ${miosEscenarios[0].scenarios.count} y ${miosEscenarios[1].scenarios.count} · `
+      + `PHP: ${suyosEscenarios[0].count} y ${suyosEscenarios[1].count}`);
+  const eventos = miosEscenarios[1].findings.filter((f) => f.code === 'scenario_over_capacity');
+  report.check('El evento más exigente entra en el informe corto de escenarios',
+    eventos.some((f) => f.value === '900 de 208') && eventos.length === 4,
+    eventos.map((f) => f.value).join(' · ') || 'sin hallazgo');
+}
+
 /* ------------------- 5 · el núcleo no se rompe con basura ------------------ */
 
 const basura = path.join(os.tmpdir(), `normia-basura-${process.pid}.json`);

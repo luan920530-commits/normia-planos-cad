@@ -67,6 +67,19 @@ typedef struct {
     size_t count;
 } norma_snapshot;
 
+/** Tope de escenarios de ocupación temporal por piso (el del validador web). */
+#define NORMA_MAX_SCENARIOS 8
+
+/**
+ * Escenario de ocupación temporal declarado en el lienzo (`canvas.scenarios`):
+ * una feria, una capacitación, la hora pico. No cambia el aforo del piso; se
+ * revisa aparte, con la misma superficie y el mismo ancho útil.
+ */
+typedef struct {
+    char name[64];
+    long persons;
+} norma_scenario;
+
 typedef struct {
     double width;
     double height;
@@ -78,6 +91,9 @@ typedef struct {
     /** Ajustes de extintores del plano: perfil normativo y riesgo predominante. */
     char ext_profile[24];
     char ext_hazard[16];
+    /** Escenarios de ocupación temporal declarados (0 = ninguno). */
+    norma_scenario scenarios[NORMA_MAX_SCENARIOS];
+    size_t scenario_count;
     norma_element *elements;
     size_t count;
     size_t capacity;

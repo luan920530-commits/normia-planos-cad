@@ -22,6 +22,7 @@
 #include "normia/extinguisher.h"
 #include "normia/firstaid.h"
 #include "normia/library.h"
+#include "normia/scenarios.h"
 #include "normia/signage.h"
 #include "normia/jsonw.h"
 #include "normia/grid.h"
@@ -250,6 +251,25 @@ static int command_audit(const char *path)
     /* Primeros auxilios: botiquín, camilla y DEA, medidos sobre la misma rejilla. */
     norma_firstaid first_aid;
     norma_firstaid_analyze(&document, &grid, aforo.used, aforo.source, NULL, &first_aid, &findings);
+    /* Escenarios de ocupación temporal: se revisan aparte, con el mismo piso y el
+       mismo ancho útil; no tocan el aforo del plano. */
+    norma_egress_criteria egress_criteria;
+    norma_egress_criteria_default(&egress_criteria);
+    norma_scenario_item scenarios[NORMA_MAX_SCENARIOS];
+    size_t scenario_count = 0;
+    if (document.scenario_count > 0) {
+        scenario_count = norma_scenarios_analyze(&document, &aforo, &egress, &egress_criteria,
+                                                scenarios, NORMA_MAX_SCENARIOS);
+        norma_scenarios_findings(scenarios, scenario_count, &aforo, &findings);
+    }
+    long peak_persons = 0;
+    char peak_name[64] = "";
+    for (size_t index = 0; index < scenario_count; index += 1) {
+        if (scenarios[index].persons > peak_persons) {
+            peak_persons = scenarios[index].persons;
+            snprintf(peak_name, sizeof(peak_name), "%.63s", scenarios[index].name);
+        }
+    }
     /* Las tres familias se ordenan juntas: gravedad y, dentro de ella, título. */
     norma_findings_sort(&findings);
     norma_findings_count(&findings, &counts);
@@ -411,6 +431,13 @@ static int command_audit(const char *path)
     printf(",\"aedMaxM\":");
     if (first_aid.has_aed_max) {
         printf("%.17g", first_aid.aed_max_m);
+    } else {
+        printf("null");
+    }
+    printf("},\"scenarios\":{\"count\":%lu,\"peakPersons\":%ld,\"peakName\":",
+           (unsigned long) scenario_count, peak_persons);
+    if (scenario_count > 0) {
+        write_json_string(peak_name);
     } else {
         printf("null");
     }
