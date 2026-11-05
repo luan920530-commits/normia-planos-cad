@@ -126,11 +126,30 @@ jobs:
       - name: Arrancar la aplicación sin ventana
         run: |
           native/macos/build/NormiaEstudio.app/Contents/MacOS/NormiaEstudio --check
-          # El mismo binario, exportando un plano de prueba a SVG desde el núcleo.
-          printf '%s' '{"version":1,"name":"prueba","elements":[{"type":"wall","layer":"obra","nodes":[{"x":0,"y":0},{"x":400,"y":0}]}]}' > "$RUNNER_TEMP/plano.json"
+
+      # El mismo núcleo que usa la ventana, exportando un plano de prueba: si el
+      # formato de las cifras o la escala física se rompen, aquí se ve el motivo.
+      - name: Exportar un plano a SVG desde el núcleo
+        run: |
+          printf '%s' '{"format":"normia-plan","version":1,"name":"prueba",
+            "design":{"canvas":{"width":1123,"height":794,"unit":"cm","scale":"1:100"},
+                      "elements":[{"id":"muro_1","type":"wall","layerId":"obra","points":[{"x":0,"y":0},{"x":400,"y":0}]},
+                                  {"id":"cota_1","type":"dimension","layerId":"cotas","points":[{"x":0,"y":100},{"x":400,"y":100}]}]}}' \
+            > "$RUNNER_TEMP/plano.json"
           native/build/norma-core --svg "$RUNNER_TEMP/plano.json" > "$RUNNER_TEMP/plano.svg"
-          grep -q 'width="190.00mm"' "$RUNNER_TEMP/plano.svg"
-          grep -q '400 cm' "$RUNNER_TEMP/plano.svg"
+          revisar() {
+            if grep -q "$1" "$RUNNER_TEMP/plano.svg"; then
+              echo "ok · $2"
+            else
+              echo "::error title=SVG::falta $2"
+              exit 1
+            fi
+          }
+          revisar 'width="190.00mm"' 'el ancho físico del papel'
+          revisar 'viewBox="0 0 1900 1034"' 'viewBox en centímetros del plano'
+          revisar '>400 cm<' 'la cifra de la cota con su unidad'
+          revisar 'd="M 0 0 L 400 0"' 'el trazado del muro'
+          revisar 'Escala 1:100' 'la franja de datos'
 
       # El paquete se publica como artefacto del flujo: así se puede abrir en un
       # Mac con Intel sin depender de una release ni de firma de código.
