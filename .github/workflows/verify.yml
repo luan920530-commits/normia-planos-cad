@@ -58,6 +58,166 @@ jobs:
       - name: Edición Electron
         run: node tests/js/electron.mjs
 
+  # El núcleo nativo se compila y se prueba aparte: no necesita PHP del sistema
+  # ni Node para sus propias pruebas, y así un fallo del C no se confunde con un
+  # fallo del editor. La paridad sí usa el arnés de PHP (php-wasm).
+  nativo:
+    name: Núcleo nativo en C
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compilar y probar el núcleo
+        run: |
+          make -C native clean
+          make -C native CFLAGS="-std=c11 -O2 -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wstrict-prototypes -Werror"
+          make -C native test
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Instalar dependencias de prueba
+        run: npm install --no-save --no-audit --no-fund
+
+      - name: Paridad entre el núcleo en C y el motor PHP
+        run: node native/tests/parity.mjs 8.3
+
+  # La ventana nativa de macOS solo se puede compilar en macOS: aquí se hace con
+  # clang y AppKit, y se arranca con --check (sin abrir ventana). El lienzo y el
+  # menú no se pueden probar sin pantalla, pero sí que compila y que el núcleo
+  # responde dentro de la aplicación.
+  macos-nativo:
+    name: Ventana nativa de macOS
+    runs-on: macos-15-intel
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compilar la aplicación nativa
+        run: |
+          # Los registros de los trabajos no siempre se pueden descargar, así que
+          # el motivo de un fallo se publica como anotación del propio paso y, si
+          # no hay anotaciones, en el resumen del trabajo (que sí se puede leer).
+          publicar() {
+            archivo="$1"
+            titulo="$2"
+            [ -f "$archivo" ] || return 0
+            {
+              echo "### ${titulo}"
+              echo '```'
+              tail -n 40 "$archivo"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY" || true
+            tail -n 25 "$archivo" > "$RUNNER_TEMP/lineas.txt" || true
+            while IFS= read -r linea; do
+              echo "::error title=${titulo}::$(printf '%s' "$linea" | tr -d '\r')"
+            done < "$RUNNER_TEMP/lineas.txt"
+          }
+          paso() {
+            echo "- $1" >> "$GITHUB_STEP_SUMMARY" || true
+          }
+          rm -rf native/build
+          paso "limpieza hecha"
+          set +e
+          make -C native CFLAGS="-std=c11 -O2 -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wstrict-prototypes -Werror" > "$RUNNER_TEMP/compilacion.log" 2>&1
+          NUCLEO=$?
+          paso "núcleo: make terminó con $NUCLEO"
+          make -C native test > "$RUNNER_TEMP/pruebas.log" 2>&1
+          PRUEBAS=$?
+          paso "pruebas: make test terminó con $PRUEBAS"
+          set -e
+          if [ "$NUCLEO" -ne 0 ] || [ "$PRUEBAS" -ne 0 ]; then
+            publicar "$RUNNER_TEMP/compilacion.log" "núcleo"
+            publicar "$RUNNER_TEMP/pruebas.log" "pruebas nativas"
+            echo "::error title=make::el núcleo o sus pruebas fallaron (núcleo $NUCLEO · pruebas $PRUEBAS)"
+            exit 1
+          fi
+          # Si clang se queja, el motivo se copia a las anotaciones del trabajo.
+          set +e
+          # El runner es macOS 15, pero el paquete promete macOS 12: se compila
+          # con ese destino para que el binario no exija nada más nuevo.
+          make -C native/macos DEPLOYMENT=12.0 CFLAGS="-O2 -Wall -Wextra -Werror -Wno-unused-parameter" > "$RUNNER_TEMP/macos.log" 2>&1
+          ESTADO=$?
+          set -e
+          paso "ventana: make -C native/macos terminó con $ESTADO"
+          cat "$RUNNER_TEMP/macos.log"
+          if [ "$ESTADO" -ne 0 ]; then
+            publicar "$RUNNER_TEMP/macos.log" "clang"
+            grep -E "error:|warning:|Undefined symbol|ld: |symbol\(s\) not found" "$RUNNER_TEMP/macos.log" > "$RUNNER_TEMP/clang.txt" 2>/dev/null || true
+            while IFS= read -r linea; do
+              echo "::error title=clang::$(printf '%s' "$linea" | tr -d '\r')"
+            done < "$RUNNER_TEMP/clang.txt"
+            echo "::error title=clang::la aplicación nativa no compiló (código $ESTADO)"
+            exit 1
+          fi
+          paso "ventana compilada"
+
+      - name: Comprobar el paquete y el mínimo de macOS
+        run: |
+          APP="native/macos/build/NormiaEstudio.app"
+          BIN="$APP/Contents/MacOS/NormiaEstudio"
+          test -x "$BIN"
+          MIN="$(/usr/libexec/PlistBuddy -c 'Print :LSMinimumSystemVersion' "$APP/Contents/Info.plist")"
+          echo "LSMinimumSystemVersion: $MIN"
+          case "$MIN" in 12.*) ;; *) echo "::error title=macOS::el paquete exige macOS $MIN"; exit 1 ;; esac
+          plutil -lint "$APP/Contents/Info.plist"
+          # El Info.plist es una promesa; el Mach-O es lo que el sistema mira.
+          # `minos` tiene que ser 12.0 aunque el runner sea macOS 15.
+          MINOS="$(otool -l "$BIN" | awk '/LC_BUILD_VERSION/{visto=1} visto && /minos/{print $2; exit}')"
+          echo "minos del binario: ${MINOS:-sin LC_BUILD_VERSION}"
+          case "$MINOS" in
+            12.0) ;;
+            *) echo "::error title=macOS::el binario exige macOS ${MINOS:-desconocido}, no 12.0"; exit 1 ;;
+          esac
+          otool -l "$BIN" | grep -E "LC_BUILD_VERSION|minos|sdk" | head -6
+          # Los registros no se pueden descargar desde fuera, así que el dato que
+          # importa queda como anotación legible: qué macOS pide el binario.
+          echo "::notice title=macOS::el binario pide macOS $MINOS (Info.plist: $MIN)"
+
+      - name: Arrancar la aplicación sin ventana
+        run: |
+          native/macos/build/NormiaEstudio.app/Contents/MacOS/NormiaEstudio --check
+
+      # El mismo núcleo que usa la ventana, exportando un plano de prueba: si el
+      # formato de las cifras o la escala física se rompen, aquí se ve el motivo.
+      - name: Exportar un plano a SVG desde el núcleo
+        run: |
+          printf '%s' '{"format":"normia-plan","version":1,"name":"prueba",
+            "design":{"canvas":{"width":1123,"height":794,"unit":"cm","scale":"1:100"},
+                      "elements":[{"id":"muro_1","type":"wall","layerId":"obra","points":[{"x":0,"y":0},{"x":400,"y":0}]},
+                                  {"id":"cota_1","type":"dimension","layerId":"cotas","points":[{"x":0,"y":100},{"x":400,"y":100}]}]}}' \
+            > "$RUNNER_TEMP/plano.json"
+          native/build/norma-core --svg "$RUNNER_TEMP/plano.json" > "$RUNNER_TEMP/plano.svg"
+          revisar() {
+            if grep -q "$1" "$RUNNER_TEMP/plano.svg"; then
+              echo "ok · $2"
+            else
+              echo "::error title=SVG::falta $2"
+              exit 1
+            fi
+          }
+          revisar 'width="190.00mm"' 'el ancho físico del papel'
+          revisar 'viewBox="0 0 1900 1034"' 'viewBox en centímetros del plano'
+          revisar '>400 cm<' 'la cifra de la cota con su unidad'
+          revisar 'd="M 0 0 L 400 0"' 'el trazado del muro'
+          revisar 'Escala 1:100' 'la franja de datos'
+
+      # El paquete se publica como artefacto del flujo: así se puede abrir en un
+      # Mac con Intel sin depender de una release ni de firma de código.
+      - name: Empaquetar la aplicación para descargarla
+        run: |
+          ditto -c -k --sequesterRsrc --keepParent \
+            native/macos/build/NormiaEstudio.app \
+            "NormiaEstudio-nativo-${{ github.sha }}.zip"
+          shasum -a 256 "NormiaEstudio-nativo-${{ github.sha }}.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NormiaEstudio-nativo-macos
+          path: NormiaEstudio-nativo-${{ github.sha }}.zip
+          if-no-files-found: error
+
   paquete:
     name: Paquete y demo
     runs-on: ubuntu-latest

@@ -2,10 +2,11 @@
 
 Editor de planos de emergencia y evacuación, en español, pensado para pequeñas y medianas organizaciones que necesitan documentar plantas, rutas, señalización y equipamiento sin depender de software CAD de escritorio ni de servicios externos.
 
-- **Editor completo**: instalador web, cuentas, proyectos y pisos, editor SVG real, biblioteca de **395 pictogramas** (332 ISO 7010 + 23 de orientación y servicios como baños, vestidores, cafetería y **«Usted está aquí»** + **34 de señalización de tránsito** + **6 de emergencia y brigada**), **420 objetos CAD esquemáticos en 31 familias** (estación de servicio, droguería, gimnasio, colegio, cafetería, supermercado, restaurante, bodega, comercio, hospital, costura, asadero, vivienda, deportes, exteriores, instalaciones eléctricas y redes hidrosanitarias, más **vías y tránsito, señalización vial y bicicletas**, entre otras), puertas de uno y dos batientes y portones, **muros curvos con arcos de tres puntos** (radio y flecha editables), **rutas con vértices editables**, **vías con sección tipo (carriles, separador, berma, ciclorruta y andenes), glorietas e intersecciones paramétricas, corredor de ejemplo en una acción, andenes, pasos cebra, parqueaderos y límites de predio esquemáticos**, **redes de tubería (agua, gas, desagües e incendio) y circuitos eléctricos**, cambio de señal y de equipo desde el inspector, guardado con versiones, borradores automáticos, deshacer/rehacer y exportación SVG/JSON/PNG/impresión.
-- **Auditor de planos y evacuación**: el cajón **Revisión** mide el recorrido más largo hasta las salidas marcadas, cuenta salidas y anchos útiles, estima la ocupación (declarada o por densidad), calcula el ancho requerido y el tiempo de evacuación, y lista los hallazgos por severidad con un botón para verlos en el plano. Los umbrales viven en `resources/audit-criteria.json`, el cálculo también corre en el servidor y el informe se imprime o se guarda como PDF.
+- **Editor completo**: instalador web, cuentas, proyectos y pisos, editor SVG real, biblioteca de **395 pictogramas** (332 ISO 7010 + 23 de orientación y servicios como baños, vestidores, cafetería y **«Usted está aquí»** + **34 de señalización de tránsito** + **6 de emergencia y brigada**), **422 objetos CAD esquemáticos en 31 familias** (estación de servicio, droguería, gimnasio, colegio, cafetería, supermercado, restaurante, bodega, comercio, hospital, costura, asadero, vivienda, deportes, exteriores, instalaciones eléctricas y redes hidrosanitarias, más **vías y tránsito, señalización vial y bicicletas**, entre otras), puertas de uno y dos batientes y portones, **muros curvos con arcos de tres puntos** (radio y flecha editables), **rutas con vértices editables**, **pluma con nodos de control para muros, líneas, cotas, vías, andenes y linderos**, **vías con sección tipo (carriles, separador, berma, ciclorruta y andenes), glorietas e intersecciones paramétricas, corredor de ejemplo en una acción, andenes, pasos cebra, parqueaderos y límites de predio esquemáticos**, **redes de tubería (agua, gas, desagües e incendio) y circuitos eléctricos**, cambio de señal y de equipo desde el inspector, guardado con versiones, borradores automáticos, deshacer/rehacer y exportación SVG/JSON/PNG/impresión.
+- **Auditor de planos y evacuación**: el cajón **Revisión** mide el recorrido más largo hasta las salidas marcadas, cuenta salidas y anchos útiles, estima la ocupación (declarada o por densidad), calcula el ancho requerido y el tiempo de evacuación, y lista los hallazgos por severidad con un botón para verlos en el plano. Los umbrales viven en `resources/audit-criteria.json`, el cálculo también corre en el servidor y el informe se imprime o se guarda como PDF. Desde la 1.23.0 revisa además botiquín, camilla y DEA, y desde la 1.24.0 los **escenarios de ocupación temporal** (un evento con más gente que el uso habitual) se calculan aparte, sin mover el aforo del piso; y desde la 1.25.0 el **simulacro** calcula el tiempo objetivo por ruta y lo anima en modo presentación, con las figuras moviéndose por el espacio libre del plano desde la 1.26.0.
 - **Instalaciones**: tuberías de agua, gas, desagües e incendio y red eléctrica con longitudes, diámetros, circuitos, cargas y caída de tensión estimada.
 - **Empresas, personas y roles.** Los planos pertenecen a una empresa y las personas entran por una membresía con rol (propietario, administrador, editor o lector). Una persona puede pertenecer a varias empresas; el sistema impide quedarse sin propietario y no deja que un lector guarde cambios.
+- **Medidas sin ceremonia.** La geometría se guarda en centímetros y la unidad del plano solo cambia cómo se leen las cifras: pasar de metros a centímetros no mueve nada. Cada objeto medible puede llevar su **largo real** (0,01 a 5 000 m) con calidad **exacta**, **aproximada** o **estimada**, y esa medida manda en el informe, la cota y las exportaciones sin tocar el dibujo.
 - **PHP ≥ 8.1 + SQLite/PDO**, arquitectura MVC propia, sin Composer, sin `node_modules` en producción y sin CDN.
 - **100 % local**: las fuentes, los estilos, los iconos, los pictogramas y los catálogos viven en el paquete. La aplicación no hace llamadas a servicios de terceros.
 - **Licencia GPL-3.0**. Los pictogramas ISO 7010 conservan su licencia MIT y su atribución (ver [Créditos](#créditos-licencias-y-atribución)).
@@ -30,42 +31,56 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 12. [Verificación física](#verificación-física)
 13. [Modo brigadista](#modo-brigadista)
 14. [Guardado, versiones y borradores](#guardado-versiones-y-borradores)
-15. [Exportaciones](#exportaciones)
-16. [Formato de datos](#formato-de-datos)
-17. [Arquitectura](#arquitectura)
-18. [Seguridad](#seguridad)
-19. [Pruebas](#pruebas)
-20. [Distribución: escritorio y Android](#distribución-escritorio-y-android)
-21. [Edición Electron](#edición-electron)
-22. [Guía de primeros pasos](#guía-de-primeros-pasos)
-23. [Complementos](#complementos)
-24. [Datos y respaldo](#datos-y-respaldo)
-25. [Cambios de la versión 1.18.0](#cambios-de-la-versión-1180)
-26. [Cambios de la versión 1.17.0](#cambios-de-la-versión-1170)
-27. [Cambios de la versión 1.16.0](#cambios-de-la-versión-1160)
-28. [Cambios de la versión 1.15.9](#cambios-de-la-versión-1159)
-29. [Cambios de la versión 1.15.8](#cambios-de-la-versión-1158)
-30. [Cambios de la versión 1.15.7](#cambios-de-la-versión-1157)
-31. [Cambios de la versión 1.15.6](#cambios-de-la-versión-1156)
-32. [Cambios de la versión 1.15.5](#cambios-de-la-versión-1155)
-33. [Cambios de la versión 1.15.4](#cambios-de-la-versión-1154)
-34. [Cambios de la versión 1.15.3](#cambios-de-la-versión-1153)
-35. [Cambios de la versión 1.15.2](#cambios-de-la-versión-1152)
-36. [Cambios de la versión 1.15.1](#cambios-de-la-versión-1151)
-37. [Cambios de la versión 1.15.0](#cambios-de-la-versión-1150)
-38. [Cambios de la versión 1.14.2](#cambios-de-la-versión-1142)
-39. [Cambios de la versión 1.14.1](#cambios-de-la-versión-1141)
-40. [Cambios de la versión 1.14.0](#cambios-de-la-versión-1140)
-41. [Cambios de la versión 1.13.0](#cambios-de-la-versión-1130)
-42. [Cambios de la versión 1.12.0](#cambios-de-la-versión-1120)
-43. [Cambios de la versión 1.11.1](#cambios-de-la-versión-1111)
-44. [Cambios de la versión 1.11.0](#cambios-de-la-versión-1110)
-45. [Cambios de la versión 1.10.0](#cambios-de-la-versión-1100)
-46. [Cambios de la versión 1.9.0](#cambios-de-la-versión-190)
-47. [Cambios de la versión 1.8.0](#cambios-de-la-versión-180)
-48. [Paquetes y verificación](#paquetes-y-verificación)
-49. [Limitaciones](#limitaciones)
-50. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
+15. [Datos y respaldo](#datos-y-respaldo)
+16. [Exportaciones](#exportaciones)
+17. [Formato de datos](#formato-de-datos)
+18. [Arquitectura](#arquitectura)
+19. [Seguridad](#seguridad)
+20. [Pruebas](#pruebas)
+21. [Distribución: escritorio y Android](#distribución-escritorio-y-android)
+22. [Edición Electron](#edición-electron)
+23. [Normia Estudio (solo editor)](#normia-estudio-solo-editor)
+24. [Guía de primeros pasos](#guía-de-primeros-pasos)
+25. [Complementos](#complementos)
+26. [Unidades y medidas](#unidades-y-medidas)
+27. [Cambios de la versión 1.30.0](#cambios-de-la-versión-1300)
+28. [Cambios de la versión 1.29.0](#cambios-de-la-versión-1290)
+29. [Cambios de la versión 1.28.0](#cambios-de-la-versión-1280)
+30. [Cambios de la versión 1.27.0](#cambios-de-la-versión-1270)
+31. [Cambios de la versión 1.26.0](#cambios-de-la-versión-1260)
+32. [Cambios de la versión 1.25.0](#cambios-de-la-versión-1250)
+33. [Cambios de la versión 1.24.0](#cambios-de-la-versión-1240)
+34. [Cambios de la versión 1.23.0](#cambios-de-la-versión-1230)
+35. [Cambios de la versión 1.22.0](#cambios-de-la-versión-1220)
+36. [Cambios de la versión 1.21.0](#cambios-de-la-versión-1210)
+37. [Cambios de la versión 1.20.0](#cambios-de-la-versión-1200)
+38. [Cambios de la versión 1.19.0](#cambios-de-la-versión-1190)
+39. [Cambios de la versión 1.18.0](#cambios-de-la-versión-1180)
+40. [Cambios de la versión 1.17.0](#cambios-de-la-versión-1170)
+41. [Cambios de la versión 1.16.0](#cambios-de-la-versión-1160)
+42. [Cambios de la versión 1.15.9](#cambios-de-la-versión-1159)
+43. [Cambios de la versión 1.15.8](#cambios-de-la-versión-1158)
+44. [Cambios de la versión 1.15.7](#cambios-de-la-versión-1157)
+45. [Cambios de la versión 1.15.6](#cambios-de-la-versión-1156)
+46. [Cambios de la versión 1.15.5](#cambios-de-la-versión-1155)
+47. [Cambios de la versión 1.15.4](#cambios-de-la-versión-1154)
+48. [Cambios de la versión 1.15.3](#cambios-de-la-versión-1153)
+49. [Cambios de la versión 1.15.2](#cambios-de-la-versión-1152)
+50. [Cambios de la versión 1.15.1](#cambios-de-la-versión-1151)
+51. [Cambios de la versión 1.15.0](#cambios-de-la-versión-1150)
+52. [Cambios de la versión 1.14.2](#cambios-de-la-versión-1142)
+53. [Cambios de la versión 1.14.1](#cambios-de-la-versión-1141)
+54. [Cambios de la versión 1.14.0](#cambios-de-la-versión-1140)
+55. [Cambios de la versión 1.13.0](#cambios-de-la-versión-1130)
+56. [Cambios de la versión 1.12.0](#cambios-de-la-versión-1120)
+57. [Cambios de la versión 1.11.1](#cambios-de-la-versión-1111)
+58. [Cambios de la versión 1.11.0](#cambios-de-la-versión-1110)
+59. [Cambios de la versión 1.10.0](#cambios-de-la-versión-1100)
+60. [Cambios de la versión 1.9.0](#cambios-de-la-versión-190)
+61. [Cambios de la versión 1.8.0](#cambios-de-la-versión-180)
+61. [Paquetes y verificación](#paquetes-y-verificación)
+62. [Limitaciones](#limitaciones)
+63. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
 
 ---
 
@@ -79,7 +94,7 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 | Pisos | Varios pisos por proyecto, orden, duplicación y protección del último piso. |
 | Editor | Lienzo SVG con rejilla, reglas, ajuste, zoom, paneo, selección múltiple, marquesina, capas y grupos. |
 | Herramientas | Muro (recto o **curvo**), puerta sencilla, puerta doble, portón o reja, ruta de evacuación, texto, medida, línea, rectángulo, elipse, **tubería**, **tubería eléctrica**, **vía vehicular**, **andén**, **paso cebra**, **parqueadero** y **límite de predio**. |
-| Bibliotecas | 395 señales (332 ISO 7010 + 23 de orientación y servicios + 34 de tránsito + 6 de emergencia y brigada) en 9 familias y 420 objetos CAD en 31 familias, con búsqueda con sinónimos y filtros por familia. |
+| Bibliotecas | 395 señales (332 ISO 7010 + 23 de orientación y servicios + 34 de tránsito + 6 de emergencia y brigada) en 9 familias y 422 objetos CAD en 31 familias, con búsqueda con sinónimos y filtros por familia. |
 | Complementos | Paquetes de datos (`plugin.json` o `.zip`) con señales y equipos CAD propios: se instalan, se activan o desactivan y se borran desde **Complementos**, sin ejecutar código ni reinstalar la aplicación. |
 | Propiedades | Posición, tamaño, rotación, sentido de apertura, color (paleta de 34), grosor, opacidad, texto, capa, bloqueo, cambio de tipo y, en redes, **sistema, diámetro, material, pendiente, presión, circuito, tensión, calibre, fases y carga**. |
 | Historial | Deshacer/rehacer con 120 pasos, duplicar, pegar, agrupar, alinear, distribuir y orden de dibujo. |
@@ -267,6 +282,7 @@ herramientas o desde **Atajos**. Los detalles están en
 - **Mano (H)**: arrastra para desplazar el lienzo; la rueda sigue haciendo zoom y el botón central o `Espacio` + arrastre funcionan en cualquier herramienta.
 - Arrastrar un elemento seleccionado lo mueve con ajuste a la rejilla (`Alt` desactiva el ajuste).
 - Los tiradores de la caja de selección escalan; el tirador superior rota (`Shift` fija pasos de 15°). Los tiradores se dibujan un poco más grandes que el trazo para poder agarrar muros finos, pero un clic sin arrastre nunca mueve ni deforma nada.
+- **Pluma (muros, líneas, cotas, vías, andenes y linderos)**: cada clic deja un nodo y el tramo elástico sigue al cursor con su cifra a la vista; `Enter` o doble clic termina, `Retroceso` quita el último nodo, `Esc` cancela y el clic sobre el primer nodo cierra el recinto. Sigue valiendo arrastrar para crear un tramo de dos puntos de una vez.
 - **Rutas de evacuación**: clic para añadir puntos, clic sobre el primer punto para cerrar el circuito, `Retroceso` quita el último punto, `Enter` o doble clic termina y `Esc` cancela.
 - **Biblioteca**: arrastra una tarjeta al lienzo o pulsa **Insertar en el plano**; el cajón se cierra y el recurso se coloca con el siguiente clic (o `Enter` sobre la tarjeta).
 - **Tuberías y circuitos**: igual que una ruta (clic para añadir puntos, `Enter` o doble clic para cerrar, `Esc` para cancelar). Después puedes arrastrar sus vértices como cualquier trazo.
@@ -351,7 +367,7 @@ El inspector se organiza en una ficha superior con la miniatura, el tipo y las a
 - Al mover un vértice la caja del elemento se recalcula sola, la rotación se disuelve en los puntos y cada paso entra en el historial (deshacer/rehacer).
 - Las rutas de evacuación conservan el cierre en circuito: el primer y el último punto siguen unidos.
 
-### Equipamiento CAD (420 objetos en 31 familias)
+### Equipamiento CAD (422 objetos en 31 familias)
 
 | Familia | Objetos | Ejemplos |
 | --- | --- | --- |
@@ -388,7 +404,7 @@ El inspector se organiza en una ficha superior con la miniatura, el tipo y las a
 | **Bicicletas y micromovilidad** | 10 | bicicleta urbana, plegable, eléctrica plegable, de montaña, de ruta, de carga, infantil, patineta eléctrica, monopatín, casco de ciclista, estación de reparación |
 
 - Identificador `cad_*` (por ejemplo `cad_desk`, `cad_rest_bar`, `cad_sport_pool`, `cad_eds_dispenser`, `cad_drg_cold_chain`, `cad_gym_treadmill`, `cad_sch_desk`, `cad_caf_bar`).
-- Los 420 objetos se generan y verifican con `tools/build-sector-catalogs.mjs` (mantenimiento; `tools/` no se distribuye).
+- Los 422 objetos se generan y verifican con `tools/build-sector-catalogs.mjs` (mantenimiento; `tools/` no se distribuye).
 - **Nombres únicos**: los 12 objetos que compartían nombre entre familias (silla, mostrador de atención, vitrina, caja registradora, lavamanos, caminadora, tanque, campana extractora, nevera de bebidas, muelle de carga, zona de empaque y silla de ruedas) ahora se distinguen con el sector entre paréntesis. El generador falla si vuelve a haber nombres repetidos.
 - Los objetos de agua (piscina, trampolín) usan un color propio del catálogo (`#0891b2`); el resto hereda el color del elemento.
 - Son **esquemáticos**: no representan medidas certificadas; la descripción y la referencia están en `resources/cad-objects.json`. Verifica siempre las dimensiones en el sitio.
@@ -436,7 +452,7 @@ El panel **Redes y circuitos** (barra lateral inferior) resume el piso:
 | Archivo | Contenido |
 | --- | --- |
 | `resources/iso7010-catalog.json` | `{format, standard, source, license, categories, signs{CODE:{name,category,description,svg}}}` |
-| `resources/cad-objects.json` | `{version, categories{furniture,...}, objects{cad_*:{category,name,description,reference,color,load?,svg}}}` — 420 objetos en 31 familias |
+| `resources/cad-objects.json` | `{version, categories{furniture,...}, objects{cad_*:{category,name,description,reference,color,load?,svg}}}` — 422 objetos en 31 familias |
 | `resources/service-signs.json` | `{format, standard, license, categories{services,location,traffic,brigade}, signs{SVC_*:{name,category,description,aliases,svg}}}` — 63 señales propias |
 | `resources/mep-networks.json` | `{hydraulic{clave:{label,short,color,dash,stroke,diameter,material,gravity,pressureKpa,reference}},diameters[],materials{},slopes{},electrical{...}}` — valores de referencia de redes y circuitos |
 | `resources/audit-criteria.json` | `{version, notice, grid, egress, occupancy, signs}` — umbrales del auditor y de la medición de evacuación |
@@ -459,18 +475,22 @@ El menú **Análisis** de la barra de herramientas abre el auditor con **Revisi�
 | Recorrido más largo | Rejilla de celdas sobre el espacio libre (muros y vanos respetados) y camino más corto desde cada celda hasta una salida. Se informa el punto más alejado y el límite de referencia. |
 | Superficie libre y zonas sin salida | Área interior transitable, superficie alcanzable y recintos que quedan sin camino a una salida. El terreno de fuera del edificio no cuenta. |
 | Salidas y anchos | Número de salidas, ancho de vano de cada una y ancho útil (vano × factor de holgura de hojas y marcos). |
-| Ocupación | La declarada en **Ajustes → Ocupación declarada (personas)**; si está en 0, se estima con la densidad de referencia por superficie libre y el informe lo advierte. |
+| Aforo máximo | **Capacidad calculada**: superficie útil libre × densidad de referencia, con el techo de `occupancy.maxPersons`. Es la cifra que se imprime en el pie del plano. |
+| Aforo permitido | El aforo que rige: el menor entre la ocupación declarada y el aforo máximo. Si no hay ocupación declarada, es la capacidad estimada y así se rotula. |
+| Ocupación | La declarada en **Ajustes → Ocupación declarada (personas)**; si está en 0, se estima con la densidad de referencia por superficie libre y el informe lo advierte. Declarar más de lo que cabe genera el hallazgo `occupancy_over_capacity`. |
 | Ancho requerido | Ocupación × ancho de paso por persona, comparado con el ancho útil disponible. |
 | Tiempo estimado | Marcha (recorrido ÷ velocidad) + cola en las salidas (personas ÷ flujo por metro de ancho). |
 | Señalización | Salida con pictograma de salida cerca del vano, presencia de «Usted está aquí» y de medios de extinción. |
 
-**Hallazgos.** Cada aviso trae severidad (*crítico*, *importante*, *menor*, *informativo*), título, explicación, valor medido y, cuando aplica, los elementos del plano. El botón **Ver en el plano** selecciona el elemento y ajusta el zoom. El contador del botón de la barra lateral muestra los críticos e importantes pendientes. Códigos: `no_exit`, `too_few_exits`, `narrow_exit`, `travel_too_long`, `unreachable_area`, `no_route`, `route_no_exit`, `route_through_wall`, `occupancy_missing`, `width_short`, `exit_without_sign`, `no_you_are_here` y `no_fire_sign`.
+**Hallazgos.** Cada aviso trae severidad (*crítico*, *importante*, *menor*, *informativo*), título, explicación, valor medido y, cuando aplica, los elementos del plano. El botón **Ver en el plano** selecciona el elemento y ajusta el zoom. El contador del botón de la barra lateral muestra los críticos e importantes pendientes. Códigos: `no_exit`, `too_few_exits`, `narrow_exit`, `travel_too_long`, `unreachable_area`, `no_route`, `route_no_exit`, `route_through_wall`, `occupancy_missing`, `occupancy_over_capacity`, `width_short`, `exit_without_sign`, `no_you_are_here` y `no_fire_sign`.
 
 **Criterios configurables.** Los umbrales están en `resources/audit-criteria.json`: recorrido máximo, mínimo de salidas, ancho mínimo de vano, factor de holgura, ancho por persona, velocidad de marcha, flujo, densidad de ocupación, tolerancia de llegada de las rutas, superficie mínima de recinto y radio de la señalización. Edita el archivo para ajustarlo a la norma aplicable; el informe imprimible enumera los valores usados.
 
-**API e informe.** `GET /index.php?r=api/floors/{id}/audit` (admite `?occupancy=N` para simular una ocupación) devuelve `{ok, floor, report, notice}` con `findings`, `counts`, `exits`, `travel`, `occupancy`, `egress`, `routes`, `signs` y `criteria`. El informe imprimible está en `…/projects/{id}/floors/{floorId}/audit` y lleva las métricas, los hallazgos, las rutas, los criterios aplicados y el aviso de alcance.
+**Aforo en el informe y en el pie del plano.** El informe imprimible tiene una sección **Aforo del piso** con la capacidad calculada (y su fórmula), el aforo permitido, la ocupación declarada —con cuántas personas excede el máximo, si es el caso— y las personas con las que se calcula la salida. El **pie del plano exportado** (SVG, PNG e impresión) publica *Aforo máximo* y *Aforo permitido* junto a la superficie útil libre, para que el plano colgado en la puerta diga a cuánta gente corresponde. La ocupación declarada por encima del máximo **no se recorta en silencio**: el tiempo de salida se calcula con la gente declarada y se añade el hallazgo.
 
-> **La revisión es de referencia.** Los umbrales son configurables y el cálculo es esquemático: **no es un dictamen**, no certifica cumplimiento normativo y no sustituye la verificación en sitio ni la revisión de un profesional competente. Los anchos, las rutas y la ocupación real deben confirmarse en el sitio.
+**API e informe.** `GET /index.php?r=api/floors/{id}/audit` (admite `?occupancy=N` para simular una ocupación) devuelve `{ok, floor, report, notice}` con `findings`, `counts`, `exits`, `travel`, `occupancy`, `egress`, `routes`, `signs`, `firstAid`, `scenarios`, `drill` y `criteria`. Dentro de `occupancy` vienen `people` (con quién se calcula), `maxPersons`, `declared`, `permitted`, `excess`, `freeAreaM2`, `density` y `cap`; `scenarios` trae `count`, `items` (personas, capacidad, exceso, ancho exigido, tiempo del escenario), `peak`, `base` y `notice`. El informe imprimible está en `…/projects/{id}/floors/{floorId}/audit` y lleva las métricas, el aforo, los hallazgos, las rutas, los criterios aplicados y el aviso de alcance.
+
+> **La revisión es de referencia.** Los umbrales son configurables y el cálculo es esquemático: **no es un dictamen**, no certifica cumplimiento normativo y no sustituye la verificación en sitio ni la revisión de un profesional competente. Los anchos, las rutas y la ocupación real deben confirmarse en el sitio. El **aforo máximo es una capacidad calculada** con la superficie del dibujo: no reemplaza el aforo que fije la autoridad competente.
 
 ---
 
@@ -638,7 +658,7 @@ previa y vuelta atrás, está en
 | Formato | Cómo | Contenido |
 | --- | --- | --- |
 | **SVG** | Botón Exportar o ruta `…/export/svg` | Dibujo vectorial de la versión guardada, con estilos incrustados, sin scripts. |
-| **JSON** | `…/export/json` | `schema_version: 2`, proyecto, piso, diseño completo, atribución y fecha. |
+| **JSON** | `…/export/json` | `schema_version: 3`, proyecto, piso, diseño completo (geometría en centímetros y medidas por objeto), atribución y fecha. |
 | **PNG** | Exportar → PNG | Se rasteriza en el navegador el diseño actual; no sube nada al servidor. |
 | **Impresión/PDF** | `…/print` o Exportar → Imprimir | Hoja con el plano, la leyenda de redes y el pie de orientación. Usa “Guardar como PDF” del navegador. |
 
@@ -767,12 +787,14 @@ La suite usa **php-wasm** (PHP compilado a WebAssembly) y **JSDOM**, de modo que
 
 ```bash
 npm install            # solo desarrollo: @php-wasm/node y jsdom
-npm test               # suite completa (20 pasos)
+npm test               # suite completa (24 pasos)
 npm run test:quick     # sin construir/validar paquetes
 npm run test:php:81    # suite funcional en PHP 8.1
 npm run test:php:83    # suite funcional en PHP 8.3
 npm run test:stability # respaldo, migraciones, conflicto y poda en 8.1 y 8.3
 npm run test:units     # autoridad única de unidades en PHP 8.1, 8.3 y JS
+npm run test:curves    # longitud de trazos curvos en PHP 8.1 y 8.3
+npm run test:golden    # 6 405 valores fijos del auditor, extintores, redes y SVG, en mm, cm y m
 npm run test:js        # editor real en JSDOM (PHP 8.3)
 npm run test:package   # construye los ZIP y hace la instalación limpia de la demo
 npm run lint:php       # sintaxis de todos los archivos PHP en 8.1 y 8.3
@@ -803,16 +825,21 @@ Lo único que no funciona sin red es la **vista previa de desarrollo** (`npm run
 | Bloque | Comprobaciones |
 | --- | --- |
 | `tests/php/lint.mjs` | `php -l` sobre todo `app/`, `bootstrap.php` e `index.php` en 8.1 y 8.3. |
-| `tests/php/functional.mjs` | 327 comprobaciones: instalador, requisitos, contraseñas débiles, CSRF, sesión, autorización entre cuentas, CRUD de proyectos/pisos, duplicados, importación v1/v2, catálogos (395 señales y 420 objetos), catálogo y guardado de redes, señales de baño y de servicios (guardado, color de familia y exportación SVG), **auditor y medición de evacuación** (salidas, recorrido máximo, zonas inalcanzables, rutas que cruzan muros o no llegan a la salida, ocupación declarada y estimada, señalización, validación de `isExit`, informe imprimible y demo coherente), **muros curvos y vías** (guardado en formato 3, auditor con el muro curvo separando recintos, arco `A` en el SVG, vía que no bloquea frente a muro que sí, `422` para curvas desalineadas, `kind` desconocido, curvas en una puerta y formato desconocido), **sección tipo y glorieta** (formato 4 con ancho derivado, SVG con calzada, andenes, anillo e isla, y `422` para una medida fuera de rango, una clave desconocida, una glorieta sin sección y un cruce desconocido), **modo brigadista** (panel, token de 32 caracteres, página pública sin sesión ni scripts inline, API del plan, service worker, regeneración y desactivación del enlace), **complementos** (pantalla, manual, descarga de las dos plantillas, instalación desde `plugin.json` y desde `.zip` con SVG al lado, familia y color propios en el catálogo, sinónimos en el buscador, activar/desactivar, borrado, rechazo de un manifiesto inválido y de un `.zip` sin su SVG), **verificación física** (lista sin trazos, tres estados, novedad sin nota rechazada, rondas e historial, cobertura, aviso de días y foto servida solo a la cuenta dueña) y **empresas y roles** (alta de empresa, acceso compartido, lector que no guarda ni borra, editor que no administra, último propietario protegido, aislamiento entre empresas y migración real desde una base `user_version = 5`), puertas y portones (geometría, sentidos de apertura, exportación con trazo), validaciones de la API, guardado/versiones/borradores/conflictos, exportaciones, ciclo de vida y logout. |
-| `tests/php/units.mjs` | 22 comprobaciones de la **autoridad única de unidades** (`App\Core\Units`) contra la tabla compartida `tests/fixtures/units.json`: factores de `mm`/`cm`/`m`, conversión de longitudes y superficies, unidad desconocida que cae a `cm` sin lanzar, lectura de la escala de impresión y, sobre todo, **paridad bit a bit de la ruta `cm`** con el cálculo anterior, para que consolidar los siete conversores no mueva un solo número. |
+| `tests/php/functional.mjs` | 386 comprobaciones: instalador, requisitos, contraseñas débiles, CSRF, sesión, autorización entre cuentas, CRUD de proyectos/pisos, duplicados, importación v1/v2, catálogos (395 señales y 422 objetos), catálogo y guardado de redes, señales de baño y de servicios (guardado, color de familia y exportación SVG), **auditor y medición de evacuación** (salidas, recorrido máximo, zonas inalcanzables, rutas que cruzan muros o no llegan a la salida, ocupación declarada y estimada, señalización, validación de `isExit`, informe imprimible y demo coherente), **muros curvos y vías** (guardado en formato 3, auditor con el muro curvo separando recintos, arco `A` en el SVG, vía que no bloquea frente a muro que sí, `422` para curvas desalineadas, `kind` desconocido, curvas en una puerta y formato desconocido), **sección tipo y glorieta** (formato 4 con ancho derivado, SVG con calzada, andenes, anillo e isla, y `422` para una medida fuera de rango, una clave desconocida, una glorieta sin sección y un cruce desconocido), **modo brigadista** (panel, token de 32 caracteres, página pública sin sesión ni scripts inline, API del plan, service worker, regeneración y desactivación del enlace), **complementos** (pantalla, manual, descarga de las dos plantillas, instalación desde `plugin.json` y desde `.zip` con SVG al lado, familia y color propios en el catálogo, sinónimos en el buscador, activar/desactivar, borrado, rechazo de un manifiesto inválido y de un `.zip` sin su SVG), **verificación física** (lista sin trazos, tres estados, novedad sin nota rechazada, rondas e historial, cobertura, aviso de días y foto servida solo a la cuenta dueña) y **empresas y roles** (alta de empresa, acceso compartido, lector que no guarda ni borra, editor que no administra, último propietario protegido, aislamiento entre empresas y migración real desde una base `user_version = 5`), puertas y portones (geometría, sentidos de apertura, exportación con trazo), validaciones de la API, guardado/versiones/borradores/conflictos, exportaciones, ciclo de vida y logout. |
+| `tests/php/golden.mjs` | **Golden de regresión numérica**: 6 405 valores del auditor (con y sin ocupación declarada), la cobertura de extintores, el resumen de redes y el SVG de los cuatro pisos de la demostración, más un plano sintético con tubería curva que comprueba que `MepCalculator` mide el arco igual que `PathGeometry`. Se capturó **antes** de consolidar los conversores de unidad y cualquier diferencia inesperada es un fallo. Se regenera con `--write`. |
+| `tests/php/units.mjs` | 23 comprobaciones de la **autoridad única de unidades** (`App\Core\Units`) contra la tabla compartida `tests/fixtures/units.json`: factores de `mm`/`cm`/`m`, conversión de longitudes y superficies, unidad desconocida que cae a `cm` sin lanzar en los conversores, lectura de la escala de impresión, **paridad bit a bit de la ruta `cm`** con el cálculo anterior y **identidad exacta de `fromMeters` con JavaScript** (18 casos en `mm`, `cm` y `m`), para que consolidar los siete conversores no mueva un solo número ni separe los dos lenguajes. |
+| `tests/php/curves.mjs` | 17 comprobaciones de la **medición de trazos curvos**: el arco en `mm`, `cm` y `m`, la recta idéntica bit a bit al cálculo anterior, la escala de impresión que no interviene, un arco degenerado que vuelve a medirse como recta, un elemento sin puntos que conserva la diagonal de su cajón, el informe de redes sumando 6,28 m donde antes sumaba 4, la caída de tensión que crece en la misma proporción, el rótulo del SVG con la nueva cifra también en milímetros y la puerta estricta de unidad del documento. |
 | `tests/php/stability.mjs` | 45 comprobaciones de la Fase 0: panel de respaldo, creación de la copia, descarga del ZIP y de la base, verificación aislada y detección de un archivo corrupto, la fotografía dentro de la copia, rotación con copia fijada, reserva del respaldo a la cuenta que instaló, bitácora de migraciones completa, **migración que falla sin tocar la versión ni los datos**, restauración de versión y **conflicto de carrera sin insertar filas**, los cuatro casos de cuerpo JSON (`empty_body`, `invalid_json`, `payload_too_large` y estructura incompleta) y la conservación del historial (protección de vigente, inicial y fijadas, y poda que solo borra lo seleccionado). |
-| `tests/js/units.mjs` | 24 comprobaciones del módulo `assets/js/lib/units.js` contra la **misma** tabla compartida: si PHP y JavaScript se separan, falla una de las dos suites. Verifica además que el módulo no toca el DOM ni la red y que publica `window.Normia.Units`. |
+| `tests/js/units.mjs` | 30 comprobaciones del módulo `assets/js/lib/units.js` contra la **misma** tabla compartida: si PHP y JavaScript se separan, falla una de las dos suites. Fija además la longitud de un trazo curvo, la identidad exacta de `fromMeters` con PHP y que el editor coincide **exactamente** con el golden que escribe el servidor; y comprueba que el módulo no toca el DOM ni la red y que publica `window.Normia.Units`. |
 | `tests/js/plugins.mjs` | 20 comprobaciones de los complementos en el editor: traducción `plg_…` ↔ `PLG_…`, color y tamaño de la familia propia, búsqueda por sinónimos, filtro por familia, inserción, guardado y reapertura del elemento. |
-| `tests/js/editor.mjs` | 383 comprobaciones de interfaz sobre la app real: arranque, 395 señales y 420 objetos, **muros curvos** (rombo del tramo, arco de tres puntos, radio y flecha en el inspector, enderezar, doble clic que parte el arco, caja analítica, puerta sobre el arco, formato 3 y degradación a v2, marcado idéntico sin curvas), **vías y andenes** (banda de 6 m con carriles, cambio de ancho y carriles, parqueadero contado en la etiqueta, franjas del paso cebra y rótulo del lindero), **sección tipo y cruces** (avenida de 20 m en formato 4, perfil transversal en el inspector, cambio de andén que recalcula el ancho, glorieta de cinco accesos, vuelta a vía normal, corredor de ejemplo en una acción y sinónimos «carro», «bici» y «semáforo»), **trazado de tuberías y circuitos, inspector de red y panel de redes**, **mano y paneo, selección de superpuestos, inspector plegable y paleta de herramientas**, **guía de primeros pasos** (apertura en el primer uso, siete pasos, progreso tomado del plano, salto a la herramienta con la baldosa resaltada, reinicio y desactivación), **buscador con sinónimos y sin tildes** (calle → vía, anden → andén, parqueo → parqueadero), **baldosa propia de vías y andenes**, puertas dobles y portones, **vértices de ruta editables (arrastrar, doble clic, Alt+clic)**, **señal de baño insertada desde la biblioteca**, **posiciones reales del trazo**, **clic sobre muros finos, pictogramas y equipos**, **cambio de señal y de equipo desde el inspector**, **auditor de planos** (interruptor de salida, ocupación declarada, cajón de revisión, contador, filtros, «Ver en el plano», cierre sin dejar el fondo bloqueado), **pliego de señalización** (conteo, tamaño sugerido, CSV, precios y consistencia), **medición de rutas internas** (ruta que rodea muros, tramos, guardado en capa y comparación), **modo presentación** (pantalla limpia, láser, spotlight, rutas animadas, capas, quiz y salida sin perder el estado), **rotación**, **rutas cerradas**, **arrastrar y soltar desde la biblioteca sin que el cajón lo bloquee**, reglas, herramientas, inserción con puntero, selección, mover, escalar, rotar, color, cambio de tipo, deshacer/rehacer, duplicar, agrupar, bloquear, desplazar, texto y saneado, guardar, reabrir, borradores, conflictos, exportación SVG/JSON/PNG, tooltips sin acumulación, capas, versiones y límites. |
+| `tests/js/editor.mjs` | 442 comprobaciones de interfaz sobre la app real: arranque, 395 señales y 422 objetos, **pluma de muros** (nodo por clic, tramo elástico con su cifra, banda de grosor, `Retroceso`, `Shift`, `Enter`, cierre sobre el primer nodo, doble clic, `Esc` y la cota que se cierra con dos nodos), **muros curvos** (rombo del tramo, arco de tres puntos, radio y flecha en el inspector, enderezar, doble clic que parte el arco, caja analítica, puerta sobre el arco, formato 3 y degradación a v2, marcado idéntico sin curvas), **vías y andenes** (banda de 6 m con carriles, cambio de ancho y carriles, parqueadero contado en la etiqueta, franjas del paso cebra y rótulo del lindero), **sección tipo y cruces** (avenida de 20 m en formato 4, perfil transversal en el inspector, cambio de andén que recalcula el ancho, glorieta de cinco accesos, vuelta a vía normal, corredor de ejemplo en una acción y sinónimos «carro», «bici» y «semáforo»), **trazado de tuberías y circuitos, inspector de red y panel de redes**, **mano y paneo, selección de superpuestos, inspector plegable y paleta de herramientas**, **guía de primeros pasos** (apertura en el primer uso, siete pasos, progreso tomado del plano, salto a la herramienta con la baldosa resaltada, reinicio y desactivación), **buscador con sinónimos y sin tildes** (calle → vía, anden → andén, parqueo → parqueadero), **baldosa propia de vías y andenes**, puertas dobles y portones, **vértices de ruta editables (arrastrar, doble clic, Alt+clic)**, **señal de baño insertada desde la biblioteca**, **posiciones reales del trazo**, **clic sobre muros finos, pictogramas y equipos**, **cambio de señal y de equipo desde el inspector**, **auditor de planos** (interruptor de salida, ocupación declarada, cajón de revisión, contador, filtros, «Ver en el plano», cierre sin dejar el fondo bloqueado), **pliego de señalización** (conteo, tamaño sugerido, CSV, precios y consistencia), **medición de rutas internas** (ruta que rodea muros, tramos, guardado en capa y comparación), **modo presentación** (pantalla limpia, láser, spotlight, rutas animadas, capas, quiz y salida sin perder el estado), **rotación**, **rutas cerradas**, **arrastrar y soltar desde la biblioteca sin que el cajón lo bloquee**, reglas, herramientas, inserción con puntero, selección, mover, escalar, rotar, color, cambio de tipo, deshacer/rehacer, duplicar, agrupar, bloquear, desplazar, texto y saneado, guardar, reabrir, borradores, conflictos, exportación SVG/JSON/PNG, tooltips sin acumulación, capas, versiones y límites. |
+| `native/tests/macos.mjs` | 46 comprobaciones del **contrato de la ventana nativa de macOS**: es AppKit y no un WebView, el lienzo dibuja con Core Graphics, el menú está en español con `⌘N ⌘O ⌘S ⇧⌘S ⌘Z ⇧⌘Z`, guarda en el sobre oficial, pregunta al cerrar con cambios, declara macOS 12 y hay un trabajo de macOS en el flujo que la compila y la arranca con `--check`. |
+| `native/tests/parity.mjs` | 56 comprobaciones de **paridad del núcleo nativo (C11)** con el motor PHP: compila sin avisos con `-Werror`, el plano da el mismo número de elementos y de muros, la longitud total y la del muro curvo coinciden dígito a dígito, la superficie en m² también, cambiar la unidad declarada no mueve nada y un archivo que no es un plano se rechaza con su motivo. |
+| `tests/js/estudio.mjs` | 35 comprobaciones de **Normia Estudio**: la página abre **sin instalar** nada, sin portada ni pisos ni versiones; los cajones hablan del plano y no de un piso de proyecto; el editor arranca en blanco con A4 a 1:100; el puente de escritorio guarda, abre y avisa del título; el plano en curso llega al auditor, al informe, a la impresión y al SVG; el JSON que se exporta es el sobre oficial y se **importa** en la edición completa; renombrar el plano funciona y los acentos no se pierden en el nombre del archivo; los catálogos se sirven sin sesión. |
 | `tests/js/pages.mjs` | 50 comprobaciones de las páginas fuera del editor y de la portada pública: menú de acciones de proyectos y pisos (capa fija, colocación, teclado, un solo menú), confirmación de borrado y borrado real de piso y proyecto, con la protección del último piso, la **portada pública** (cinco capturas con texto alternativo, flechas de la galería y token del formulario) y **la página pública del modo brigadista** ejecutando su JavaScript: acciones rápidas, atenuado del plano, alto contraste recordado, zoom y borrado de la copia local. |
 | `tests/php/package.mjs` | 39 comprobaciones: construye ambos ZIP, verifica que no haya bases, sesiones, credenciales, logs ni carpetas de desarrollo, valida los SHA-256 y hace una instalación limpia de la demo comprobando assets, catálogos (395/420), los cuatro pisos del proyecto de ejemplo, señales de servicios y redes en la demo, la señal «Usted está aquí», **el auditor y su informe en la demo empaquetada**, editor, SVG, JSON e impresión. |
 | `tests/php/desktop.mjs` | 37 comprobaciones del escritorio: rutas de datos separadas del código, `NORMA_DATA_PATH` (solo absolutas), lanzador (argumentos, puerto, estado, cierre), enrutador (bloqueos, saltos de directorio, byte nulo) y una instalación completa escribiendo en una carpeta de datos externa. |
-| `tests/js/electron.mjs` | 40 comprobaciones de la edición Electron: ventana sin acceso a Node, puente mínimo, enlaces externos, instancia única, menú en español, descargas, servidor en `127.0.0.1` sin cookies en memoria, entorno de php-wasm, instalación completa con datos fuera del código, `storage/` inaccesible, armado del paquete (aplicación, ventana e intérprete), los ocho paquetes de php-wasm dentro de `runtime/node_modules`, el rechazo de un paquete sin ellos, el mínimo de macOS y la ausencia de ICU y de versiones de PHP que no se usan. |
+| `tests/js/electron.mjs` | 52 comprobaciones de la edición Electron (incluida la del editor suelto): ventana sin acceso a Node, puente mínimo, enlaces externos, instancia única, menú en español, descargas, servidor en `127.0.0.1` sin cookies en memoria, entorno de php-wasm, instalación completa con datos fuera del código, `storage/` inaccesible, armado del paquete (aplicación, ventana e intérprete), los ocho paquetes de php-wasm dentro de `runtime/node_modules`, el rechazo de un paquete sin ellos, el mínimo de macOS, la ausencia de ICU y de versiones de PHP que no se usan, y **el paquete real arrancado para abrir el estudio sin instalar ni crear base de datos**. |
 | `tests/js/android.mjs` | 52 comprobaciones del APK: arranque de PHP 8.3 sobre WebAssembly, instalación, sesión, panel, editor, auditor, guardado, reapertura y verificación del contenedor nativo (permisos, descargas, impresión, selección de archivos, firma, prefijo de los activos y aviso de error). |
 | `tests/js/offline.mjs` | 0 dependencias de red: revisa las vistas, los estilos, los scripts y los catálogos y falla si aparece un `fetch`, un `WebSocket`, un `src`/`href`/`url()` externo, una llamada de red desde PHP o un dominio no declarado. |
 
@@ -823,23 +850,30 @@ Resultados esperados de la última ejecución completa:
 ✓ Sintaxis PHP 8.3 · 97 archivos, sin errores
 ✓ Sintaxis JavaScript · 65 archivos, sin errores
 ✓ Complementos (JS) · 20/20
-✓ Unidades (JS) · 24/24
+✓ Unidades (JS) · 30/30
 ✓ Funcionamiento sin conexión · 124 archivos, sin referencias externas
 ✓ Funcional PHP 8.1 · 327/327
 ✓ Funcional PHP 8.3 · 327/327
-✓ Unidades PHP 8.1 · 22/22
-✓ Unidades PHP 8.3 · 22/22
-✓ Estabilidad PHP 8.1 · 45/45
-✓ Estabilidad PHP 8.3 · 45/45
-✓ Interfaz (JSDOM) PHP 8.1 · 383/383
-✓ Interfaz (JSDOM) PHP 8.3 · 383/383
-✓ Páginas y menús PHP 8.1 · 50/50
-✓ Páginas y menús PHP 8.3 · 50/50
+✓ Longitud de curvas PHP 8.1 · 17/17
+✓ Longitud de curvas PHP 8.3 · 17/17
+✓ Golden numérico PHP 8.1 · 8/8
+✓ Golden numérico PHP 8.3 · 8/8
+✓ Unidades PHP 8.1 · 23/23
+✓ Unidades PHP 8.3 · 23/23
+✓ Interfaz (JSDOM) PHP 8.1 · 442/442
+✓ Interfaz (JSDOM) PHP 8.3 · 442/442
+✓ Páginas y menús PHP 8.1 · 54/54
+✓ Páginas y menús PHP 8.3 · 54/54
+✓ Modo estudio PHP 8.1 · 35/35
+✓ Modo estudio PHP 8.3 · 35/35
+✓ Núcleo en C (compilación estricta) · 3.9s
+✓ Núcleo nativo (paridad C/PHP) · 64/64
+✓ Ventana nativa (macOS) · 56/56
 ✓ Escritorio (instaladores) · 37/37
 ✓ Android (APK) · 52/52
-✓ Escritorio (Electron) · 40/40
+✓ Escritorio (Electron) · 52/52
 ✓ Paquetes y demo · 39/39
-20/20 pasos correctos
+29/29 pasos correctos
 ```
 
 Las pruebas trabajan sobre copias temporales: no escriben configuración ni bases en el repositorio. `node_modules` solo contiene dependencias de desarrollo y se excluye de los paquetes.
@@ -857,6 +891,7 @@ más en el equipo.
 | macOS 12 Monterey o superior (Intel y Apple Silicon) | `normia-planos-cad-<versión>-macos-x64.pkg` · `…-arm64.pkg` | Ninguno adicional |
 | Windows 10 y 11 de 64 bits | `normia-planos-cad-<versión>-windows-x64.exe` | Ninguno adicional |
 | Android 8.0 o superior | `normia-planos-cad-<versión>-android.apk` | WebView actualizado |
+| macOS 12 Monterey o superior · solo editor, ventana nativa en C | `normia-estudio-nativo-<versión>-macos-arm64.dmg` · `…-macos-x64.dmg` | Ninguno adicional |
 
 - **Escritorio.** Instalador por usuario (sin permisos de administrador en
   Windows) que copia la app y su propio PHP 8.3. El lanzador escucha solo en
@@ -874,10 +909,14 @@ más en el equipo.
   instalador sin avisos.
 - **Windows 7, 8 y 8.1 no están soportados**: PHP 8.x exige Windows 8 o superior
   y esos sistemas ya no reciben navegadores actualizados.
-- **macOS 12 Monterey está soportado en las dos ediciones.** La edición Electron
+- **macOS 12 Monterey está soportado en las tres ediciones.** La edición Electron
   se compila con **Electron 43**, la última rama que abre en Monterey (Electron
   44 exige macOS 13 Ventura); el paquete declara `LSMinimumSystemVersion 12.0`.
-  En macOS 12 también sirve el `.pkg` de la edición nativa.
+  En macOS 12 también sirven el `.pkg` de la edición nativa (PHP estático) y el
+  **`.dmg` de la app nativa en C** (ventana AppKit, sin Electron ni WebView, unos
+  pocos MB), que se compila y se publica con ese mismo mínimo: el flujo lee el
+  `minos` del binario y **falla** si pide más de 12.0. Ver
+  [`docs/APP-NATIVA.md`](docs/APP-NATIVA.md) §15.
 
 ### Dos ediciones
 
@@ -954,6 +993,58 @@ Las ediciones de escritorio se compilan en los flujos de trabajo y su tamaño ex
 se publica en la release junto con el `SHA256SUMS.txt`; los paquetes web se
 construyen con `tools/build-packages.sh` y se verifican con la suite.
 
+## Normia Estudio (solo editor)
+
+La edición de escritorio que trae **solo el editor**: se abre y se dibuja. Sin
+portada, sin cuentas, sin proyectos y **sin base de datos**. El plano es un
+**archivo** que la persona abre y guarda donde quiera, y ese archivo se puede
+importar después en un proyecto de la edición completa sin conversiones.
+
+| Plataforma | Archivo |
+| --- | --- |
+| macOS 12 Monterey o superior · Intel y Apple Silicon | `normia-estudio-<versión>-macos-arm64.dmg` · `…-macos-x64.dmg` |
+| Windows 10 y 11 de 64 bits | `normia-estudio-<versión>-windows-x64-instalador.exe` |
+| Linux de 64 bits | `normia-estudio-<versión>-linux-x64.AppImage` |
+
+- **El editor completo, y nada más**: muros con la pluma de nodos y arcos de tres
+  puntos, puertas, biblioteca de señales y objetos CAD, redes, vías, capas,
+  deshacer, inspector, guía, modo presentación, auditor, informe, impresión con
+  escala física y exportaciones.
+- **Archivo → Nuevo / Abrir… / Guardar / Guardar como…**, con `⌘N`, `⌘O`, `⌘S` y
+  `⇧⌘S`, y los últimos diez archivos en **Abrir reciente** (los que ya no existen
+  salen de la lista).
+- **Doble clic en un `.json` o arrastrarlo sobre la ventana** abre ese plano.
+- **Cerrar con cambios sin guardar pregunta** antes de perderlos.
+- **El auditor, el informe, la impresión y el SVG** se calculan con el **mismo
+  código PHP** que la edición completa (PHP 8.3 en WebAssembly dentro del
+  paquete), así que las cifras no cambian de una edición a otra.
+- **El mismo formato de plano**: lo que se guarda en el estudio es el sobre
+  oficial `normia-plan` que la edición completa importa.
+- **Sin firma comercial**: macOS puede mostrar Gatekeeper y Windows SmartScreen;
+  las instrucciones están en [`docs/ESTUDIO.md`](docs/ESTUDIO.md).
+- **¿Y una app 100 % nativa, sin Electron?** Va en camino, y ya se puede ver: la
+  **ventana nativa de macOS en AppKit** dibuja con Core Graphics —sin WebView, sin
+  JavaScript— y su motor es un **núcleo en C11** sin dependencias que da las mismas
+  cifras que el PHP **hasta el último dígito** (64/64 de paridad, 67/67 del auditor
+  propio). Trae el auditor completo —superficie, aforo, salidas, recorridos,
+  señalización, primeros auxilios, extintores con acciones cuantificadas,
+  escenarios y rutas—, las herramientas de dibujo `M · P · A · D · R`, zoom de CAD,
+  exportación SVG e impresión. Faltan Windows y Linux y los pictogramas en el
+  lienzo; el alcance y las etapas están en
+  [`docs/APP-NATIVA.md`](docs/APP-NATIVA.md). Lo que **no** entra, por decisión del
+  autor, es el simulacro: se queda en la web.
+
+Los instaladores los compila **GitHub Actions** en el flujo *Distribución de
+Normia Estudio (solo editor)*, con la comprobación del contenido del paquete y el
+mínimo de macOS leído del `.app`.
+
+**Dónde se descargan:** GitHub → **Actions** → *Distribución de Normia Estudio
+(solo editor)* → trabajo de la versión → **Artifacts**. El de tu Mac es
+`normia-estudio-macos-15-intel-x64`, y dentro viene
+`normia-estudio-<versión>-macos-x64.dmg`. Los artefactos se conservan 30 días y
+no viajan en el repositorio; el `.dmg` solo existe si el trabajo de macOS ha
+corrido, porque se compila con las herramientas de macOS.
+
 ## Guía de primeros pasos
 
 El editor explica dónde está cada cosa **en su sitio**, sin manuales aparte ni
@@ -1021,6 +1112,467 @@ empaqueta sus pictogramas y sus equipos, los sube y los activa.
 Límites: **4 MB** por archivo, **400 elementos** por complemento, SVG de 40 bytes
 a 400 KB y 12 sinónimos por señal. Un complemento no certifica nada: sus
 elementos son referencias gráficas que se verifican en sitio.
+
+## Unidades y medidas
+
+Una unidad del lienzo equivale a la unidad declarada del plano (`mm`, `cm` o `m`),
+y **la escala `1:100` es una referencia de impresión: no interviene en ninguna
+medida**. Las conversiones viven en un solo sitio por lenguaje —`App\Core\Units`
+en PHP y `window.Normia.Units` en el editor— y el resto del código delega.
+
+- Tabla fuente en centímetros: `mm` 0,1 · `cm` 1 · `m` 100 por unidad. Así el
+  cálculo en `cm`, que es el de todos los planos actuales, no arrastra error de
+  coma flotante.
+- **No se redondea al convertir**: el redondeo es de presentación (auditor a 2
+  decimales, editor a 1).
+- Una unidad desconocida se interpreta como `cm`, sin romper planos antiguos.
+- **No se convierten** el grosor del trazo ni el tamaño del texto: son dibujo, no
+  medidas físicas.
+
+- **Un trazo curvo se mide por su arco**, no por la cuerda entre sus extremos, y
+  da la misma cifra en el editor, en el informe de redes y en el rótulo del SVG
+  exportado. En una semicircunferencia el arco es un 57 % más largo (π/2), y la
+  caída de tensión estimada acompaña esa longitud.
+
+El detalle y los límites están en [docs/DIMENSIONAL.md](docs/DIMENSIONAL.md).
+
+La **geometría se guarda en centímetros**, la unidad del plano dice cómo se leen y
+se escriben las cifras, y cada objeto puede llevar **su medida real declarada** con
+una etiqueta de calidad (exacta, aproximada o estimada). Cambiar de unidad no toca
+ni un objeto ni el tamaño del lienzo. El diseño completo y lo ya implementado están
+en [docs/NORMIA-006-DIMENSIONES-SIMPLES.md](docs/NORMIA-006-DIMENSIONES-SIMPLES.md);
+la calibración de [docs/NORMIA-005-CALIBRACION-DIMENSIONAL.md](docs/NORMIA-005-CALIBRACION-DIMENSIONAL.md)
+se conserva como registro y no se implementa.
+
+El alcance completo de la misión —**3.A a 3.J**, nueve apartados— está diseñado en
+el mismo documento (§1 a §12 el núcleo; §13 a §25 edificios, áreas, aforo,
+escenarios, escala física, importados y compatibilidad).
+
+Las seis primeras decisiones (DEC-1 a DEC-6) quedaron **aprobadas el 2026-11-02**;
+siguen **pendientes** DEC-7 y DEC-9 a DEC-12. Están implementadas las etapas 1 a
+4 (geometría en centímetros, medida por objeto, aforo calculado, ajuste por
+mediana y escala física al exportar); las etapas 5 a 10 no han empezado. Ni una
+tabla nueva: `user_version` sigue en 7.
+
+## Cambios de la versión 1.30.0
+
+**El simulacro entra en el núcleo nativo: el plano ya dice cuánto debería tardar
+la evacuación, y el cronómetro dice cuánto tardó.**
+
+DEC-14 queda revisada. La decisión de dejar el simulacro solo en la web suponía
+que llevarlo a la nativa obligaba a duplicar el motor de camino caminable; no era
+cierto: la rejilla del aforo ya tenía las celdas libres, los muros con su holgura,
+los vanos de puerta y el exterior. Lo único que faltaba era **buscar el camino**,
+y eso es una sola función.
+
+- **Camino caminable en C** (`norma_grid_path()`, `native/src/grid.c`): Dijkstra
+  de ocho vecinos con montículo binario sobre la rejilla de 20 cm, sin cortar
+  esquinas en diagonal, con **exterior permitido o no** según el tramo. Los puntos
+  se simplifican por línea de vista (paso de 0,4 celdas) y la longitud se redondea
+  al centímetro, igual que `PlanGrid::path()` en PHP.
+- **Tiempo objetivo por ruta** (`native/src/drill.c`): reacción declarada (30 s por
+  omisión) + camino / velocidad (1 m/s por omisión). El recorrido va del inicio del
+  trazo a la **salida marcada más cercana a su final**, entrando por el centro del
+  vano, y sigue hasta el **punto de encuentro** si el plano lo dibuja: manda el
+  objeto de punto de encuentro y, si no está, la señal **E007** del catálogo. El
+  objetivo del piso es la **ruta más lenta**, porque el plan no está bien si hay
+  que esperar a los últimos.
+- **Tiempo medido, aparte**: `canvas.drill.measuredS` es lo que se cronometró en el
+  edificio. No se calcula nunca, no se promedia con el objetivo y solo se resta; el
+  reloj se escribe como se lee en voz alta (`1 min 18 s`).
+- **Tres hallazgos nuevos**: `no_meeting_point` (baja, hay rutas pero ningún punto
+  de encuentro), `drill_route_blocked` (media, el inicio del trazo no se conecta
+  con su salida sin cruzar un muro) y `drill_slower_than_target` (baja, el medido
+  supera el objetivo en más de 1 s).
+- **Dónde se ve**: el bloque `drill` de `norma-core --audit` (objetivo, medido,
+  diferencia, encuentro y el camino de cada ruta, punto por punto) y la lista del
+  cajón de revisión de la ventana, con los tres códigos sumados a los demás.
+- **Paridad comprobada**: `parity.mjs` compara el simulacro **campo por campo**
+  contra `EvacuationDrill`/`PlanAudit::analyze()` con el mismo plano —camino,
+  tiempo de cada ruta, encuentro, objetivo, medido y el texto del aviso—, no solo
+  la lista de códigos.
+- **Pruebas**: auditor **67/67**, señalización **30/30**, extintores **32/32**,
+  documento **33/33**, ventana de macOS **56/56** y paridad C/PHP **64/64**.
+- **macOS 12 de verdad, no solo en el `Info.plist`**: los runners compilan en macOS
+  15, así que la aplicación nativa se enlaza con `-mmacosx-version-min=12.0` y el
+  flujo lee el `minos` del binario con `otool -l` y falla si no es 12.0; el
+  intérprete de PHP del paquete de escritorio se compila con
+  `MACOSX_DEPLOYMENT_TARGET=12.0` y se verifica igual. Lo que se entrega abre en
+  Monterey, no solo lo promete.
+- **El instalador de Monterey ya se publica** (`dist-nativo.yml`): `.dmg` de la
+  aplicación **nativa en C** para Apple Silicon e Intel, con el enlace a
+  Aplicaciones dentro, firma ad-hoc verificada y `SHA256SUMS-<arch>.txt`. El
+  flujo monta el `.dmg` generado y vuelve a leer el `Info.plist`, el `minos`, la
+  arquitectura, la firma y los catálogos: si algo pide más de macOS 12.0, el
+  trabajo falla en vez de entregar un instalador que no abre en Monterey. El
+  armado completo vive en `tools/nativo/build-mac.sh`, que también se ejecuta en
+  un Mac con un solo comando; el `Info.plist` deja de mentir con el `0.1.0` de la
+  etapa N1 y la app sale con su icono.
+
+## Cambios de la versión 1.29.0
+
+**El auditor completo en C, y las rutas se dibujan en la ventana nativa.**
+
+La aplicación nativa deja de ser un dibujante con cotas: su motor en **C11** ya
+calcula lo mismo que la edición web —comprobado cifra a cifra— y la ventana de
+macOS trae las herramientas de evacuación.
+
+- **Superficie y aforo en C** (`native/src/grid.c`): celdas de 20 cm, muros con
+  medio trazo, holgura y media celda, vanos de puerta que abren paso, exterior
+  inundado y vías, andenes, cebras, parqueaderos y linderos que no cuentan como
+  piso. El aforo distingue capacidad calculada, aforo declarado, el que rige y el
+  **exceso**.
+- **Salidas y recorridos**: ancho de vano (medida declarada o geometría), ancho
+  útil, ancho que pide el criterio, cola con flujo de 1,3 pers./s·m, recorrido
+  más largo con Dijkstra de ocho vecinos, punto más lejano, superficie alcanzable
+  y **zonas sin salida** agrupadas por vecindad.
+- **Señalización** sobre las **395** señales del catálogo local (332 ISO 7010 +
+  63 de servicio): salida sin pictograma cerca, falta de «usted está aquí» y falta
+  de señalización contra incendios.
+- **Primeros auxilios y extintores**: botiquín, camilla y DEA con su alcance
+  medido; tablas NTC 2885 / NFPA 10 y Resolución 2400 con **acciones
+  cuantificadas** —añadir, reubicar, subir el rótulo— y la ganancia medida otra
+  vez por el motor. Los criterios van rotulados como criterios de la app, no como
+  certificación.
+- **Escenarios de ocupación temporal**, con la misma aritmética que la web.
+- **Rutas de evacuación en C** (`native/src/routes.c`): longitud con los arcos
+  resueltos y no la cuerda, llegada a la salida con tolerancia de **80 cm**,
+  distancia al vano más cercano y **cruces de muro** fuera de un vano. Hallazgos
+  `no_route`, `route_no_exit` y `route_through_wall`, idénticos a los de
+  `PlanAudit::analyze()`.
+- **La herramienta de rutas en el lienzo** (`R`): un clic por nodo, `Enter` o
+  doble clic cierra, `Retroceso` quita el último nodo. Se guarda como elemento
+  `route` con su identificador y su grosor, se pinta en **verde de evacuación** con
+  **punta de flecha** y su **longitud rotulada**, y el auditor la mide igual que
+  si viniera de la web.
+- **El lienzo, de CAD**: infinito, zoom de 2 % a 4000 % anclado al cursor,
+  desplazamiento con el botón central o derecho, rejilla adaptativa, cotas,
+  pluma, arcos y exportación SVG con escala física.
+- **El cajón de revisión, en la ventana** (**⌘R**): la lista de hallazgos del
+  núcleo con su gravedad, su título y su detalle, el resumen del plano y un botón
+  *Ver en el plano* que centra el punto del hallazgo; los puntos se marcan con
+  anillos rojos. El cajón no calcula: pide el informe a
+  `norma_inspect_document()`, la misma receta que `norma-core --inspect`, y
+  `parity.mjs` compara las dos listas con `PlanAudit::analyze()`. Editar el plano
+  invalida la revisión en vez de mostrar cifras viejas, y los catálogos viajan
+  dentro del `.app`.
+- **Pruebas**: auditor **57/57**, señalización **30/30**, extintores **32/32**,
+  documento **31/31**, ventana de macOS **52/52** y paridad C/PHP **60/60**. El
+  flujo compila el núcleo con `-Werror` en Linux y compila, arranca y exporta el
+  `.app` en un runner de macOS.
+- **Los instaladores salieron completos** al empujar el tag: macOS Intel y Apple
+  Silicon (`.dmg`, `.pkg`, `.zip`), Linux (`.AppImage`), Windows (`.exe`) y el APK,
+  con su `SHA256SUMS.txt` en la release `v1.29.0`.
+- **El fallo de Windows quedó resuelto**: la comprobación del paquete borraba una
+  carpeta temporal con un `.node` todavía bloqueado y `EPERM` tumbaba el trabajo.
+  Ahora el borrado reintenta y, si no puede, avisa sin declarar malo un paquete que
+  funciona. Windows compila y verifica el instalador en esta entrega.
+
+## Cambios de la versión 1.28.0
+
+**Normia Estudio: el editor, suelto.**
+
+Una edición de escritorio que trae **solo el editor**. Se abre y se dibuja, sin
+portada, sin cuentas, sin proyectos y **sin base de datos**: el plano es un
+archivo del equipo.
+
+- **Modo estudio en la aplicación PHP** (`estudio`): una ruta nueva que abre el
+  editor sin instalar nada y sin sesión. El auditor, el informe, la impresión y el
+  SVG se calculan con el mismo código, así que **ninguna cifra cambia**.
+- **El plano es un archivo**: **Nuevo**, **Abrir…**, **Guardar**, **Guardar
+  como…** y los últimos diez en **Abrir reciente**, con los diálogos del sistema.
+- **Cerrar con cambios sin guardar pregunta** antes de perderlos.
+- **El archivo guardado es el sobre oficial** `normia-plan` (esquema 3): se
+  importa tal cual en un proyecto de la edición completa. Hay prueba de ida y
+  vuelta.
+- **Un puente mínimo** (`preload` con cuatro llamadas) y la regla de siempre: la
+  página no toca el disco ni tiene Node.
+- **Armado propio**: `--modo=estudio` produce *Normia Estudio* con su
+  `appId`, sus nombres de archivo y su flujo de GitHub Actions para macOS 12
+  Monterey (Intel y Apple Silicon), Windows y Linux, sin firma comercial.
+- **Se puede tener instalada junto a la edición completa**: distinto `appId`,
+  distinto nombre y distinta carpeta de datos.
+- **Los cajones hablan de plano, no de piso**: en el estudio no hay proyectos ni
+  niveles, así que «Ajustes del plano», el pie y sus ayudas dicen lo que hay y no
+  inventan empresa ni responsable.
+- **Soltar un plano sobre la ventana lo abre**, con aviso si había cambios sin
+  guardar, y la lista de recientes se limpia sola cuando un archivo ya no está.
+- **Nombres de archivo con acentos**: `slug_filename()` resuelve las tildes con
+  una tabla explícita, así que «Plano sin título» se descarga como
+  `plano-sin-titulo` y no como `plano-sin-t-tulo` en ningún sistema. Vale para
+  todas las exportaciones de las dos ediciones.
+- **Pruebas**: `tests/js/estudio.mjs` con **35** comprobaciones en PHP 8.1 y 8.3,
+  `tests/js/electron.mjs` de 40 a **52** y la suite en **28/28** pasos. Entre
+  ellas, la más importante: **el paquete real se arranca, abre el estudio y
+  audita un plano sin instalar nada ni crear una base de datos**.
+
+## Cambios de la versión 1.27.0
+
+**La pluma: muros, cotas, vías y linderos se trazan nodo a nodo.**
+
+Los seis trazos de un solo eje se dibujaban de un arrastre. Ahora se dibujan como en
+un editor vectorial: cada clic deja un nodo, el tramo elástico sigue al cursor con su
+cifra y el trazo se cierra cuando uno quiere.
+
+- **Un nodo por clic** en muro, línea, cota, vía vehicular, andén y límite de predio.
+  `Enter` o doble clic termina, `Retroceso` quita el último nodo y `Esc` descarta.
+- **Cierre en circuito**: el clic sobre el primer nodo cierra el recinto de muros,
+  vías, andenes y linderos, con el primer punto repetido al final. Una cota se cierra
+  con el segundo nodo, porque una medida es entre dos puntos.
+- **Nodos de control a la vista**: el borrador dibuja los nodos ya fijados, marca el
+  primero como destino de cierre, enseña el **grosor real del muro** (2 m) y la
+  **cifra del tramo elástico** en la unidad del plano.
+- **El arrastre sigue valiendo**: la pluma decide al soltar, así que un arrastre crea
+  el tramo de dos puntos de siempre. Nadie tiene que aprender un modo nuevo para un
+  muro corto.
+- **`Shift`** alinea el nodo nuevo con el anterior y **`Alt`** suelta la rejilla para
+  ese nodo.
+- **Cambiar de herramienta no pierde el trazo**: se cierra con los nodos ya puestos.
+  La pluma queda activa para el tramo siguiente.
+- **Nada cambia por debajo**: el modelo ya admitía N puntos y curvas, el formato de
+  guardado es el mismo, `user_version` sigue en **7** y el golden no se mueve.
+- **Pruebas**: interfaz **442** (16 nuevas), funcional **386**, páginas **54** y
+  golden **8/8** con **7 552 valores**.
+
+## Cambios de la versión 1.26.0
+
+**El simulacro se mueve por el espacio libre, no en línea recta.**
+
+La primera animación caminaba sobre el trazo y en el tramo final atravesaba el muro
+de la edificación. Ahora el recorrido **se calcula sobre la rejilla del auditor**:
+muros bloqueados, vanos abiertos, y el tramo de la salida al punto de encuentro
+rodeando la edificación.
+
+- **Camino real por ruta**: `PlanGrid::path()` resuelve el recorrido con Dijkstra
+  sobre el espacio libre y lo simplifica con línea de vista. El tiempo objetivo usa
+  ese camino, no la longitud del trazo.
+- **Una o varias figuras por ruta** (una por cada 4 m, máximo cuatro), repartidas
+  sobre el mismo camino: se ve el tramo cubierto y todas caminan por donde se puede.
+- **Ninguna figura cruza un muro.** Si el camino no existe, no hay figura: la ruta
+  se queda sin tiempo y aparece el hallazgo `drill_route_blocked`.
+- **El informe** añade la columna *Camino libre* junto al trazo; el cajón de
+  revisión muestra el camino más largo del piso.
+- **Cifras que cambian, y se dicen**: en la demo el objetivo pasa de 47,9 s a
+  **45,6 s** porque el camino ahora rodea la esquina en vez de cortar por el muro.
+- **Pruebas**: funcional **386**, interfaz **426**, páginas **54**, golden **8/8**
+  con **7 552 valores**. Ningún recuento de hallazgos se mueve.
+
+## Cambios de la versión 1.25.0
+
+**Simulacro de evacuación: el tiempo objetivo y la evacuación en movimiento.**
+
+El plano aprobaba rutas mirando líneas. Ahora se puede ver a la gente salir, con
+figuras que caminan por las rutas dibujadas hasta el punto de encuentro.
+
+- **Tiempo objetivo por ruta**: reacción + camino hasta la salida + tramo al punto
+  de encuentro, con la distancia real del trazo y la velocidad de referencia.
+- **Dos números declarados** en *Ajustes del piso*: el tiempo de reacción
+  (por defecto 30 s) y, si ya se cronometró, el **tiempo medido**. El informe
+  compara objetivo y real y avisa cuando lo medido se pasa. Se guardan con el
+  plano: `user_version` sigue en **7**.
+- **Animación en modo presentación**: botón *Simulacro*, figuras que esperan la
+  reacción (naranja), caminan por la ruta (azul) y llegan al punto de encuentro
+  (verde), con reloj en segundos simulados y el estado de cada ruta. La reacción
+  se cambia desde el panel sin tocar el plano guardado.
+- **Punto de encuentro**: objeto nuevo del catálogo *Punto de encuentro de
+  evacuación* (familia Emergencia); si no está dibujado se acepta la señal E007.
+- **Dos hallazgos**: `no_meeting_point` y `drill_slower_than_target`.
+- **Lo que no hace, y se dice**: no mide un simulacro real, no cuenta
+  participantes ni evalúa la brigada. Eso se cronometra en sitio.
+- **Pruebas**: funcional **384**, interfaz **424**, páginas **54**, golden **8/8**
+  con **7 514 valores**.
+
+## Cambios de la versión 1.24.0
+
+**Escenarios de ocupación temporal: el auditor también mira el día del evento.**
+
+Un aforo de 23 personas no dice nada sobre la capacitación de brigada con 30
+sillas. Desde ahora el piso puede declarar sus eventos y el cálculo los revisa
+aparte, con las mismas fórmulas del uso habitual.
+
+- **Hasta ocho escenarios por piso** en *Ajustes del piso*: un nombre y cuántas
+  personas. Se guardan con el plano (viajan con la versión, el borrador y la
+  exportación) y no necesitan migración: `user_version` sigue en **7**.
+- **Tres cifras por escenario**: capacidad con la superficie libre y la densidad,
+  ancho exigido con los milímetros por persona del criterio, y tiempo estimado de
+  salida (marcha + cola con el ancho útil disponible).
+- **El aforo del piso no cambia.** El escenario se informa aparte: mezclarlos
+  habría movido en silencio el resultado de un plano ya revisado.
+- **Tres hallazgos**: `scenario_over_capacity`, `scenario_width_short` y
+  `scenario_more` (cuando más de cuatro escenarios se pasan, se cuentan).
+- **Informe imprimible**: tabla de escenarios con personas, capacidad, ancho
+  exigido, tiempo y si cabe, junto al uso habitual. **Cajón Revisión**: dos filas
+  nuevas con el más exigente y la capacidad del piso.
+- **Lo que no hace, y se dice**: no aprueba el evento ni verifica el permiso, la
+  silletería, las tarimas o la ocupación real en la puerta.
+- **La demo** trae dos escenarios en la planta baja (uno cabe, otro no) y uno en la
+  cafetería: el informe muestra los tres casos.
+- **Pruebas**: funcional **373**, interfaz **412**, páginas **54**, golden **8/8**
+  con **7 256 valores**.
+
+## Cambios de la versión 1.23.0
+
+**Recursos de primeros auxilios en el cálculo: botiquín, camilla y DEA.**
+
+El auditor miraba la evacuación y la extinción. Faltaba lo que se usa cuando
+alguien se hace daño, y ahora está dentro del mismo informe.
+
+- **Tres cifras nuevas.** Botiquines, camillas y desfibriladores (DEA) ubicados en
+  el plano, con la distancia del punto más lejano del piso al recurso más cercano.
+  La sección **Recursos de primeros auxilios** sale en el informe imprimible y las
+  mismas cifras aparecen en el cajón Revisión del editor.
+- **Cinco hallazgos con nombre propio**: `no_first_aid_kit`, `first_aid_kit_far`,
+  `no_stretcher`, `no_aed` y `aed_far`.
+- **El DEA no se declara obligatorio.** Por debajo del umbral de afluencia el
+  hallazgo es informativo y lo dice; al pasar el umbral (500 personas por defecto)
+  sube a importante y remite a la Ley 1831 de 2017 y a la Resolución 3316 de 2019.
+- **Umbrales configurables** en `resources/audit-criteria.json` → `firstAid`:
+  alcance del botiquín (30 m), camilla por piso y alcance del DEA (100 m). Son
+  criterios de la aplicación, no exigencias normativas, y el informe lo advierte.
+- **Nuevo objeto del catálogo**: *Botiquín de primeros auxilios* (familia
+  Emergencia). La camilla y el DEA ya existían.
+- **Lo que no comprueba, y se dice:** contenido, dotación, vencimientos, carga y
+  mantenimiento. El plano deja constancia de **dónde está**, no de **cómo está**.
+- **La demo** incorpora los tres recursos en la planta baja; los demás pisos
+  muestran justo lo que falta, que es lo que el cálculo tiene que decir.
+- **Pruebas**: funcional **361**, interfaz **406**, páginas **54**, golden **8/8**
+  con **6 974 valores** (crece por el bloque `firstAid` y por los recursos de la
+  demo). `user_version` sigue en **7**.
+
+## Cambios de la versión 1.22.0
+
+**Etapa 4 · la escala deja de ser decorativa (DEC-8) y una cabecera nueva.**
+
+- **El plano exportado tiene tamaño de papel.** El SVG sale con `width` y `height`
+  en **milímetros** y un `viewBox` en milímetros; el dibujo entra con una
+  transformación de escala. Un muro de 4,20 m mide **42 mm a 1:100** y **84 mm a
+  1:50**, sin que cambie ni una coordenada del documento.
+- **La escala se elige al exportar, y no se guarda.** `?escala=1:50` en la
+  exportación SVG; la vista de impresión añade **selector de escala y de hoja**
+  (A4/A3, horizontal o vertical), dice cuánto medirá el plano en papel, avisa si
+  se recortaría y ofrece **Ajustar a la hoja** con la escala mayor que entra. El
+  documento no cambia: `canvas.scale` es solo la sugerencia.
+- **Barra de escala en el pie.** Cinco divisiones con su largo real en milímetros,
+  más la escala impresa en la línea de datos. Es lo único que sigue siendo cierto
+  si alguien imprime al 97 % o hace una fotocopia.
+- **El pie no se encoge con la escala.** Se dibuja en un lienzo fijo que se mapea
+  al ancho de la hoja, con un ancho mínimo de 190 mm: a 1:500 la letra se lee
+  igual que a 1:50.
+- **La impresión ya no recorta a 170 mm.** El CSS de impresión deja el SVG a su
+  tamaño real y `@page` toma la hoja elegida. La vista recuerda desactivar
+  «ajustar a la página» en el diálogo del navegador.
+- **Cabecera nueva.** Barra flotante translúcida con el apartado actual en
+  relieve, «Nuevo» como acción, cuenta y salida separadas, y adaptación a móvil
+  sin perder ninguna entrada del menú.
+- **Pruebas**: funcional **353**, interfaz **406**, páginas **54**, golden **8/8**
+  con 6 504 valores. En el golden solo cambian los cuatro SVG (+1 KB cada uno):
+  ninguna cifra del auditor, de la cobertura ni de las redes se mueve.
+
+El formato del plano y la base no cambian: `user_version` sigue en **7**.
+
+## Cambios de la versión 1.21.0
+
+**Etapa 3 · ajuste global por mediana (DEC-3).** Cuando las medidas declaradas no
+cuadran con el dibujo, el editor lo dice y ofrece **ajustar el plano entero** de
+una vez. Es una acción del historial, no un estado: no se guarda ningún factor.
+
+- **Diagnóstico sin tocar nada.** Para cada objeto con medida declarada se calcula
+  la relación `medida / dibujo` y se toma **la mediana** —no la media—, de modo
+  que un número mal escrito no arrastra al resto. El panel dice cuántas medidas no
+  coinciden, cuánto de media y cuánto queda de residuo en cada una.
+- **Antes y después a la vista.** El bloque enseña el lienzo que resultaría, los
+  elementos que se moverían y recuerda que **se puede deshacer**.
+- **Medidas que se contradicen.** Si discrepan entre sí más del **2 %**, el botón
+  se deshabilita y se explica: *las medidas no coinciden entre sí, revisa si alguna
+  está en otra unidad*. No se inventa un factor intermedio.
+- **Trazabilidad sin estado.** Al guardar, la versión se anota como **«Ajuste a 3
+  medidas (×1,0032)»**. El documento guardado no lleva factor ni calibración, y las
+  medidas declaradas siguen intactas: siguen siendo la verdad de referencia.
+- **Qué no se escala.** Trazos, tamaños de letra y anchos de vía en metros de
+  proyecto se quedan como están; solo se reescala la geometría del lienzo, con
+  redondeo a dos decimales.
+- **Un defecto corregido de paso.** Al abrir un plano, el editor descartaba las
+  medidas declaradas: ahora se conservan con sus mismas reglas (0,01–5 000 m y
+  tres decimales). Sin esto, el ajuste no habría podido funcionar al reabrir.
+- **Pruebas**: funcional **343**, interfaz **406**, golden **8/8** con 6 504
+  valores. El ajuste es del editor: ninguna cifra del servidor se mueve.
+
+El formato del plano y la base no cambian: `user_version` sigue en **7**.
+
+## Cambios de la versión 1.20.0
+
+**Etapa 3 · aforo calculado y publicado.** El auditor deja de limitarse a la
+ocupación declarada: calcula cuánta gente cabe en el piso, dice cuál es el aforo
+que rige y lo imprime en el pie del plano exportado.
+
+- **Aforo máximo.** Capacidad calculada con la **superficie útil libre** del plano
+  y la densidad de referencia: `superficie libre × densidad`, con el techo
+  `occupancy.maxPersons`. No se declara a mano ni obliga a configurar nada.
+- **Aforo permitido.** El que rige: el menor entre la ocupación declarada y el
+  aforo máximo. Sin ocupación declarada, es la capacidad estimada y el informe lo
+  dice con esa palabra.
+- **Ocupación por encima del máximo.** Nuevo hallazgo `occupancy_over_capacity`,
+  de severidad *importante*, con la cifra declarada, la capacidad y el exceso. La
+  salida **no se calcula con la capacidad**: se calcula con las personas
+  declaradas, para no dar un tiempo optimista.
+- **En el informe imprimible.** Sección **Aforo del piso** con las cuatro cifras,
+  la fórmula a la vista y el aviso de alcance: es una capacidad de referencia, no
+  el aforo que fija la autoridad.
+- **En el cajón Revisión.** Indicador de **Aforo permitido** y filas de aforo
+  máximo, permitido y ocupación, con el exceso cuando lo hay.
+- **En el pie del plano exportado.** Dos líneas nuevas —*Aforo máximo* y *Aforo
+  permitido* con la superficie útil libre— en el SVG exportado, en el PNG del
+  editor y en la impresión. El aforo se calcula con el plano guardado y, si en la
+  sesión se corrió la revisión, el PNG usa las cifras recién calculadas.
+- **Pruebas**: `run-all` 24/24 en PHP 8.1 y 8.3; funcional **342**, interfaz
+  **397**, golden **8/8** con 6 504 valores. Nuevas: capacidad sin ocupación
+  declarada, aforo declarado desmedido acotado con el exceso, densidad 0 → techo
+  del criterio, aforo en el informe, en el cajón y en el pie del SVG y del PNG.
+- **Cifras que se mueven, y por qué.** El golden cambia donde el plano declaraba
+  más gente de la que cabe: la demostración pasa a tener un hallazgo importante
+  (`occupancy_over_capacity`, 30 declaradas frente a 23 de capacidad) y los cuatro
+  SVG cambian porque el pie gana dos líneas. Las métricas de evacuación no se
+  mueven.
+
+El formato del plano y la base no cambian: `user_version` sigue en **7**.
+
+## Cambios de la versión 1.19.0
+
+Sistema de dimensiones, etapas 1 y 2: **geometría en centímetros** y **medida
+declarada por objeto**. Se puede seguir dibujando sin configurar nada; lo que
+cambia es que un número escrito manda sobre el dibujo y que la unidad del plano
+deja de alterar medidas.
+
+- **La geometría se guarda en centímetros.** `canvas.unit` es la unidad de
+  trabajo: cómo se leen y cómo se escriben las cifras, no cuánto mide el dibujo.
+  Un plano en metros escribe 11,23 y no 1 123; el lienzo, los objetos y los
+  informes miden exactamente lo mismo en las tres unidades.
+- **Cambiar de unidad no cambia nada.** El formulario del lienzo convierte sus
+  cifras y sus límites a la unidad elegida; al aplicar, el plano conserva tamaño,
+  objetos y medidas. Los planos guardados en `mm` o `m` se convierten a centímetros
+  una sola vez, al abrirlos, y mantienen su etiqueta.
+- **Medida real por objeto.** Muros, rutas, tuberías y demás trazos medibles
+  admiten *Largo real* (0,01 a 5 000 m, tres decimales) y *Calidad de la medida*:
+  exacta, aproximada o estimada. Sin medida, el objeto se mide por el dibujo; con
+  medida, la cifra declarada manda en el informe, la cota y las exportaciones, y el
+  dibujo no se toca. Un muro de 418,6 cm con 4,2 m se lee 420,0 cm.
+- **Formato 5 / `schema_version: 3`.** La exportación JSON sube de esquema; los
+  archivos 2 se siguen importando. El validador acepta formatos 2 a 5 y normaliza
+  los antiguos en la puerta de entrada.
+- **Defecto corregido.** Un plano histórico en `mm` se convertía a centímetros y
+  acto seguido se validaba como si siguiera en milímetros: se rechazaba con «El
+  ancho del lienzo debe estar entre 400 y 4000». Ahora entra y queda en 1 200 cm.
+- **Cifras anunciadas.** Los informes de un plano declarado en `mm` o `m` cambian
+  de cifra porque antes dividían por 100 «porque sí»: es la corrección, no una
+  regresión. El auditor, los extintores, las redes y los cuatro SVG del golden
+  salen idénticos.
+- **Pruebas**: 24 pasos de `tests/run-all.mjs` en verde en PHP 8.1 y 8.3, con
+  documento histórico en `mm`, documento en formato 5 sin reconvertir, y cambio de
+  unidad de ida y vuelta sin alterar el lienzo. El detalle está en
+  [docs/NORMIA-006-DIMENSIONES-SIMPLES.md](docs/NORMIA-006-DIMENSIONES-SIMPLES.md) §26.
+
+El ajuste global por mediana (etapa 3) sigue sin implementar, y `user_version`
+continúa en **7**: esta versión no crea tablas.
 
 ## Cambios de la versión 1.18.0
 

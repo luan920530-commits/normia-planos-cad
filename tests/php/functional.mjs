@@ -282,7 +282,7 @@ try {
   const designMatch = /<textarea id="editor-design" hidden>([\s\S]*?)<\/textarea>/.exec(editorHtml);
   let design = null;
   try { design = JSON.parse(decodeEntities(designMatch?.[1] || '')); } catch { design = null; }
-  report.check('Editor recibe el diseño guardado', design?.format === 2 && design?.elements?.length === 93, `${design?.elements?.length} elementos`);
+  report.check('Editor recibe el diseño guardado', design?.format === 2 && design?.elements?.length === 97, `${design?.elements?.length} elementos`);
   report.check('La demo trae dos salidas marcadas y la ocupación declarada',
     (design?.elements || []).filter((element) => element.isExit === true).length === 2 && design?.canvas?.occupancy === 30,
     `${(design?.elements || []).filter((element) => element.isExit === true).length} salidas · ${design?.canvas?.occupancy} personas`);
@@ -297,6 +297,19 @@ try {
     && demoAudit.report.travel.freeAreaM2 < demoAudit.report.travel.reachableAreaM2 + 0.01,
     `libre ${demoAudit.report?.travel?.freeAreaM2} m² · exterior ${demoAudit.report?.travel?.exteriorAreaM2} m²`);
 
+  const demoEscenarios = demoAudit.report?.scenarios || {};
+  report.check('La demo declara escenarios de ocupación temporal y los calcula aparte',
+    demoEscenarios.count === 2
+    && demoEscenarios.items?.some((item) => item.name === 'Capacitación de brigada' && item.fits === false)
+    && (demoAudit.report?.findings || []).some((finding) => finding.code === 'scenario_over_capacity'
+      && finding.title.includes('Capacitación de brigada')),
+    `${demoEscenarios.count} escenarios · el más exigente ${demoEscenarios.peak?.persons} personas`);
+  const demoSimulacro = demoAudit.report?.drill || {};
+  report.check('La demo declara el simulacro con punto de encuentro y tiempo medido',
+    demoSimulacro.meeting?.found === true && demoSimulacro.routes?.length === 1
+    && demoSimulacro.targetS > (demoSimulacro.reactionS || 0)
+    && demoSimulacro.measuredS === 63 && demoSimulacro.differenceS > 0,
+    `objetivo ${demoSimulacro.targetS} s · medido ${demoSimulacro.measuredS} s · encuentro ${demoSimulacro.meeting?.source}`);
   const demoExt = demoAudit.report?.extinguishers || {};
   report.check('La demo incluye extintores con datos de norma',
     demoExt.summary?.count === 4 && demoExt.profile === 'colombia'
@@ -378,6 +391,316 @@ try {
     Boolean(extUnit) && extUnit.hazard === 'extra' && extUnit.areaLimitM2 > 0 && extUnit.areaLimitM2 < 557.6,
     extUnit ? `${extUnit.areaLimitM2} m² · ${extUnit.rating}` : 'sin unidad');
 
+  /* ------------------ recursos de primeros auxilios (1.23.0) ------------------
+   * Botiquín, camilla y DEA sobre el mismo piso de prueba: primero sin nada, y
+   * después con los tres recursos para ver cómo cambia el cálculo.
+   */
+  const sinRecursos = JSON.parse(JSON.stringify(extDesign));
+  sinRecursos.canvas.occupancy = 40;
+  sinRecursos.elements = [];
+  res = await client.postJson(`api/floors/${extFloorId}/save`, { design: sinRecursos, expected_version: (await json(`api/floors/${extFloorId}`)).body.floor.version, note: 'Sin primeros auxilios' });
+  const sinRecursosAudit = (await json(`api/floors/${extFloorId}/audit`)).body.report || {};
+  const sinRecursosCodes = (sinRecursosAudit.findings || []).map((finding) => finding.code);
+  report.check('Sin botiquín, camilla ni DEA el auditor lo dice',
+    res.status === 200 && sinRecursosCodes.includes('no_first_aid_kit')
+    && sinRecursosCodes.includes('no_stretcher') && sinRecursosCodes.includes('no_aed')
+    && sinRecursosAudit.firstAid?.kits?.count === 0,
+    sinRecursosCodes.filter((code) => code.startsWith('no_') || code.includes('first_aid')).join(','));
+  report.check('El DEA no se declara obligatorio por debajo del umbral de referencia',
+    (sinRecursosAudit.findings || []).find((finding) => finding.code === 'no_aed')?.severity === 'low'
+    && sinRecursosAudit.firstAid?.criteria?.aedMinPersons === 500,
+    `severidad ${(sinRecursosAudit.findings || []).find((finding) => finding.code === 'no_aed')?.severity}`);
+
+  const conRecursos = JSON.parse(JSON.stringify(sinRecursos));
+  const recurso = (id, type, x, y) => ({
+    id, type, layerId: extLayer, x, y, w: 48, h: 48,
+    rotation: 0, color: '#b91c1c', stroke: 2, opacity: 1, label: '', locked: false,
+  });
+  conRecursos.elements = [recurso('kit_central', 'cad_emg_firstaid', 60, 60), recurso('camilla_piso', 'cad_emg_stretcher', 120, 60)];
+  res = await client.postJson(`api/floors/${extFloorId}/save`, { design: conRecursos, expected_version: (await json(`api/floors/${extFloorId}`)).body.floor.version, note: 'Con botiquín y camilla' });
+  const conRecursosAudit = (await json(`api/floors/${extFloorId}/audit`)).body.report || {};
+  const conRecursosCodes = (conRecursosAudit.findings || []).map((finding) => finding.code);
+  report.check('Un botiquín y una camilla dibujados apagan sus hallazgos',
+    res.status === 200 && conRecursosAudit.firstAid?.kits?.count === 1
+    && conRecursosAudit.firstAid?.stretchers?.count === 1
+    && !conRecursosCodes.includes('no_first_aid_kit') && !conRecursosCodes.includes('no_stretcher'),
+    `botiquines ${conRecursosAudit.firstAid?.kits?.count} · camillas ${conRecursosAudit.firstAid?.stretchers?.count}`);
+  report.check('El cálculo mide hasta dónde llega el botiquín',
+    typeof conRecursosAudit.firstAid?.coverage?.kitMaxM === 'number'
+    && conRecursosAudit.firstAid.coverage.kitMaxM > 0
+    && conRecursosAudit.firstAid.coverage.cells > 0
+    && conRecursosAudit.firstAid.coverage.kitMaxM <= conRecursosAudit.firstAid.criteria.kitTravelM,
+    `${conRecursosAudit.firstAid?.coverage?.kitMaxM} m · límite ${conRecursosAudit.firstAid?.criteria?.kitTravelM} m`);
+
+  /* Lienzo grande (38 × 28 m) con el botiquín en una esquina: el punto más
+     lejano queda a más de los 30 m de referencia. */
+  const kitLejos = JSON.parse(JSON.stringify(conRecursos));
+  kitLejos.canvas = { ...kitLejos.canvas, width: 3800, height: 2800 };
+  kitLejos.elements = [recurso('kit_lejos', 'cad_emg_firstaid', 40, 40), recurso('camilla_piso2', 'cad_emg_stretcher', 120, 60)];
+  res = await client.postJson(`api/floors/${extFloorId}/save`, { design: kitLejos, expected_version: (await json(`api/floors/${extFloorId}`)).body.floor.version, note: 'Botiquín lejos' });
+  const lejosAudit = (await json(`api/floors/${extFloorId}/audit`)).body.report || {};
+  report.check('Un botiquín que no alcanza el punto más lejano se marca',
+    (lejosAudit.findings || []).some((finding) => finding.code === 'first_aid_kit_far')
+    && lejosAudit.firstAid.coverage.kitMaxM > lejosAudit.firstAid.criteria.kitTravelM,
+    `${lejosAudit.firstAid?.coverage?.kitMaxM} m frente a ${lejosAudit.firstAid?.criteria?.kitTravelM} m`);
+
+  /* Con el aforo por encima del umbral, el DEA deja de ser informativo. */
+  const conAfluencia = JSON.parse(JSON.stringify(conRecursos));
+  conAfluencia.canvas = { ...conAfluencia.canvas, width: 3800, height: 2800, occupancy: 900 };
+  conAfluencia.elements = [recurso('kit_grande', 'cad_emg_firstaid', 200, 200), recurso('camilla_grande', 'cad_emg_stretcher', 300, 200)];
+  res = await client.postJson(`api/floors/${extFloorId}/save`, { design: conAfluencia, expected_version: (await json(`api/floors/${extFloorId}`)).body.floor.version, note: 'Afluencia alta' });
+  const afluenciaAudit = (await json(`api/floors/${extFloorId}/audit`)).body.report || {};
+  report.check('Con afluencia por encima del umbral el DEA pasa a importante',
+    (afluenciaAudit.findings || []).find((finding) => finding.code === 'no_aed')?.severity === 'medium'
+    && afluenciaAudit.firstAid?.aeds?.count === 0,
+    `${afluenciaAudit.firstAid?.people} personas · umbral ${afluenciaAudit.firstAid?.criteria?.aedMinPersons}`);
+
+  const informeRecursos = await client.get(`projects/${extProjectId}/floors/${extFloorId}/audit`);
+  report.check('El informe imprimible trae la sección de primeros auxilios',
+    informeRecursos.status === 200 && informeRecursos.text.includes('Recursos de primeros auxilios')
+    && informeRecursos.text.includes('Botiquín') && informeRecursos.text.includes('Camilla')
+    && /desfibrilador/i.test(informeRecursos.text)
+    && /no comprueba contenido|No comprueba contenido/i.test(informeRecursos.text),
+    `${informeRecursos.status} · ${(informeRecursos.text.match(/Recursos de primeros auxilios/g) || []).length} sección`);
+  const catalogoBotiquin = await json('catalogs/cad');
+  report.check('El catálogo trae el botiquín como objeto propio',
+    catalogoBotiquin.body.objects?.cad_emg_firstaid?.name === 'Botiquín de primeros auxilios'
+    && /^<svg/.test(catalogoBotiquin.body.objects?.cad_emg_firstaid?.svg || ''),
+    catalogoBotiquin.body.objects?.cad_emg_firstaid?.name || 'sin botiquín');
+
+  /* --------------- escenarios de ocupación temporal (1.24.0) ---------------
+   * A-04: un evento con más gente que el uso habitual se calcula con las mismas
+   * fórmulas del piso y aparte, para que el aforo habitual no cambie solo.
+   */
+  const escBase = JSON.parse(JSON.stringify(sinRecursos));
+  escBase.canvas = { ...escBase.canvas, occupancy: 20 };
+  escBase.elements = [];
+  let resEsc = await client.postJson(`api/floors/${extFloorId}/save`, { design: escBase, expected_version: (await json(`api/floors/${extFloorId}`)).body.floor.version, note: 'Sin escenarios' });
+  const escBaseAudit = (await json(`api/floors/${extFloorId}/audit`)).body.report || {};
+  const capacidad = (escBaseAudit.scenarios?.base?.capacity || 0);
+  report.check('Sin escenarios el informe lo dice y no inventa la sección',
+    resEsc.status === 200 && escBaseAudit.scenarios?.count === 0 && escBaseAudit.scenarios?.peak === null
+    && (escBaseAudit.findings || []).every((finding) => !String(finding.code).startsWith('scenario_')),
+    `${escBaseAudit.scenarios?.count} escenarios · capacidad ${capacidad}`);
+  report.check('Un plano sin escenarios no guarda la clave en el lienzo',
+    (await json(`api/floors/${extFloorId}`)).body.design?.canvas?.scenarios === undefined,
+    'clave ausente');
+
+  const conEscenarios = JSON.parse(JSON.stringify(escBase));
+  conEscenarios.canvas.scenarios = [
+    { name: 'Capacitación de brigada', persons: capacidad + 7 },
+    { name: 'Visita corta', persons: 4 },
+  ];
+  res = await client.postJson(`api/floors/${extFloorId}/save`, { design: conEscenarios, expected_version: (await json(`api/floors/${extFloorId}`)).body.floor.version, note: 'Con escenarios' });
+  const guardadoEscenarios = (await json(`api/floors/${extFloorId}`)).body.design?.canvas?.scenarios || [];
+  const escAudit = (await json(`api/floors/${extFloorId}/audit`)).body.report || {};
+  report.check('Los escenarios se guardan con el plano y se calculan aparte',
+    res.status === 200 && guardadoEscenarios.length === 2
+    && guardadoEscenarios[0].name === 'Capacitación de brigada' && guardadoEscenarios[0].persons === capacidad + 7
+    && escAudit.scenarios?.count === 2 && escAudit.scenarios.base.capacity === capacidad,
+    `${guardadoEscenarios.length} guardados · ${escAudit.scenarios?.count} calculados`);
+  const hallazgoEscenario = (escAudit.findings || []).find((finding) => finding.code === 'scenario_over_capacity');
+  report.check('El escenario que no cabe se marca y el que cabe no',
+    hallazgoEscenario?.severity === 'medium'
+    && hallazgoEscenario.value === `${capacidad + 7} de ${capacidad}`
+    && hallazgoEscenario.title.includes('Capacitación de brigada')
+    && escAudit.scenarios.items[1].fits === true && escAudit.scenarios.items[1].excess === 0
+    && !(escAudit.findings || []).some((finding) => finding.code.startsWith('scenario_') && finding.title.includes('Visita corta')),
+    `${hallazgoEscenario?.value} · cabe ${escAudit.scenarios?.items?.[1]?.fits}`);
+  report.check('El escenario no cambia el aforo del uso habitual',
+    escAudit.occupancy?.people === 20
+    && escAudit.occupancy.permitted === Math.min(20, capacidad)
+    && escAudit.occupancy.excess === Math.max(0, 20 - capacidad)
+    && escAudit.scenarios.base.people === 20,
+    `personas ${escAudit.occupancy?.people} · permitido ${escAudit.occupancy?.permitted} · exceso ${escAudit.occupancy?.excess}`);
+
+  const escConSalida = JSON.parse(JSON.stringify(escBase));
+  escConSalida.elements = [{
+    id: 'puerta_escenarios', type: 'door', layerId: extLayer, x: 700, y: 560, w: 90, h: 16,
+    rotation: 0, color: '#0f172a', stroke: 2, opacity: 1, label: 'Salida', locked: false, isExit: true,
+  }];
+  escConSalida.canvas.scenarios = [{ name: 'Montaje de feria', persons: 200 }];
+  res = await client.postJson(`api/floors/${extFloorId}/save`, { design: escConSalida, expected_version: (await json(`api/floors/${extFloorId}`)).body.floor.version, note: 'Escenario con salida angosta' });
+  const escSalidaAudit = (await json(`api/floors/${extFloorId}/audit`)).body.report || {};
+  const codigosEscenario = (escSalidaAudit.findings || []).map((finding) => finding.code);
+  report.check('Un escenario con más gente que ancho útil también se marca',
+    res.status === 200 && codigosEscenario.includes('scenario_over_capacity')
+    && codigosEscenario.includes('scenario_width_short')
+    && escSalidaAudit.scenarios.items[0].widthOk === false,
+    `ancho exigido ${escSalidaAudit.scenarios?.items?.[0]?.requiredWidthM} m · disponible ${escSalidaAudit.scenarios?.items?.[0]?.availableWidthM} m`);
+
+  const demasiados = JSON.parse(JSON.stringify(escBase));
+  demasiados.canvas.scenarios = Array.from({ length: 9 }, (unused, index) => ({ name: `Escenario ${index + 1}`, persons: 5 }));
+  res = await client.postJson(`api/floors/${extFloorId}/save`, { design: demasiados, expected_version: (await json(`api/floors/${extFloorId}`)).body.floor.version });
+  report.check('La API rechaza más de ocho escenarios por piso', res.status === 422, String(res.status));
+  const sinNombre = JSON.parse(JSON.stringify(escBase));
+  sinNombre.canvas.scenarios = [{ name: '   ', persons: 10 }];
+  res = await client.postJson(`api/floors/${extFloorId}/save`, { design: sinNombre, expected_version: (await json(`api/floors/${extFloorId}`)).body.floor.version });
+  report.check('La API rechaza un escenario sin nombre', res.status === 422, String(res.status));
+  const sinPersonas = JSON.parse(JSON.stringify(escBase));
+  sinPersonas.canvas.scenarios = [{ name: 'Evento sin gente', persons: 0 }];
+  res = await client.postJson(`api/floors/${extFloorId}/save`, { design: sinPersonas, expected_version: (await json(`api/floors/${extFloorId}`)).body.floor.version });
+  report.check('La API rechaza un escenario con cero personas', res.status === 422, String(res.status));
+  const claveExtra = JSON.parse(JSON.stringify(escBase));
+  claveExtra.canvas.scenarios = [{ name: 'Evento', persons: 10, hora: '18:00' }];
+  res = await client.postJson(`api/floors/${extFloorId}/save`, { design: claveExtra, expected_version: (await json(`api/floors/${extFloorId}`)).body.floor.version });
+  report.check('La API rechaza datos de escenario fuera de nombre y personas', res.status === 422, String(res.status));
+
+  res = await client.postJson(`api/floors/${extFloorId}/save`, { design: conEscenarios, expected_version: (await json(`api/floors/${extFloorId}`)).body.floor.version, note: 'Escenarios para el informe' });
+  const informeEscenarios = await client.get(`projects/${extProjectId}/floors/${extFloorId}/audit`);
+  report.check('El informe imprimible trae la sección de escenarios',
+    informeEscenarios.status === 200
+    && informeEscenarios.text.includes('Escenarios de ocupación temporal')
+    && informeEscenarios.text.includes('Capacitación de brigada')
+    && informeEscenarios.text.includes('Visita corta')
+    && /No aprueba el evento/i.test(informeEscenarios.text),
+    `${informeEscenarios.status} · ${(informeEscenarios.text.match(/Escenarios de ocupación temporal/g) || []).length} sección`);
+
+  /* ------------------ simulacro de evacuación (1.25.0) ------------------
+   * A-05: tiempo objetivo por ruta (reacción + camino + tramo al punto de
+   * encuentro) y comparación con el tiempo cronometrado, si se declaró.
+   */
+  const simulacro = JSON.parse(JSON.stringify(escBase));
+  simulacro.canvas = { ...simulacro.canvas, width: 1200, height: 900, occupancy: 20, drill: { reactionS: 30 } };
+  simulacro.elements = [{
+    id: 'ruta_simulacro', type: 'route', layerId: extLayer, x: 200, y: 200, w: 400, h: 2,
+    rotation: 0, color: '#237f52', stroke: 3, opacity: 1, label: 'Ruta principal', locked: false,
+    points: [{ x: 0, y: 0 }, { x: 400, y: 0 }],
+  }, {
+    id: 'salida_simulacro', type: 'door', layerId: extLayer, x: 620, y: 190, w: 90, h: 16,
+    rotation: 0, color: '#0f172a', stroke: 2, opacity: 1, label: 'Salida', locked: false, isExit: true,
+  }];
+  let resSim = await client.postJson(`api/floors/${extFloorId}/save`, { design: simulacro, expected_version: (await json(`api/floors/${extFloorId}`)).body.floor.version, note: 'Simulacro sin punto de encuentro' });
+  const sinEncuentro = (await json(`api/floors/${extFloorId}/audit`)).body.report || {};
+  report.check('Sin punto de encuentro el simulacro lo advierte y no inventa el tramo final',
+    resSim.status === 200 && sinEncuentro.drill?.meeting?.found === false
+    && sinEncuentro.drill.routes.length === 1 && sinEncuentro.drill.routes[0].meetingM === null
+    && (sinEncuentro.findings || []).some((finding) => finding.code === 'no_meeting_point'),
+    `encuentro ${sinEncuentro.drill?.meeting?.found} · objetivo ${sinEncuentro.drill?.targetS}`);
+  const rutaSim = sinEncuentro.drill?.routes?.[0] || {};
+  report.check('El tiempo objetivo suma reacción y camino caminable de la ruta',
+    sinEncuentro.drill?.reactionS === 30
+    && Math.abs((rutaSim.pathM || 0) - 4.7) < 0.4
+    && Math.abs((rutaSim.walkS || 0) - rutaSim.pathM) < 0.2
+    && Math.abs((sinEncuentro.drill.targetS || 0) - (30 + (rutaSim.pathM || 0))) < 0.3
+    && rutaSim.targetSource === 'exit'
+    && Array.isArray(rutaSim.path) && rutaSim.path.length >= 2,
+    `reacción ${sinEncuentro.drill?.reactionS} s + camino ${rutaSim.pathM} m = ${sinEncuentro.drill?.targetS} s · ${rutaSim.path?.length} puntos`);
+
+  const conEncuentro = JSON.parse(JSON.stringify(simulacro));
+  conEncuentro.elements.push({
+    id: 'encuentro_demo', type: 'cad_emg_meeting', layerId: extLayer, x: 660, y: 300, w: 48, h: 48,
+    rotation: 0, color: '#0f766e', stroke: 2, opacity: 1, label: 'Punto de encuentro', locked: false,
+  });
+  res = await client.postJson(`api/floors/${extFloorId}/save`, { design: conEncuentro, expected_version: (await json(`api/floors/${extFloorId}`)).body.floor.version, note: 'Con punto de encuentro' });
+  const conPunto = (await json(`api/floors/${extFloorId}/audit`)).body.report || {};
+  report.check('El punto de encuentro dibujado cierra el recorrido del simulacro',
+    res.status === 200 && conPunto.drill?.meeting?.found === true && conPunto.drill.meeting.source === 'object'
+    && typeof conPunto.drill.routes[0].meetingM === 'number' && conPunto.drill.routes[0].meetingM > 0
+    && conPunto.drill.targetS > sinEncuentro.drill.targetS
+    && !(conPunto.findings || []).some((finding) => finding.code === 'no_meeting_point'),
+    `encuentro a ${conPunto.drill?.routes?.[0]?.meetingM} m · objetivo ${conPunto.drill?.targetS} s`);
+
+  /* El camino no es una línea recta: se calcula sobre el espacio libre. Un muro
+     entre el inicio de la ruta y la salida obliga a rodearlo, y un recinto cerrado
+     sin vano deja la ruta sin camino. */
+  const conMuro = JSON.parse(JSON.stringify(escBase));
+  conMuro.canvas = { ...conMuro.canvas, width: 1200, height: 900, occupancy: 20, drill: { reactionS: 30 } };
+  conMuro.elements = [{
+    id: 'ruta_muro', type: 'route', layerId: extLayer, x: 200, y: 300, w: 100, h: 2,
+    rotation: 0, color: '#237f52', stroke: 3, opacity: 1, label: 'Ruta con muro', locked: false,
+    points: [{ x: 0, y: 0 }, { x: 100, y: 0 }],
+  }, {
+    id: 'muro_medio', type: 'wall', layerId: extLayer, x: 500, y: 100, w: 12, h: 550,
+    rotation: 0, color: '#0f172a', stroke: 12, opacity: 1, label: '', locked: false,
+    points: [{ x: 0, y: 0 }, { x: 0, y: 550 }],
+  }, {
+    id: 'salida_muro', type: 'door', layerId: extLayer, x: 800, y: 294, w: 90, h: 16,
+    rotation: 0, color: '#0f172a', stroke: 2, opacity: 1, label: 'Salida', locked: false, isExit: true,
+  }];
+  res = await client.postJson(`api/floors/${extFloorId}/save`, { design: conMuro, expected_version: (await json(`api/floors/${extFloorId}`)).body.floor.version, note: 'Simulacro con muro' });
+  const conMuroAudit = (await json(`api/floors/${extFloorId}/audit`)).body.report || {};
+  const rutaMuro = conMuroAudit.drill?.routes?.[0] || {};
+  const recta = Math.hypot(845 - 200, 302 - 300) / 100;
+  report.check('El camino rodea el muro en lugar de atravesarlo',
+    res.status === 200 && rutaMuro.pathM > recta * 1.2
+    && (rutaMuro.path || []).length >= 3 && rutaMuro.walkS > recta,
+    `camino ${rutaMuro.pathM} m frente a ${Math.round(recta * 100) / 100} m en línea recta · ${rutaMuro.path?.length} puntos`);
+
+  const encerrado = JSON.parse(JSON.stringify(conMuro));
+  encerrado.elements = [conMuro.elements[0], {
+    id: 'caja_n', type: 'wall', layerId: extLayer, x: 100, y: 200, w: 300, h: 12,
+    rotation: 0, color: '#0f172a', stroke: 12, opacity: 1, label: '', locked: false,
+    points: [{ x: 0, y: 0 }, { x: 300, y: 0 }],
+  }, {
+    id: 'caja_s', type: 'wall', layerId: extLayer, x: 100, y: 400, w: 300, h: 12,
+    rotation: 0, color: '#0f172a', stroke: 12, opacity: 1, label: '', locked: false,
+    points: [{ x: 0, y: 0 }, { x: 300, y: 0 }],
+  }, {
+    id: 'caja_o', type: 'wall', layerId: extLayer, x: 100, y: 200, w: 12, h: 212,
+    rotation: 0, color: '#0f172a', stroke: 12, opacity: 1, label: '', locked: false,
+    points: [{ x: 0, y: 0 }, { x: 0, y: 212 }],
+  }, {
+    id: 'caja_e', type: 'wall', layerId: extLayer, x: 388, y: 200, w: 12, h: 212,
+    rotation: 0, color: '#0f172a', stroke: 12, opacity: 1, label: '', locked: false,
+    points: [{ x: 0, y: 0 }, { x: 0, y: 212 }],
+  }, conMuro.elements[2]];
+  res = await client.postJson(`api/floors/${extFloorId}/save`, { design: encerrado, expected_version: (await json(`api/floors/${extFloorId}`)).body.floor.version, note: 'Ruta encerrada' });
+  const encerradoAudit = (await json(`api/floors/${extFloorId}/audit`)).body.report || {};
+  const rutaEncerrada = encerradoAudit.drill?.routes?.[0] || {};
+  report.check('Una ruta encerrada sin vano se queda sin camino y lo dice',
+    res.status === 200
+    && (encerradoAudit.findings || []).some((finding) => finding.code === 'drill_route_blocked')
+    && rutaEncerrada.pathM === null && rutaEncerrada.walkS === null && rutaEncerrada.arrivalS === null,
+    `camino ${JSON.stringify(rutaEncerrada.pathM)} · ${(encerradoAudit.findings || []).map((finding) => finding.code).join(',')}`);
+
+  const conReaccion = JSON.parse(JSON.stringify(conEncuentro));
+  conReaccion.canvas.drill = { reactionS: 90 };
+  res = await client.postJson(`api/floors/${extFloorId}/save`, { design: conReaccion, expected_version: (await json(`api/floors/${extFloorId}`)).body.floor.version, note: 'Reacción larga' });
+  const reaccionLarga = (await json(`api/floors/${extFloorId}/audit`)).body.report || {};
+  report.check('Cambiar el tiempo de reacción mueve el objetivo en la misma cantidad',
+    res.status === 200 && reaccionLarga.drill?.reactionS === 90
+    && Math.abs((reaccionLarga.drill.targetS - conPunto.drill.targetS) - 60) < 0.2,
+    `${conPunto.drill?.targetS} s → ${reaccionLarga.drill?.targetS} s`);
+
+  const conMedido = JSON.parse(JSON.stringify(conEncuentro));
+  conMedido.canvas.drill = { reactionS: 30, measuredS: 75 };
+  res = await client.postJson(`api/floors/${extFloorId}/save`, { design: conMedido, expected_version: (await json(`api/floors/${extFloorId}`)).body.floor.version, note: 'Simulacro medido' });
+  const simulacroMedido = (await json(`api/floors/${extFloorId}/audit`)).body.report || {};
+  const avisoMedido = (simulacroMedido.findings || []).find((finding) => finding.code === 'drill_slower_than_target');
+  report.check('El tiempo medido se compara con el objetivo y avisa si se pasa',
+    res.status === 200 && simulacroMedido.drill?.measuredS === 75
+    && simulacroMedido.drill.differenceS > 0 && avisoMedido?.severity === 'low'
+    && /^\d+ s$/.test(avisoMedido.value || ''),
+    `objetivo ${simulacroMedido.drill?.targetS} s · medido ${simulacroMedido.drill?.measuredS} s · diferencia ${simulacroMedido.drill?.differenceS} s`);
+
+  const reaccionInvalida = JSON.parse(JSON.stringify(conEncuentro));
+  reaccionInvalida.canvas.drill = { reactionS: 601 };
+  res = await client.postJson(`api/floors/${extFloorId}/save`, { design: reaccionInvalida, expected_version: (await json(`api/floors/${extFloorId}`)).body.floor.version });
+  report.check('La API rechaza un tiempo de reacción fuera de rango', res.status === 422, String(res.status));
+  const medidoCero = JSON.parse(JSON.stringify(conEncuentro));
+  medidoCero.canvas.drill = { reactionS: 30, measuredS: 0 };
+  res = await client.postJson(`api/floors/${extFloorId}/save`, { design: medidoCero, expected_version: (await json(`api/floors/${extFloorId}`)).body.floor.version });
+  report.check('La API rechaza un tiempo medido de cero segundos', res.status === 422, String(res.status));
+  const drillExtra = JSON.parse(JSON.stringify(conEncuentro));
+  drillExtra.canvas.drill = { reactionS: 30, hora: '10:00' };
+  res = await client.postJson(`api/floors/${extFloorId}/save`, { design: drillExtra, expected_version: (await json(`api/floors/${extFloorId}`)).body.floor.version });
+  report.check('La API rechaza datos de simulacro fuera de reacción y tiempo medido', res.status === 422, String(res.status));
+
+  res = await client.postJson(`api/floors/${extFloorId}/save`, { design: conMedido, expected_version: (await json(`api/floors/${extFloorId}`)).body.floor.version, note: 'Simulacro para el informe' });
+  const informeSimulacro = await client.get(`projects/${extProjectId}/floors/${extFloorId}/audit`);
+  report.check('El informe imprimible trae la sección del simulacro',
+    informeSimulacro.status === 200
+    && informeSimulacro.text.includes('Simulacro de evacuación')
+    && informeSimulacro.text.includes('Tiempo objetivo')
+    && /No mide un simulacro real/i.test(informeSimulacro.text),
+    `${informeSimulacro.status} · ${(informeSimulacro.text.match(/Simulacro de evacuación/g) || []).length} sección`);
+  const catalogoEncuentro = await json('catalogs/cad');
+  report.check('El catálogo trae el punto de encuentro de evacuación',
+    catalogoEncuentro.body.objects?.cad_emg_meeting?.name === 'Punto de encuentro de evacuación'
+    && /^<svg/.test(catalogoEncuentro.body.objects?.cad_emg_meeting?.svg || ''),
+    catalogoEncuentro.body.objects?.cad_emg_meeting?.name || 'sin punto de encuentro');
+
   res = await client.get('/assets/js/editor.js');
   report.check('JS del editor se sirve completo', res.status === 200 && res.text.length > 20000, `${res.text.length} bytes`);
   for (const asset of ['/assets/css/app.css', '/assets/css/editor.css', '/assets/css/print.css', '/assets/js/ui.js', '/assets/js/app.js', '/assets/js/lib/model.js', '/assets/js/lib/geometry.js', '/assets/js/lib/renderer.js', '/assets/img/favicon.svg']) {
@@ -407,7 +730,7 @@ try {
     Object.keys(catalog.categories || {}).join(','));
   report.check('Alias heredados disponibles', catalog.legacyTools?.extinguisher === 'F001' && catalog.legacyTools?.exit === 'E002');
   ({ response: catalogResponse, body: catalog } = await json('catalogs/cad'));
-  report.check('Catálogo CAD con 420 objetos', catalogResponse.status === 200 && catalog.count === 420 && Object.keys(catalog.objects || {}).length === 420);
+  report.check('Catálogo CAD con 422 objetos', catalogResponse.status === 200 && catalog.count === 422 && Object.keys(catalog.objects || {}).length === 422);
   report.check('Catálogo CAD con 31 familias sectoriales', Object.keys(catalog.categories || {}).length === 31
     && ['restaurant', 'warehouse', 'retail', 'hospital', 'textile', 'grill', 'supermarket', 'residential', 'sports', 'outdoor', 'electrico', 'hidraulico', 'eds', 'drogueria', 'gimnasio', 'colegio', 'cafeteria'].every((key) => catalog.categories?.[key]?.label),
     Object.keys(catalog.categories || {}).join(','));
@@ -437,7 +760,7 @@ try {
   /* ---------------------------- guardado y versiones ---------------------------- */
   ({ body: catalog } = await json(`api/floors/${floorId}`));
   let floor = catalog;
-  report.check('API del piso devuelve diseño y versión', floor.floor?.version === 1 && floor.design?.elements?.length === 93, `v${floor.floor?.version}`);
+  report.check('API del piso devuelve diseño y versión', floor.floor?.version === 1 && floor.design?.elements?.length === 97, `v${floor.floor?.version}`);
   const original = floor.design;
   const changed = JSON.parse(JSON.stringify(original));
   changed.elements[0].label = 'Prueba funcional';
@@ -562,10 +885,21 @@ try {
   report.check('Guardar un plano corregido con dos salidas', res.status === 200, String(res.status));
   ({ body: audit } = await json(`api/floors/${auditFloorId}/audit`));
   const fixedReport = audit.report || {};
-  report.check('Con dos salidas y ruta limpia no quedan hallazgos críticos ni importantes',
-    fixedReport.exits?.count === 2 && fixedReport.counts.high === 0 && fixedReport.counts.medium === 0
+  /* El plano de prueba declara 40 personas en un recinto pequeño: el aforo
+     máximo calculado por superficie es menor, así que el auditor lo dice. Es el
+     único hallazgo importante que puede quedar con la ruta ya limpia. */
+  report.check('Con dos salidas y ruta limpia no quedan hallazgos críticos',
+    fixedReport.exits?.count === 2 && fixedReport.counts.high === 0
     && (fixedReport.routes?.[0]?.wallCrossings || 0) === 0 && fixedReport.routes?.[0]?.endsAtExit === true,
-    `salidas ${fixedReport.exits?.count} · críticos ${fixedReport.counts?.high} · importantes ${fixedReport.counts?.medium} · ${codes(fixedReport).join(',')}`);
+    `salidas ${fixedReport.exits?.count} · críticos ${fixedReport.counts?.high} · ${codes(fixedReport).join(',')}`);
+  report.check('El aforo máximo sale de la superficie libre y acota la ocupación declarada',
+    fixedReport.occupancy?.maxPersons > 0
+    && fixedReport.occupancy?.permitted === Math.min(40, fixedReport.occupancy?.maxPersons)
+    && fixedReport.occupancy?.excess === Math.max(0, 40 - fixedReport.occupancy?.maxPersons)
+    && fixedReport.occupancy?.people === 40
+    && Math.abs((fixedReport.occupancy?.freeAreaM2 || 0) * (fixedReport.occupancy?.density || 0) - fixedReport.occupancy?.maxPersons) < 1
+    && codes(fixedReport).includes('occupancy_over_capacity'),
+    `máximo ${fixedReport.occupancy?.maxPersons} · permitido ${fixedReport.occupancy?.permitted} · declarado ${fixedReport.occupancy?.declared} · ${fixedReport.occupancy?.freeAreaM2} m²`);
   report.check('La ocupación declarada alimenta el ancho y el tiempo de evacuación',
     fixedReport.occupancy?.source === 'declared' && fixedReport.occupancy?.people === 40
     && Math.abs((fixedReport.egress?.requiredWidthM || 0) - 0.2) < 0.001
@@ -625,6 +959,74 @@ try {
     && /Medición de evacuación/.test(auditView.text) && /Criterios aplicados/.test(auditView.text)
     && /no certifica cumplimiento normativo/i.test(auditView.text),
     `${auditView.status} · ${auditView.text.length} bytes`);
+  /* Aforo en el informe (NORMIA-006 §27): capacidad calculada, aforo permitido
+     y ocupación declarada, con la fórmula a la vista y sin prometer certificación. */
+  report.check('El informe calcula y muestra el aforo del piso',
+    /Aforo del piso/.test(auditView.text)
+    && /Aforo máximo/.test(auditView.text) && /Aforo permitido/.test(auditView.text)
+    && /superficie útil libre/i.test(auditView.text)
+    && /capacidad calculada/i.test(auditView.text)
+    && /no sustituye el aforo que fije la autoridad competente/i.test(auditView.text),
+    `aforo en ${auditView.text.length} bytes`);
+
+  /* Reglas del aforo, sobre un plano sintético: sin ocupación declarada el
+     aforo permitido es la capacidad; con densidad 0 no se inventa una cifra y
+     manda el techo del criterio. La aritmética se comprueba contra la
+     superficie libre que devuelve el propio cálculo. */
+  const aforoRules = await app.run(`
+$design = App\\Services\\DesignValidator::normalizeArray([
+    'format' => 5,
+    'canvas' => [
+        'width' => 1200, 'height' => 800, 'grid' => 20,
+        'unit' => 'cm', 'scale' => '1:100', 'background' => '#ffffff', 'occupancy' => 0,
+    ],
+    'layers' => [['id' => 'capa', 'name' => 'Planta', 'visible' => true, 'locked' => false]],
+    'elements' => [
+        ['id' => 'muro_n', 'type' => 'wall', 'layerId' => 'capa', 'x' => 100, 'y' => 100, 'w' => 1000, 'h' => 4,
+         'points' => [['x' => 0, 'y' => 0], ['x' => 1000, 'y' => 0]], 'stroke' => 8, 'color' => '#0f172a'],
+        ['id' => 'muro_s', 'type' => 'wall', 'layerId' => 'capa', 'x' => 100, 'y' => 700, 'w' => 1000, 'h' => 4,
+         'points' => [['x' => 0, 'y' => 0], ['x' => 1000, 'y' => 0]], 'stroke' => 8, 'color' => '#0f172a'],
+    ],
+    'groups' => [],
+]);
+$vacio = App\\Services\\PlanAudit::aforo($design, 0);
+$lleno = App\\Services\\PlanAudit::aforo($design, 500);
+$sinDensidad = (new ReflectionMethod(App\\Services\\PlanAudit::class, 'aforoFromArea'))
+    ->invoke(null, 100.0, 0, $design, ['occupancy' => ['densityPersonsPerM2' => 0.0, 'maxPersons' => 120]]);
+echo json_encode([
+    'vacio' => $vacio,
+    'lleno' => $lleno,
+    'sinDensidad' => $sinDensidad,
+], JSON_UNESCAPED_UNICODE);
+`);
+  let aforoData = {};
+  try { aforoData = JSON.parse(aforoRules.text || '{}'); } catch { aforoData = {}; }
+  const aforoLibre = aforoData.vacio || {};
+  const aforoLleno = aforoData.lleno || {};
+  const aforoSinDensidad = aforoData.sinDensidad || {};
+  report.check('Sin ocupación declarada, el aforo permitido es la capacidad calculada',
+    aforoLibre.maxPersons > 0 && aforoLibre.permitted === aforoLibre.maxPersons
+    && aforoLibre.used === aforoLibre.maxPersons && aforoLibre.excess === 0
+    && aforoLibre.source === 'estimated'
+    && Math.abs(aforoLibre.freeAreaM2 * aforoLibre.density - aforoLibre.maxPersons) < 1,
+    `${aforoLibre.freeAreaM2} m² · máximo ${aforoLibre.maxPersons}`);
+  report.check('Un aforo declarado desmedido se acota al máximo y el cálculo usa el declarado',
+    aforoLleno.maxPersons === aforoLibre.maxPersons && aforoLleno.permitted === aforoLleno.maxPersons
+    && aforoLleno.used === 500 && aforoLleno.excess === 500 - aforoLleno.maxPersons
+    && aforoLleno.source === 'declared',
+    `declarado 500 · permitido ${aforoLleno.permitted} · exceso ${aforoLleno.excess}`);
+  report.check('Sin densidad de referencia el aforo máximo es el techo del criterio',
+    aforoSinDensidad.maxPersons === 120 && aforoSinDensidad.permitted === 120,
+    `máximo ${aforoSinDensidad.maxPersons}`);
+
+  /* El pie del plano exportado lleva el aforo como dato del plano. */
+  const aforoSvg = await client.get(`projects/${auditProjectId}/floors/${auditFloorId}/export/svg`);
+  const aforoBase = (await json(`api/floors/${auditFloorId}/audit`)).body.report?.occupancy || {};
+  report.check('El pie del plano exportado publica el aforo máximo y el permitido',
+    aforoSvg.status === 200
+    && aforoSvg.text.includes(`Aforo máximo ${aforoBase.maxPersons} personas`)
+    && aforoSvg.text.includes(`Aforo permitido ${aforoBase.permitted} personas`),
+    `máximo ${aforoBase.maxPersons} · permitido ${aforoBase.permitted}`);
 
   /* --------------------------- guardado de redes --------------------------- */
   // Se prueba en un proyecto aparte para no alterar el número de versión del
@@ -843,6 +1245,61 @@ try {
     !/(href|src)="https?:/.test(res.text)
     && !/xlink:href="(?!#|data:image\/)/.test(res.text)
     && !/url\((?!#)/.test(res.text));
+
+  /* ------------------ escala física al exportar (NORMIA-006 §17 · DEC-8) ------------------
+   * El tamaño impreso depende de la escala elegida al exportar y de nada más. La
+   * geometría no se reescala: solo cambia la caja del SVG.
+   */
+  const svgRoute = `/index.php?r=projects/${projectId}/floors/${floorId}/export/svg`;
+  const design1 = (await json(`api/floors/${floorId}`)).body;
+  const escalaPlano = String(design1.design.canvas.scale || '1:100');
+  const denominadorPlano = Number(escalaPlano.split(':')[1]);
+  const anchoCm = Number(design1.design.canvas.width);
+  const planWidthMm = (svg) => Number((/data-plan-width-mm="([\d.]+)"/.exec(svg) || [])[1] || 0);
+  const sheetWidthMm = (svg) => Number((/width="([\d.]+)mm"/.exec(svg) || [])[1] || 0);
+  report.check('El SVG exportado trae su tamaño en milímetros, no píxeles',
+    /width="[\d.]+mm" height="[\d.]+mm"/.test(res.text) && res.text.includes(`data-scale="${escalaPlano}"`),
+    `${sheetWidthMm(res.text)} mm · ${escalaPlano}`);
+  report.check('El plano se dibuja a la escala del documento',
+    Math.abs(planWidthMm(res.text) - (anchoCm * 10) / denominadorPlano) < 0.02
+    && res.text.includes(`transform="scale(${Number((10 / denominadorPlano).toFixed(2))})"`),
+    `${planWidthMm(res.text)} mm para ${anchoCm} cm a ${escalaPlano}`);
+  const svgMedio = (await client.get(`${svgRoute}&escala=1:50`)).text;
+  const trazo = (svg) => (/<g data-element="[^"]+"[^>]*>[\s\S]{0,400}?<\/g>/.exec(svg) || [''])[0];
+  report.check('A 1:50 el mismo plano ocupa el doble y las coordenadas no cambian',
+    Math.abs(planWidthMm(svgMedio) - planWidthMm(res.text) * (denominadorPlano / 50)) < 0.05
+    && svgMedio.includes('data-scale="1:50"') && trazo(svgMedio) === trazo(res.text),
+    `${planWidthMm(res.text)} → ${planWidthMm(svgMedio)} mm`);
+  report.check('El pie imprime la escala elegida, no la guardada',
+    /Escala 1:50 ·/.test(svgMedio.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' '))
+    && /Escala [^ ]+ ·/.test(res.text.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ')),
+    (svgMedio.match(/Escala 1:50 ·/) || ['sin escala'])[0]);
+  report.check('El pie lleva barra de escala con su largo en papel',
+    /data-scale-bar="1" data-scale-bar-metres="\d+"/.test(res.text) && /mm<\/text>/.test(res.text),
+    (res.text.match(/Barra de escala · [^<]+/) || ['sin barra'])[0]);
+  const svgRaro = (await client.get(`${svgRoute}&escala=mitad`)).text;
+  report.check('Una escala que no se entiende vuelve a la del plano',
+    svgRaro.includes(`data-scale="${escalaPlano}"`), escalaPlano);
+  const despuesEscala = (await json(`api/floors/${floorId}`)).body;
+  report.check('Elegir escala al exportar no toca el documento guardado',
+    JSON.stringify(despuesEscala.design) === JSON.stringify(design1.design)
+    && despuesEscala.floor.version === design1.floor.version,
+    `v${despuesEscala.floor.version}`);
+  const printRoute = `/index.php?r=projects/${projectId}/floors/${floorId}/print`;
+  const print50 = await client.get(`${printRoute}&escala=1:50&hoja=a3h`);
+  report.check('La impresión deja elegir escala y hoja sin guardar nada',
+    print50.status === 200 && print50.text.includes('data-print-scale') && print50.text.includes('data-print-paper')
+    && print50.text.includes('@page { size: A3 landscape') && /value="1:50" selected/.test(print50.text)
+    && /value="a3h" selected/.test(print50.text),
+    `${print50.status} · A3 horizontal`);
+  report.check('La impresión dice cuánto mide el plano y si cabe en la hoja',
+    /data-print-size/.test(print50.text) && /el plano mide/.test(print50.text)
+    && /Cabe en|No cabe en la hoja/.test(print50.text),
+    (print50.text.match(/Escala <strong>[^<]+<\/strong>[^<]*/) || [''])[0].replace(/<[^>]+>/g, ' '));
+  const printAjustada = await client.get(`${printRoute}&hoja=a4h`);
+  report.check('La vista de impresión ofrece la escala mayor que cabe',
+    /data-print-fit/.test(printAjustada.text) || /Cabe en/.test(printAjustada.text),
+    (printAjustada.text.match(/Ajustar a la hoja · 1:\d+/) || ['ya cabe'])[0]);
   report.check('SVG con pictogramas embebidos', res.text.includes('<svg x=') && res.text.includes('data-layer='));
   const footerSvg = res.text;
   const footerCells = [...footerSvg.matchAll(/data-footer-cell="([a-z]+)"/g)].map((match) => match[1]);
@@ -879,7 +1336,7 @@ try {
   res = await client.get(`projects/${projectId}/floors/${floorId}/export/json`);
   let exported = {};
   try { exported = JSON.parse(res.text); } catch {}
-  report.check('Exportación JSON con sobre propio', res.status === 200 && exported.application === 'normia-planos-cad' && exported.format === 'normia-plan' && exported.schema_version === 2);
+  report.check('Exportación JSON con sobre propio', res.status === 200 && exported.application === 'normia-planos-cad' && exported.format === 'normia-plan' && exported.schema_version === 3, `esquema ${exported.schema_version}`);
   report.check('JSON exportado incluye proyecto y piso', exported.project?.name?.includes('Bodega') && exported.floor?.name === 'Planta baja ajustada', exported.floor?.name);
   report.check('JSON exportado no incluye el borrador', !JSON.stringify(exported).includes('Prueba funcional'));
   res = await client.get(`projects/${projectId}/floors/${floorId}/print`);
@@ -1052,6 +1509,29 @@ try {
   report.check('El auditor mide el cuarto recto', straightAudit.travel?.computed === true && straightFree > 15,
     `${straightFree} m² libres`);
 
+  /* Trazabilidad del ajuste (NORMIA-006 §5.4): el factor vive en la nota de la
+     versión, no en el documento. Se guarda un plano con tres medidas que no
+     coinciden y se comprueba que la medida sobrevive y que no hay factor. */
+  const ajusteDoc = JSON.parse(JSON.stringify(straightRoom));
+  ajusteDoc.format = 5;
+  ajusteDoc.canvas.unit = 'cm';
+  ajusteDoc.elements[0].measuredM = 4.2;
+  ajusteDoc.elements[0].quality = 'exacta';
+  res = await client.postJson(`api/floors/${curveFloorId}/save`, {
+    design: ajusteDoc,
+    expected_version: (await json(`api/floors/${curveFloorId}`)).body.floor.version,
+    note: 'Ajuste a 3 medidas (×1,0032)',
+  });
+  const versionesAjuste = (await json(`api/floors/${curveFloorId}/versions`)).body.versions || [];
+  const ultima = versionesAjuste[0] || {};
+  const guardadoAjuste = (await json(`api/floors/${curveFloorId}`)).body.design || {};
+  report.check('El ajuste deja el factor en la nota de la versión y no en el plano',
+    res.status === 200 && /^Ajuste a 3 medidas/.test(String(ultima.note || ''))
+    && guardadoAjuste.elements?.[0]?.measuredM === 4.2
+    && !JSON.stringify(guardadoAjuste).includes('factor'),
+    `${ultima.note} · ${guardadoAjuste.elements?.[0]?.measuredM} m`);
+
+
   // Muro derecho curvo: el arco se comba hacia el interior del cuarto.
   const curvedRoom = {
     ...curveBase,
@@ -1149,8 +1629,86 @@ try {
   doorCurve.elements.find((element) => element.id === 'salida_curva').curves = [{ kind: 'arc', through: { x: 1, y: 1 } }];
   res = await client.postJson(`api/floors/${curveFloorId}/save`, { design: doorCurve, expected_version: (await json(`api/floors/${curveFloorId}`)).body.floor.version });
   report.check('Una puerta no admite curvas', res.status === 422, String(res.status));
-  res = await client.postJson(`api/floors/${curveFloorId}/save`, { design: { ...straightRoom, format: 5 }, expected_version: (await json(`api/floors/${curveFloorId}`)).body.floor.version });
+  /* La cota de un elemento medido rotula la medida, no la cuerda dibujada. */
+  const cota = JSON.parse(JSON.stringify(straightRoom));
+  cota.format = 5;
+  cota.elements = [{
+    id: 'cota_prueba', type: 'dimension', layerId: cota.layers[0].id,
+    x: 10, y: 10, w: 200, h: 20, rotation: 0, color: '#334155', stroke: 1, opacity: 1,
+    label: '', locked: false, fontSize: 12,
+    points: [{ x: 0, y: 0 }, { x: 200, y: 0 }],
+    measuredM: 4.2, quality: 'exacta',
+  }];
+  res = await client.postJson(`api/floors/${curveFloorId}/save`, { design: cota, expected_version: (await json(`api/floors/${curveFloorId}`)).body.floor.version });
+  report.check('Se puede guardar un plano con una cota medida', res.status === 200, String(res.status));
+  const svgCm = (await client.get(`projects/${curveProjectId}/floors/${curveFloorId}/export/svg`)).text;
+  report.check('La cota del plano exportado rotula la medida declarada',
+    svgCm.includes('420,0 cm'), (svgCm.match(/element-dimension[^>]*>[^<]*/) || [''])[0].slice(0, 60));
+  cota.canvas.unit = 'm';
+  res = await client.postJson(`api/floors/${curveFloorId}/save`, { design: cota, expected_version: (await json(`api/floors/${curveFloorId}`)).body.floor.version });
+  const svgM = (await client.get(`projects/${curveProjectId}/floors/${curveFloorId}/export/svg`)).text;
+  report.check('La misma cota se lee en la unidad de trabajo sin cambiar de tamaño',
+    res.status === 200 && svgM.includes('4,20 m') && !svgM.includes('420,0 cm'),
+    `m: ${svgM.includes('4,20 m')}`);
+
+  res = await client.postJson(`api/floors/${curveFloorId}/save`, { design: { ...straightRoom, format: 6 }, expected_version: (await json(`api/floors/${curveFloorId}`)).body.floor.version });
   report.check('Un formato de plano desconocido se rechaza', res.status === 422, String(res.status));
+  /* Formato 5 (NORMIA-006): geometría en centímetros y, ahora, medida por objeto. */
+  const medido = JSON.parse(JSON.stringify(straightRoom));
+  medido.elements[0].measuredM = 4.2;
+  medido.elements[0].quality = 'exacta';
+  res = await client.postJson(`api/floors/${curveFloorId}/save`, { design: medido, expected_version: (await json(`api/floors/${curveFloorId}`)).body.floor.version });
+  report.check('Una medida declarada sube el documento a formato 5', res.status === 200, String(res.status));
+  const guardado = (await json(`api/floors/${curveFloorId}`)).body.design;
+  report.check('La medida y su calidad sobreviven al guardado',
+    guardado.format === 5 && guardado.elements[0].measuredM === 4.2 && guardado.elements[0].quality === 'exacta',
+    `formato ${guardado.format} · ${guardado.elements[0].measuredM} · ${guardado.elements[0].quality}`);
+
+  /* Documento histórico dibujado en milímetros (U-06): al abrirlo se convierte
+     una vez a centímetros, conserva lo que mide y no se puede convertir dos veces. */
+  const enMilimetros = JSON.parse(JSON.stringify(straightRoom));
+  enMilimetros.format = 2;
+  enMilimetros.canvas.unit = 'mm';
+  enMilimetros.canvas.width = Math.round(enMilimetros.canvas.width * 10);
+  enMilimetros.canvas.height = Math.round(enMilimetros.canvas.height * 10);
+  enMilimetros.canvas.grid = Math.round(enMilimetros.canvas.grid * 10);
+  enMilimetros.elements.forEach((element) => {
+    element.x *= 10; element.y *= 10; element.w *= 10; element.h *= 10;
+    (element.points || []).forEach((point) => { point.x *= 10; point.y *= 10; });
+  });
+  res = await client.postJson(`api/floors/${curveFloorId}/save`, { design: enMilimetros, expected_version: (await json(`api/floors/${curveFloorId}`)).body.floor.version });
+  report.check('Un plano histórico en milímetros se acepta y se convierte', res.status === 200, String(res.status));
+
+  const convertido = (await json(`api/floors/${curveFloorId}`)).body.design || {};
+  report.check('La conversión deja la geometría en centímetros y la etiqueta intacta',
+    convertido.format === 5 && convertido.canvas.unit === 'mm'
+    && convertido.canvas.width === straightRoom.canvas.width
+    && Math.abs(convertido.elements[0].w - straightRoom.elements[0].w) < 0.5,
+    `formato ${convertido.format} · unidad ${convertido.canvas.unit} · ancho ${convertido.canvas.width}`);
+  const reconvertido = JSON.parse(JSON.stringify(convertido));
+  delete reconvertido.format;
+  reconvertido.format = 5;
+  res = await client.postJson(`api/floors/${curveFloorId}/save`, { design: reconvertido, expected_version: (await json(`api/floors/${curveFloorId}`)).body.floor.version });
+  const dosVeces = (await json(`api/floors/${curveFloorId}`)).body.design;
+  report.check('Un documento en formato 5 no se vuelve a convertir',
+    res.status === 200 && dosVeces.canvas.width === convertido.canvas.width,
+    `ancho ${dosVeces.canvas.width}`);
+
+  /* El editor guarda siempre en formato 5 (geometría en centímetros), también
+     cuando el plano se lee en metros. Guardar dos veces no puede mover nada:
+     era el riesgo real de confundir la unidad de trabajo con un factor. */
+  const enMetros = JSON.parse(JSON.stringify(straightRoom));
+  enMetros.format = 5;
+  enMetros.canvas.unit = 'm';
+  const anchoEnMetros = enMetros.canvas.width;
+  res = await client.postJson(`api/floors/${curveFloorId}/save`, { design: enMetros, expected_version: (await json(`api/floors/${curveFloorId}`)).body.floor.version });
+  const metrosUna = (await json(`api/floors/${curveFloorId}`)).body.design;
+  res = await client.postJson(`api/floors/${curveFloorId}/save`, { design: JSON.parse(JSON.stringify(metrosUna)), expected_version: (await json(`api/floors/${curveFloorId}`)).body.floor.version });
+  const metrosDos = (await json(`api/floors/${curveFloorId}`)).body.design;
+  report.check('Un plano en metros conserva sus dimensiones al guardarlo dos veces',
+    res.status === 200 && metrosDos.canvas.width === anchoEnMetros && metrosDos.canvas.unit === 'm'
+    && Math.abs(metrosDos.elements[0].w - straightRoom.elements[0].w) < 0.01,
+    `ancho ${metrosDos.canvas.width} cm · ${metrosDos.elements[0].w} cm`);
 
   /* ------------------ sección tipo y glorieta (formato 4) ------------------ */
   const avenueSection = { lanes: 2, laneM: 3, medianM: 2, shoulderM: 0.5, bikeM: 1.8, sidewalkM: 1 };
@@ -1486,7 +2044,7 @@ echo '|SVC=' . ($repo::codeForType('sig_wc_men') ?? 'NULL');
   });
   const cadCatalog = await json('catalogs/cad');
   report.check('Instalar un .zip con SVG al lado añade los equipos',
-    [302, 303].includes(res.status) && cadCatalog.body.count === 422
+    [302, 303].includes(res.status) && cadCatalog.body.count === 424
     && Boolean(cadCatalog.body.objects?.cad_labo_equipos_tanque_agua)
     && /^<svg/.test(cadCatalog.body.objects?.cad_labo_equipos_tanque_agua?.svg || ''),
     `${cadCatalog.body.count} · ${Object.keys(cadCatalog.body.objects || {}).filter((key) => key.startsWith('cad_labo')).join(',')}`);
@@ -1508,7 +2066,7 @@ $manager = implode(chr(92), ['App', 'Services', 'PluginManager']);
 echo is_dir($manager::directory() . '/labo-equipos') ? 'QUEDA' : 'BORRADO';
 `);
   report.check('Eliminar un complemento borra su carpeta y sus equipos',
-    [302, 303].includes(res.status) && cadTrasBorrar.body.count === 420 && /BORRADO/.test(resto.text || ''),
+    [302, 303].includes(res.status) && cadTrasBorrar.body.count === 422 && /BORRADO/.test(resto.text || ''),
     `${cadTrasBorrar.body.count} · ${(resto.text || '').trim()}`);
 
   res = await client.postForm('plugins/acme-senalizacion/delete', { _token: homeToken });

@@ -20,34 +20,46 @@
 <?php \App\Core\View::partial('partials/icons'); ?>
 <?php \App\Core\View::partial('partials/splash', ['splashTitle' => 'Abriendo Normia Planos CAD']); ?>
 <a class="skip-link" href="#contenido">Saltar al contenido</a>
+<?php
+/* Apartado actual para marcar la cabecera. Es solo presentación: los permisos
+   se comprueban en cada controlador. */
+$route = current_route();
+$inSection = static fn (string ...$roots): bool => $roots !== [] && array_reduce(
+    $roots,
+    static fn (bool $carry, string $root): bool => $carry || ($root === '' ? $route === '' : $route === $root || str_starts_with($route, $root . '/')),
+    false
+);
+?>
 <header class="site-header">
-  <a class="brand" href="<?= e(url('')) ?>" aria-label="Normia Planos CAD · inicio">
-    <span class="brand-mark"><img src="<?= e(asset('img/normia-emblem.png')) ?>" alt="" width="40" height="40" decoding="async"></span>
-    <span class="brand-text"><strong>Normia</strong><small>Planos CAD</small></span>
-  </a>
-  <?php if (!empty($user)): ?>
-    <nav class="site-nav" aria-label="Navegación principal">
-      <a class="nav-link" href="<?= e(url('')) ?>"><svg class="icon"><use href="#i-grid"></use></svg><span>Mis planos</span></a>
-      <a class="nav-link" href="<?= e(url('projects/new')) ?>"><svg class="icon"><use href="#i-plus"></use></svg><span>Nuevo</span></a>
-      <a class="nav-link" href="<?= e(url('empresas')) ?>"><svg class="icon"><use href="#i-property"></use></svg><span>Empresas</span></a>
-      <a class="nav-link" href="<?= e(url('plugins')) ?>"><svg class="icon"><use href="#i-stack"></use></svg><span>Complementos</span></a>
-      <?php if ((int) ($user['is_admin'] ?? 0) === 1): ?>
-        <a class="nav-link" href="<?= e(url('respaldo')) ?>"><svg class="icon"><use href="#i-cloud"></use></svg><span>Respaldo</span></a>
-      <?php endif; ?>
-    </nav>
-    <div class="account-menu">
-      <a class="account-chip" href="<?= e(url('account/password')) ?>" data-tooltip="Cuenta y contraseña">
-        <span class="avatar" aria-hidden="true"><?= e(strtoupper(substr((string) ($user['name'] ?? 'N'), 0, 1))) ?></span>
-        <span class="account-name"><?= e($user['name'] ?? '') ?></span>
-      </a>
-      <form method="post" action="<?= e(url('logout')) ?>" class="inline-form">
-        <?= csrf_field() ?>
-        <button class="icon-button" type="submit" data-tooltip="Cerrar sesión" aria-label="Cerrar sesión">
-          <svg class="icon"><use href="#i-logout"></use></svg>
-        </button>
-      </form>
-    </div>
-  <?php endif; ?>
+  <div class="site-header-inner">
+    <a class="brand" href="<?= e(url('')) ?>" aria-label="Normia Planos CAD · inicio">
+      <span class="brand-mark"><img src="<?= e(asset('img/normia-emblem.png')) ?>" alt="" width="40" height="40" decoding="async"></span>
+      <span class="brand-text"><strong>Normia</strong><small>Planos CAD</small></span>
+    </a>
+    <?php if (!empty($user)): ?>
+      <nav class="site-nav" aria-label="Navegación principal">
+        <a class="nav-link<?= $inSection('', 'projects') ? ' is-active' : '' ?>" href="<?= e(url('')) ?>"<?= $inSection('', 'projects') ? ' aria-current="page"' : '' ?>><svg class="icon" aria-hidden="true"><use href="#i-grid"></use></svg><span>Mis planos</span></a>
+        <a class="nav-link nav-link-primary" href="<?= e(url('projects/new')) ?>"><svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg><span>Nuevo</span></a>
+        <a class="nav-link<?= $inSection('empresas', 'organizations') ? ' is-active' : '' ?>" href="<?= e(url('empresas')) ?>"<?= $inSection('empresas', 'organizations') ? ' aria-current="page"' : '' ?>><svg class="icon" aria-hidden="true"><use href="#i-property"></use></svg><span>Empresas</span></a>
+        <a class="nav-link<?= $inSection('plugins') ? ' is-active' : '' ?>" href="<?= e(url('plugins')) ?>"<?= $inSection('plugins') ? ' aria-current="page"' : '' ?>><svg class="icon" aria-hidden="true"><use href="#i-stack"></use></svg><span>Complementos</span></a>
+        <?php if ((int) ($user['is_admin'] ?? 0) === 1): ?>
+          <a class="nav-link<?= $inSection('respaldo') ? ' is-active' : '' ?>" href="<?= e(url('respaldo')) ?>"<?= $inSection('respaldo') ? ' aria-current="page"' : '' ?>><svg class="icon" aria-hidden="true"><use href="#i-cloud"></use></svg><span>Respaldo</span></a>
+        <?php endif; ?>
+      </nav>
+      <div class="account-menu">
+        <a class="account-chip" href="<?= e(url('account/password')) ?>" data-tooltip="Cuenta y contraseña"<?= $inSection('account') ? ' aria-current="page"' : '' ?>>
+          <span class="avatar" aria-hidden="true"><?= e(strtoupper(substr((string) ($user['name'] ?? 'N'), 0, 1))) ?></span>
+          <span class="account-name"><?= e($user['name'] ?? '') ?></span>
+        </a>
+        <form method="post" action="<?= e(url('logout')) ?>" class="inline-form">
+          <?= csrf_field() ?>
+          <button class="icon-button" type="submit" data-tooltip="Cerrar sesión" aria-label="Cerrar sesión">
+            <svg class="icon"><use href="#i-logout"></use></svg>
+          </button>
+        </form>
+      </div>
+    <?php endif; ?>
+  </div>
 </header>
 <main id="contenido" class="page">
   <?php \App\Core\View::partial('partials/flashes', ['flashes' => $flashes]); ?>

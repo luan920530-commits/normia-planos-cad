@@ -108,6 +108,44 @@ report.check('El intérprete se copia con filtro: electron-builder descarta node
 report.check('El armado revisa el instalador terminado y falla si le falta el intérprete',
   /verifyInstallers\(out\);/.test(buildCode) && /El instalador quedó sin paquetes de php-wasm/.test(build));
 
+/* --------------------- edición «solo editor» (estudio) --------------------- */
+
+const estudioMain = read('tools/electron/estudio/main.mjs');
+const estudioPreload = read('tools/electron/estudio/preload.cjs');
+const estudioWorkflow = read('.github/workflows/dist-estudio.yml');
+const estudioCode = estudioMain.split('\n').filter((line) => !line.trim().startsWith('//') && !line.trim().startsWith('*')).join('\n');
+
+report.check('El editor suelto abre directo en el lienzo, sin portada ni cuentas',
+  /index\.php\?r=estudio/.test(estudioCode) && !/login/.test(estudioCode) && !/install/.test(estudioCode));
+report.check('La ventana del estudio tampoco da Node a la página y usa su propio puente',
+  /nodeIntegration: false/.test(estudioCode) && /contextIsolation: true/.test(estudioCode)
+  && /sandbox: true/.test(estudioCode) && /preload\.cjs/.test(estudioCode));
+report.check('El puente del estudio solo expone abrir, guardar, guardar como y el título',
+  /contextBridge\.exposeInMainWorld\('NormiaEstudio'/.test(estudioPreload)
+  && /estudio:abrir/.test(estudioPreload) && /estudio:guardar/.test(estudioPreload)
+  && !/require\('fs'\)/.test(estudioPreload));
+report.check('Cerrar con cambios sin guardar pregunta antes de perderlos',
+  /window\.on\('close'/.test(estudioCode) && /Guardar y cerrar/.test(estudioMain) && /Salir sin guardar/.test(estudioMain));
+report.check('Los planos se abren y se guardan como archivos con los diálogos del sistema',
+  /showOpenDialog/.test(estudioCode) && /showSaveDialog/.test(estudioCode) && /recientes\.json/.test(estudioCode));
+report.check('El archivo del estudio es el sobre oficial, importable en la edición completa',
+  /format: 'normia-plan'/.test(estudioCode) && /schema_version: 3/.test(estudioCode) && /design,/.test(estudioCode));
+report.check('El armado distingue las dos ediciones y no las pisa al instalar',
+  /match\[1\] === 'modo'/.test(build) && /mode === 'estudio'/.test(build)
+  && /co\.normia\.estudio/.test(build) && /co\.normia\.cad/.test(build)
+  && /normia-estudio/.test(build) && /productFor\(args\.mode\)/.test(build));
+report.check('El flujo del editor suelto compila las tres plataformas y comprueba el paquete',
+  /--modo=estudio/.test(estudioWorkflow) && /macos-15-intel/.test(estudioWorkflow)
+  && /verify-package\.mjs/.test(estudioWorkflow) && /LSMinimumSystemVersion/.test(estudioWorkflow)
+  && /normia-estudio-\$\{\{ matrix\.os \}\}-\$\{\{ matrix\.arch \}\}\.SHA256SUMS\.txt/.test(estudioWorkflow)
+  && /upload-artifact@v4/.test(estudioWorkflow));
+
+report.check('Un plano soltado sobre la ventana se abre, preguntando antes si hay cambios',
+  /webUtils\??\.getPathForFile/.test(estudioPreload) && /estudio:soltar/.test(estudioPreload)
+  && /ipcMain\.on\('estudio:soltar'/.test(estudioCode) && /Abrir de todas formas/.test(estudioMain));
+report.check('La lista de recientes no muestra archivos que ya no existen',
+  /existsSync\(item\.path\)/.test(estudioCode) && /readRecent\(\)/.test(estudioCode));
+
 report.check('Las sumas del flujo evitan opciones de GNU que macOS no tiene',
   !/^\s*find .* -printf/m.test(workflow) && /sha256sum "\$archivo"/.test(workflow) && /shasum -a 256/.test(workflow));
 // Se mira la línea de comando del paso y no el texto: los comentarios explican
@@ -235,6 +273,37 @@ try {
 report.check('El verificador del paquete arranca el intérprete y el servidor desde resources/',
   verifyOk && /el servidor del paquete responde/.test(verifyOutput),
   verifyOutput.split('\n').filter((line) => line.includes('✗') || line.includes('::error')).join(' ').slice(0, 160));
+
+// El paquete real del estudio: la misma aplicación e intérprete que se
+// distribuye, arrancados sin instalar nada y con una carpeta de datos vacía.
+const datosEstudio = fs.mkdtempSync(path.join(os.tmpdir(), 'estudio-paquete-'));
+let estudioServidor = null;
+let estudioPage = { status: 0, text: '' };
+let estudioAuditoria = { status: 0, text: '' };
+let estudioArchivos = [];
+try {
+  estudioServidor = await startServer({ appDir: path.join(packaged, 'app'), dataDir: datosEstudio, runtimeDir: path.join(packaged, 'runtime'), log: () => {} });
+  await estudioServidor.waitUntilReady();
+  const pedir = async (ruta) => {
+    const respuesta = await fetch(`${estudioServidor.url}index.php?r=${ruta}`, { redirect: 'manual' });
+    return { status: respuesta.status, text: await respuesta.text() };
+  };
+  estudioPage = await pedir('estudio');
+  estudioAuditoria = await pedir('estudio/auditoria');
+  estudioArchivos = fs.readdirSync(path.join(datosEstudio, 'storage')).filter((name) => name.endsWith('.sqlite'));
+} catch (error) {
+  estudioPage = { status: 0, text: String(error?.message || error) };
+} finally {
+  await estudioServidor?.close().catch(() => {});
+  fs.rmSync(datosEstudio, { recursive: true, force: true });
+}
+const estudioHtml = estudioPage.text.replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+report.check('El paquete real abre el estudio sin instalar y sin crear base de datos',
+  estudioPage.status === 200 && /"study":true/.test(estudioHtml) && estudioArchivos.length === 0,
+  `${estudioPage.status} · ${estudioArchivos.length} bases · ${estudioPage.text.slice(0, 80)}`);
+report.check('El auditor del paquete revisa el plano en curso sin base de datos',
+  estudioAuditoria.status === 200 && /"criteria"/.test(estudioAuditoria.text),
+  `${estudioAuditoria.status} · ${estudioAuditoria.text.slice(0, 100)}`);
 
 // El paquete de la 1.11.1: `runtime/php-wasm.mjs` suelto, sin node_modules.
 // El verificador tiene que rechazarlo en vez de darlo por bueno.

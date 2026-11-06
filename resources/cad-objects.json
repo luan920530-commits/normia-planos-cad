@@ -1236,6 +1236,14 @@
       "color": "#c2410c",
       "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M20 16L80 16\"/><path d=\"M34 16L34 40\"/><path d=\"M66 16L66 40\"/><circle cx=\"34\" cy=\"45\" r=\"5\" fill=\"currentColor\" fill-opacity=\"0.2\"/><circle cx=\"66\" cy=\"45\" r=\"5\" fill=\"currentColor\" fill-opacity=\"0.2\"/><path d=\"M31 52c-1 5 2 6 1 9M37 52c1 5-2 6-1 9\" opacity=\".55\"/><path d=\"M63 52c-1 5 2 6 1 9M69 52c1 5-2 6-1 9\" opacity=\".55\"/><path d=\"M24 66a26 14 0 0 0 52 0Z\" fill=\"currentColor\" fill-opacity=\".08\"/><path d=\"M50 80L50 90\" opacity=\".55\"/><path d=\"M38 90L62 90\" opacity=\".55\"/></svg>"
     },
+    "cad_emg_firstaid": {
+      "category": "emergency",
+      "name": "Botiquín de primeros auxilios",
+      "description": "Botiquín portátil con asa, broche y cruz de primeros auxilios. Representación CAD esquemática; verifica su contenido y vigencia en sitio.",
+      "reference": "CAD",
+      "color": "#b91c1c",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"14\" y=\"32\" width=\"72\" height=\"46\" rx=\"9\" fill=\"currentColor\" fill-opacity=\"0.07\"/><path d=\"M36 32v-7a5 5 0 0 1 5-5h18a5 5 0 0 1 5 5v7\"/><path d=\"M14 47h72\" opacity=\".4\"/><path d=\"M50 51v14M43 58h14\" stroke-width=\"6\"/><rect x=\"42\" y=\"44\" width=\"16\" height=\"7\" rx=\"2.5\" fill=\"currentColor\" stroke=\"none\" opacity=\".45\"/></svg>"
+    },
     "cad_emg_muster": {
       "category": "emergency",
       "name": "Punto de reunión",
@@ -3515,6 +3523,14 @@
       "reference": "CAD",
       "color": "#334155",
       "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"16\" y=\"26\" width=\"68\" height=\"44\" rx=\"4\" fill=\"currentColor\" fill-opacity=\".09\"/><circle cx=\"26\" cy=\"80\" r=\"3\"/><circle cx=\"74\" cy=\"80\" r=\"3\"/><rect x=\"68\" y=\"12\" width=\"22\" height=\"12\" rx=\"2\"/><path d=\"M79 24v2\" opacity=\".6\"/><path d=\"M28 38h30\" opacity=\".35\"/></svg>"
+    },
+    "cad_emg_meeting": {
+      "category": "emergency",
+      "name": "Punto de encuentro de evacuación",
+      "description": "Zona de reunión posterior a la evacuación, con las personas ya contadas. Representación CAD esquemática; verifica la ubicación, la distancia a la edificación y la accesibilidad en sitio.",
+      "reference": "NTC 1916 · ISO 7010 E007",
+      "color": "#0f766e",
+      "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"50\" cy=\"46\" r=\"30\" stroke-dasharray=\"7 5\" fill=\"currentColor\" fill-opacity=\".06\"/><circle cx=\"50\" cy=\"34\" r=\"7\"/><path d=\"M40 66v-8a10 10 0 0 1 20 0v8\"/><path d=\"M30 76h40\"/><circle cx=\"28\" cy=\"30\" r=\"4\" fill=\"currentColor\"/><circle cx=\"72\" cy=\"30\" r=\"4\" fill=\"currentColor\"/></svg>"
     }
   }
 }

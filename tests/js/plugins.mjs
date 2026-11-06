@@ -70,7 +70,7 @@ const { window } = dom;
 const errores = [];
 window.addEventListener('error', (event) => errores.push(String(event.message)));
 
-for (const file of ['js/lib/geometry.js', 'js/lib/model.js', 'js/lib/renderer.js', 'js/editor/library.js']) {
+for (const file of ['js/lib/units.js', 'js/lib/geometry.js', 'js/lib/model.js', 'js/lib/renderer.js', 'js/editor/library.js']) {
   const fuente = fs.readFileSync(path.join(root, 'assets', file), 'utf8');
   window.eval(`${fuente}\n//# sourceURL=${file}`);
 }

@@ -65,11 +65,8 @@
    * unidad declarada (igual que la cota del editor); la escala es una
    * referencia de impresión y no cambia las longitudes del plano.
    */
-  const unitsToMeters = (unit) => {
-    if (unit === 'm') return 1;
-    if (unit === 'mm') return 0.001;
-    return 0.01;
-  };
+  // La geometría está en centímetros: el factor ya no depende de la etiqueta.
+  const unitsToMeters = (unit) => root.Units.metersPerUnit(root.Units.GEOMETRY_UNIT);
 
   const pathLength = (points) => {
     if (!Array.isArray(points) || points.length < 2) return 0;
@@ -89,7 +86,12 @@
     ? root.Geometry.pathLength(elementPoints(element), element.curves)
     : pathLength(elementPoints(element)));
 
-  const elementLengthMeters = (element, canvas) => elementLength(element) * unitsToMeters(canvas.unit, canvas.scale);
+  const elementLengthMeters = (element) => {
+    // La medida declarada manda sobre el dibujo (NORMIA-006 §6.1).
+    const measured = Number(element?.measuredM);
+    if (Number.isFinite(measured) && measured > 0) return measured;
+    return elementLength(element) * unitsToMeters();
+  };
 
   /** Pendiente media del trazo en porcentaje (positiva = desciende hacia el final). */
   const slopeOf = (element) => {

@@ -145,14 +145,14 @@ async function main() {
     report.check('Señales de baño disponibles', ['SVC_WC_MEN', 'SVC_WC_WOMEN', 'SVC_WC_MIXED', 'SVC_WC_ACCESSIBLE', 'SVC_BABY'].every((code) => app.catalogs.signs[code]?.name),
       ['SVC_WC_MEN', 'SVC_WC_WOMEN', 'SVC_WC_MIXED', 'SVC_WC_ACCESSIBLE', 'SVC_BABY'].filter((code) => !app.catalogs.signs[code]).join(',') || 'todas');
     report.check('La familia de servicios está disponible', app.catalogs.signCategories.services?.label === 'Orientación y servicios', app.catalogs.signCategories.services?.label);
-    report.check('Catálogo CAD ampliado a 420 objetos', Object.keys(app.catalogs.cad).length === 420, String(Object.keys(app.catalogs.cad).length));
+    report.check('Catálogo CAD ampliado a 422 objetos', Object.keys(app.catalogs.cad).length === 422, String(Object.keys(app.catalogs.cad).length));
     report.check('Familias CAD ampliadas a 31', Object.keys(app.catalogs.cadCategories).length === 31, Object.keys(app.catalogs.cadCategories).join(','));
     const expectedFamilies = ['restaurant', 'warehouse', 'retail', 'hospital', 'textile', 'grill', 'supermarket', 'residential', 'sports', 'outdoor', 'electrico', 'hidraulico', 'eds', 'drogueria', 'gimnasio', 'colegio', 'cafeteria'];
     report.check('Nuevas familias sectoriales disponibles', expectedFamilies.every((key) => app.catalogs.cadCategories[key]?.label), expectedFamilies.filter((key) => !app.catalogs.cadCategories[key]).join(',') || 'todas');
     const nuevasFamilias = ['fire', 'emergency', 'technic', 'access', 'security'];
     report.check('Cinco familias nuevas de emergencia y seguridad',
       nuevasFamilias.every((key) => app.catalogs.cadCategories[key]?.label)
-      && nuevasFamilias.reduce((total, key) => total + Object.values(app.catalogs.cad).filter((object) => object.category === key).length, 0) === 44,
+      && nuevasFamilias.reduce((total, key) => total + Object.values(app.catalogs.cad).filter((object) => object.category === key).length, 0) === 46,
       nuevasFamilias.map((key) => `${key}:${Object.values(app.catalogs.cad).filter((object) => object.category === key).length}`).join(' · '));
     report.check('Las señales de brigada están disponibles',
       ['SVC_EVAC_ROUTE', 'SVC_EXIT_TEXT', 'SVC_HYDRANT', 'SVC_COMMAND_POST', 'SVC_GAS_SHUTOFF', 'SVC_POWER_SHUTOFF'].every((code) => app.catalogs.signs[code]?.category === 'brigade' && app.catalogs.signs[code]?.aliases?.length > 0)
@@ -165,7 +165,7 @@ async function main() {
     report.check('Nombres de equipos sin duplicados', new Set(nombresCad).size === nombresCad.length,
       `${nombresCad.length - new Set(nombresCad).size} repetidos`);
     report.check('Paleta de colores expuesta', window.Normia.COLORS.length === 34, String(window.Normia.COLORS.length));
-    report.check('La barra lateral cuenta los equipos del catálogo', q(window, '[data-cad-count]')?.textContent === '420', q(window, '[data-cad-count]')?.textContent);
+    report.check('La barra lateral cuenta los equipos del catálogo', q(window, '[data-cad-count]')?.textContent === '422', q(window, '[data-cad-count]')?.textContent);
     report.check('La barra lateral cuenta las señales del catálogo', q(window, '[data-sign-count]')?.textContent === '395', q(window, '[data-sign-count]')?.textContent);
     report.check('Lienzo con el preset A4 horizontal', app.model.design.canvas.width === 1123 && app.model.design.canvas.height === 794, `${app.model.design.canvas.width}×${app.model.design.canvas.height}`);
     report.check('Barra de estado muestra el tamaño', q(window, '[data-canvas-size]').textContent.includes('794'), q(window, '[data-canvas-size]').textContent);
@@ -328,13 +328,117 @@ async function main() {
       near(lineDrawn[0], 600, 3) && near(lineDrawn[1], 400, 3) && near(lineDrawn[2], 400, 3) && near(lineDrawn[3], 500, 3),
       `${lineDrawn.slice(0, 4).map((value) => Math.round(value)).join(',')}`);
 
-    /* --------------------------------- rutas --------------------------------- */
+    /* ------------------- pluma: muros nodo a nodo (1.27.0) ------------------- */
     const clickAt = (x, y) => {
       const point = clientPoint(app, x, y);
       pointer(window, app.svg, 'pointerdown', point);
       pointer(window, app.svg, 'pointerup', point);
       return point;
     };
+    /* La pluma coloca un nodo por clic y deja el tramo elástico al cursor: el
+       muro se traza como en un programa vectorial, con sus nodos a la vista. */
+    app.model.clearSelection();
+    clearToasts(window);
+    app.applyTool('wall');
+    const penNodes = () => qa(window, '#plan-canvas .draft-preview .draft-node');
+    clickAt(700, 620);
+    app.renderNow();
+    report.check('La pluma abre el muro con el primer nodo', app.draft?.tool === 'wall' && app.draft.points.length === 2,
+      `${app.draft?.points?.length ?? 0} puntos`);
+    report.check('El borrador del muro muestra su nodo de control', penNodes().length === 1, `${penNodes().length} nodos`);
+    clickAt(980, 620);
+    pointer(window, app.svg, 'pointermove', clientPoint(app, 1060, 600));
+    app.renderNow();
+    report.check('Cada clic añade un nodo y el último tramo sigue al cursor',
+      app.draft?.points?.length === 3 && near(app.draft.points[2].x, 1060, 2),
+      `${app.draft?.points?.length} puntos · cursor ${Math.round(app.draft?.points?.at(-1)?.x ?? 0)}`);
+    report.check('El borrador dibuja los nodos ya fijados y la cifra del tramo elástico',
+      penNodes().length === 2 && Boolean(q(window, '#plan-canvas .draft-measure')),
+      `${penNodes().length} nodos · ${q(window, '#plan-canvas .draft-measure')?.textContent ?? 'sin cifra'}`);
+    report.check('El muro enseña su grosor mientras se dibuja',
+      Number(q(window, '#plan-canvas .draft-preview polyline')?.getAttribute('stroke-width')) > 100,
+      `${q(window, '#plan-canvas .draft-preview polyline')?.getAttribute('stroke-width')} de ancho`);
+    report.check('La pista de la pluma cuenta los nodos y cómo terminar',
+      /nodo/.test(q(window, '[data-stage-hint]').textContent) && /doble clic/.test(q(window, '[data-stage-hint]').textContent),
+      q(window, '[data-stage-hint]').textContent.slice(0, 70));
+    key(window, window.document.body, 'Backspace');
+    app.renderNow();
+    report.check('Retroceso quita el último nodo del muro', app.draft?.points?.length === 2, `${app.draft?.points?.length} puntos`);
+    clickAt(980, 620);
+    clickAt(980, 720);
+    const penPoint = clientPoint(app, 1100, 800);
+    pointer(window, app.svg, 'pointerdown', penPoint, { shiftKey: true });
+    pointer(window, app.svg, 'pointerup', penPoint, { shiftKey: true });
+    report.check('Shift alinea el nodo nuevo con el anterior',
+      near(app.draft?.points?.at(-2)?.y ?? -1, 720, 1), String(Math.round(app.draft?.points?.at(-2)?.y ?? -1)));
+    key(window, window.document.body, 'Enter');
+    app.renderNow();
+    const penWall = app.model.design.elements.at(-1);
+    report.check('Enter cierra el muro con los nodos colocados',
+      penWall?.type === 'wall' && penWall.points.length === 4 && app.draft === null,
+      `${penWall?.points?.length} vértices`);
+    report.check('El muro trazado mide lo que dicen sus nodos',
+      Math.round(app.model.pathLength(penWall)) === 500,
+      `${Math.round(app.model.pathLength(penWall))} cm`);
+    report.check('La pluma sigue activa para trazar el muro siguiente',
+      app.tool === 'wall' && /Muro · 4 nodos/.test(toastText(window)), toastText(window).slice(0, 60));
+    clearToasts(window);
+    /* Cerrar el recinto: el clic sobre el primer nodo devuelve a él. */
+    clickAt(700, 700);
+    clickAt(1000, 700);
+    clickAt(1000, 780);
+    clickAt(702, 702);
+    app.renderNow();
+    const closedWall = app.model.design.elements.at(-1);
+    report.check('El clic sobre el primer nodo cierra el muro en circuito',
+      closedWall?.type === 'wall' && closedWall.points.length === 4
+      && near(closedWall.points[0].x, closedWall.points[3].x, 0.01)
+      && /circuito cerrado/.test(toastText(window)),
+      `${closedWall?.points?.length} vértices · ${toastText(window).slice(0, 40)}`);
+    clearToasts(window);
+    /* Doble clic también termina; Esc descarta lo que aún no se cerró. */
+    clickAt(760, 560);
+    clickAt(900, 560);
+    pointer(window, app.svg, 'dblclick', clientPoint(app, 900, 560));
+    app.renderNow();
+    const dblWall = app.model.design.elements.at(-1);
+    report.check('Doble clic termina el trazo de la pluma', dblWall?.type === 'wall'
+      && dblWall.points.length === 2 && app.draft === null, `${dblWall?.points?.length} vértices`);
+    const beforeEsc = app.model.design.elements.length;
+    clickAt(760, 520);
+    clickAt(860, 520);
+    key(window, window.document.body, 'Escape');
+    app.renderNow();
+    report.check('Esc descarta el trazo a medio dibujar sin crear nada',
+      app.draft === null && app.model.design.elements.length === beforeEsc,
+      `${app.model.design.elements.length - beforeEsc} elementos nuevos`);
+    /* El arrastre de siempre sigue creando el tramo de dos puntos. */
+    const beforeDrag = app.model.design.elements.length;
+    drag(window, app.svg, clientPoint(app, 700, 480), clientPoint(app, 900, 480));
+    app.renderNow();
+    const draggedWall = app.model.design.elements.at(-1);
+    report.check('Arrastrar sigue creando un muro de dos puntos de una vez',
+      app.model.design.elements.length === beforeDrag + 1 && draggedWall?.type === 'wall'
+      && draggedWall.points.length === 2, `${draggedWall?.points?.length} vértices`);
+    /* La cota también se dibuja a dos clics y se cierra sola. */
+    clearToasts(window);
+    app.applyTool('dimension');
+    clickAt(700, 460);
+    clickAt(900, 460);
+    app.renderNow();
+    const penDimension = app.model.design.elements.at(-1);
+    report.check('La cota de dos clics se cierra sola con dos nodos', penDimension?.type === 'dimension'
+      && penDimension.points.length === 2 && app.draft === null,
+      `${penDimension?.type} · ${penDimension?.points?.length} · ${toastText(window).slice(0, 40)}`);
+    // Los trazos de prueba de la pluma se retiran: el resto de la sesión sigue
+    // con el plano tal como estaba y las rutas no quedan bloqueadas.
+    app.model.select([penWall.id, closedWall.id, dblWall.id, draggedWall.id, penDimension.id]);
+    app.model.deleteSelected();
+    app.applyTool('select');
+    app.model.clearSelection();
+    app.renderNow();
+
+    /* --------------------------------- rutas --------------------------------- */
     app.applyTool('route');
     clickAt(120, 620);
     clickAt(320, 620);
@@ -665,9 +769,11 @@ async function main() {
     app.renderNow();
     app.model.select([road.id]);
     app.model.clearRoadSection();
-    report.check('Una vía sin sección tipo mantiene el plano en formato 3',
-      !app.model.element(road.id).section && app.model.serialize().format === 3
-      && app.model.documentFormat() === 3,
+    // Desde la 1.19.0 el editor guarda siempre en formato 5: la geometría está
+    // en centímetros y esa marca es la que impide reconvertirla al guardar.
+    report.check('Una vía sin sección tipo se guarda en formato 5 y conserva el trazo',
+      !app.model.element(road.id).section && app.model.serialize().format === 5
+      && app.model.documentFormat() === 5,
       String(app.model.serialize().format));
 
     /* ------------- sección tipo, glorieta e inserción del corredor ------------- */
@@ -679,8 +785,9 @@ async function main() {
       && app.model.element(road.id).section?.lanes === 4
       && app.model.element(road.id).widthM === 20,
       `${app.model.element(road.id).section?.lanes} carriles · ${app.model.element(road.id).widthM} m`);
-    report.check('Una vía con sección tipo cambia el plano a formato 4',
-      app.model.documentFormat() === 4 && app.model.serialize().format === 4,
+    report.check('Una vía con sección tipo se guarda en formato 5 con su sección',
+      app.model.documentFormat() === 5 && app.model.serialize().format === 5
+      && app.model.element(road.id).section?.lanes === 4,
       String(app.model.serialize().format));
     app.renderNow();
     const avenueGroup = app.svg.querySelector(`.plan-element[data-id="${road.id}"]`);
@@ -749,8 +856,8 @@ async function main() {
       && corridor.some((element) => element.junction?.kind === 'roundabout')
       && corridor.every((element) => element.section || element.type !== 'road'),
       `${corridor.length} elementos: ${corridorTypes.join(', ')}`);
-    report.check('El corredor queda seleccionado y en formato 4',
-      app.model.selection.size === 8 && app.model.documentFormat() === 4,
+    report.check('El corredor queda seleccionado y en formato 5',
+      app.model.selection.size === 8 && app.model.documentFormat() === 5,
       `${app.model.selection.size} seleccionados · formato ${app.model.documentFormat()}`);
     report.check('El corredor de ejemplo se dibuja sin valores inválidos',
       corridor.every((element) => !/NaN|Infinity|undefined/.test(app.svg.querySelector(`.plan-element[data-id="${element.id}"]`)?.outerHTML || '')),
@@ -825,9 +932,9 @@ async function main() {
     };
     const importedV3 = new window.Normia.Model(v3Doc, app.catalogs, {});
     const importedV3Wall = importedV3.element('muro_v3');
-    report.check('Un plano v3 con curvas se abre como formato 3 y conserva los arcos',
-      importedV3.documentFormat() === 3 && importedV3.hasCurves(importedV3Wall)
-      && importedV3.serialize().format === 3,
+    report.check('Un plano v3 con curvas se abre y conserva los arcos en formato 5',
+      importedV3.documentFormat() === 5 && importedV3.hasCurves(importedV3Wall)
+      && importedV3.serialize().format === 5,
       `formato ${importedV3.documentFormat()}`);
     report.check('El muro importado mide el arco y no la cuerda',
       importedV3.pathLength(importedV3Wall) > 260,
@@ -837,8 +944,8 @@ async function main() {
     v2Doc.elements[0].id = 'muro_v2';
     delete v2Doc.elements[0].curves;
     const importedV2 = new window.Normia.Model(v2Doc, app.catalogs, {});
-    report.check('Un plano v2 de la 1.10 se abre sin curvas y sigue en formato 2',
-      importedV2.documentFormat() === 2 && !importedV2.hasCurves(importedV2.element('muro_v2'))
+    report.check('Un plano v2 de la 1.10 se abre sin curvas',
+      importedV2.documentFormat() === 5 && !importedV2.hasCurves(importedV2.element('muro_v2'))
       && importedV2.flatPoints(importedV2.element('muro_v2')).length === 2);
     // La 1.10 ignora las claves que no conoce: al abrir un v3 descarta
     // `curves` y dibuja la polilínea recta de los vértices.
@@ -848,7 +955,7 @@ async function main() {
     const legacyWall = legacyView.element('muro_v3');
     report.check('Sin `curves` el muro v3 se ve recto: degradación a la 1.10',
       !legacyView.hasCurves(legacyWall) && legacyView.flatPoints(legacyWall).length === 2
-      && legacyView.documentFormat() === 2);
+      && legacyView.documentFormat() === 5);
 
     // La vía ocupa una banda ancha: se retira junto con el resto de elementos
     // de esta sección para no tapar el muro que usan las pruebas siguientes.
@@ -860,8 +967,8 @@ async function main() {
     app.model.clearSelection();
     app.applyTool('select');
     app.renderNow();
-    report.check('Sin curvas el plano vuelve a serializarse en formato 2',
-      app.model.serialize().format === 2, String(app.model.serialize().format));
+    report.check('Sin curvas el plano se sigue guardando en formato 5',
+      app.model.serialize().format === 5, String(app.model.serialize().format));
     // Deshacer y rehacer reconstruyen los elementos: se refresca la referencia
     // del muro de las pruebas anteriores para no leer un objeto obsoleto.
     wall = app.model.element(wallId);
@@ -1270,7 +1377,9 @@ async function main() {
     report.check('El SVG exportado incluye el contenido del plano', /Ruta de evacuación/.test(svgExport.text) && /<svg/i.test(svgExport.text), `${svgExport.text.length} bytes`);
     const jsonExport = await client.get(routePath(app.boot.exportJsonUrl));
     const exported = JSON.parse(jsonExport.text);
-    report.check('La exportación JSON usa el esquema v2', exported.schema_version === 2 && exported.application === 'normia-planos-cad', String(exported.schema_version));
+    // Esquema 3 desde NORMIA-006: geometría en centímetros y medida por objeto.
+    // El importador sigue aceptando el 2, así que los archivos viejos entran.
+    report.check('La exportación JSON usa el esquema v3', exported.schema_version === 3 && exported.application === 'normia-planos-cad', String(exported.schema_version));
     report.check('El JSON exportado incluye proyecto y piso', exported.project?.name === 'Proyecto UI' && exported.floor?.name, `${exported.project?.name} · ${exported.floor?.name}`);
     report.check('El JSON exportado contiene los elementos guardados', exported.design.elements.length === app.model.design.elements.length, `${exported.design.elements.length}`);
 
@@ -1310,6 +1419,15 @@ async function main() {
       footerExport.svg.querySelectorAll('[data-footer-cell]').length === 5
       && footerExport.svg.querySelectorAll('[data-footer-line]').length >= 4,
       `${footerExport.svg.querySelectorAll('[data-footer-cell]').length} celdas · ${footerExport.svg.querySelectorAll('[data-footer-line]').length} líneas`);
+    /* Aforo en el pie (NORMIA-006 §27): el plano exportado lo lleva impreso. */
+    const pieTexto = footerExport.svg.textContent.replace(/\s+/g, ' ');
+    report.check('El pie del plano exportado publica el aforo máximo y el permitido',
+      /Aforo máximo \d+ personas/.test(pieTexto) && /Aforo permitido \d+ personas/.test(pieTexto)
+      && /Superficie útil libre [\d.,]+ m²/.test(pieTexto),
+      (pieTexto.match(/Aforo máximo[^·]*·[^·]*/) || [''])[0].slice(0, 90));
+    report.check('La vista previa del pie también muestra el aforo',
+      /Aforo máximo/.test(footerPreview?.textContent || '')
+      && /Aforo permitido/.test(footerPreview?.textContent || ''));
     app.closeDrawer();
     report.check('El cajón del pie se cierra sin dejar el fondo bloqueado',
       app.activeDrawer === null && !window.document.body.classList.contains('has-drawer'),
@@ -1407,6 +1525,28 @@ async function main() {
         /position:\s*(relative|fixed|sticky|absolute)/.test(block) && zIndexOf(block) > canvasZ,
         `${selector} z-index ${zIndexOf(block)} · lienzo ${canvasZ} · ${block.replace(/\s+/g, ' ').slice(0, 90)}`);
     }
+    /* Los paneles de la barra superior («Más opciones») y del rail no son
+       elementos de la ventana: viven dentro del contexto de apilamiento que abre
+       su contenedor (`backdrop-filter` + `z-index`). Por eso el contenedor tiene
+       que ganarle a la barra de herramientas, que ocupa la franja justo debajo y
+       se dibuja después en el documento. Con la barra superior en 30 el panel se
+       veía por debajo de la paleta. */
+    const ladder = {
+      '.editor-topbar': zIndexOf(cssBlock('.editor-topbar')),
+      '.rail': zIndexOf(cssBlock('.rail')),
+      '.stage-toolbar': zIndexOf(cssBlock('.stage-toolbar')),
+    };
+    report.check('El menú «Más opciones» se dibuja por encima de la barra de herramientas',
+      ladder['.editor-topbar'] > ladder['.stage-toolbar'] && ladder['.editor-topbar'] > ladder['.rail'],
+      `barra superior ${ladder['.editor-topbar']} · rail ${ladder['.rail']} · herramientas ${ladder['.stage-toolbar']}`);
+    report.check('Los menús del rail se dibujan por encima de la barra de herramientas',
+      ladder['.rail'] > ladder['.stage-toolbar'],
+      `rail ${ladder['.rail']} · herramientas ${ladder['.stage-toolbar']}`);
+    report.check('Los cajones siguen por encima de la barra superior y del rail',
+      zIndexOf(cssBlock('.drawer')) > ladder['.editor-topbar']
+      && zIndexOf(cssBlock('.drawer')) > ladder['.rail'],
+      `cajón ${zIndexOf(cssBlock('.drawer'))} · barra superior ${ladder['.editor-topbar']}`);
+
     report.check('La paleta de herramientas se ancla a la barra y no se queda detrás del lienzo',
       /position:\s*absolute/.test(cssBlock('.tools-popover'))
       && zIndexOf(cssBlock('.tools-popover')) >= 1
@@ -1690,6 +1830,132 @@ async function main() {
     app.closeDrawer();
     window.localStorage.setItem('normia.guia.auto', '0');
 
+    /* ---------------- medida declarada por objeto (NORMIA-006 §5) ---------------- */
+    {
+      const target = elementById(app, wall.id);
+      app.model.select([target.id]);
+      app.renderNow();
+      const panel = app.window.document.querySelector('[data-properties]');
+      const measureField = panel?.querySelector('[data-prop="measuredM"]');
+      report.check('El inspector ofrece «Largo real» en un muro', Boolean(measureField),
+        measureField ? `valor ${measureField.value}` : 'sin campo');
+      const qualityField = panel?.querySelector('[data-prop="quality"]');
+      report.check('La calidad de la medida se elige entre tres valores',
+        Boolean(qualityField) && qualityField.options.length === 4,
+        qualityField ? `${qualityField.options.length} opciones` : 'sin selector');
+
+      app.model.setProps({ measuredM: 4.2, quality: 'exacta' });
+      const medido = elementById(app, wall.id);
+      report.check('La medida se guarda en el modelo y no toca la geometría',
+        medido.measuredM === 4.2 && medido.quality === 'exacta' && medido.x === target.x && medido.w === target.w,
+        `${medido.measuredM} m · ${medido.quality}`);
+
+      let rechazada = false;
+      try {
+        app.model.setProps({ measuredM: 9000 });
+      } catch {
+        rechazada = true;
+      }
+      report.check('Una medida fuera de rango se rechaza con mensaje', rechazada);
+
+      app.model.setProps({ measuredM: null });
+      report.check('Borrar la medida devuelve el objeto al dibujo',
+        elementById(app, wall.id).measuredM === undefined);
+    }
+
+    /* --------- ajuste a las medidas declaradas (NORMIA-006 §5.4 · DEC-3) ---------
+     * Tres trazos dibujados a 418,6 / 897,2 / 1 236,0 cm y medidos 4,20 / 9,00 /
+     * 12,40 m dan relaciones 1,003344 / 1,003121 / 1,003236; la mediana es
+     * 1,003236 y el lienzo pasa de 16,00 × 10,00 a 16,05 × 10,03 m.
+     */
+    {
+      const conMedidas = (tercera) => ({
+        format: 5,
+        canvas: { width: 1600, height: 1000, grid: 20, unit: 'm', scale: '1:100', background: '#ffffff', occupancy: 0 },
+        layers: [{ id: 'capa_planta', name: 'Planta', visible: true, locked: false }],
+        elements: [
+          { id: 'm1', type: 'wall', layerId: 'capa_planta', x: 100, y: 100, w: 418.6, h: 2, stroke: 4, color: '#0f172a', points: [{ x: 0, y: 0 }, { x: 418.6, y: 0 }], measuredM: 4.2, quality: 'exacta' },
+          { id: 'm2', type: 'wall', layerId: 'capa_planta', x: 100, y: 300, w: 897.2, h: 2, stroke: 4, color: '#0f172a', points: [{ x: 0, y: 0 }, { x: 897.2, y: 0 }], measuredM: 9, quality: 'exacta' },
+          { id: 'm3', type: 'wall', layerId: 'capa_planta', x: 100, y: 500, w: 1236, h: 2, stroke: 4, color: '#0f172a', points: [{ x: 0, y: 0 }, { x: 1236, y: 0 }], measuredM: tercera, quality: 'aproximada' },
+        ],
+        groups: [],
+      });
+      const ajuste = new window.Normia.Model(conMedidas(12.4), app.catalogs, {});
+      // Al abrir un plano, la medida declarada se conserva: perderla sería
+      // borrar en silencio lo que la persona escribió.
+      report.check('Un plano abierto conserva las medidas declaradas',
+        ajuste.element('m1').measuredM === 4.2 && ajuste.element('m3').quality === 'aproximada');
+      const fit = ajuste.measureFit();
+      report.check('El ajuste usa la mediana de las medidas, no la media',
+        fit.count === 3 && Math.abs(fit.median - 1.003236) < 1e-6
+        && Math.abs(fit.before.width - 1600) < 0.001 && fit.after.width === 1605 && fit.after.height === 1003,
+        `×${fit.median.toFixed(6)} · ${fit.before.width}→${fit.after.width} cm`);
+
+      const antes = JSON.stringify(ajuste.design);
+      const aplicado = ajuste.applyMeasureFit();
+      report.check('Ajustar reescala el plano y deja los residuos por debajo del 0,05 %',
+        aplicado?.applied === true && aplicado.factor === fit.median
+        && ajuste.design.canvas.width === 1605
+        && Math.abs(ajuste.element('m1').w - 419.95) < 0.02
+        && ajuste.measureFit().worstDeviationPct < 0.05,
+        `${ajuste.design.canvas.width} cm · peor residuo ${ajuste.measureFit().worstDeviationPct.toFixed(3)} %`);
+      const guardado = JSON.stringify(ajuste.serialize());
+      report.check('El ajuste deja intactas las medidas declaradas y no arrastra factor',
+        ajuste.element('m3').measuredM === 12.4 && ajuste.element('m1').quality === 'exacta'
+        && !('calibration' in ajuste.design) && ajuste.serialize().format === 5
+        && !('factor' in ajuste.serialize()) && !/localFactor|calibration/.test(guardado),
+        `${ajuste.element('m1').measuredM} m · formato ${ajuste.serialize().format} · ${guardado.length} bytes`);
+      ajuste.undo();
+      report.check('Deshacer devuelve el plano a su tamaño anterior',
+        JSON.stringify(ajuste.design) === antes && ajuste.design.canvas.width === 1600,
+        `ancho ${ajuste.design.canvas.width} cm`);
+
+      const contradictorio = new window.Normia.Model(conMedidas(14.5), app.catalogs, {});
+      const roto = contradictorio.measureFit();
+      let rechazado = false;
+      try {
+        contradictorio.applyMeasureFit();
+      } catch {
+        rechazado = true;
+      }
+      report.check('Con medidas que discrepan más del 2 % no se ajusta y se explica',
+        roto.consistent === false && roto.applicable === false && rechazado
+        && roto.worstDeviationPct > 2
+        && /no coinciden entre sí/.test((() => { try { contradictorio.applyMeasureFit(); } catch (error) { return error.message; } return ''; })()),
+        `peor desvío ${roto.worstDeviationPct.toFixed(1)} %`);
+
+      const sinMedidas = new window.Normia.Model(conMedidas(0), app.catalogs, {});
+      sinMedidas.design.elements.forEach((element) => { delete element.measuredM; });
+      let sinMedidasError = '';
+      try { sinMedidas.applyMeasureFit(); } catch (error) { sinMedidasError = error.message; }
+      report.check('Sin medidas declaradas el ajuste no propone nada y lo explica',
+        sinMedidas.measureFit().count === 0 && sinMedidas.measureFit().applicable === false
+        && /No hay medidas declaradas/.test(sinMedidasError),
+        sinMedidasError.slice(0, 60));
+    }
+
+    /* El bloque del panel: aparece al abrir Ajustes y explica qué pasaría. */
+    {
+      app.model.select([wall.id]);
+      app.model.setProps({ measuredM: 4.2, quality: 'exacta' });
+      q(window, '[data-open-drawer="settings"]')?.click();
+      const bloque = q(window, '[data-measure-fit]');
+      const texto = (bloque?.textContent || '').replace(/\s+/g, ' ');
+      report.check('El panel del lienzo propone ajustar el dibujo a las medidas',
+        bloque?.hidden === false && /medida .* coincide con el dibujo/i.test(texto)
+        && /Ajustar el dibujo/.test(texto) && /Dejar solo las medidas/.test(texto),
+        texto.slice(0, 90));
+      const anchoAntes = app.model.design.canvas.width;
+      q(window, '[data-measure-fit-apply]')?.click();
+      report.check('Ajustar desde el panel reescala y deja nota para la versión',
+        app.model.design.canvas.width !== anchoAntes && /Ajuste a 1 medida/.test(app.fitNote || ''),
+        `${anchoAntes} → ${app.model.design.canvas.width} cm · ${app.fitNote}`);
+      app.model.undo();
+      app.renderNow();
+      app.closeDrawer();
+      app.model.setProps({ measuredM: null });
+    }
+
     /* ------------------------------ límites/seguridad ------------------------------ */
     const previousTool = app.tool;
     app.model.addElement.bind(app.model);
@@ -1732,7 +1998,7 @@ async function main() {
         assetFailures.push(`${key}: ${error.message}`);
       }
     }
-    report.check('Los 395 pictogramas y 420 equipos se instancian sin errores', assetsOk === 815 && assetFailures.length === 0,
+    report.check('Los 395 pictogramas y 422 equipos se instancian sin errores', assetsOk === 817 && assetFailures.length === 0,
       `${assetsOk}/500 · ${assetFailures.slice(0, 3).join(', ')}`);
 
     const xlink = new window.DOMParser().parseFromString(
@@ -1999,6 +2265,83 @@ async function main() {
     report.check('La ocupación declarada se guarda en el lienzo', app.model.design.canvas.occupancy === 40,
       String(app.model.design.canvas.occupancy));
 
+    /* Escenarios de ocupación temporal (NORMIA-006 §31): nombre, personas y
+       quitar. Se guardan con el plano y el auditor los revisa aparte. */
+    const ajustesTexto = q(window, '[data-drawer="settings"]')?.textContent || '';
+    report.check('Los ajustes del piso ofrecen escenarios de ocupación temporal',
+      /Escenarios de ocupación temporal/.test(ajustesTexto) && Boolean(q(window, '[data-scenario-add]')),
+      'bloque presente');
+    q(window, '[data-scenario-add]').click();
+    report.check('Añadir escenario crea una fila corta', qa(window, '[data-scenario-row]').length === 1,
+      `${qa(window, '[data-scenario-row]').length} fila`);
+    let filaEscenario = q(window, '[data-scenario-row]');
+    filaEscenario.querySelector('[data-scenario-name]').value = 'Evento de prueba';
+    filaEscenario.querySelector('[data-scenario-persons]').value = '5';
+    q(window, '[data-canvas-form]').dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
+    report.check('El escenario se guarda en el lienzo sin tocar el aforo declarado',
+      app.model.design.canvas.scenarios?.length === 1
+      && app.model.design.canvas.scenarios[0].name === 'Evento de prueba'
+      && app.model.design.canvas.scenarios[0].persons === 5
+      && app.model.design.canvas.occupancy === 40,
+      `escenario ${app.model.design.canvas.scenarios?.[0]?.persons} · aforo ${app.model.design.canvas.occupancy}`);
+    q(window, '[data-scenario-remove]').click();
+    q(window, '[data-canvas-form]').dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
+    report.check('Quitar el escenario lo borra del lienzo sin dejar la clave',
+      app.model.design.canvas.scenarios === undefined,
+      app.model.design.canvas.scenarios === undefined ? 'clave ausente' : String(app.model.design.canvas.scenarios));
+    q(window, '[data-scenario-add]').click();
+    filaEscenario = q(window, '[data-scenario-row]');
+    filaEscenario.querySelector('[data-scenario-name]').value = 'Visita corta';
+    filaEscenario.querySelector('[data-scenario-persons]').value = '5';
+    q(window, '[data-canvas-form]').dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
+
+    /* Simulacro de evacuación (NORMIA-006 §32): reacción y tiempo medido. */
+    const reaccionField = q(window, '[data-canvas-form] input[name="reaction"]');
+    const medidoField = q(window, '[data-canvas-form] input[name="measured"]');
+    report.check('Los ajustes del piso piden la reacción y el tiempo medido del simulacro',
+      Boolean(reaccionField) && Boolean(medidoField)
+      && /Simulacro de evacuación/.test(q(window, '[data-drawer="settings"]')?.textContent || ''));
+    reaccionField.value = '45';
+    medidoField.value = '70';
+    q(window, '[data-canvas-form]').dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
+    report.check('La reacción y el tiempo medido se guardan en el lienzo',
+      app.model.design.canvas.drill?.reactionS === 45 && app.model.design.canvas.drill?.measuredS === 70,
+      `reacción ${app.model.design.canvas.drill?.reactionS} s · medido ${app.model.design.canvas.drill?.measuredS} s`);
+    medidoField.value = '';
+    q(window, '[data-canvas-form]').dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
+    report.check('Sin tiempo medido el lienzo guarda solo la reacción',
+      app.model.design.canvas.drill?.reactionS === 45 && app.model.design.canvas.drill?.measuredS === undefined,
+      JSON.stringify(app.model.design.canvas.drill));
+    reaccionField.value = '30';
+    q(window, '[data-canvas-form]').dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
+
+    /* El lienzo se edita en la unidad de trabajo sin cambiar el tamaño real. */
+    const canvasForm = q(window, '[data-canvas-form]');
+    const unitSelect = canvasForm?.querySelector('select[name="unit"]');
+    const anchoAntes = app.model.design.canvas.width;
+    const altoAntes = app.model.design.canvas.height;
+    const objetoAntes = { ...elementById(app, rectId) };
+    unitSelect.value = 'm';
+    unitSelect.dispatchEvent(new window.Event('change', { bubbles: true }));
+    const anchoVisible = canvasForm.querySelector('input[name="width"]').value;
+    report.check('Pasar el lienzo a metros reetiqueta las cifras y no lo redimensiona',
+      Number(anchoVisible) === anchoAntes / 100 && app.model.design.canvas.width === anchoAntes,
+      `${anchoVisible} m · ${app.model.design.canvas.width} cm`);
+    canvasForm.dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
+    const objetoDespues = elementById(app, rectId);
+    report.check('Aplicar el lienzo en metros conserva el tamaño y los objetos',
+      app.model.design.canvas.unit === 'm'
+      && Math.round(app.model.design.canvas.width) === anchoAntes
+      && Math.round(app.model.design.canvas.height) === altoAntes
+      && objetoDespues.x === objetoAntes.x && objetoDespues.w === objetoAntes.w,
+      `${Math.round(app.model.design.canvas.width)} × ${Math.round(app.model.design.canvas.height)} cm · objeto ${objetoDespues.w}`);
+    unitSelect.value = 'cm';
+    unitSelect.dispatchEvent(new window.Event('change', { bubbles: true }));
+    canvasForm.dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
+    report.check('Volver a centímetros deja el lienzo como estaba',
+      app.model.design.canvas.unit === 'cm' && Math.round(app.model.design.canvas.width) === anchoAntes,
+      `${app.model.design.canvas.unit} · ${Math.round(app.model.design.canvas.width)} cm`);
+
     await app.saveNow('Plano para revisión', { force: true });
     await sleep(400);
     const savedAuditFloor = JSON.parse((await client.get(`api/floors/${floorId}`, { accept: 'application/json' })).text);
@@ -2006,6 +2349,11 @@ async function main() {
     report.check('El servidor conserva la salida marcada y la ocupación',
       savedAuditDoor?.isExit === true && savedAuditFloor.design?.canvas?.occupancy === 40,
       `salida ${savedAuditDoor?.isExit} · ${savedAuditFloor.design?.canvas?.occupancy} personas`);
+    report.check('El servidor conserva los escenarios de ocupación temporal',
+      savedAuditFloor.design?.canvas?.scenarios?.length === 1
+      && savedAuditFloor.design.canvas.scenarios[0].name === 'Visita corta'
+      && savedAuditFloor.design.canvas.scenarios[0].persons === 5,
+      `${savedAuditFloor.design?.canvas?.scenarios?.length || 0} escenario guardado`);
 
     report.check('El arranque recibe la dirección del auditor', decodeURIComponent(String(app.boot.auditUrl || '')).includes('/audit'), app.boot.auditUrl);
     report.check('El cajón de revisión avisa de que no es un dictamen',
@@ -2018,10 +2366,26 @@ async function main() {
     const auditReport = app.audit.report;
     report.check('La revisión real marca su paso en la guía de primeros pasos',
       app.guide?.flag('revision') === true);
-    report.check('La revisión mide salidas, recorrido y tiempo de evacuación',
+    report.check('La revisión mide salidas, recorrido, aforo y tiempo de evacuación',
       auditReport?.exits?.count >= 1 && Boolean(auditReport.travel) && Boolean(auditReport.egress)
-      && qa(window, '[data-drawer="audit"] .audit-stat').length === 4,
+      && qa(window, '[data-drawer="audit"] .audit-stat').length === 5,
       `${auditReport?.exits?.count} salidas · ${auditReport?.travel?.longestM} m · ${auditReport?.egress?.estimatedTimeS} s`);
+    /* Aforo (NORMIA-006 §27): capacidad por superficie y aforo que rige. */
+    report.check('El cajón de revisión calcula el aforo máximo y el permitido',
+      Number.isFinite(auditReport?.occupancy?.maxPersons) && auditReport.occupancy.maxPersons > 0
+      && auditReport.occupancy.permitted === Math.min(
+        auditReport.occupancy.declared || auditReport.occupancy.maxPersons,
+        auditReport.occupancy.maxPersons)
+      && /Aforo máximo/.test(q(window, '[data-drawer="audit"]')?.textContent || '')
+      && /Aforo permitido/.test(q(window, '[data-drawer="audit"]')?.textContent || ''),
+      `máximo ${auditReport?.occupancy?.maxPersons} · permitido ${auditReport?.occupancy?.permitted} · ${auditReport?.occupancy?.freeAreaM2} m²`);
+    report.check('El cajón de revisión calcula el escenario y lo deja fuera del aforo habitual',
+      auditReport?.scenarios?.count === 1
+      && auditReport.scenarios.items[0].persons === 5
+      && auditReport.scenarios.base.people === auditReport.occupancy.people
+      && /Escenarios/.test(q(window, '[data-drawer="audit"]')?.textContent || '')
+      && /No aprueban el evento/.test(q(window, '[data-drawer="audit"]')?.textContent || ''),
+      `${auditReport?.scenarios?.count} escenario · base ${auditReport?.scenarios?.base?.people} personas`);
     report.check('El cajón muestra la medición y el listado de hallazgos',
       /Medición de evacuación/.test(q(window, '[data-drawer="audit"]')?.textContent || '')
       && qa(window, '[data-drawer="audit"] .audit-finding').length === (auditReport?.findings || []).length,
@@ -2262,6 +2626,8 @@ async function main() {
       app.activeDrawer === null && app.measure.tracing === false && !app.svg.classList.contains('is-measuring'));
 
     /* ---------------------------- modo presentación ---------------------------- */
+    /* ¿La figura se movió? Compara el translate del atributo transform. */
+    const caminoCambio = (node, previo) => Boolean(node) && node.getAttribute('transform') !== previo;
     const routes = app.model.design.elements.filter((element) => element.type === 'route');
     const railPresent = q(window, '[data-present-open]');
     report.check('La barra lateral ofrece el modo presentación', Boolean(railPresent && app.present));
@@ -2297,6 +2663,86 @@ async function main() {
     report.check('La velocidad de las rutas se ajusta desde la barra',
       app.present.speed === 'fast' && app.present.animationDuration(routes[0]) < slowDuration,
       `${app.present.animationDuration(routes[0])} ms`);
+    /* Simulacro animado: figuras sobre las rutas, reloj y llegada al punto. */
+    q(window, '[data-present-drill]').click();
+    await waitFor(() => q(window, '[data-drill-play]'), 20000);
+    const drillReport = app.present.drill?.report?.drill || null;
+    await waitFor(() => qa(window, '#plan-canvas .drill-figure').length >= 1, 20000);
+    report.check('El simulacro toma del informe las rutas y el tiempo objetivo',
+      Boolean(drillReport) && drillReport.routes.length >= 1
+      && Number.isFinite(drillReport.targetS) && drillReport.targetS > 0
+      && /Objetivo/.test(q(window, '[data-present-panel]')?.textContent || ''),
+      `${drillReport?.routes?.length || 0} rutas · objetivo ${drillReport?.targetS} s`);
+    report.check('El panel del simulacro avisa de que no mide un simulacro real',
+      /No mide un simulacro real/.test(q(window, '[data-present-panel]')?.textContent || ''));
+    app.present.stepDrill(0);
+    const figuras = qa(window, '#plan-canvas .drill-figure');
+    const rutas = drillReport?.routes || [];
+    report.check('El simulacro dibuja figuras sobre el camino de cada ruta',
+      figuras.length === app.present.drillFigures.length && figuras.length >= rutas.length
+      && rutas.every((ruta) => app.present.drillFigures.some((figure) => figure.routeId === ruta.id)),
+      `${figuras.length} figuras · ${rutas.length} rutas`);
+    /* El camino sale del servidor: las figuras lo recorren, no van en línea recta. */
+    /* Distancia de un punto al camino: cero significa que va por él. */
+    const sobreCamino = (point, path) => path.reduce((best, vertex, index) => {
+      if (index === 0) return best;
+      const a = path[index - 1];
+      const dx = vertex.x - a.x;
+      const dy = vertex.y - a.y;
+      const length = dx * dx + dy * dy;
+      const ratio = length > 0 ? Math.max(0, Math.min(1, ((point.x - a.x) * dx + (point.y - a.y) * dy) / length)) : 0;
+      return Math.min(best, Math.hypot(point.x - (a.x + dx * ratio), point.y - (a.y + dy * ratio)));
+    }, Infinity);
+    const sobreElCamino = app.present.drillFigures.every((figure) => {
+      const ruta = rutas.find((item) => item.id === figure.routeId);
+      if (!ruta || !Array.isArray(ruta.path)) return false;
+      const ultimo = ruta.path[ruta.path.length - 1];
+      const fin = figure.points[figure.points.length - 1];
+      return sobreCamino(figure.points[0], ruta.path) < 0.5
+        && Math.hypot(fin.x - ultimo.x, fin.y - ultimo.y) < 0.5
+        && figure.points.every((point) => sobreCamino(point, ruta.path) < 0.5);
+    });
+    report.check('Las figuras arrancan y terminan sobre el camino calculado del plano',
+      sobreElCamino && rutas.every((ruta) => Array.isArray(ruta.path) && ruta.path.length >= 2 && ruta.pathM > 0),
+      rutas.map((ruta) => `${ruta.id}: ${ruta.path?.length} puntos · ${ruta.pathM} m`).join(' · '));
+    const inicioTransform = figuras.map((node) => node.getAttribute('transform')).join('|');
+    report.check('El simulacro empieza con todas las figuras esperando la alarma',
+      figuras.every((node) => node.classList.contains('is-waiting')),
+      figuras[0]?.getAttribute('transform') || 'sin figura');
+    const reaccionPanel = q(window, '[data-drill-reaction]');
+    const reaccionActual = Number(reaccionPanel.value);
+    report.check('Cambiar la reacción desde el panel reinicia el simulacro',
+      app.present.drill.reactionS === reaccionActual && app.present.drill.t === 0
+      && q(window, '[data-drill-clock]')?.textContent === '0 s');
+    const totalFiguras = Math.max(...app.present.drillFigures.map((figure) => figure.arrivalS), 0);
+    app.present.stepDrill(Math.max(1, reaccionActual - 1));
+    const antesDeArrancar = qa(window, '#plan-canvas .drill-figure').map((node) => node.getAttribute('transform')).join('|');
+    report.check('Antes de la reacción las figuras siguen en su sitio',
+      antesDeArrancar === inicioTransform);
+    app.present.stepDrill(reaccionActual + Math.max(0.5, totalFiguras * 0.05));
+    const enCamino = app.present.drillFigures.filter((figure) => figure.phase === 'walking').length;
+    const despues = qa(window, '#plan-canvas .drill-figure').map((node) => node.getAttribute('transform')).join('|');
+    report.check('Pasada la reacción las figuras caminan por su camino',
+      enCamino >= 1 && despues !== inicioTransform
+      && /en camino|esperando|llegaron/.test(q(window, '[data-drill-state]')?.textContent || ''),
+      `${enCamino} en camino · ${q(window, '[data-drill-state]')?.textContent}`);
+    app.present.stepDrill(totalFiguras + 0.5);
+    report.check('Al final del tiempo objetivo todas las figuras llegan',
+      qa(window, '#plan-canvas .drill-figure.is-arrived').length === app.present.drillFigures.length
+      && /completo/.test(q(window, '[data-drill-clock]')?.textContent || ''),
+      `${qa(window, '.drill-figure.is-arrived').length} de ${app.present.drillFigures.length} · reloj ${q(window, '[data-drill-clock]')?.textContent}`);
+    q(window, '[data-drill-reset]').click();
+    report.check('Reiniciar devuelve las figuras al inicio y el reloj a cero',
+      app.present.drill.t === 0 && q(window, '[data-drill-clock]')?.textContent === '0 s'
+      && qa(window, '#plan-canvas .drill-figure.is-arrived').length === 0,
+      q(window, '[data-drill-clock]')?.textContent);
+    q(window, '[data-present-exit]').click();
+    report.check('Salir de la presentación retira el simulacro del lienzo',
+      !app.present.active && !q(window, '#plan-canvas .drill-layer')
+      && app.present.drillFigures.length === 0);
+    // Volver a entrar para el resto de las comprobaciones de presentación.
+    q(window, '[data-present-open]').click();
+    await waitFor(() => q(window, '[data-present]') && !q(window, '[data-present]').hidden, 10000);
     const selectedBefore = [...app.model.selection];
     app.svg.dispatchEvent(new window.MouseEvent('pointerdown', { clientX: 300, clientY: 300, bubbles: true }));
     report.check('Durante la presentación el lienzo no edita ni selecciona',

@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "notice": "Umbrales de referencia configurables para el auditor de planos. No son una norma ni un dictamen: ajústalos a la normativa aplicable y revísalos con un profesional competente antes de usarlos como criterio de cumplimiento.",
   "grid": {
     "cellCm": 20,
@@ -33,5 +33,13 @@
       "F005"
     ],
     "youAreHereCode": "SVC_AQUI"
+  },
+  "firstAid": {
+    "notice": "Recursos de atención de primeros auxilios. Los umbrales numéricos son criterios de referencia de la aplicación, no exigencias normativas: la norma aplicable depende del establecimiento, del riesgo y de la afluencia de público, y la revisa un profesional competente.",
+    "reference": "Decreto 1072 de 2015 (SG-SST: atención oportuna de primeros auxilios) · Resolución 0312 de 2019 (recursos para la prevención y respuesta ante emergencias) · Ley 1831 de 2017 y Resolución 3316 de 2019 (uso del desfibrilador externo automático DEA)",
+    "kitTravelM": 30,
+    "stretcherPerFloor": true,
+    "aedMinPersons": 500,
+    "aedTravelM": 100
   }
 }

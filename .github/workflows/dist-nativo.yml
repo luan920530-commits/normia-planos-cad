@@ -1,0 +1,174 @@
+# Distribución de la aplicación nativa en C (macOS 12 Monterey).
+#
+# Lo que se publica aquí es la **ventana AppKit** con el núcleo en C
+# (`native/macos`), no la edición Electron: no lleva WebView, ni Chromium, ni PHP
+# por dentro. Pesa unos pocos MB y abre en macOS 12 Monterey, tanto en Apple
+# Silicon como en Intel.
+#
+# El mínimo del sistema no se declara solo en el `Info.plist`: los runners de
+# GitHub son macOS 15, así que el binario se compila **contra** el destino 12.0
+# (`-mmacosx-version-min=12.0`, `DEPLOYMENT ?= 12.0` en `native/macos/Makefile`)
+# y el flujo lee el `minos` del Mach-O con `otool`. Si algún día el paquete pide
+# más que 12.0, el trabajo falla en vez de entregar un `.dmg` que no abre en
+# Monterey.
+#
+# Firma: no hay certificados de Apple. El `.app` se firma en modo **ad-hoc**
+# (`codesign --sign -`), que es lo mínimo para que un binario arm64 arranque y
+# para que macOS no lo trate como dañado; Gatekeeper seguirá pidiendo el permiso
+# la primera vez y se explica en docs/APP-NATIVA.md.
+name: Distribución de la app nativa (macOS 12)
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+concurrency:
+  group: nativo-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+env:
+  # Un solo sitio donde vive la promesa de Monterey: se usa en el armado, en la
+  # comprobación del Mach-O y en el nombre de los archivos.
+  MACOS_MINIMO: '12.0'
+
+jobs:
+  paquete:
+    name: App nativa · macOS ${{ matrix.arch }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Un Mac por arquitectura: clang de macOS no compila para la otra.
+          - os: macos-latest
+            arch: arm64
+          - os: macos-15-intel
+            arch: x64
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Solo para el icono (.icns), que se genera con el logo del repositorio.
+          node-version: '22'
+
+      - name: Dependencias del icono
+        run: npm install --no-audit --no-fund
+
+      # Un solo comando hace todo el armado (el mismo que se usa en un Mac):
+      # compilar con destino 12.0, icono, versión del plist, comprobación del
+      # minos y de la arquitectura, firma ad-hoc, `--check` y el .dmg.
+      - name: Armar el instalador nativo
+        run: |
+          set -o pipefail
+          bash tools/nativo/build-mac.sh --arch=${{ matrix.arch }} \
+            2>&1 | tee "$RUNNER_TEMP/nativo.log"
+
+      # Segunda lectura, sobre el archivo que la persona descarga y no sobre el
+      # que quedó en build/: se monta el .dmg, se lee el mínimo de macOS, el
+      # minos del binario, la arquitectura, la firma y los catálogos.
+      - name: Comprobar el .dmg que se publica
+        run: |
+          set -euo pipefail
+          DMG="$(ls dist/nativo/*-macos-${{ matrix.arch }}.dmg | head -1)"
+          echo "Discos generados:"; ls -lh dist/nativo
+          MONTAJE="$RUNNER_TEMP/montado"
+          rm -rf "$MONTAJE"; mkdir -p "$MONTAJE"
+          hdiutil attach "$DMG" -nobrowse -quiet -mountpoint "$MONTAJE"
+          APP="$MONTAJE/Normia Estudio.app"
+          BIN="$APP/Contents/MacOS/NormiaEstudio"
+
+          MIN="$(/usr/libexec/PlistBuddy -c 'Print :LSMinimumSystemVersion' "$APP/Contents/Info.plist")"
+          MINOS="$(otool -l "$BIN" | awk '/LC_BUILD_VERSION/{visto=1} visto && /minos/{print $2; exit}')"
+          ARCHS="$(lipo -archs "$BIN")"
+          # `lipo` dice x86_64; el nombre del archivo dice x64. Es el mismo
+          # binario, así que se compara contra el nombre que usa `uname -m`.
+          case "${{ matrix.arch }}" in
+            x64) ESPERADA="x86_64" ;;
+            *) ESPERADA="${{ matrix.arch }}" ;;
+          esac
+          echo "plist $MIN · minos $MINOS · arquitecturas $ARCHS (esperada $ESPERADA)"
+
+          fallo=0
+          if [ "$MIN" != "$MACOS_MINIMO" ]; then
+            echo "::error title=macOS::el Info.plist del .dmg exige macOS $MIN; se promete $MACOS_MINIMO"; fallo=1
+          fi
+          if [ "$MINOS" != "$MACOS_MINIMO" ]; then
+            echo "::error title=macOS::el binario del .dmg exige macOS ${MINOS:-desconocido}, no $MACOS_MINIMO"; fallo=1
+          fi
+          if [ "$ARCHS" != "$ESPERADA" ]; then
+            echo "::error title=arquitectura::el binario es $ARCHS y el trabajo es ${{ matrix.arch }}"; fallo=1
+          fi
+          # Los catálogos viajan dentro del paquete: sin ellos el cajón de
+          # revisión mide el plano pero no revisa señalización ni extintores.
+          for catalogo in iso7010-catalog.json service-signs.json cad-objects.json \
+                          audit-criteria.json extinguisher-criteria.json; do
+            if [ ! -f "$APP/Contents/Resources/resources/$catalogo" ]; then
+              echo "::error title=catálogos::falta $catalogo dentro del .dmg"; fallo=1
+            fi
+          done
+          # La firma ad-hoc tiene que seguir en pie dentro del disco: si se copió
+          # algo después de firmar, el sistema lo rechaza.
+          if ! codesign --verify --deep --strict "$APP" 2>"$RUNNER_TEMP/firma.txt"; then
+            echo "::error title=firma::la firma no verifica dentro del .dmg"
+            cat "$RUNNER_TEMP/firma.txt" || true
+            fallo=1
+          fi
+          # El arranque se comprueba aquí y no solo en build/: es el binario
+          # que viaja dentro del disco montado.
+          if ! "$BIN" --check; then
+            echo "::error title=humo::el binario del .dmg no respondió a --check"; fallo=1
+          fi
+          hdiutil detach "$MONTAJE" -quiet
+          if [ "$fallo" -ne 0 ]; then exit 1; fi
+          echo "::notice title=macOS::el .dmg abre en macOS $MINOS o superior · ${{ matrix.arch }} · firma ad-hoc verificada"
+
+      - name: Publicar el instalador
+        uses: actions/upload-artifact@v4
+        with:
+          name: normia-estudio-nativo-macos-${{ matrix.arch }}
+          path: |
+            dist/nativo/*.dmg
+            dist/nativo/*.zip
+            dist/nativo/*.SHA256SUMS*.txt
+          if-no-files-found: error
+
+      # Las anotaciones del trabajo son lo único que se puede leer desde la API:
+      # el final del armado se publica cuando algo falla.
+      - name: Diagnóstico del armado
+        if: failure()
+        run: |
+          tail -n 40 "$RUNNER_TEMP/nativo.log" 2>/dev/null || true
+          ls -R native/macos/build 2>/dev/null | head -20 || true
+
+  adjuntar:
+    name: Adjuntar a la release
+    needs: paquete
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artefactos
+
+      - name: Adjuntar los archivos del release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artefactos/**/*.dmg
+            artefactos/**/*.zip
+            artefactos/**/*.SHA256SUMS*.txt
+          fail_on_unmatched_files: false
+          body: |
+            Aplicación **nativa en C** de Normia Estudio (ventana AppKit, sin
+            Electron, sin WebView y sin PHP): macOS 12 Monterey o superior, en
+            Apple Silicon (`…-arm64.dmg`) e Intel (`…-x64.dmg`).
+
+            El `.dmg` va firmado en modo ad-hoc (sin certificado de Apple), así
+            que la primera vez hay que abrirlo con clic derecho → **Abrir**, o
+            quitar la cuarentena: `xattr -dr com.apple.quarantine "/Applications/Normia Estudio.app"`.

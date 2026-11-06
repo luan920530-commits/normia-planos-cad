@@ -62,6 +62,12 @@ final class PluginManager
      */
     public static function all(): array
     {
+        // Sin base de datos configurada (el estudio abre el editor antes de
+        // instalar nada) no hay complementos registrados: se devuelve vacío en
+        // vez de reventar la biblioteca entera.
+        if (!\App\Core\Config::isInstalled()) {
+            return [];
+        }
         $rows = [];
         foreach (Database::query('SELECT id, enabled, installed_at FROM plugins ORDER BY installed_at, id') as $row) {
             $manifest = self::read((string) $row['id']);

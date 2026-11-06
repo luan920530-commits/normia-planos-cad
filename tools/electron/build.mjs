@@ -41,11 +41,19 @@ function isUnwantedPackage(name) {
 }
 
 function parseArgs(argv) {
-  const args = { out: path.join(ROOT, 'dist', 'electron'), arch: process.arch === 'x64' ? 'x64' : process.arch, installer: true };
+  const args = {
+    out: path.join(ROOT, 'dist', 'electron'),
+    arch: process.arch === 'x64' ? 'x64' : process.arch,
+    installer: true,
+    // `completo` = la aplicación entera (cuentas, proyectos y editor).
+    // `estudio` = solo el editor: sin portada, sin cuentas y sin base de datos.
+    mode: 'completo',
+  };
   for (const argument of argv) {
     const match = /^--([a-z-]+)(?:=(.*))?$/.exec(argument);
     if (!match) continue;
     if (match[1] === 'sin-instalador') args.installer = false;
+    else if (match[1] === 'modo') args.mode = match[2] === 'estudio' ? 'estudio' : 'completo';
     else if (match[2] !== undefined) args[match[1]] = match[2];
   }
   return args;
@@ -102,37 +110,62 @@ function buildRuntime(destination) {
   return modules;
 }
 
+/**
+ * Ficha del producto que se empaqueta.
+ *
+ * Las dos ediciones comparten todo el motor: el paquete PHP, el intérprete y el
+ * armado. Lo único que cambia es la ventana que se abre (la aplicación entera o
+ * solo el editor) y el nombre con el que se instala, para que ambas puedan vivir
+ * en el mismo equipo sin pisarse.
+ */
+function productFor(mode) {
+  const estudio = mode === 'estudio';
+  return {
+    estudio,
+    name: estudio ? 'normia-estudio' : 'normia-planos-cad',
+    productName: estudio ? 'Normia Estudio' : 'Normia Planos CAD',
+    appId: estudio ? 'co.normia.estudio' : 'co.normia.cad',
+    slug: estudio ? 'normia-estudio' : 'normia-planos-cad',
+    mainSource: estudio ? path.join(HERE, 'estudio', 'main.mjs') : path.join(HERE, 'main.mjs'),
+    preloadSource: estudio ? path.join(HERE, 'estudio', 'preload.cjs') : path.join(HERE, 'preload.cjs'),
+    description: estudio
+      ? 'El editor de planos de emergencia, suelto: abre y guarda planos en tu equipo, sin cuentas ni servidor.'
+      : 'Planos de emergencia y señalización: editor CAD en el escritorio, sin servidor.',
+  };
+}
+
 function build() {
   const args = parseArgs(process.argv.slice(2));
+  const product = productFor(args.mode);
   const version = readVersion();
   const out = path.resolve(args.out);
   const stage = path.join(out, 'stage');
   fs.rmSync(out, { recursive: true, force: true });
   fs.mkdirSync(stage, { recursive: true });
 
-  console.log(`· Normia Planos CAD ${version} · edición Electron`);
+  console.log(`· ${product.productName} ${version} · edición Electron${product.estudio ? ' (solo editor)' : ''}`);
   console.log('· Copiando la aplicación…');
   copyApp(path.join(stage, 'app'), { excludeTools: true });
 
   console.log('· Copiando el intérprete PHP 8.3 para WebAssembly…');
   const modules = buildRuntime(path.join(stage, 'runtime'));
 
-  console.log('· Copiando la ventana…');
+  console.log(`· Copiando la ventana${product.estudio ? ' del editor' : ''}…`);
   const electronDir = path.join(stage, 'electron');
   fs.mkdirSync(electronDir, { recursive: true });
-  for (const file of ['main.mjs', 'server.mjs', 'preload.cjs']) {
-    fs.copyFileSync(path.join(HERE, file), path.join(electronDir, file));
-  }
+  fs.copyFileSync(path.join(HERE, 'server.mjs'), path.join(electronDir, 'server.mjs'));
+  fs.copyFileSync(product.mainSource, path.join(electronDir, 'main.mjs'));
+  fs.copyFileSync(product.preloadSource, path.join(electronDir, 'preload.cjs'));
 
   console.log('· Generando el icono…');
   const buildDir = path.join(stage, 'build');
   execFileSync(process.execPath, [path.join(HERE, 'make-icon.mjs'), path.join(ROOT, 'assets/img/normia-logo.png'), buildDir], { stdio: 'inherit' });
 
   const manifest = {
-    name: 'normia-planos-cad',
-    productName: 'Normia Planos CAD',
+    name: product.name,
+    productName: product.productName,
     version,
-    description: 'Planos de emergencia y señalización: editor CAD en el escritorio, sin servidor.',
+    description: product.description,
     private: true,
     type: 'module',
     main: 'electron/main.mjs',
@@ -140,9 +173,9 @@ function build() {
     license: 'UNLICENSED',
     homepage: 'https://github.com/luan920530-commits/normia-planos-cad',
     build: {
-      appId: 'co.normia.cad',
-      productName: 'Normia Planos CAD',
-      copyright: `Normia Planos CAD ${version}`,
+      appId: product.appId,
+      productName: product.productName,
+      copyright: `${product.productName} ${version}`,
       directories: { output: path.join(out, 'installers'), buildResources: buildDir },
       files: ['electron/**/*', 'package.json'],
       extraResources: [
@@ -179,10 +212,10 @@ function build() {
         // tabla de requisitos de docs/ELECTRON.md y el mensaje del instalador.
         minimumSystemVersion: '12.0',
         target: [{ target: 'dmg', arch: [args.arch] }, { target: 'zip', arch: [args.arch] }],
-        artifactName: `normia-planos-cad-\${version}-macos-\${arch}.\${ext}`,
+        artifactName: `${product.slug}-\${version}-macos-\${arch}.\${ext}`,
       },
       dmg: {
-        title: 'Normia Planos CAD',
+        title: product.productName,
         contents: [
           { x: 130, y: 220, type: 'file' },
           { x: 410, y: 220, type: 'link', path: '/Applications' },
@@ -191,7 +224,7 @@ function build() {
       win: {
         icon: path.join(buildDir, 'icon.ico'),
         target: [{ target: 'nsis', arch: [args.arch] }, { target: 'zip', arch: [args.arch] }],
-        artifactName: `normia-planos-cad-\${version}-windows-\${arch}.\${ext}`,
+        artifactName: `${product.slug}-\${version}-windows-\${arch}.\${ext}`,
       },
       nsis: {
         oneClick: false,
@@ -199,15 +232,15 @@ function build() {
         allowToChangeInstallationDirectory: true,
         createDesktopShortcut: true,
         createStartMenuShortcut: true,
-        shortcutName: 'Normia Planos CAD',
-        artifactName: `normia-planos-cad-\${version}-windows-\${arch}-instalador.\${ext}`,
-        uninstallDisplayName: 'Normia Planos CAD',
+        shortcutName: product.productName,
+        artifactName: `${product.slug}-\${version}-windows-\${arch}-instalador.\${ext}`,
+        uninstallDisplayName: product.productName,
       },
       linux: {
         icon: path.join(buildDir, 'icon.png'),
         category: 'Graphics',
         target: [{ target: 'AppImage', arch: [args.arch] }],
-        artifactName: `normia-planos-cad-\${version}-linux-\${arch}.\${ext}`,
+        artifactName: `${product.slug}-\${version}-linux-\${arch}.\${ext}`,
       },
     },
   };
