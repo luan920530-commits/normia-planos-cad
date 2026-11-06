@@ -27,6 +27,8 @@ const makefile = read('Makefile');
 const leerFlujo = (name) => fs.readFileSync(path.join(repoRoot, '.github', 'workflows', name), 'utf8');
 const verifyWorkflow = leerFlujo('verify.yml');
 const desktopWorkflow = leerFlujo('dist-desktop.yml');
+const nativoWorkflow = leerFlujo('dist-nativo.yml');
+const buildMac = fs.readFileSync(path.join(repoRoot, 'tools', 'nativo', 'build-mac.sh'), 'utf8');
 /**
  * El código sin comentarios. Los comentarios explican justamente por qué no se
  * usa un WebView, así que no pueden contar como si se usara.
@@ -291,6 +293,43 @@ report.check('El minos comprobado se publica como anotación, no solo en el regi
 report.check('El escritorio compila el intérprete de PHP con destino macOS 12',
   /MACOSX_DEPLOYMENT_TARGET: '12\.0'/.test(desktopWorkflow) && /otool -l/.test(desktopWorkflow),
   'dist-desktop.yml · MACOSX_DEPLOYMENT_TARGET');
+
+// El flujo de `verify.yml` compila y prueba; lo que se **descarga** en Monterey
+// sale de dist-nativo.yml, que tiene que sostener la misma promesa y probarla
+// sobre el archivo publicado, no solo sobre la carpeta de trabajo.
+report.check('El instalador nativo se compila con destino macOS 12 desde el guion',
+  /DEPLOYMENT="12\.0"/.test(buildMac) && /make -C native\/macos DEPLOYMENT="\$DEPLOYMENT"/.test(buildMac)
+  && /-mmacosx-version-min/.test(makefile),
+  'tools/nativo/build-mac.sh · 12.0');
+
+report.check('El guion comprueba el minos, la arquitectura y los catálogos antes de firmar',
+  /otool -l "\$BIN" \.\.\.|awk '\/LC_BUILD_VERSION\/\{visto=1\}/.test(buildMac)
+  && /lipo -archs/.test(buildMac) && /iso7010-catalog\.json/.test(buildMac)
+  && /codesign --force --deep --sign -/.test(buildMac),
+  'otool · lipo · catálogos · ad-hoc');
+
+report.check('El guion vuelve a leer el mínimo dentro del .dmg y lo firma antes de armar',
+  /hdiutil attach "\$SALIDA\/\$BASE\.dmg"/.test(buildMac)
+  && /MIN_DMG=/.test(buildMac) && /MINOS_DMG=/.test(buildMac)
+  && /shasum -a 256/.test(buildMac),
+  'montaje · SHA-256');
+
+report.check('El flujo de distribución publica el .dmg nativo para arm64 e Intel',
+  /macos-latest[\s\S]*arm64/.test(nativoWorkflow) && /macos-15-intel[\s\S]*x64/.test(nativoWorkflow)
+  && /dist\/nativo\/\*\.dmg/.test(nativoWorkflow) && /tool-gh-release|action-gh-release/.test(nativoWorkflow),
+  'dist-nativo.yml · arm64 · x64');
+
+report.check('El flujo comprueba el .dmg montado, no solo la carpeta de trabajo',
+  /hdiutil attach "\$DMG"/.test(nativoWorkflow)
+  && /MACOS_MINIMO: '12\.0'/.test(nativoWorkflow)
+  && /the .dmg|\.dmg abre en macOS/.test(nativoWorkflow)
+  && /codesign --verify --deep --strict/.test(nativoWorkflow),
+  'dist-nativo.yml · minos del disco');
+
+report.check('El paquete declara la versión de la entrega, no la de la etapa N1',
+  /<key>CFBundleShortVersionString<\/key>\s*<string>\d+\.\d+\.\d+<\/string>/.test(plist)
+  && !/<string>0\.1\.0<\/string>/.test(plist) && /CFBundleIconFile/.test(plist),
+  'CFBundleShortVersionString · AppIcon');
 
 report.check('El paquete se identifica aparte de las ediciones existentes',
   /co\.normia\.estudio\.nativo/.test(plist) && /CFBundleDocumentTypes/.test(plist)

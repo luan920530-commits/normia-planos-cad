@@ -140,9 +140,23 @@ este entorno (Linux, sin pantalla) es la ventana en sí: el ratón, el teclado y
 dibujo en pantalla los ve una persona en su Mac.
 
 El `.app` se publica como **artefacto del trabajo «Ventana nativa de macOS»**
-(`NormiaEstudio-nativo-macos`): así se descarga y se abre en un Mac con Intel sin
-firma ni release. Al abrirlo por primera vez, macOS pide permiso en
-*Ajustes del Sistema › Privacidad y seguridad* porque llega sin firmar.
+(`NormiaEstudio-nativo-macos`): así se descarga y se abre en un Mac con Intel,
+en macOS 12 Monterey o superior, sin release. Al abrirlo por primera vez, macOS
+pide permiso en *Ajustes del Sistema › Privacidad y seguridad* porque llega sin
+certificado de Apple (va firmado en modo ad-hoc).
+
+Y para instalarlo como una aplicación normal hay un instalador propio:
+`dist-nativo.yml` publica el **`.dmg` de Monterey** para Apple Silicon y para
+Intel (`normia-estudio-nativo-<versión>-macos-<arm64|x64>.dmg`), con el enlace a
+*Aplicaciones* dentro, firma ad-hoc verificada y las sumas SHA-256. El flujo
+monta el `.dmg` ya generado y vuelve a leer el `minos` del binario: si alguno
+pide más de 12.0, el trabajo falla en vez de publicarlo. En un Mac se arma con
+un comando:
+
+```sh
+bash tools/nativo/build-mac.sh            # compila, firma y arma el .dmg
+bash tools/nativo/build-mac.sh --sin-dmg  # solo la .app
+```
 
 ## Lo que sigue
 

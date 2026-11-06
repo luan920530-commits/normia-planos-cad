@@ -891,6 +891,7 @@ más en el equipo.
 | macOS 12 Monterey o superior (Intel y Apple Silicon) | `normia-planos-cad-<versión>-macos-x64.pkg` · `…-arm64.pkg` | Ninguno adicional |
 | Windows 10 y 11 de 64 bits | `normia-planos-cad-<versión>-windows-x64.exe` | Ninguno adicional |
 | Android 8.0 o superior | `normia-planos-cad-<versión>-android.apk` | WebView actualizado |
+| macOS 12 Monterey o superior · solo editor, ventana nativa en C | `normia-estudio-nativo-<versión>-macos-arm64.dmg` · `…-macos-x64.dmg` | Ninguno adicional |
 
 - **Escritorio.** Instalador por usuario (sin permisos de administrador en
   Windows) que copia la app y su propio PHP 8.3. El lanzador escucha solo en
@@ -908,10 +909,14 @@ más en el equipo.
   instalador sin avisos.
 - **Windows 7, 8 y 8.1 no están soportados**: PHP 8.x exige Windows 8 o superior
   y esos sistemas ya no reciben navegadores actualizados.
-- **macOS 12 Monterey está soportado en las dos ediciones.** La edición Electron
+- **macOS 12 Monterey está soportado en las tres ediciones.** La edición Electron
   se compila con **Electron 43**, la última rama que abre en Monterey (Electron
   44 exige macOS 13 Ventura); el paquete declara `LSMinimumSystemVersion 12.0`.
-  En macOS 12 también sirve el `.pkg` de la edición nativa.
+  En macOS 12 también sirven el `.pkg` de la edición nativa (PHP estático) y el
+  **`.dmg` de la app nativa en C** (ventana AppKit, sin Electron ni WebView, unos
+  pocos MB), que se compila y se publica con ese mismo mínimo: el flujo lee el
+  `minos` del binario y **falla** si pide más de 12.0. Ver
+  [`docs/APP-NATIVA.md`](docs/APP-NATIVA.md) §15.
 
 ### Dos ediciones
 
@@ -1194,6 +1199,15 @@ y eso es una sola función.
   intérprete de PHP del paquete de escritorio se compila con
   `MACOSX_DEPLOYMENT_TARGET=12.0` y se verifica igual. Lo que se entrega abre en
   Monterey, no solo lo promete.
+- **El instalador de Monterey ya se publica** (`dist-nativo.yml`): `.dmg` de la
+  aplicación **nativa en C** para Apple Silicon e Intel, con el enlace a
+  Aplicaciones dentro, firma ad-hoc verificada y `SHA256SUMS-<arch>.txt`. El
+  flujo monta el `.dmg` generado y vuelve a leer el `Info.plist`, el `minos`, la
+  arquitectura, la firma y los catálogos: si algo pide más de macOS 12.0, el
+  trabajo falla en vez de entregar un instalador que no abre en Monterey. El
+  armado completo vive en `tools/nativo/build-mac.sh`, que también se ejecuta en
+  un Mac con un solo comando; el `Info.plist` deja de mentir con el `0.1.0` de la
+  etapa N1 y la app sale con su icono.
 
 ## Cambios de la versión 1.29.0
 

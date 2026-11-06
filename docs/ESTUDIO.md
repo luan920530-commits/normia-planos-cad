@@ -11,6 +11,14 @@ en un proyecto de la edición completa, sin conversiones.
 | macOS 12 Monterey o superior · Intel y Apple Silicon | `normia-estudio-<versión>-macos-arm64.dmg` · `…-macos-x64.dmg` | Ninguno adicional |
 | Windows 10 y 11 de 64 bits | `normia-estudio-<versión>-windows-x64-instalador.exe` | Ninguno adicional |
 | Linux de 64 bits | `normia-estudio-<versión>-linux-x64.AppImage` | `libfuse2` o `--appimage-extract-and-run` |
+| macOS 12 Monterey o superior · **ventana nativa en C**, solo editor | `normia-estudio-nativo-<versión>-macos-arm64.dmg` · `…-macos-x64.dmg` | Ninguno adicional |
+
+> **Dos formas de abrir el editor en Monterey.** La de esta página es la edición
+> Electron (la misma en macOS, Windows y Linux). La **nativa en C** —ventana AppKit
+> con el núcleo en C, sin Electron, sin WebView y sin PHP dentro— se publica aparte,
+> pesa unos pocos MB y también se compila con mínimo macOS 12.0, comprobado en el
+> Mach-O del `.dmg` publicado. Se detalla en
+> [`APP-NATIVA.md`](APP-NATIVA.md) §15.
 
 > **Por qué macOS 12 y no 13.** Se compila con **Electron 43**, la última rama que
 > abre en **macOS 12 Monterey** (Electron 39–43). Electron 44 subió el mínimo a

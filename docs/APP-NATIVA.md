@@ -706,3 +706,50 @@ sabía buscar el camino: `norma_grid_path()` recorre el espacio libre con los
 vecinos de siempre y el simulacro solo suma tramos. Lo que **no** entra en la
 ventana es la puesta en escena: las figuras moviéndose en modo presentación
 siguen en la web. Ver «El simulacro» más abajo.
+
+## 15. El instalador de Monterey: lo que se descarga (2026-11-06)
+
+Hasta aquí la ventana nativa **se compilaba y se probaba** en `verify.yml`, pero lo
+que una persona descarga en un Mac con macOS 12 era el `.pkg` de la edición PHP o
+el `.dmg` de Electron. La app en C viajaba solo como artefacto por SHA del flujo de
+verificación. Ya no: **`dist-nativo.yml` publica el `.dmg` de la aplicación nativa
+para Monterey**, en Apple Silicon y en Intel.
+
+| Qué | Dónde | Comprobación |
+| --- | --- | --- |
+| Armado completo en un comando | `tools/nativo/build-mac.sh` | compila, firma, arma el `.dmg` y el `.zip` |
+| Destino macOS 12, no el del runner | `native/macos/Makefile` (`DEPLOYMENT ?= 12.0`) | `minos` del Mach-O = `12.0` |
+| Flujo de distribución | `.github/workflows/dist-nativo.yml` | arm64 (`macos-latest`) y x64 (`macos-15-intel`) |
+| Comprobación del archivo publicado | el mismo flujo | monta el `.dmg` y vuelve a leer plist, `minos`, arquitectura, firma y catálogos |
+| Contrato en las pruebas | `native/tests/macos.mjs` | **62/62** (antes 56) |
+
+- **La promesa se comprueba dos veces.** La primera sobre lo que se acaba de
+  compilar; la segunda **dentro del `.dmg` ya montado**, que es el archivo que se
+  descarga. Si el `Info.plist` o el binario piden más que `12.0`, o si la
+  arquitectura no es la del trabajo, el flujo **falla** en vez de publicar un
+  instalador que no abre en Monterey.
+- **Un Mac por arquitectura.** `clang` de macOS no compila para la otra: `arm64`
+  sale de `macos-latest` y `x64` de `macos-15-intel`. El guion local se niega a
+  prometer la arquitectura que el equipo no puede producir.
+- **Firma ad-hoc, no «sin firma».** Tras tocar el `Info.plist` y los catálogos se
+  firma con `codesign --sign -` y se verifica con `--strict`. Sin eso, un binario
+  `arm64` puede ser rechazado por el sistema; con eso, Gatekeeper pide permiso la
+  primera vez y nada más. Sigue sin haber certificado de Apple.
+- **Versión y nombre reales.** El `Info.plist` llevaba `0.1.0` de la etapa N1 y no
+  tenía icono: el armado escribe la versión de `package.json` y copia el `.icns`
+  generado del logo. Los archivos se llaman
+  `normia-estudio-nativo-<versión>-macos-<arm64|x64>.dmg` (y `.zip`), con su
+  `SHA256SUMS-<arch>.txt`.
+- **Qué NO es.** No es la edición completa: es **Normia Estudio** nativo (ventana
+  AppKit + núcleo en C). No lleva portada, ni cuentas, ni base de datos, ni
+  pictogramas pintados en el lienzo (eso sigue pendiente en N3), ni Windows ni
+  Linux (N4). Si lo que se quiere es la suite entera en Monterey, el camino siguen
+  siendo el `.pkg` de `docs/ESCRITORIO.md` y el `.dmg` de `docs/ELECTRON.md`, que
+  también se compilan con mínimo 12.0.
+
+Para compilarlo en un Mac, sin pasar por GitHub:
+
+```sh
+bash tools/nativo/build-mac.sh              # la arquitectura del equipo
+bash tools/nativo/build-mac.sh --sin-dmg    # solo compila y firma la .app
+```
