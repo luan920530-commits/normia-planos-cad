@@ -22,7 +22,6 @@ on:
   workflow_dispatch:
   push:
     tags: ['v*']
-    branches: ['arena/7b5de8f7-normia-planos-cad']
 
 concurrency:
   group: nativo-${{ github.ref }}
