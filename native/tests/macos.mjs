@@ -284,6 +284,10 @@ report.check('El flujo de verificación comprueba el minos del Mach-O',
   && /minos/.test(verifyWorkflow) && /DEPLOYMENT=12\.0/.test(verifyWorkflow),
   'otool · minos 12.0');
 
+report.check('El minos comprobado se publica como anotación, no solo en el registro',
+  /::notice title=macOS::el binario pide macOS \$MINOS/.test(verifyWorkflow),
+  '::notice · minos');
+
 report.check('El escritorio compila el intérprete de PHP con destino macOS 12',
   /MACOSX_DEPLOYMENT_TARGET: '12\.0'/.test(desktopWorkflow) && /otool -l/.test(desktopWorkflow),
   'dist-desktop.yml · MACOSX_DEPLOYMENT_TARGET');

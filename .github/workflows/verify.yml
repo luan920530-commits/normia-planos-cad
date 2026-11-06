@@ -171,6 +171,9 @@ jobs:
             *) echo "::error title=macOS::el binario exige macOS ${MINOS:-desconocido}, no 12.0"; exit 1 ;;
           esac
           otool -l "$BIN" | grep -E "LC_BUILD_VERSION|minos|sdk" | head -6
+          # Los registros no se pueden descargar desde fuera, así que el dato que
+          # importa queda como anotación legible: qué macOS pide el binario.
+          echo "::notice title=macOS::el binario pide macOS $MINOS (Info.plist: $MIN)"
 
       - name: Arrancar la aplicación sin ventana
         run: |
