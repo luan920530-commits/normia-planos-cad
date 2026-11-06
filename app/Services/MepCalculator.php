@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Core\Units;
+
 /**
  * Cálculos de redes hidrosanitarias y eléctricas.
  *
@@ -16,30 +18,47 @@ final class MepCalculator
      * Una unidad del lienzo equivale a la unidad declarada (igual que la cota
      * del editor). La escala es una referencia de impresión: no altera las
      * longitudes del plano.
+     *
+     * Delegaba en `Units` con la unidad del plano; desde NORMIA-006 §3 la
+     * geometría está siempre en centímetros, así que el factor es constante y
+     * los dos parámetros se conservan solo por compatibilidad: **no se usan**.
+     *
+     * @deprecated Usa `Units::metersPerUnit(Units::GEOMETRY_UNIT)`.
      */
-    public static function unitsToMeters(string $unit, string $scale = '1:100'): float
+    public static function unitsToMeters(string $unit = '', string $scale = '1:100'): float
     {
-        return match ($unit) {
-            'm' => 1.0,
-            'mm' => 0.001,
-            default => 0.01,
-        };
+        /* La geometría está en centímetros (NORMIA-006 §3), así que el factor ya
+           no depende de la unidad declarada del plano: es siempre el de `cm`.
+           El parámetro se conserva para no romper a quien lo pase; se ignora. */
+        return Units::metersPerUnit(Units::GEOMETRY_UNIT);
     }
 
-    /** Longitud de un trazo en unidades del lienzo. */
+    /**
+     * Longitud de un trazo en unidades del lienzo.
+     *
+     * Un tramo curvo se mide por su arco, no por su cuerda: delega en
+     * `PathGeometry::length()`, que aplana con la misma tolerancia de 0,5 cm
+     * que el auditor y que el lienzo. Así el rótulo del plano, el informe de
+     * redes y lo que ve el editor dicen lo mismo.
+     */
     public static function length(array $element): float
     {
-        $points = self::points($element);
-        $total = 0.0;
-        for ($index = 1; $index < count($points); $index++) {
-            $total += hypot($points[$index]['x'] - $points[$index - 1]['x'], $points[$index]['y'] - $points[$index - 1]['y']);
-        }
-        return $total;
+        $curves = is_array($element['curves'] ?? null) ? $element['curves'] : null;
+        return PathGeometry::length(self::points($element), $curves);
     }
 
+    /**
+     * Longitud de la red en metros, con la medida declarada si existe.
+     *
+     * Delegar en `ElementMeasure` mantiene la misma jerarquía que el auditor y
+     * que la cota (NORMIA-006 §6.1): medida del usuario primero, geometría
+     * después. Sin medidas —el caso de todos los planos actuales— el resultado
+     * es el mismo número de antes, al milímetro.
+     */
     public static function lengthMeters(array $element, array $canvas): float
     {
-        return self::length($element) * self::unitsToMeters((string) ($canvas['unit'] ?? 'cm'), (string) ($canvas['scale'] ?? '1:100'));
+        [$cm] = ElementMeasure::lengthCm($element);
+        return $cm * self::unitsToMeters();
     }
 
     /** Factor √3 solo en circuitos trifásicos; 220 V monofásico es 1. */

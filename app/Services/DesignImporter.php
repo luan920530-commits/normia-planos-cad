@@ -35,7 +35,12 @@ final class DesignImporter
                     throw new DomainException('El archivo contiene campos de nivel superior no permitidos.');
                 }
             }
-            if (($payload['application'] ?? '') !== 'normia-planos-cad' || ($payload['schema_version'] ?? null) !== 2) {
+            /* El sobre 3 añadió `measuredM`/`quality` y la geometría en
+               centímetros; el 2 sigue siendo válido y se importa igual, porque
+               el validador normaliza el documento al leerlo. Rechazar el 2 sería
+               romper los archivos exportados ayer. */
+            $schema = $payload['schema_version'] ?? null;
+            if (($payload['application'] ?? '') !== 'normia-planos-cad' || !in_array($schema, [2, 3], true)) {
                 throw new DomainException('El archivo no corresponde a un plano compatible de Normia Planos CAD.');
             }
             if (!isset($payload['design']) || !is_array($payload['design'])) {
@@ -47,7 +52,9 @@ final class DesignImporter
             return ['design' => $design, 'project' => $project, 'floor' => $floor, 'legacy' => false];
         }
 
-        if (($payload['format'] ?? null) === 2) {
+        /* Un diseño suelto, sin sobre. Los formatos 2 a 4 se convierten a
+           centímetros en la puerta de entrada; el 5 ya viene así. */
+        if (in_array($payload['format'] ?? null, [2, 3, 4, 5], true) && isset($payload['canvas'])) {
             $design = DesignValidator::normalizeArray($payload);
             return ['design' => $design, 'project' => [], 'floor' => [], 'legacy' => false];
         }
@@ -236,7 +243,8 @@ final class DesignImporter
         }
 
         $design = [
-            'format' => 2,
+            // El heredado se dibuja en la unidad del lienzo nuevo, que es cm.
+            'format' => 5,
             'canvas' => [
                 'width' => $width,
                 'height' => $height,

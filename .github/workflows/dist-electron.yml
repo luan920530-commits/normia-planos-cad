@@ -135,7 +135,20 @@ jobs:
             find dist/electron/installers -maxdepth 6 -type d -name app | head -10
             exit 1
           fi
-          node tools/electron/verify-package.mjs "$RESOURCES" --completo
+          # El motivo de un fallo se copia a las anotaciones del trabajo: se lee
+          # en la pestaña del trabajo y por la API, sin depender del registro.
+          set +e
+          node tools/electron/verify-package.mjs "$RESOURCES" --completo > verificacion.log 2>&1
+          ESTADO=$?
+          set -e
+          cat verificacion.log
+          if [ "$ESTADO" -ne 0 ]; then
+            tail -12 verificacion.log | while IFS= read -r linea; do
+              [ -n "$linea" ] && echo "::error title=verificador::${linea//$'\r'/}"
+            done
+            echo "::error title=verificador::el paquete de ${{ matrix.os }} no superó la comprobación (código $ESTADO)"
+            exit 1
+          fi
 
       # El requisito de macOS se comprueba en el artefacto, no solo en la
       # configuración: Electron 44 subió el mínimo a macOS 13 y el síntoma que

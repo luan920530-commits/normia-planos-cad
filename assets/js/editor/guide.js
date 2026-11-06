@@ -25,7 +25,7 @@
     {
       id: 'muros',
       title: 'Traza el primer muro',
-      text: 'Los muros separan los espacios y sostienen el resto del plano. Elige <strong>Muro</strong> y arrastra; con <kbd>Shift</kbd> el trazo queda recto.',
+      text: 'Los muros separan los espacios y sostienen el resto del plano. Elige <strong>Muro</strong> y haz clic en cada nodo: el tramo sigue al cursor, <kbd>Enter</kbd> o doble clic termina y el clic sobre el primer nodo cierra el recinto. Con <kbd>Shift</kbd> el tramo queda recto.',
       hint: 'Baldosa del rail · atajo M',
       action: { kind: 'tool', value: 'wall' },
       actionLabel: 'Ir a Muro',

@@ -185,7 +185,7 @@ async function main() {
       report.check('La exportación SVG de la demo funciona', svg.status === 200 && /<svg/i.test(svg.text) && !/<script/i.test(svg.text), `${svg.text.length} bytes`);
       const json = await client.get(`projects/1/floors/${floorIds[0]}/export/json`);
       const exported = JSON.parse(json.text);
-      report.check('La exportación JSON de la demo funciona', exported.schema_version === 2 && exported.design.elements.length >= 30);
+      report.check('La exportación JSON de la demo funciona', exported.schema_version === 3 && exported.design.elements.length >= 30, `esquema ${exported.schema_version}`);
       const print = await client.get(`projects/1/floors/${floorIds[0]}/print`);
       report.check('La vista de impresión de la demo funciona', print.status === 200 && /editor-print|print/i.test(print.text));
       report.check('La impresión incluye redes y circuitos',

@@ -101,6 +101,10 @@
   background: #fff;
 }
 
+/* Aforo: capacidad calculada, aforo permitido y ocupación declarada. */
+.audit-aforo-note, .audit-firstaid-note, .audit-scenarios-note, .audit-drill-note, .audit-sheet .audit-note {
+  margin: 0; font-size: .68rem; line-height: 1.45; color: var(--muted);
+}
 .audit-metrics span { font-size: .68rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
 .audit-metrics strong { font-size: 1rem; color: var(--ink); }
 .audit-metrics small { font-size: .68rem; color: var(--muted); line-height: 1.35; }

@@ -117,6 +117,21 @@ const exact = U.metersPerUnit('cm') === legacy
 report.check('La ruta «cm» es idéntica bit a bit al cálculo anterior', exact,
   `metersPerUnit=${U.metersPerUnit('cm')} · toMeters(1200)=${U.toMeters(1200, 'cm')}`);
 
+/* ------------------- metros → unidades: identidad exacta -------------------
+ * Misma tabla que la suite de PHP. Se compara con igualdad estricta: si JS
+ * dividiera por los metros por unidad en vez de multiplicar por 100 y dividir
+ * por los centímetros por unidad, un ancho de vía saldría un bit distinto que
+ * en el servidor, y el SVG del navegador no coincidiría con el exportado.
+ */
+
+const fromFailures = [];
+for (const item of fixture.fromMeters) {
+  const value = U.fromMeters(item.meters, item.unit);
+  if (value !== item.units) fromFailures.push(`${item.meters} m en ${item.unit}: ${value} ≠ ${item.units}`);
+}
+report.check('Metros → unidades coincide bit a bit con la tabla compartida', fromFailures.length === 0,
+  fromFailures.length === 0 ? `${fixture.fromMeters.length} casos en mm, cm y m` : fromFailures.join(' · '));
+
 /* ---------------------------- invariancias ---------------------------- */
 
 const invariant = U.SUPPORTED.every((unit) => {
@@ -130,6 +145,63 @@ const squares = U.SUPPORTED.every((unit) => {
   return near(U.squareMeters(4, unit), (4 * factor) * factor);
 });
 report.check('La superficie sale del mismo factor que la longitud', squares);
+
+/* --------------------- longitud de arcos: PHP y JS iguales ---------------------
+ * El trazo curvo se mide por su arco en los dos lados:
+ *
+ *   JavaScript: Mep.elementLengthMeters → Geometry.pathLength
+ *   PHP:        MepCalculator::length     → PathGeometry::length
+ *
+ * Con un semicírculo de 400 unidades de cuerda y 200 de flecha, el trazo mide
+ * 628,318… unidades y la cuerda 400. Aquí se fija el valor del editor y se
+ * comprueba contra la referencia que también guarda el golden en PHP, para que
+ * una regresión en cualquiera de los dos lados rompa esta suite.
+ */
+for (const file of ['js/lib/geometry.js', 'js/lib/mep.js']) {
+  window.eval(`${fs.readFileSync(path.join(repoRoot, 'assets', file), 'utf8')}\n//# sourceURL=${file}`);
+}
+const Mep = window.Normia?.Mep;
+const arco = {
+  id: 'el_arco',
+  type: 'pipe',
+  points: [{ x: 0, y: 200 }, { x: 400, y: 200 }],
+  curves: [{ kind: 'arc', through: { x: 200, y: 0 } }, null],
+};
+const chord = 400;
+const arcLength = Math.PI * 200;
+const canvasCm = { unit: 'cm', scale: '1:100' };
+const jsMeters = Mep?.elementLengthMeters?.(arco, canvasCm);
+
+report.check('La longitud de un trazo curvo en el editor incluye el arco',
+  Number.isFinite(jsMeters) && near(jsMeters, arcLength / 100, 1e-9),
+  `${jsMeters} m (arco) frente a ${chord / 100} m de cuerda`);
+report.check('El servidor mide lo mismo que el editor (referencia del golden PHP)',
+  near(jsMeters, 6.283185307179586, 1e-9) && Math.abs(jsMeters - chord / 100) > 2,
+  'MepCalculator y Mep.elementLengthMeters coinciden en 6,283185307179586 m');
+report.check('Un trazo recto no se mueve al medir con arcos',
+  near(Mep?.elementLengthMeters?.({ points: [{ x: 0, y: 0 }, { x: 400, y: 0 }] }, canvasCm), 4, 1e-12),
+  'recta de 400 unidades = 4 m');
+
+/* --------------------- paridad con el golden que escribe PHP ---------------------
+ * El golden (tests/fixtures/golden/numeric.json) lo produce PHP. Aquí se lee y
+ * se comprueba que el editor calcula exactamente la misma cifra para la misma
+ * geometría: es la prueba cruzada de que PHP y JS no se separan sin que falle
+ * una suite, sin necesidad de un tercer valor de referencia.
+ */
+
+const goldenPath = path.join(repoRoot, 'tests/fixtures/golden/numeric.json');
+if (fs.existsSync(goldenPath)) {
+  const golden = JSON.parse(fs.readFileSync(goldenPath, 'utf8'));
+  const tuberia = golden?.synthetic?.tuberia ?? {};
+  const recta = { points: [{ x: 0, y: 0 }, { x: 400, y: 0 }] };
+  const jsRecta = Mep?.elementLengthMeters?.(recta, canvasCm);
+  report.check('El golden de PHP trae la medición del arco de referencia',
+    typeof tuberia.arcoMetrosMep === 'number' && typeof tuberia.rectaMetros === 'number',
+    `arco ${tuberia.arcoMetrosMep} m · recta ${tuberia.rectaMetros} m`);
+  report.check('El editor coincide exactamente con el golden de PHP',
+    jsMeters === tuberia.arcoMetrosMep && jsRecta === tuberia.rectaMetros,
+    `JS arco ${jsMeters} · PHP ${tuberia.arcoMetrosMep}`);
+}
 
 /* ------------------------------ pureza ------------------------------ */
 

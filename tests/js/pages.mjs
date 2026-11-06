@@ -182,6 +182,28 @@ async function main() {
       && splash.getAttribute('role') === 'status'
       && Boolean($(window, '[data-splash-status]')),
       text($(window, '.app-splash-sub')));
+    /* Cabecera (rediseño 1.22.0): pastilla flotante, apartado actual en relieve
+       y una sola marca de «página actual» por estado. */
+    const header = $(window, '.site-header');
+    const activeLinks = $$(window, '.site-header .nav-link.is-active');
+    report.check('La cabecera es una barra flotante con su contenedor',
+      Boolean(header) && Boolean($(window, '.site-header-inner'))
+      && Boolean($(window, '.site-header .brand-mark img')),
+      text($(window, '.brand-text')));
+    report.check('La cabecera marca un solo apartado y es el actual',
+      activeLinks.length === 1 && activeLinks[0].getAttribute('aria-current') === 'page'
+      && /Mis planos/.test(text(activeLinks[0])) && /index\.php/.test(activeLinks[0].getAttribute('href')),
+      `${activeLinks.length} marcados · ${text(activeLinks[0])}`);
+    report.check('Crear un plano se distingue de los apartados',
+      Boolean($(window, '.site-header .nav-link-primary'))
+      && !($(window, '.site-header .nav-link-primary')?.classList.contains('is-active')),
+      text($(window, '.site-header .nav-link-primary')));
+    const pluginsPage = await openPage(client, 'plugins');
+    const pluginsActive = $$(pluginsPage.window, '.site-header .nav-link.is-active');
+    report.check('Al entrar en Complementos el relieve cambia de apartado',
+      pluginsActive.length === 1 && /Complementos/.test(text(pluginsActive[0])),
+      pluginsActive.map((node) => text(node)).join(', '));
+
     report.check('La marca usa el emblema como logo y en los iconos del navegador',
       Boolean($(window, '.brand-mark img[src*="normia-emblem"]'))
       && Boolean($(window, 'link[rel="apple-touch-icon"]'))
