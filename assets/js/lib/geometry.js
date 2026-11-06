@@ -2,6 +2,7 @@
 (() => {
   'use strict';
   const root = (window.Normia = window.Normia || {});
+  const Units = root.Units;
 
   const clamp = (value, min, max) => Math.min(max, Math.max(min, Number.isFinite(value) ? value : min));
   const round = (value, decimals = 2) => {
@@ -204,12 +205,17 @@
    * el auditor, la medición y la exportación comparten el mismo valor, así
    * que el muro curvo separa recintos igual en el lienzo y en el servidor.
    */
-  const CURVE_TOLERANCE_CM = 0.5;
+  const CURVE_TOLERANCE_CM = Units.TOLERANCE_CM;
 
-  const cmPerUnit = (unit) => (unit === 'm' ? 100 : unit === 'mm' ? 0.1 : 1);
+  /*
+   * Unidades y conversiones: la autoridad única es `Normia.Units`
+   * (assets/js/lib/units.js). Aquí solo se reexportan para que el resto del
+   * editor siga hablando con `Geometry`, que es su punto de entrada de siempre.
+   */
+  const cmPerUnit = (unit) => Units.cmPerUnit(unit);
 
   /** Tolerancia en unidades del lienzo para la unidad declarada del plano. */
-  const flattenTolerance = (unit) => CURVE_TOLERANCE_CM / cmPerUnit(unit);
+  const flattenTolerance = (unit) => Units.tolerance(unit);
 
   const curveAt = (curves, index) => (
     Array.isArray(curves) && curves[index] && curves[index].kind === 'arc' && curves[index].through

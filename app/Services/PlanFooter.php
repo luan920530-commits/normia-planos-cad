@@ -69,6 +69,10 @@ final class PlanFooter
         ['text' => '{project} · {floor} · Nivel {level}', 'tone' => 'strong'],
         ['text' => 'Sitio: {site} · Área: {workplace} · Responsable: {responsible}', 'tone' => 'body'],
         ['text' => 'Escala {scale} · Unidad {unit} · Versión v{version} · Guardado {saved} · {count} elementos', 'tone' => 'body'],
+        // Aforo del piso (NORMIA-006 §27). Va en el pie porque el plano se usa en
+        // la puerta del recinto: la cifra que importa es cuánta gente puede haber.
+        ['text' => 'Aforo máximo {aforo_max} personas · Aforo permitido {aforo_permitido} personas · Superficie útil libre {aforo_superficie}', 'tone' => 'strong'],
+        ['text' => 'Aforo del piso: {aforo_fuente}. Cálculo de referencia: superficie libre × densidad; verifica la ocupación real y la normativa aplicable.', 'tone' => 'meta'],
         ['text' => '© {year} {app} · Licencia GPL-3.0 · Generado con la versión {app_version} · {attribution}', 'tone' => 'meta'],
         ['text' => '{note}', 'tone' => 'meta'],
     ];
@@ -81,6 +85,17 @@ final class PlanFooter
 
     /** Alto reservado para la marca de agua al final del bloque de datos. */
     public const BRAND_HEIGHT = 26.0;
+
+    /**
+     * Largos de barra que se ofrecen, en metros. Se elige el mayor que quepa en
+     * un ancho razonable de papel: una barra de 5 m a 1:500 mide 10 mm y sus
+     * divisiones no se leen; a 1:50 mediría 100 mm y no cabe en el pie.
+     */
+    public const SCALE_BAR_METRES = [1, 2, 5, 10, 20, 50];
+
+    /** Ancho máximo y mínimo de la barra de escala, en milímetros de papel. */
+    public const SCALE_BAR_MAX_MM = 70.0;
+    public const SCALE_BAR_MIN_MM = 20.0;
 
     /**
      * Emblema incrustado como `data:` para que el SVG exportado y el PNG del
@@ -125,9 +140,10 @@ final class PlanFooter
      * @param array<string,mixed> $meta
      * @return array{cells:list<array<string,string>>,lines:list<array{text:string,tone:string}>,fields:array<string,string>}
      */
-    public static function payload(array $design, array $meta = []): array
+    public static function payload(array $design, array $meta = [], ?array $aforo = null): array
     {
         $canvas = is_array($design['canvas'] ?? null) ? $design['canvas'] : [];
+        $aforo ??= self::aforo($design);
         $orDash = static function (mixed $value): string {
             $text = trim((string) $value);
             return $text === '' ? '—' : $text;
@@ -140,7 +156,9 @@ final class PlanFooter
             'workplace' => $orDash($meta['workplace'] ?? ''),
             'responsible' => $orDash($meta['responsible'] ?? ''),
             'saved' => self::date($meta['saved_at'] ?? ''),
-            'scale' => $orDash($canvas['scale'] ?? ''),
+            /* La escala impresa es la que se eligió al exportar; si nadie la
+               eligió (pie del editor), la del plano, que es solo sugerencia. */
+            'scale' => $orDash($meta['print_scale'] ?? $canvas['scale'] ?? ''),
             'unit' => $orDash($canvas['unit'] ?? ''),
             'version' => (string) max(1, (int) ($meta['version'] ?? 1)),
             'count' => (string) count(is_array($design['elements'] ?? null) ? $design['elements'] : []),
@@ -149,8 +167,29 @@ final class PlanFooter
             'app_version' => defined('NORMA_VERSION') ? (string) \NORMA_VERSION : '1.0',
             'attribution' => 'Pictogramas ISO 7010 (MIT © Karl Norling)',
             'note' => 'Los planos son esquemáticos: verifica dimensiones y escala en sitio.',
+            'aforo_max' => (string) (int) ($aforo['maxPersons'] ?? 0),
+            'aforo_permitido' => (string) (int) ($aforo['permitted'] ?? 0),
+            'aforo_superficie' => number_format((float) ($aforo['freeAreaM2'] ?? 0.0), 2, ',', '.') . ' m²',
+            'aforo_fuente' => ($aforo['source'] ?? 'estimated') === 'declared'
+                ? 'ocupación declarada en el piso y capacidad calculada por superficie'
+                : 'capacidad estimada por superficie libre (no hay ocupación declarada)',
         ];
         return ['cells' => self::CELLS, 'lines' => self::LINES, 'fields' => $fields, 'brand' => self::brand()];
+    }
+
+    /**
+     * Aforo del piso para el pie. Delega en `PlanAudit::aforo()`, que es la única
+     * fórmula; si el cálculo falla, el pie se dibuja igual y sin cifras.
+     *
+     * @return array<string,mixed>
+     */
+    public static function aforo(array $design): array
+    {
+        try {
+            return PlanAudit::aforo($design);
+        } catch (\Throwable) {
+            return ['maxPersons' => 0, 'permitted' => 0, 'declared' => 0, 'source' => 'estimated', 'freeAreaM2' => 0.0];
+        }
     }
 
     /** Columnas de la franja según el ancho disponible. */
@@ -173,26 +212,36 @@ final class PlanFooter
         return round($rows * self::rowHeight($width), 2);
     }
 
-    /** Altura del bloque de datos, la nota legal y la marca de agua. */
-    public static function dataHeight(float $width, array $payload): float
+    /**
+     * Altura del bloque de datos, la barra de escala, la nota legal y la marca
+     * de agua. `$scaleInfo` es `['denominator' => N, 'mmPerUnit' => mm]`: sin
+     * él el pie no sabe cuánto mide una unidad en el papel y no dibuja barra.
+     *
+     * @param array{denominator:float|int,mmPerUnit:float}|null $scaleInfo
+     */
+    public static function dataHeight(float $width, array $payload, ?array $scaleInfo = null): float
     {
         $height = 0.0;
         foreach (self::wrappedLines($width, $payload) as $line) {
             $height += self::lineStep($line['size']);
         }
-        return round($height + 16.0 + self::BRAND_HEIGHT, 2);
+        $bar = $scaleInfo !== null ? 8.0 / max(0.0001, (float) $scaleInfo['mmPerUnit']) : 0.0;
+        return round($height + 16.0 + self::BRAND_HEIGHT + min(80.0, $bar), 2);
     }
 
     /**
      * Dibuja la franja y el bloque de datos. `$top` es la coordenada Y donde
      * empieza la franja (justo debajo del plano).
      */
-    public static function render(float $width, float $top, array $payload): string
+    /**
+     * @param array{denominator:float|int,mmPerUnit:float}|null $scaleInfo
+     */
+    public static function render(float $width, float $top, array $payload, ?array $scaleInfo = null): string
     {
         $band = self::bandHeight($width);
         $svg = '<g id="pie-plano" data-plan-footer="guia" font-family="Helvetica, Arial, sans-serif">' . "\n";
         $svg .= self::band($width, $top, $payload);
-        $svg .= self::dataBlock($width, $top + $band, $payload);
+        $svg .= self::dataBlock($width, $top + $band, $payload, $scaleInfo);
         $svg .= '</g>' . "\n";
         return $svg;
     }
@@ -351,7 +400,10 @@ final class PlanFooter
         return $svg;
     }
 
-    private static function dataBlock(float $width, float $top, array $payload): string
+    /**
+     * @param array{denominator:float|int,mmPerUnit:float}|null $scaleInfo
+     */
+    private static function dataBlock(float $width, float $top, array $payload, ?array $scaleInfo = null): string
     {
         $svg = '<g id="datos-plano" data-plan-data="1">' . "\n";
         $svg .= '<line x1="0" y1="' . SvgAsset::num($top) . '" x2="' . SvgAsset::num($width) . '" y2="' . SvgAsset::num($top)
@@ -367,6 +419,55 @@ final class PlanFooter
             $cursor += $step;
         }
         $svg .= self::brandMark($width, $cursor + 5.0, $payload);
+        if ($scaleInfo !== null) {
+            /* La barra va en su propio renglón, debajo de la marca: así nunca se
+               cruza con ella aunque el papel sea estrecho. */
+            $svg .= self::scaleBar($width, $cursor + 5.0 + self::BRAND_HEIGHT, (float) $scaleInfo['denominator'], (float) $scaleInfo['mmPerUnit']);
+        }
+        $svg .= '</g>' . "\n";
+        return $svg;
+    }
+
+    /**
+     * Barra de escala gráfica con sus divisiones.
+     *
+     * Es lo único que sigue siendo cierto si alguien imprime al 97 % o hace una
+     * fotocopia: un «1:100» impreso sin barra no protege de eso. La barra se
+     * dibuja con el largo que le corresponde en el papel, así que a 1:100 una
+     * barra de 5 m mide 50 mm.
+     */
+    private static function scaleBar(float $width, float $top, float $denominator, float $mmPerUnit): string
+    {
+        $perUnit = max(0.0001, $mmPerUnit);
+        $metres = self::SCALE_BAR_METRES[0];
+        $printed = (float) $metres * 1000.0 / max(1.0, $denominator);
+        foreach (self::SCALE_BAR_METRES as $candidate) {
+            $length = (float) $candidate * 1000.0 / max(1.0, $denominator);
+            if ($length <= self::SCALE_BAR_MAX_MM && $length >= self::SCALE_BAR_MIN_MM) {
+                $metres = $candidate;
+                $printed = $length;
+            }
+        }
+        $barUnits = $printed / $perUnit;
+        $thick = 3.6 / $perUnit;
+        $x = self::PAD;
+        $y = $top;
+        $divisions = $metres >= 5 ? 5 : max(1, $metres);
+        $step = $barUnits / $divisions;
+        $svg = '<g id="barra-escala" data-scale-bar="1" data-scale-bar-metres="' . $metres . '">';
+        for ($index = 0; $index < $divisions; $index += 1) {
+            $svg .= '<rect x="' . SvgAsset::num($x + $index * $step) . '" y="' . SvgAsset::num($y)
+                . '" width="' . SvgAsset::num($step) . '" height="' . SvgAsset::num($thick)
+                . '" fill="' . ($index % 2 === 0 ? '#0f172a' : '#ffffff') . '" stroke="#0f172a" stroke-width="0.8"/>';
+        }
+        $labelSize = 2.5 / $perUnit;
+        $svg .= '<text x="' . SvgAsset::num($x) . '" y="' . SvgAsset::num($y + $thick + $labelSize * 1.1)
+            . '" font-size="' . SvgAsset::num($labelSize) . '" fill="#475569">0</text>';
+        $svg .= '<text x="' . SvgAsset::num($x + $barUnits) . '" y="' . SvgAsset::num($y + $thick + $labelSize * 1.1)
+            . '" font-size="' . SvgAsset::num($labelSize) . '" fill="#475569" text-anchor="end">' . $metres . ' m</text>';
+        $caption = 'Barra de escala · ' . $metres . ' m = ' . number_format($printed, 1, ',', '.') . ' mm';
+        $svg .= '<text x="' . SvgAsset::num($x + $barUnits + 8.0 / $perUnit) . '" y="' . SvgAsset::num($y + $thick * 0.9)
+            . '" font-size="' . SvgAsset::num($labelSize) . '" fill="#64748b">' . SvgAsset::esc($caption) . '</text>';
         $svg .= '</g>' . "\n";
         return $svg;
     }

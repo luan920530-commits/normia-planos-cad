@@ -6,6 +6,27 @@
   const COLORS = ['#0f172a', '#1e293b', '#334155', '#475569', '#64748b', '#94a3b8', '#ffffff', '#f8fafc', '#2563eb', '#1d4ed8', '#005387', '#0f766e', '#15803d', '#16a34a', '#237f52', '#65a30d', '#b71f2e', '#dc2626', '#991b1b', '#ea580c', '#f97316', '#f59e0b', '#f9a800', '#eab308', '#facc15', '#7c3aed', '#be185d', '#0891b2', '#ca8a04', '#0e7490', '#b45309', '#0369a1', '#c2410c', '#b91c1c'];
   const BASIC = ['wall', 'door', 'door_double', 'door_garage', 'route', 'text', 'dimension', 'line', 'rect', 'ellipse', 'pipe', 'conduit', 'road', 'sidewalk', 'crosswalk', 'parking', 'property'];
   const DOOR_TYPES = ['door', 'door_double', 'door_garage'];
+  /* Calidad declarada de una medida (NORMIA-006 §5.3). Tres valores, sin
+     tolerancias: describe cómo se obtuvo la medida, no el plano. */
+  const QUALITIES = ['exacta', 'aproximada', 'estimada'];
+  /**
+   * Escenarios de ocupación temporal (NORMIA-006 §31): hasta ocho por piso.
+   * Son una declaración del usuario —un evento, una hora pico— y se guardan
+   * con el plano. El auditor los calcula aparte y no toca el aforo del piso.
+   */
+  const MAX_SCENARIOS = 8;
+  const normalizeScenarios = (list) => {
+    if (!Array.isArray(list)) return [];
+    return list.slice(0, MAX_SCENARIOS).map((scenario) => ({
+      name: String(scenario?.name || '').trim().replace(/[<>]/g, '').slice(0, 60),
+      persons: G.clamp(Math.round(Number(scenario?.persons) || 0), 1, 10000),
+    })).filter((scenario) => scenario.name !== '');
+  };
+  /* Tipos a los que se les puede declarar una longitud real. */
+  const MEASURABLE_TYPES = [
+    'wall', 'route', 'line', 'pipe', 'conduit', 'road', 'sidewalk', 'property',
+    'crosswalk', 'parking', ...DOOR_TYPES, 'dimension',
+  ];
   /**
    * Vías, andenes y límites: se dibujan en planta como referencia esquemática.
    * No son muros: no bloquean el tránsito ni cierran recintos. El servidor las
@@ -135,6 +156,9 @@
   };
   const EXT_TYPES = Object.keys(EXT_DEFAULTS);
   const EXT_PROFILES = ['colombia', 'nfpa10'];
+  /** Dispersión máxima entre medidas declaradas para poder ajustar el plano. */
+  const MEASURE_FIT_SPREAD = 0.02;
+
   const EXT_HAZARDS = ['light', 'ordinary', 'extra'];
   let idCounter = 0;
 
@@ -432,6 +456,19 @@
         // la estima con el área libre y lo advierte en el informe.
         occupancy: G.clamp(Math.round(Number(canvasSource.occupancy) || 0), 0, 10000),
       };
+      /* Escenarios de ocupación temporal (NORMIA-006 §31): una declaración del
+         usuario que viaja con el plano. Sin escenarios la clave no existe, para
+         que un documento anterior se guarde igual que antes. */
+      const scenarios = normalizeScenarios(canvasSource.scenarios);
+      if (scenarios.length) canvas.scenarios = scenarios;
+      /* Simulacro (NORMIA-006 §32): reacción y, si existe, tiempo medido. */
+      const drillSource = canvasSource.drill && typeof canvasSource.drill === 'object' ? canvasSource.drill : null;
+      if (drillSource) {
+        const drill = { reactionS: G.clamp(Math.round(Number(drillSource.reactionS)) || 0, 0, 600) };
+        const measured = Math.round(Number(drillSource.measuredS) || 0);
+        if (measured >= 1) drill.measuredS = G.clamp(measured, 1, 7200);
+        canvas.drill = drill;
+      }
       let layers = Array.isArray(source.layers) && source.layers.length ? source.layers : [{ id: 'capa_planta', name: 'Planta', visible: true, locked: false }];
       layers = layers.slice(0, 24).map((layer, index) => ({
         id: String(layer.id || `capa_${index + 1}`),
@@ -458,6 +495,14 @@
           label: typeof element.label === 'string' ? element.label.slice(0, 240) : base.label,
           locked: Boolean(element.locked),
         };
+        /* La medida declarada viaja con el objeto (NORMIA-006 §5): si el editor
+           la descartara al abrir, se perdería lo que la persona escribió. Las
+           reglas son las mismas que al editarla: 0,01–5 000 m y tres decimales. */
+        const measured = Number(element.measuredM);
+        if (Number.isFinite(measured) && measured >= 0.01 && measured <= 5000) {
+          normalized.measuredM = Math.round(measured * 1000) / 1000;
+          if (QUALITIES.includes(element.quality)) normalized.quality = element.quality;
+        }
         const code = this.signCodeForType(type);
         if (code) normalized.color = this.signCategoryColor(code);
         if (type === 'text' || type === 'dimension') normalized.fontSize = G.clamp(Number(element.fontSize) || base.fontSize || 14, 8, 160);
@@ -536,13 +581,16 @@
     }
 
     /**
-     * Versión del documento: 3 cuando algún trazo tiene curvas y 2 cuando no.
-     * Un plano sin curvas se guarda igual que en la 1.10.0 y su SVG sale
-     * idéntico byte a byte con las polilíneas de siempre.
+     * Versión del documento: **5** desde la 1.19.0 (NORMIA-006 DEC-5).
+     *
+     * El editor guarda y dibuja siempre en centímetros, y `format: 5` es
+     * justamente la marca de «esta geometría está en centímetros». Dejarlo en 2,
+     * 3 o 4 haría que el servidor volviera a convertir un plano declarado en
+     * metros cada vez que se guarda. El formato 5 incluye lo que ya había:
+     * curvas (3) y sección tipo en las vías (4).
      */
     documentFormat() {
-      if (this.design.elements.some((element) => element.section)) return 4;
-      return this.design.elements.some((element) => G.hasCurves(element.curves)) ? 3 : 2;
+      return 5;
     }
 
     /** Curvas válidas alineadas con los vértices; `null` si no hay ninguna. */
@@ -1503,8 +1551,8 @@
      */
     resizeForJunction(element, junction, section) {
       if (!junction || !section) return;
-      const unit = this.design.canvas.unit;
-      const perMeter = 100 / G.cmPerUnit(unit);
+      // La geometría está en centímetros: los metros se dibujan con 100 por metro.
+      const perMeter = root.Units.unitsPerMeter(root.Units.GEOMETRY_UNIT);
       const pavement = section.lanes * section.laneM + 2 * section.shoulderM;
       const outer = junction.kind === 'roundabout'
         ? 2 * (pavement + junction.islandM + section.bikeM + section.sidewalkM)
@@ -1529,7 +1577,7 @@
     insertCorridorExample() {
       if (!this.canEdit()) return 0;
       const canvas = this.design.canvas;
-      const perMeter = 100 / G.cmPerUnit(canvas.unit);
+      const perMeter = root.Units.unitsPerMeter(root.Units.GEOMETRY_UNIT);
       const margin = Math.max(20, Math.round(Math.min(canvas.width, canvas.height) * 0.04));
       // El anillo necesita alto de papel: todo el corredor se dimensiona con lo
       // que quepa, para que el dibujo y las medidas nunca se contradigan.
@@ -1630,6 +1678,9 @@
         'network', 'diameter', 'material', 'slope', 'pressure', 'circuit', 'voltage', 'gauge', 'phases', 'load',
         'extAgent', 'extCapacityLb', 'extRating', 'extHazard', 'extMountCm',
         'lanes', 'widthM',
+        // Medida declarada por el usuario (NORMIA-006 §5): en metros y con su
+        // etiqueta de confianza. `null` la borra.
+        'measuredM', 'quality',
       ];
       const keys = Object.keys(patch);
       if (!keys.every((key) => allowed.includes(key))) return false;
@@ -1643,6 +1694,28 @@
       }
       return this.apply('style', () => {
         elements.forEach((element) => {
+          // Medida declarada: opcional, en metros, entre 0,01 y 5 000, con tres
+          // decimales. `null` la borra y el objeto vuelve a medir lo dibujado.
+          if (patch.measuredM !== undefined) {
+            if (patch.measuredM === null || patch.measuredM === '') {
+              delete element.measuredM;
+            } else {
+              const value = Number(patch.measuredM);
+              if (!Number.isFinite(value) || value < 0.01 || value > 5000) {
+                throw new Error('La medida real debe estar entre 0,01 y 5 000 m.');
+              }
+              element.measuredM = Math.round(value * 1000) / 1000;
+            }
+          }
+          if (patch.quality !== undefined) {
+            if (patch.quality === '' || patch.quality === null) {
+              delete element.quality;
+            } else if (QUALITIES.includes(patch.quality)) {
+              element.quality = patch.quality;
+            } else {
+              throw new Error('La calidad de la medida no es válida.');
+            }
+          }
           if (patch.color !== undefined && COLORS.includes(patch.color) && !this.signCodeForType(element.type)) element.color = patch.color;
           if (patch.stroke !== undefined) element.stroke = G.clamp(Number(patch.stroke), 0, 40);
           if (patch.opacity !== undefined) element.opacity = G.clamp(Number(patch.opacity), 0.1, 1);
@@ -2045,11 +2118,162 @@
       if (patch.scale !== undefined && /^1:[1-9][0-9]{0,4}$/.test(patch.scale)) canvas.scale = patch.scale;
       if (patch.background !== undefined && ['#ffffff', '#f8fafc'].includes(patch.background)) canvas.background = patch.background;
       if (patch.occupancy !== undefined) canvas.occupancy = G.clamp(Math.round(Number(patch.occupancy)) || 0, 0, 10000);
+      if (patch.drill !== undefined && patch.drill !== null) {
+        const drill = { reactionS: G.clamp(Math.round(Number(patch.drill.reactionS)) || 0, 0, 600) };
+        const measured = Math.round(Number(patch.drill.measuredS) || 0);
+        if (measured >= 1) drill.measuredS = G.clamp(measured, 1, 7200);
+        canvas.drill = drill;
+      }
+      if (patch.scenarios !== undefined) {
+        if (Array.isArray(patch.scenarios) && patch.scenarios.length > MAX_SCENARIOS) {
+          throw new Error(`Puedes declarar hasta ${MAX_SCENARIOS} escenarios de ocupación por piso.`);
+        }
+        const scenarios = normalizeScenarios(patch.scenarios);
+        if (scenarios.length) canvas.scenarios = scenarios;
+        else delete canvas.scenarios;
+      }
       const overflow = this.design.elements.some((element) => element.x + element.w > canvas.width + 0.5 || element.y + element.h > canvas.height + 0.5);
       if (overflow) throw new Error('No puedes reducir el lienzo: hay elementos fuera de los nuevos límites. Muévelos o amplía el lienzo.');
       return this.apply('canvas', () => {
         this.design.canvas = canvas;
       }), true;
+    }
+
+    /* --------------- ajuste a las medidas declaradas (DEC-3) --------------- */
+
+    /**
+     * Largo geométrico de un objeto, en unidades del lienzo, con el mismo
+     * criterio que `ElementMeasure::geometryCm()`: el arco cuando hay trazo y el
+     * ancho del cajón cuando no lo hay (un vano mide su hueco, no su diagonal).
+     */
+    geometryLength(element) {
+      if (!element) return 0;
+      if (Array.isArray(element.points) && element.points.length >= 2) {
+        return this.pathLength(element);
+      }
+      return Math.max(0, Number(element.w) || 0);
+    }
+
+    /**
+     * Compara lo declarado con lo dibujado, sin tocar nada.
+     *
+     * Es el diagnóstico del ajuste global (NORMIA-006 §5.4): para cada objeto con
+     * `measuredM` calcula la relación `medida / dibujo`, y con ellas la
+     * **mediana** —no la media—, de modo que una medida mal escrita no arrastra
+     * al resto. Si las medidas se contradicen entre sí más de un 2 %, el ajuste
+     * se declara no aplicable en vez de inventar un factor.
+     *
+     * Devuelve `count: 0` cuando no hay ninguna medida declarada, y `applicable`
+     * solo cuando hay medidas, hay algo que corregir y el lienzo resultante cabe
+     * en los límites del formato.
+     */
+    measureFit() {
+      const perMeter = root.Units.unitsPerMeter(root.Units.GEOMETRY_UNIT);
+      const rows = [];
+      for (const element of this.design.elements) {
+        const measured = Number(element.measuredM);
+        if (!Number.isFinite(measured) || measured <= 0) continue;
+        const drawn = this.geometryLength(element);
+        if (!Number.isFinite(drawn) || drawn <= 0) continue;
+        rows.push({ id: element.id, drawn, measuredCm: measured * perMeter, ratio: (measured * perMeter) / drawn });
+      }
+      const empty = {
+        count: 0, median: 1, consistent: true, worstDeviationPct: 0, averageDeviationPct: 0,
+        rows: [], moved: 0, inRange: true, applicable: false, reason: 'sin_medidas', canvas: null,
+        before: null, after: null,
+      };
+      if (rows.length === 0) return empty;
+
+      const ratios = rows.map((row) => row.ratio).sort((a, b) => a - b);
+      const middle = Math.floor(ratios.length / 2);
+      const median = ratios.length % 2 === 1
+        ? ratios[middle]
+        : (ratios[middle - 1] + ratios[middle]) / 2;
+
+      const entries = rows.map((row) => ({
+        ...row,
+        deviation: median > 0 ? row.ratio / median - 1 : 0,
+      }));
+      const worst = entries.reduce((max, entry) => Math.max(max, Math.abs(entry.deviation)), 0);
+      const average = entries.reduce((total, entry) => total + Math.abs(entry.deviation), 0) / entries.length;
+      const consistent = worst <= MEASURE_FIT_SPREAD;
+
+      const canvas = this.design.canvas;
+      const nextWidth = Math.round(Number(canvas.width) * median);
+      const nextHeight = Math.round(Number(canvas.height) * median);
+      const inRange = nextWidth >= 400 && nextWidth <= 4000 && nextHeight >= 300 && nextHeight <= 3000;
+      const decided = Math.abs(median - 1) > 1e-6;
+      let reason = '';
+      if (!consistent) reason = 'inconsistente';
+      else if (!decided) reason = 'coincide';
+      else if (!inRange) reason = 'fuera_de_rango';
+
+      return {
+        count: entries.length,
+        median,
+        consistent,
+        worstDeviationPct: worst * 100,
+        averageDeviationPct: average * 100,
+        rows: entries,
+        moved: this.design.elements.length,
+        inRange,
+        applicable: consistent && decided && inRange,
+        reason: reason || 'aplicable',
+        canvas: { width: nextWidth, height: nextHeight },
+        before: { width: canvas.width, height: canvas.height },
+        after: { width: nextWidth, height: nextHeight },
+      };
+    }
+
+    /**
+     * Reescala el plano entero para que el dibujo cuadre con las medidas
+     * declaradas. Es **una acción del historial**: `undo()` la revierte como
+     * cualquier otra edición y no deja factor, ni bloque nuevo, ni estado que
+     * pueda quedar obsoleto.
+     *
+     * No se tocan los trazos ni los tipos de letra (son dibujo, no medidas) ni
+     * las medidas declaradas (siguen siendo la verdad). Los anchos de vía
+     * (`widthM`, `section`…) van en metros de proyecto y tampoco se escalan.
+     *
+     * @returns {object|null} resumen del ajuste, o `null` si no había nada que hacer.
+     */
+    applyMeasureFit() {
+      const fit = this.measureFit();
+      if (fit.count === 0) {
+        throw new Error('No hay medidas declaradas: escribe el largo real de algún objeto para poder ajustar el dibujo.');
+      }
+      if (!fit.consistent) {
+        throw new Error(`Las medidas no coinciden entre sí (hasta ${fit.worstDeviationPct.toFixed(1)} %): revisa si alguna está en otra unidad o mal escrita.`);
+      }
+      if (!fit.inRange) {
+        throw new Error(`El ajuste llevaría el lienzo a ${fit.after.width} × ${fit.after.height} cm, fuera de los límites del formato.`);
+      }
+      if (!fit.applicable) return null;
+
+      const factor = fit.median;
+      const round = (value) => Math.round((Number(value) || 0) * factor * 100) / 100;
+      this.apply('measure-fit', () => {
+        const canvas = this.design.canvas;
+        canvas.width = fit.canvas.width;
+        canvas.height = fit.canvas.height;
+        for (const element of this.design.elements) {
+          element.x = round(element.x);
+          element.y = round(element.y);
+          element.w = round(element.w);
+          element.h = round(element.h);
+          if (Array.isArray(element.points)) {
+            element.points = element.points.map((point) => ({ x: round(point.x), y: round(point.y) }));
+          }
+          if (Array.isArray(element.curves)) {
+            element.curves = element.curves.map((curve) => (
+              curve && curve.through
+                ? { ...curve, through: { x: round(curve.through.x), y: round(curve.through.y) } }
+                : curve
+            ));
+          }
+        }
+      });
+      return { ...fit, factor, applied: true };
     }
 
     updateGroupName(id, name) {
@@ -2071,6 +2295,8 @@
   root.COLORS = COLORS;
   root.BASIC_TYPES = BASIC;
   root.DOOR_TYPES = DOOR_TYPES;
+  root.QUALITIES = QUALITIES;
+  root.MEASURABLE_TYPES = MEASURABLE_TYPES;
   root.PATH_TYPES = PATH_TYPES;
   root.MEP_TYPES = MEP_TYPES;
   root.createModel = (design, catalogs, options) => new Model(design, catalogs, options);

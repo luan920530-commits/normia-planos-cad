@@ -3,6 +3,9 @@
 $counts = $report['counts'];
 $travel = $report['travel'];
 $occupancy = $report['occupancy'];
+$firstAid = $report['firstAid'] ?? null;
+$scenarios = $report['scenarios'] ?? null;
+$drill = $report['drill'] ?? null;
 $egress = $report['egress'];
 $exits = $report['exits'];
 $labels = \App\Services\PlanAudit::SEVERITY_LABELS;
@@ -96,6 +99,196 @@ $severityLabels = ['high' => 'Críticos', 'medium' => 'Importantes', 'low' => 'M
     </article>
   </div>
 
+  <h2 class="audit-h2">Aforo del piso</h2>
+  <div class="audit-metrics">
+    <article>
+      <span>Aforo máximo</span>
+      <strong><?= (int) $occupancy['maxPersons'] ?> pers.</strong>
+      <small>Superficie útil libre <?= $formatNumber((float) $occupancy['freeAreaM2']) ?> m² × <?= $formatNumber((float) $occupancy['density'], 2) ?> pers./m²</small>
+    </article>
+    <article>
+      <span>Aforo permitido</span>
+      <strong><?= (int) $occupancy['permitted'] ?> pers.</strong>
+      <small><?= $occupancy['source'] === 'declared'
+        ? 'El menor entre la ocupación declarada y el aforo máximo'
+        : 'Estimación por superficie libre: no hay ocupación declarada' ?></small>
+    </article>
+    <article>
+      <span>Ocupación declarada</span>
+      <strong><?= (int) $occupancy['declared'] > 0 ? (int) $occupancy['declared'] . ' pers.' : 'Sin declarar' ?></strong>
+      <small><?= (int) $occupancy['declared'] > 0
+        ? ((int) $occupancy['excess'] > 0
+          ? 'Supera el aforo máximo en ' . (int) $occupancy['excess'] . ' personas'
+          : 'Dentro de la capacidad del piso')
+        : 'Se usa el aforo máximo como referencia del cálculo' ?></small>
+    </article>
+    <article>
+      <span>Personas en el cálculo</span>
+      <strong><?= (int) $occupancy['people'] ?> pers.</strong>
+      <small>Base del ancho requerido y del tiempo de salida</small>
+    </article>
+  </div>
+  <p class="audit-note audit-aforo-note">El aforo máximo es una <strong>capacidad calculada</strong> con la superficie útil libre del plano y la densidad de referencia; no sustituye el aforo que fije la autoridad competente ni la revisión de la ocupación real del recinto. Con la ocupación declarada por encima del máximo, el tiempo de salida se calcula con las personas declaradas para no dar un resultado optimista.</p>
+
+  <?php if (is_array($firstAid)): ?>
+  <?php
+  $kitMax = $firstAid['coverage']['kitMaxM'] ?? null;
+  $aedMax = $firstAid['coverage']['aedMaxM'] ?? null;
+  $kitLimit = (float) ($firstAid['criteria']['kitTravelM'] ?? 30);
+  $aedLimit = (float) ($firstAid['criteria']['aedTravelM'] ?? 100);
+  $formatDistance = static fn ($value): string => $value === null ? 'sin medición' : $formatNumber((float) $value, 1) . ' m';
+  ?>
+  <h2 class="audit-h2">Recursos de primeros auxilios</h2>
+  <div class="audit-metrics">
+    <article>
+      <span>Botiquines</span>
+      <strong><?= (int) $firstAid['kits']['count'] ?></strong>
+      <small><?= (int) $firstAid['kits']['count'] === 0
+        ? 'Ninguno ubicado en el plano'
+        : 'Punto más lejano: ' . $formatDistance($kitMax) . ' · referencia ' . $formatNumber($kitLimit, 1) . ' m' ?></small>
+    </article>
+    <article>
+      <span>Camillas</span>
+      <strong><?= (int) $firstAid['stretchers']['count'] ?></strong>
+      <small><?= (int) $firstAid['stretchers']['count'] === 0
+        ? 'Ninguna ubicada en el piso'
+        : 'Ubicadas en el plano · verifica su estado en sitio' ?></small>
+    </article>
+    <article>
+      <span>Desfibrilador (DEA)</span>
+      <strong><?= (int) $firstAid['aeds']['count'] ?></strong>
+      <small><?php if ((int) $firstAid['aeds']['count'] === 0): ?>
+        <?= (int) $firstAid['people'] >= (int) $firstAid['criteria']['aedMinPersons']
+          ? 'Afluencia por encima de ' . (int) $firstAid['criteria']['aedMinPersons'] . ' personas: revisa si aplica'
+          : 'No exigible por debajo de ' . (int) $firstAid['criteria']['aedMinPersons'] . ' personas' ?>
+      <?php else: ?>Punto más lejano: <?= $formatDistance($aedMax) ?> · referencia <?= $formatNumber($aedLimit, 1) ?> m<?php endif; ?></small>
+    </article>
+    <article>
+      <span>Personas en el cálculo</span>
+      <strong><?= (int) $firstAid['people'] ?> pers.</strong>
+      <small><?= ($firstAid['source'] ?? 'estimated') === 'declared' ? 'Ocupación declarada del piso' : 'Capacidad calculada: no hay ocupación declarada' ?></small>
+    </article>
+  </div>
+  <p class="audit-note audit-firstaid-note">El auditor cuenta los recursos <strong>dibujados en el plano</strong> y mide su alcance en línea recta hasta el punto más lejano del espacio libre. <strong>No comprueba contenido, dotación, vigencia, carga ni mantenimiento</strong>: eso se verifica en sitio. Los umbrales son criterios de referencia de la aplicación, no exigencias normativas<?= ($firstAid['criteria']['reference'] ?? '') !== '' ? '; la norma aplicable (' . e((string) $firstAid['criteria']['reference']) . ') depende del establecimiento y de la afluencia de público' : '' ?>.</p>
+  <?php endif; ?>
+
+
+  <?php if (is_array($scenarios) && (int) ($scenarios['count'] ?? 0) > 0): ?>
+  <?php $base = $scenarios['base'] ?? []; $peak = $scenarios['peak'] ?? null; ?>
+  <h2 class="audit-h2">Escenarios de ocupación temporal</h2>
+  <div class="audit-metrics">
+    <article>
+      <span>Escenarios declarados</span>
+      <strong><?= (int) $scenarios['count'] ?></strong>
+      <small>Máximo <?= (int) ($scenarios['criteria']['maxScenarios'] ?? 8) ?> por piso</small>
+    </article>
+    <article>
+      <span>El más exigente</span>
+      <strong><?= $peak === null ? 'Sin datos' : (int) $peak['persons'] . ' pers.' ?></strong>
+      <small><?= $peak === null ? 'Sin escenarios' : e((string) $peak['name']) ?></small>
+    </article>
+    <article>
+      <span>Uso habitual</span>
+      <strong><?= (int) ($base['people'] ?? 0) ?> pers.</strong>
+      <small><?= e($formatTime($base['estimatedTimeS'] ?? null)) ?> de salida · <?= ($base['source'] ?? 'estimated') === 'declared' ? 'ocupación declarada' : 'capacidad calculada' ?></small>
+    </article>
+    <article>
+      <span>Capacidad del piso</span>
+      <strong><?= (int) ($base['capacity'] ?? 0) ?> pers.</strong>
+      <small>La misma superficie libre × densidad del uso habitual</small>
+    </article>
+  </div>
+  <table class="print-table audit-table audit-scenarios">
+    <thead>
+      <tr>
+        <th scope="col">Escenario</th>
+        <th scope="col">Personas</th>
+        <th scope="col">Capacidad</th>
+        <th scope="col">Ancho exigido</th>
+        <th scope="col">Tiempo estimado</th>
+        <th scope="col">Cabe</th>
+      </tr>
+    </thead>
+    <tbody>
+      <?php foreach ($scenarios['items'] as $scenario): ?>
+        <tr>
+          <th scope="row"><?= e((string) $scenario['name']) ?></th>
+          <td><?= (int) $scenario['persons'] ?></td>
+          <td><?= (int) $scenario['capacity'] ?><?php if ((int) $scenario['excess'] > 0): ?> <small>+<?= (int) $scenario['excess'] ?> de más</small><?php endif; ?></td>
+          <td><?= $formatNumber((float) $scenario['requiredWidthM']) ?> m<?php if ($scenario['widthOk'] === false): ?> <small>disponible <?= $formatNumber((float) $scenario['availableWidthM']) ?> m</small><?php endif; ?></td>
+          <td><?= e($formatTime($scenario['estimatedTimeS'])) ?><?php if ($scenario['extraTimeS'] !== null && (float) $scenario['extraTimeS'] > 0.05): ?> <small>+<?= e($formatTime((float) $scenario['extraTimeS'])) ?></small><?php endif; ?></td>
+          <td><?= $scenario['fits'] ? 'Sí' : 'No' ?><?= $scenario['widthOk'] === false ? ' · ancho' : '' ?></td>
+        </tr>
+      <?php endforeach; ?>
+    </tbody>
+  </table>
+  <p class="audit-note audit-scenarios-note"><?= e((string) ($scenarios['notice'] ?? '')) ?></p>
+  <?php endif; ?>
+
+
+  <?php if (is_array($drill) && ($drill['routes'] ?? []) !== []): ?>
+  <?php
+  $drillTarget = $drill['targetS'] ?? null;
+  $drillMeasured = $drill['measuredS'] ?? null;
+  $drillDifference = $drill['differenceS'] ?? null;
+  ?>
+  <h2 class="audit-h2">Simulacro de evacuación</h2>
+  <div class="audit-metrics">
+    <article>
+      <span>Tiempo objetivo</span>
+      <strong><?= $drillTarget === null ? 'Sin datos' : e($formatTime((float) $drillTarget)) ?></strong>
+      <small>Reacción <?= e($formatTime((float) ($drill['reactionS'] ?? 0))) ?> + caminos hasta el punto de encuentro</small>
+    </article>
+    <article>
+      <span>Punto de encuentro</span>
+      <strong><?= ($drill['meeting']['found'] ?? false) ? 'Declarado' : 'Sin declarar' ?></strong>
+      <small><?= ($drill['meeting']['source'] ?? 'none') === 'object'
+        ? 'Objeto «Punto de encuentro» en el plano'
+        : (($drill['meeting']['source'] ?? 'none') === 'sign' ? 'Solo la señal E007: ubica la zona de reunión' : 'El recorrido termina en la salida') ?></small>
+    </article>
+    <article>
+      <span>Tiempo medido</span>
+      <strong><?= $drillMeasured === null ? 'Sin registrar' : e($formatTime((float) $drillMeasured)) ?></strong>
+      <small><?php if ($drillMeasured === null): ?>Se anota después de cronometrar el simulacro real
+      <?php elseif ($drillDifference !== null && (float) $drillDifference > 0): ?>+<?= e($formatTime((float) $drillDifference)) ?> sobre el objetivo
+      <?php elseif ($drillDifference !== null): ?><?= e($formatTime(abs((float) $drillDifference))) ?> por debajo del objetivo
+      <?php else: ?>Sin objetivo con el que comparar<?php endif; ?></small>
+    </article>
+    <article>
+      <span>Personas del cálculo</span>
+      <strong><?= (int) ($drill['people'] ?? 0) ?> pers.</strong>
+      <small>Velocidad de referencia <?= $formatNumber((float) ($drill['speedMps'] ?? 1), 1) ?> m/s · el camino se mide por el espacio libre</small>
+    </article>
+  </div>
+  <table class="print-table audit-table audit-drill">
+    <thead>
+      <tr>
+        <th scope="col">Ruta</th>
+        <th scope="col">Trazo</th>
+        <th scope="col">Camino libre</th>
+        <th scope="col">Salida</th>
+        <th scope="col">Al punto de encuentro</th>
+        <th scope="col">Reacción</th>
+        <th scope="col">Tiempo objetivo</th>
+      </tr>
+    </thead>
+    <tbody>
+      <?php foreach ($drill['routes'] as $index => $ruta): ?>
+        <tr>
+          <th scope="row"><?= e(($ruta['label'] ?? '') !== '' ? $ruta['label'] : 'Ruta ' . ($index + 1)) ?></th>
+          <td><?= $formatNumber((float) $ruta['lengthM'], 1) ?> m</td>
+          <td><?= ($ruta['pathM'] ?? null) === null ? 'Sin camino' : $formatNumber((float) $ruta['pathM'], 1) . ' m' ?></td>
+          <td><?= $ruta['exitId'] === null ? 'Sin salida' : ($ruta['endsAtExit'] ? 'Sí' : 'No termina en ella') ?></td>
+          <td><?= $ruta['meetingM'] === null ? '—' : $formatNumber((float) $ruta['meetingM'], 1) . ' m' ?></td>
+          <td><?= e($formatTime((float) $ruta['reactionS'])) ?></td>
+          <td><?= $ruta['arrivalS'] === null ? '—' : e($formatTime((float) $ruta['arrivalS'])) ?></td>
+        </tr>
+      <?php endforeach; ?>
+    </tbody>
+  </table>
+  <p class="audit-note audit-drill-note"><?= e((string) ($drill['notice'] ?? '')) ?></p>
+  <?php endif; ?>
+
   <h2 class="audit-h2">Hallazgos</h2>
   <?php if ($findings === []): ?>
     <p class="audit-clean">No se detectaron hallazgos con los criterios de referencia configurados. Aun así, verifica el plano en sitio antes de usarlo.</p>
@@ -154,9 +347,23 @@ $severityLabels = ['high' => 'Críticos', 'medium' => 'Importantes', 'low' => 'M
       <tr><th scope="row">Ancho mínimo de vano por salida</th><td><?= $formatNumber(((float) $criteria['egress']['minExitWidthCm']) / 100) ?> m</td></tr>
       <tr><th scope="row">Ancho útil por persona</th><td><?= $formatNumber((float) $criteria['egress']['widthMmPerPerson'], 1) ?> mm</td></tr>
       <tr><th scope="row">Densidad de ocupación</th><td><?= $formatNumber((float) $criteria['occupancy']['densityPersonsPerM2'], 2) ?> pers./m²</td></tr>
+      <tr><th scope="row">Techo de aforo del criterio</th><td><?= (int) $occupancy['cap'] ?> personas</td></tr>
       <tr><th scope="row">Velocidad de marcha</th><td><?= $formatNumber((float) $criteria['egress']['travelSpeedMps'], 2) ?> m/s</td></tr>
       <tr><th scope="row">Señal de salida junto al vano</th><td>≤ <?= $formatNumber(((float) $criteria['signs']['exitSignRadiusCm']) / 100, 1) ?> m</td></tr>
       <tr><th scope="row">Rejilla de cálculo</th><td><?= (int) $criteria['grid']['cellCm'] ?> cm</td></tr>
+      <?php if (is_array($firstAid)): ?>
+      <tr><th scope="row">Alcance del botiquín</th><td>≤ <?= $formatNumber((float) $firstAid['criteria']['kitTravelM'], 1) ?> m</td></tr>
+      <tr><th scope="row">Alcance del DEA</th><td>≤ <?= $formatNumber((float) $firstAid['criteria']['aedTravelM'], 1) ?> m</td></tr>
+      <tr><th scope="row">Umbral de afluencia para el DEA</th><td><?= (int) $firstAid['criteria']['aedMinPersons'] ?> personas</td></tr>
+      <?php endif; ?>
+      <?php if (is_array($drill) && ($drill['routes'] ?? []) !== []): ?>
+      <tr><th scope="row">Tiempo de reacción del simulacro</th><td><?= e($formatTime((float) ($drill['reactionS'] ?? 0))) ?></td></tr>
+      <tr><th scope="row">Velocidad de marcha del simulacro</th><td><?= $formatNumber((float) ($drill['speedMps'] ?? 1), 2) ?> m/s</td></tr>
+      <?php endif; ?>
+      <?php if (is_array($scenarios) && (int) ($scenarios['count'] ?? 0) > 0): ?>
+      <tr><th scope="row">Escenarios de ocupación por piso</th><td>hasta <?= (int) ($scenarios['criteria']['maxScenarios'] ?? 8) ?></td></tr>
+      <tr><th scope="row">Ancho exigido por escenario</th><td><?= $formatNumber((float) ($scenarios['criteria']['widthMmPerPerson'] ?? 5), 1) ?> mm por persona</td></tr>
+      <?php endif; ?>
     </tbody>
   </table>
 

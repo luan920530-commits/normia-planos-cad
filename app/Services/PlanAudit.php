@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Core\Units;
 use JsonException;
 
 /**
@@ -63,6 +64,14 @@ final class PlanAudit
                 'fireSignCodes' => ['F001', 'F002', 'F005'],
                 'youAreHereCode' => 'SVC_AQUI',
             ],
+            'firstAid' => [
+                'notice' => 'Recursos de primeros auxilios con umbrales de referencia configurables.',
+                'reference' => 'Decreto 1072 de 2015 · Resolución 0312 de 2019 · Ley 1831 de 2017 y Resolución 3316 de 2019 (DEA)',
+                'kitTravelM' => 30,
+                'stretcherPerFloor' => true,
+                'aedMinPersons' => 500,
+                'aedTravelM' => 100,
+            ],
         ];
         if (!is_file($path)) {
             return self::$criteria = $defaults;
@@ -76,7 +85,7 @@ final class PlanAudit
             return self::$criteria = $defaults;
         }
         $merged = $defaults;
-        foreach (['grid', 'egress', 'occupancy', 'signs'] as $block) {
+        foreach (['grid', 'egress', 'occupancy', 'signs', 'firstAid'] as $block) {
             if (isset($raw[$block]) && is_array($raw[$block])) {
                 $merged[$block] = array_merge($defaults[$block], $raw[$block]);
             }
@@ -86,6 +95,110 @@ final class PlanAudit
         }
         $merged['version'] = (int) ($raw['version'] ?? 1);
         return self::$criteria = $merged;
+    }
+
+    /* -------------------------------- aforo -------------------------------- */
+
+    /**
+     * Aforo del piso: cuánta gente cabe según la superficie libre, cuánta hay
+     * declarada y con cuántas se calcula la salida.
+     *
+     * Es una sola fórmula, usada por el informe, el pie del plano exportado y el
+     * cajón de revisión del editor:
+     *
+     *   aforo máximo = superficie libre (m²) × densidad de referencia
+     *
+     * | Clave | Qué es |
+     * | --- | --- |
+     * | `maxPersons` | capacidad calculada con la superficie libre y la densidad, limitada por `occupancy.maxPersons` |
+     * | `declared` | lo que se escribió en *Ajustes del piso*; `0` = sin declarar |
+     * | `permitted` | el aforo que rige: el declarado si no supera el máximo; si no, el máximo |
+     * | `used` | personas con las que se calculan ancho y tiempo de salida |
+     * | `excess` | personas declaradas por encima del máximo (0 si no hay exceso) |
+     * | `source` | `declared` o `estimated` |
+     *
+     * `used` es la declarada cuando existe: si el plano declara más gente de la
+     * que cabe, el tiempo de salida tiene que reflejar esa gente, no la capacidad.
+     * Reducirla en silencio daría un tiempo optimista. Lo que sí se dice, con un
+     * hallazgo propio, es que el aforo declarado supera el máximo.
+     *
+     * @return array{maxPersons:int,declared:int,permitted:int,used:int,excess:int,source:string,freeAreaM2:float,density:float,cap:int}
+     */
+    public static function aforo(array $design, int $occupancy = 0): array
+    {
+        $criteria = self::criteria();
+        $free = self::freeArea($design, $criteria);
+        return self::aforoFromArea($free['freeAreaM2'], $occupancy, $design, $criteria);
+    }
+
+    /**
+     * La misma cuenta cuando la superficie libre ya se conoce (el recorrido usa
+     * la rejilla y no vamos a construirla dos veces).
+     *
+     * @return array{maxPersons:int,declared:int,permitted:int,used:int,excess:int,source:string,freeAreaM2:float,density:float,cap:int}
+     */
+    private static function aforoFromArea(float $freeAreaM2, int $occupancy, array $design, array $criteria): array
+    {
+        $canvas = is_array($design['canvas'] ?? null) ? $design['canvas'] : [];
+        $declared = max(0, $occupancy);
+        if ($declared === 0) {
+            $declared = max(0, (int) ($canvas['occupancy'] ?? 0));
+        }
+        $density = max(0.0, (float) $criteria['occupancy']['densityPersonsPerM2']);
+        $cap = max(1, (int) $criteria['occupancy']['maxPersons']);
+        $freeAreaM2 = max(0.0, $freeAreaM2);
+        // Sin densidad no hay capacidad calculable: si el criterio se pone en 0,
+        // el máximo es el techo declarado y no se inventa una cifra.
+        $maxPersons = $density > 0.0
+            ? (int) min($cap, max(1, (int) round($freeAreaM2 * $density)))
+            : $cap;
+        $permitted = $declared > 0 ? min($declared, $maxPersons) : $maxPersons;
+        return [
+            'maxPersons' => $maxPersons,
+            'declared' => $declared,
+            'permitted' => $permitted,
+            'used' => $declared > 0 ? $declared : $maxPersons,
+            'excess' => max(0, $declared - $maxPersons),
+            'source' => $declared > 0 ? 'declared' : 'estimated',
+            'freeAreaM2' => self::round($freeAreaM2),
+            'density' => $density,
+            'cap' => $cap,
+        ];
+    }
+
+    /**
+     * Superficie libre del piso y su exterior, sin calcular recorridos. Es la
+     * base del aforo y de la ficha del pie de página, donde no hace falta el
+     * camino más largo hasta cada salida.
+     *
+     * @return array{freeAreaM2:float,exteriorAreaM2:float,cellM:float}
+     */
+    public static function freeArea(array $design, ?array $criteria = null): array
+    {
+        $criteria ??= self::criteria();
+        $walls = [];
+        $doors = [];
+        foreach ($design['elements'] as $element) {
+            if (!self::layerVisible($design, (string) ($element['layerId'] ?? ''))) {
+                continue;
+            }
+            $type = (string) ($element['type'] ?? '');
+            if ($type === 'wall') {
+                $walls[] = [
+                    'id' => (string) $element['id'],
+                    'points' => PlanGrid::visualPoints($element, Units::GEOMETRY_UNIT),
+                    'stroke' => max(1.0, (float) ($element['stroke'] ?? 2)),
+                ];
+            } elseif (in_array($type, DesignValidator::DOOR_TYPES, true)) {
+                $doors[] = ['id' => (string) $element['id'], 'opening' => PlanGrid::doorOpening($element)];
+            }
+        }
+        $grid = PlanGrid::build($design, $walls, $doors, $criteria);
+        return [
+            'freeAreaM2' => self::round((float) $grid['freeAreaM2']),
+            'exteriorAreaM2' => self::round((float) ($grid['exteriorAreaM2'] ?? 0.0)),
+            'cellM' => self::round((float) $grid['cellM'], 2),
+        ];
     }
 
     /* ------------------------------ análisis ------------------------------ */
@@ -102,9 +215,13 @@ final class PlanAudit
             $design['elements'],
             static fn (array $element): bool => self::layerVisible($design, (string) $element['layerId'])
         ));
-        $cmPerUnit = self::cmPerUnit((string) $canvas['unit']);
-        $metersPerUnit = $cmPerUnit / 100;
-        $toUnits = static fn (float $cm): float => $cm / $cmPerUnit;
+        /* La geometría del documento está siempre en centímetros (NORMIA-006
+           §3): `canvas.unit` es solo cómo se leen las cifras. El auditor no
+           pregunta por la unidad del plano, la da por centímetros. */
+        $geometry = Units::GEOMETRY_UNIT;
+        $cmPerUnit = Units::cmPerUnit($geometry);
+        $metersPerUnit = Units::metersPerUnit($geometry);
+        $toUnits = static fn (float $cm): float => Units::fromCm($cm, $geometry);
 
         $exits = [];
         $doors = [];
@@ -114,10 +231,14 @@ final class PlanAudit
         foreach ($elements as $element) {
             $type = (string) $element['type'];
             if (in_array($type, DesignValidator::DOOR_TYPES, true)) {
+                // El ancho del vano manda desde la medida declarada si la hay
+                // (NORMIA-006 §6.1); si no, la geometría en centímetros.
+                [$doorWidthCm, $doorSource] = ElementMeasure::lengthCm($element);
                 $door = [
                     'id' => (string) $element['id'],
                     'type' => $type,
-                    'widthM' => self::round(((float) $element['w']) * $metersPerUnit),
+                    'widthM' => self::round($doorWidthCm * $metersPerUnit),
+                    'widthSource' => $doorSource,
                     'opening' => PlanGrid::doorOpening($element),
                     'center' => [
                         'x' => (float) $element['x'] + (float) $element['w'] / 2,
@@ -134,13 +255,13 @@ final class PlanAudit
             if ($type === 'wall') {
                 $walls[] = [
                     'id' => (string) $element['id'],
-                    'points' => PlanGrid::visualPoints($element, (string) $design['canvas']['unit']),
+                    'points' => PlanGrid::visualPoints($element, Units::GEOMETRY_UNIT),
                     'stroke' => max(1.0, (float) ($element['stroke'] ?? 2)),
                 ];
                 continue;
             }
             if ($type === 'route') {
-                $routes[] = ['id' => (string) $element['id'], 'element' => $element, 'points' => PlanGrid::visualPoints($element, (string) $design['canvas']['unit'])];
+                $routes[] = ['id' => (string) $element['id'], 'element' => $element, 'points' => PlanGrid::visualPoints($element, Units::GEOMETRY_UNIT)];
                 continue;
             }
             $code = LibraryRepository::codeForType($type);
@@ -289,7 +410,9 @@ final class PlanAudit
             for ($index = 0; $index < count($points) - 1; $index += 1) {
                 $lengthU += self::distance($points[$index], $points[$index + 1]);
             }
-            $lengthM = self::round($lengthU * $metersPerUnit);
+            [$measuredCm, $lengthSource] = ElementMeasure::lengthCm($route['element']);
+            // Con medida declarada manda ella; sin ella, el recorrido dibujado.
+            $lengthM = self::round(($lengthSource === ElementMeasure::SOURCE_MEASURED ? $measuredCm : $lengthU) * $metersPerUnit);
             $end = $points[count($points) - 1];
             $nearest = null;
             foreach ($exits as $exit) {
@@ -304,6 +427,7 @@ final class PlanAudit
                 'id' => $route['id'],
                 'label' => trim((string) ($route['element']['label'] ?? '')),
                 'lengthM' => $lengthM,
+                'lengthSource' => $lengthSource,
                 'endsAtExit' => $endsAtExit,
                 'distanceToExitM' => $nearest === null ? null : self::round($nearest * $metersPerUnit),
                 'wallCrossings' => $crossings,
@@ -342,17 +466,29 @@ final class PlanAudit
         }
 
         /* ------------------------ ocupación y ancho ------------------------ */
-        $declared = max(0, $occupancy);
-        if ($declared === 0) {
-            $declared = max(0, (int) ($canvas['occupancy'] ?? 0));
-        }
-        $occupancySource = $declared > 0 ? 'declared' : 'estimated';
+        /* Aforo: capacidad por superficie libre, aforo declarado y aforo que
+           rige. Una sola fórmula para el informe, el pie y el editor. */
+        $aforo = self::aforoFromArea(max(0.0, $field['freeAreaM2']), $occupancy, $design, $criteria);
+        $declared = $aforo['used'];
+        $occupancySource = $aforo['source'];
         $freeAreaM2 = max(0.0, $field['freeAreaM2']);
-        if ($declared === 0) {
-            $density = max(0.0, (float) $criteria['occupancy']['densityPersonsPerM2']);
-            $declared = (int) min(
-                (int) $criteria['occupancy']['maxPersons'],
-                max(1, (int) round($freeAreaM2 * $density))
+        if ($aforo['excess'] > 0) {
+            $add(
+                $findings,
+                'occupancy_over_capacity',
+                'medium',
+                'Aforo declarado por encima de la capacidad del piso',
+                sprintf(
+                    'El piso declara %d personas y su superficie libre de %s m² admite %d con la densidad de referencia (%s pers./m²). El aforo permitido queda en %d: reduce la ocupación, amplía la superficie útil o ajusta la densidad documentada.',
+                    $aforo['declared'],
+                    self::number($aforo['freeAreaM2']),
+                    $aforo['maxPersons'],
+                    self::number($aforo['density'], 2),
+                    $aforo['permitted']
+                ),
+                [],
+                null,
+                $aforo['declared'] . ' de ' . $aforo['maxPersons']
             );
         }
         if ($occupancySource === 'estimated') {
@@ -460,6 +596,36 @@ final class PlanAudit
             $findings[] = $finding;
         }
 
+        /* --------------------- primeros auxilios (1.23.0) ---------------------
+         * Botiquín, camilla y DEA. La ocupación que se pasa es la declarada; si
+         * no hay, el propio inventario usa la capacidad calculada. */
+        $firstAid = FirstAidInventory::analyze($design, $declared);
+        foreach ($firstAid['findings'] as $finding) {
+            $findings[] = $finding;
+        }
+
+        /* ------------------ escenarios de ocupación temporal ------------------
+         * A-04 (NORMIA-006 §31): un evento con más gente que el uso habitual se
+         * calcula con las mismas fórmulas del piso y aparte, para que el aforo
+         * del uso habitual no cambie en silencio. */
+        $speed = max(0.1, (float) $criteria['egress']['travelSpeedMps']);
+        $walkTimeS = $travel['longestM'] === null ? null : self::round((float) $travel['longestM'] / $speed, 1);
+        $scenarios = OccupancyScenarios::analyze($design, $aforo, $availableWidthM, $walkTimeS);
+        foreach ($scenarios['findings'] as $finding) {
+            $findings[] = $finding;
+        }
+
+        /* --------------------- simulacro de evacuación ---------------------
+         * A-05 (NORMIA-006 §32): el tiempo objetivo del piso con las rutas
+         * dibujadas y el tiempo de reacción declarado. Se calcula aparte del
+         * tiempo de salida del aforo: uno es cronómetro estimado de la marcha y
+         * la cola, el otro es el recorrido real de cada ruta hasta el punto de
+         * encuentro. */
+        $drill = EvacuationDrill::analyze($design, $routes, $routesReport, $exits, $aforo, $criteria);
+        foreach ($drill['findings'] as $finding) {
+            $findings[] = $finding;
+        }
+
         /* ------------------------------ orden ------------------------------ */
         usort($findings, static function (array $a, array $b): int {
             $order = array_flip(self::SEVERITIES);
@@ -470,9 +636,7 @@ final class PlanAudit
             $counts[$finding['severity']] += 1;
         }
 
-        $speed = max(0.1, (float) $criteria['egress']['travelSpeedMps']);
         $flow = max(0.0, (float) $criteria['egress']['flowPersonsPerSecondPerMeter']);
-        $walkTimeS = $travel['longestM'] === null ? null : self::round((float) $travel['longestM'] / $speed, 1);
         $queueTimeS = ($availableWidthM > 0 && $flow > 0)
             ? self::round($declared / ($flow * $availableWidthM), 1)
             : null;
@@ -498,9 +662,18 @@ final class PlanAudit
             ],
             'travel' => $travel,
             'occupancy' => [
+                // `people` es con quién se calcula; el aforo va aparte para que
+                // el informe pueda decir «caben 23, declaras 30, rigen 23».
                 'people' => $declared,
                 'source' => $occupancySource,
                 'density' => (float) $criteria['occupancy']['densityPersonsPerM2'],
+                'maxPersons' => $aforo['maxPersons'],
+                'declared' => $aforo['declared'],
+                'permitted' => $aforo['permitted'],
+                'excess' => $aforo['excess'],
+                'freeAreaM2' => $aforo['freeAreaM2'],
+                'cap' => $aforo['cap'],
+                'formula' => 'superficie libre × densidad de referencia',
             ],
             'egress' => [
                 'requiredWidthM' => $requiredWidthM,
@@ -511,6 +684,9 @@ final class PlanAudit
                 'speedMps' => $speed,
             ],
             'extinguishers' => $extinguishers,
+            'firstAid' => $firstAid,
+            'scenarios' => $scenarios,
+            'drill' => $drill,
             'routes' => $routesReport,
             'signs' => [
                 'youAreHere' => $hasYouAreHere,
@@ -773,15 +949,6 @@ final class PlanAudit
             'x' => min($width, ($ix + 0.5) * $cell),
             'y' => min($height, ($iy + 0.5) * $cell),
         ];
-    }
-
-    private static function cmPerUnit(string $unit): float
-    {
-        return match ($unit) {
-            'm' => 100.0,
-            'mm' => 0.1,
-            default => 1.0,
-        };
     }
 
     private static function layerVisible(array $design, string $layerId): bool

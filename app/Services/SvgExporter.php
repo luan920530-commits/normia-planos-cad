@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Core\Units;
+
 /**
  * Genera una representación SVG limpia del diseño guardado.
  * No incluye cuadrícula, guías, selección ni controles del editor.
@@ -11,7 +13,64 @@ final class SvgExporter
 {
     private static int $assetSequence = 0;
 
-    public static function render(array $design, array $meta = [], bool $withFrame = true): string
+    /**
+     * Ancho virtual del marco (pie, leyenda y perfiles), en unidades propias.
+     *
+     * El marco **no se dibuja a la escala del plano**: si lo hiciera, a 1:500 la
+     * letra del pie mediría medio milímetro. Se dibuja en un lienzo de 1 200
+     * unidades y se mapea al ancho del papel, así su tamaño en milímetros no
+     * depende de la escala elegida.
+     */
+    public const FRAME_WIDTH = 1200.0;
+
+    /** Ancho mínimo de la hoja, en milímetros: debajo, el pie no es legible. */
+    public const MIN_SHEET_MM = 190.0;
+
+    /** Escalas de impresión que se ofrecen en la vista de impresión. */
+    public const SCALES = ['1:20', '1:25', '1:50', '1:75', '1:100', '1:125', '1:150', '1:200', '1:250', '1:500', '1:1000'];
+
+    /**
+     * Tamaño de la hoja que produce `render()` con marco, en milímetros.
+     *
+     * Lo usan la vista de impresión y las pruebas para saber si un plano cabe en
+     * la hoja elegida sin tener que analizar el SVG. `planWidthMm` y
+     * `planHeightMm` son el dibujo a la escala pedida; `widthMm` y `heightMm`
+     * incluyen el marco y el ancho mínimo legible.
+     *
+     * @param array<string,mixed> $design
+     * @return array{widthMm:float,heightMm:float,planWidthMm:float,planHeightMm:float,frameHeightMm:float,denominator:float,mmPerCm:float,scale:string}
+     */
+    public static function sheet(array $design, ?string $scale = null): array
+    {
+        $canvas = is_array($design['canvas'] ?? null) ? $design['canvas'] : [];
+        $requested = $scale ?? (string) ($canvas['scale'] ?? '');
+        $denominator = Units::scaleDenominator($requested) ?? 100.0;
+        $label = '1:' . (int) $denominator;
+        $mmPerCm = 10.0 / $denominator;
+        $planWidthMm = (float) ($canvas['width'] ?? 0) * $mmPerCm;
+        $planHeightMm = (float) ($canvas['height'] ?? 0) * $mmPerCm;
+        $widthMm = max(self::MIN_SHEET_MM, $planWidthMm);
+        $frameScale = $widthMm / self::FRAME_WIDTH;
+        $frameUnits = self::frameUnits($design, $frameScale);
+        $frameHeightMm = $frameUnits * $frameScale;
+        return [
+            'widthMm' => round($widthMm, 2),
+            'heightMm' => round($planHeightMm + $frameHeightMm + 2.0, 2),
+            'planWidthMm' => round($planWidthMm, 2),
+            'planHeightMm' => round($planHeightMm, 2),
+            'frameHeightMm' => round($frameHeightMm, 2),
+            'denominator' => $denominator,
+            'mmPerCm' => $mmPerCm,
+            'scale' => $label,
+        ];
+    }
+
+    /**
+     * @param array<string,mixed> $design
+     * @param array<string,mixed> $meta
+     * @param array{scale?:string,papel?:string} $options escala pedida, sin tocar el documento
+     */
+    public static function render(array $design, array $meta = [], bool $withFrame = true, array $options = []): string
     {
         $canvas = $design['canvas'];
         $width = (float) $canvas['width'];
@@ -20,27 +79,117 @@ final class SvgExporter
         $mepItems = $withFrame ? self::mepLegend($design) : [];
         $mepColumns = $mepItems === [] ? 1 : self::legendColumns($width);
         $mepRows = $mepItems === [] ? [] : array_chunk($mepItems, $mepColumns);
-        $footer = $withFrame ? PlanFooter::payload($design, $meta) : null;
-        $bandHeight = $withFrame ? PlanFooter::bandHeight($width) : 0.0;
-        $dataHeight = $withFrame ? PlanFooter::dataHeight($width, (array) $footer) : 0.0;
+        $sheet = $withFrame ? self::sheet($design, $options['scale'] ?? null) : null;
+        $footer = $withFrame
+            ? PlanFooter::payload($design, $meta + ['print_scale' => (string) ($sheet['scale'] ?? '')])
+            : null;
+        $frameWidth = $withFrame ? self::FRAME_WIDTH : $width;
+        $bandHeight = $withFrame ? PlanFooter::bandHeight($frameWidth) : 0.0;
+        $dataHeight = $withFrame ? PlanFooter::dataHeight($frameWidth, (array) $footer, self::scaleInfo($sheet)) : 0.0;
         $mepHeight = $withFrame && $mepRows !== [] ? 10.0 + 15.0 * count($mepRows) : 0.0;
         $profileRoads = $withFrame ? self::profileRoads($design) : [];
         $profileHeight = $profileRoads === [] ? 0.0 : 8.0 + 42.0 * count($profileRoads);
-        $frameHeight = $withFrame ? 2.0 + $bandHeight + $dataHeight + $mepHeight + $profileHeight + 8.0 : 0.0;
-        $totalHeight = $height + $frameHeight;
         $title = trim((string) ($meta['floor_name'] ?? 'Plano de emergencia'));
         $project = trim((string) ($meta['project_name'] ?? ''));
         $scale = (string) $canvas['scale'];
-        $unit = (string) $canvas['unit'];
+        // Geometría en centímetros: el SVG dibuja con `cm`, no con la etiqueta.
+        $unit = Units::GEOMETRY_UNIT;
 
         $svg = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
-        $svg .= '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="' . self::n($width) . '" height="' . self::n($totalHeight) . '" '
-            . 'viewBox="0 0 ' . self::n($width) . ' ' . self::n($totalHeight) . '" role="img" aria-label="' . self::x($title) . '">' . "\n";
+        if ($withFrame && $sheet !== null) {
+            /* Hoja física: el `viewBox` está en milímetros de papel y el plano se
+               adentra con una transformación de escala. Así un muro de 4,20 m mide
+               42 mm en un 1:100 y 84 mm en un 1:50 sin que cambie una coordenada
+               del documento. */
+            $svg .= '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="' . self::n($sheet['widthMm']) . 'mm" height="' . self::n($sheet['heightMm']) . 'mm" '
+                . 'viewBox="0 0 ' . self::n($sheet['widthMm']) . ' ' . self::n($sheet['heightMm']) . '" data-scale="' . self::x((string) $sheet['scale']) . '" data-plan-width-mm="' . self::n($sheet['planWidthMm']) . '" data-plan-height-mm="' . self::n($sheet['planHeightMm']) . '" '
+                . 'role="img" aria-label="' . self::x($title) . '">' . "\n";
+        } else {
+            $totalHeight = $height;
+            $svg .= '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="' . self::n($width) . '" height="' . self::n($totalHeight) . '" '
+                . 'viewBox="0 0 ' . self::n($width) . ' ' . self::n($totalHeight) . '" role="img" aria-label="' . self::x($title) . '">' . "\n";
+        }
         $svg .= '<title>' . self::x($title . ($project !== '' ? ' · ' . $project : '')) . '</title>' . "\n";
         $svg .= '<desc>Representación esquemática de un plano de emergencia. Las dimensiones y la escala deben verificarse en sitio.</desc>' . "\n";
         $svg .= '<rect width="100%" height="100%" fill="#ffffff"/>' . "\n";
-        $svg .= '<g id="plano">' . "\n";
 
+        $plan = self::plan($design, $canvas);
+        if ($withFrame && $sheet !== null) {
+            $svg .= '<g id="plano" transform="scale(' . self::n((float) $sheet['mmPerCm'], 6) . ')">' . "\n" . $plan . '</g>' . "\n";
+            $frameTop = (float) $sheet['planHeightMm'] + 2.0;
+            $frameScale = (float) $sheet['widthMm'] / self::FRAME_WIDTH;
+            $svg .= '<g id="leyenda" data-frame="1" transform="translate(0 ' . self::n($frameTop) . ') scale(' . self::n($frameScale, 6) . ')"'
+                . ' font-family="Helvetica, Arial, sans-serif">' . "\n";
+            $svg .= '<line x1="0" y1="0.5" x2="' . self::n(self::FRAME_WIDTH) . '" y2="0.5" stroke="#e2e8f0" stroke-width="1"/>' . "\n";
+            $svg .= PlanFooter::render(self::FRAME_WIDTH, 2.0, (array) $footer, self::scaleInfo($sheet));
+            $mepTop = 2.0 + $bandHeight + $dataHeight;
+            foreach ($mepRows as $rowIndex => $row) {
+                $rowY = $mepTop + 12 + 15 * $rowIndex;
+                foreach ($row as $columnIndex => $item) {
+                    $itemX = PlanFooter::PAD + self::legendColumnWidth(self::FRAME_WIDTH) * $columnIndex;
+                    $svg .= '<g data-mep-legend="' . self::x($item['key']) . '">';
+                    $svg .= '<line x1="' . self::n($itemX) . '" y1="' . self::n($rowY - 3) . '" x2="' . self::n($itemX + 20) . '" y2="' . self::n($rowY - 3) . '" stroke="' . self::x($item['color']) . '" stroke-width="2.4" stroke-linecap="round"'
+                        . ($item['dash'] !== '' ? ' stroke-dasharray="' . self::x($item['dash']) . '"' : '') . '/>';
+                    $svg .= '<text x="' . self::n($itemX + 26) . '" y="' . self::n($rowY) . '" font-size="9" fill="#475569">' . self::x($item['text']) . '</text>';
+                    $svg .= '</g>' . "\n";
+                }
+            }
+            if ($profileRoads !== []) {
+                $svg .= self::roadProfiles($profileRoads, self::FRAME_WIDTH, $mepTop + $mepHeight + 4);
+            }
+            $svg .= '</g>' . "\n";
+        } else {
+            $svg .= '<g id="plano">' . "\n" . $plan . '</g>' . "\n";
+        }
+
+        $svg .= '</svg>' . "\n";
+        return $svg;
+    }
+
+    /**
+     * Datos de la barra de escala para el pie: denominador, milímetros que ocupa
+     * una unidad del marco y el ancho de hoja. Sin esto el pie no puede dibujar
+     * una barra que sea cierta al imprimir.
+     *
+     * @param array{mmPerCm:float,widthMm:float,denominator:float}|null $sheet
+     * @return array{denominator:float,mmPerUnit:float}|null
+     */
+    private static function scaleInfo(?array $sheet): ?array
+    {
+        if ($sheet === null) {
+            return null;
+        }
+        return [
+            'denominator' => (float) $sheet['denominator'],
+            'mmPerUnit' => (float) $sheet['widthMm'] / self::FRAME_WIDTH,
+        ];
+    }
+
+    /**
+     * Alto del marco, en sus unidades (1 200 de ancho).
+     *
+     * @param array<string,mixed> $design
+     */
+    private static function frameUnits(array $design, float $mmPerUnit): float
+    {
+        $footer = PlanFooter::payload($design, []);
+        $mepItems = self::mepLegend($design);
+        $mepHeight = $mepItems === [] ? 0.0 : 10.0 + 15.0 * count(array_chunk($mepItems, self::legendColumns(self::FRAME_WIDTH)));
+        $profiles = self::profileRoads($design);
+        $profileHeight = $profiles === [] ? 0.0 : 8.0 + 42.0 * count($profiles);
+        return 2.0 + PlanFooter::bandHeight(self::FRAME_WIDTH)
+            + PlanFooter::dataHeight(self::FRAME_WIDTH, $footer, ['denominator' => 100, 'mmPerUnit' => max(0.0001, $mmPerUnit)])
+            + $mepHeight + $profileHeight + 8.0;
+    }
+
+    /**
+     * Capas y elementos del plano, en centímetros del documento.
+     *
+     * @param array<string,mixed> $design
+     * @param array<string,mixed> $canvas
+     */
+    private static function plan(array $design, array $canvas): string
+    {
         $visibleLayers = [];
         foreach ($design['layers'] as $layer) {
             if (($layer['visible'] ?? true) === true) {
@@ -54,6 +203,7 @@ final class SvgExporter
             }
             $byLayer[$element['layerId']][] = $element;
         }
+        $svg = '';
         foreach ($design['layers'] as $layer) {
             if (!isset($byLayer[$layer['id']])) {
                 continue;
@@ -64,31 +214,6 @@ final class SvgExporter
             }
             $svg .= '</g>' . "\n";
         }
-        $svg .= '</g>' . "\n";
-
-        if ($withFrame) {
-            $svg .= '<g id="leyenda" font-family="Helvetica, Arial, sans-serif">' . "\n";
-            $svg .= '<line x1="0" y1="' . self::n($height + 0.5) . '" x2="' . self::n($width) . '" y2="' . self::n($height + 0.5) . '" stroke="#e2e8f0" stroke-width="1"/>' . "\n";
-            $svg .= PlanFooter::render($width, $height + 2, (array) $footer);
-            $mepTop = $height + 2 + $bandHeight + $dataHeight;
-            foreach ($mepRows as $rowIndex => $row) {
-                $rowY = $mepTop + 12 + 15 * $rowIndex;
-                foreach ($row as $columnIndex => $item) {
-                    $itemX = PlanFooter::PAD + self::legendColumnWidth($width) * $columnIndex;
-                    $svg .= '<g data-mep-legend="' . self::x($item['key']) . '">';
-                    $svg .= '<line x1="' . self::n($itemX) . '" y1="' . self::n($rowY - 3) . '" x2="' . self::n($itemX + 20) . '" y2="' . self::n($rowY - 3) . '" stroke="' . self::x($item['color']) . '" stroke-width="2.4" stroke-linecap="round"'
-                        . ($item['dash'] !== '' ? ' stroke-dasharray="' . self::x($item['dash']) . '"' : '') . '/>';
-                    $svg .= '<text x="' . self::n($itemX + 26) . '" y="' . self::n($rowY) . '" font-size="9" fill="#475569">' . self::x($item['text']) . '</text>';
-                    $svg .= '</g>' . "\n";
-                }
-            }
-            $svg .= '</g>' . "\n";
-            if ($profileRoads !== []) {
-                $svg .= self::roadProfiles($profileRoads, $width, $mepTop + $mepHeight + 4);
-            }
-        }
-
-        $svg .= '</svg>' . "\n";
         return $svg;
     }
 
@@ -346,14 +471,10 @@ final class SvgExporter
             return '';
         }
         $parts = [$network['short'] . ' Ø ' . (string) ($element['diameter'] ?? $network['diameter'])];
-        $points = self::pointList($element);
-        if (count($points) >= 2) {
-            $length = 0.0;
-            for ($index = 1; $index < count($points); $index++) {
-                $length += hypot((float) $points[$index]['x'] - (float) $points[$index - 1]['x'], (float) $points[$index]['y'] - (float) $points[$index - 1]['y']);
-            }
-            $factor = MepCalculator::unitsToMeters((string) $canvas['unit'], (string) $canvas['scale']);
-            $parts[] = self::meters($length * $factor);
+        if (count(self::pointList($element)) >= 2) {
+            // La misma longitud que el editor y el informe: incluye los arcos.
+            $factor = Units::metersPerUnit((string) $canvas['unit']);
+            $parts[] = self::meters(MepCalculator::length($element) * $factor);
         }
         if (!empty($network['gravity'])) {
             $parts[] = 'i=' . self::n((float) ($element['slope'] ?? 0)) . ' %';
@@ -442,10 +563,11 @@ final class SvgExporter
      * berma, ciclorruta y andenes. Réplica del dibujo del editor
      * (`Renderer.roadNode`) para que el SVG y la pantalla coincidan.
      */
-    private static function roadSectionMarkup(array $element, float $x, float $y, string $color, float $stroke, float $cmPerUnit, array $canvas): string
+    private static function roadSectionMarkup(array $element, float $x, float $y, string $color, float $stroke, array $canvas): string
     {
+        $unit = Units::GEOMETRY_UNIT;
         $section = $element['section'];
-        $perMeter = 100 / $cmPerUnit;
+        $perMeter = Units::unitsPerMeter($unit);
         $lanes = max(1, (int) ($section['lanes'] ?? 2));
         $laneM = (float) ($section['laneM'] ?? 3);
         $median = (float) ($section['medianM'] ?? 0);
@@ -481,7 +603,7 @@ final class SvgExporter
         if ($bike > 0) {
             foreach ([-1, 1] as $side) {
                 $out .= $line($offset($side * ($halfPavement + ($bike / 2) * $perMeter)), 'stroke="#e7f5ea" stroke-width="' . self::n($bike * $perMeter) . '"');
-                $out .= $line($offset($side * ($halfPavement + $bike * $perMeter)), 'stroke="#15803d" stroke-width="' . self::n(max(0.7, $stroke * 0.6)) . '" stroke-dasharray="' . self::n(max(6.0, 120 / $cmPerUnit)) . ' ' . self::n(max(4.0, 80 / $cmPerUnit)) . '" opacity="0.8"');
+                $out .= $line($offset($side * ($halfPavement + $bike * $perMeter)), 'stroke="#15803d" stroke-width="' . self::n(max(0.7, $stroke * 0.6)) . '" stroke-dasharray="' . self::n(max(6.0, Units::fromCm(120, $unit))) . ' ' . self::n(max(4.0, Units::fromCm(80, $unit))) . '" opacity="0.8"');
             }
         }
         // 3. Calzada y sus bordes.
@@ -499,10 +621,10 @@ final class SvgExporter
                 $out .= $line($offset($side * ($median / 2) * $perMeter), 'stroke="' . self::x($color) . '" stroke-width="' . self::n(max(1.0, $stroke * 0.9)) . '"');
             }
         } else {
-            $out .= $line($offset(0), 'stroke="' . self::x($color) . '" stroke-width="' . self::n(max(0.8, $stroke * 0.8)) . '" stroke-dasharray="' . self::n(max(8.0, 300 / $cmPerUnit)) . ' ' . self::n(max(6.0, 200 / $cmPerUnit)) . '" opacity="0.85"');
+            $out .= $line($offset(0), 'stroke="' . self::x($color) . '" stroke-width="' . self::n(max(0.8, $stroke * 0.8)) . '" stroke-dasharray="' . self::n(max(8.0, Units::fromCm(300, $unit))) . ' ' . self::n(max(6.0, Units::fromCm(200, $unit))) . '" opacity="0.85"');
         }
         // 5. Separación entre carriles.
-        $dash = self::n(max(7.0, 250 / $cmPerUnit)) . ' ' . self::n(max(5.0, 150 / $cmPerUnit));
+        $dash = self::n(max(7.0, Units::fromCm(250, $unit))) . ' ' . self::n(max(5.0, Units::fromCm(150, $unit)));
         $rightLanes = (int) ceil($lanes / 2);
         $leftLanes = $lanes - $rightLanes;
         for ($index = 1; $index < $rightLanes; $index += 1) {
@@ -556,11 +678,12 @@ final class SvgExporter
      * brazos toman el ancho de la sección tipo y la caja del elemento fija el
      * tamaño del cruce. Se dibuja en coordenadas absolutas del lienzo.
      */
-    private static function roadJunctionMarkup(array $element, float $x, float $y, string $color, float $stroke, float $cmPerUnit, array $canvas): string
+    private static function roadJunctionMarkup(array $element, float $x, float $y, string $color, float $stroke, array $canvas): string
     {
+        $unit = Units::GEOMETRY_UNIT;
         $section = $element['section'];
         $junction = $element['junction'];
-        $perMeter = 100 / $cmPerUnit;
+        $perMeter = Units::unitsPerMeter($unit);
         $lanes = max(1, (int) ($section['lanes'] ?? 2));
         $laneM = (float) ($section['laneM'] ?? 3);
         $median = (float) ($section['medianM'] ?? 0);
@@ -574,7 +697,7 @@ final class SvgExporter
         $cx = $x + $w / 2;
         $cy = $y + $h / 2;
         $edge = max(1.0, $stroke);
-        $dash = self::n(max(6.0, 250 / $cmPerUnit)) . ' ' . self::n(max(4.0, 150 / $cmPerUnit));
+        $dash = self::n(max(6.0, Units::fromCm(250, $unit))) . ' ' . self::n(max(4.0, Units::fromCm(150, $unit)));
         $out = '';
         $circle = static function (float $radius, string $attributes) use ($cx, $cy): string {
             return '<circle cx="' . self::n($cx) . '" cy="' . self::n($cy) . '" r="' . self::n($radius) . '" ' . $attributes . '/>' . "\n";
@@ -796,7 +919,7 @@ final class SvgExporter
      */
     private static function flatPointList(array $element, array $canvas): array
     {
-        $unit = (string) ($canvas['unit'] ?? 'cm');
+        $unit = Units::GEOMETRY_UNIT;
         $x = (float) $element['x'];
         $y = (float) $element['y'];
         $points = [];
@@ -814,31 +937,31 @@ final class SvgExporter
     private static function outdoorBand(array $element, float $x, float $y, float $w, float $h, string $color, float $stroke, array $canvas): string
     {
         $type = (string) $element['type'];
-        $cmPerUnit = PlanGrid::cmPerUnit((string) ($canvas['unit'] ?? 'cm'));
+        $unit = Units::GEOMETRY_UNIT;
         $band = $type === 'property'
             ? 0.0
-            : max(2.0, (float) ($element['widthM'] ?? 2) * 100 / $cmPerUnit);
+            : max(2.0, Units::fromMeters((float) ($element['widthM'] ?? 2), $unit));
         $out = '';
         if ($type === 'road' && is_array($element['section'] ?? null)) {
             // Glorieta o intersección: anillo o cruce de calzadas.
             if (is_array($element['junction'] ?? null)) {
-                return $out . self::roadJunctionMarkup($element, $x, $y, $color, $stroke, $cmPerUnit, $canvas);
+                return $out . self::roadJunctionMarkup($element, $x, $y, $color, $stroke, $canvas);
             }
             // Vía con sección tipo: calzada con carriles, separador, berma,
             // ciclorruta y andenes. Mismo dibujo que el editor; esquemático.
-            return $out . self::roadSectionMarkup($element, $x, $y, $color, $stroke, $cmPerUnit, $canvas);
+            return $out . self::roadSectionMarkup($element, $x, $y, $color, $stroke, $canvas);
         }
         if ($band > 0) {
             $out .= self::strokeMarkup($element, $x, $y, 'fill="none" stroke="' . self::x($color) . '" stroke-width="' . self::n($band + $stroke * 2) . '" stroke-opacity="0.55" stroke-linecap="butt" stroke-linejoin="round"');
             $out .= self::strokeMarkup($element, $x, $y, 'fill="none" stroke="#f8fafc" stroke-width="' . self::n(max(1.0, $band)) . '" stroke-linecap="butt" stroke-linejoin="round"');
             if ($type === 'road') {
-                $out .= self::strokeMarkup($element, $x, $y, 'fill="none" stroke="#ffffff" stroke-width="' . self::n(max(0.9, $stroke * 0.8)) . '" stroke-dasharray="' . self::n(max(8.0, 300 / $cmPerUnit)) . ' ' . self::n(max(6.0, 200 / $cmPerUnit)) . '" stroke-linecap="butt" opacity="0.9"');
+                $out .= self::strokeMarkup($element, $x, $y, 'fill="none" stroke="#ffffff" stroke-width="' . self::n(max(0.9, $stroke * 0.8)) . '" stroke-dasharray="' . self::n(max(8.0, Units::fromCm(300, $unit))) . ' ' . self::n(max(6.0, Units::fromCm(200, $unit))) . '" stroke-linecap="butt" opacity="0.9"');
             }
             if ($type === 'sidewalk') {
-                $out .= self::sidewalkHatch($element, $x, $y, $color, $stroke, $band, $cmPerUnit, $canvas, $w, $h);
+                $out .= self::sidewalkHatch($element, $x, $y, $color, $stroke, $band, $canvas, $w, $h);
             }
         } else {
-            $out .= self::strokeMarkup($element, $x, $y, 'fill="none" stroke="' . self::x($color) . '" stroke-width="' . self::n(max(1.0, $stroke)) . '" stroke-dasharray="' . self::n(18 / $cmPerUnit) . ' ' . self::n(6 / $cmPerUnit) . ' ' . self::n(3 / $cmPerUnit) . ' ' . self::n(6 / $cmPerUnit) . '" stroke-linejoin="round"');
+            $out .= self::strokeMarkup($element, $x, $y, 'fill="none" stroke="' . self::x($color) . '" stroke-width="' . self::n(max(1.0, $stroke)) . '" stroke-dasharray="' . self::n(Units::fromCm(18, $unit)) . ' ' . self::n(Units::fromCm(6, $unit)) . ' ' . self::n(Units::fromCm(3, $unit)) . ' ' . self::n(Units::fromCm(6, $unit)) . '" stroke-linejoin="round"');
         }
         $label = (string) ($element['label'] ?? '');
         if ($label !== '') {
@@ -850,13 +973,14 @@ final class SvgExporter
     }
 
     /** Trama de losas del andén: marcas perpendiculares cada 60 cm. */
-    private static function sidewalkHatch(array $element, float $x, float $y, string $color, float $stroke, float $band, float $cmPerUnit, array $canvas, float $w, float $h): string
+    private static function sidewalkHatch(array $element, float $x, float $y, string $color, float $stroke, float $band, array $canvas, float $w, float $h): string
     {
-        $points = PlanGrid::visualPoints($element, (string) ($canvas['unit'] ?? 'cm'));
+        $unit = Units::GEOMETRY_UNIT;
+        $points = PlanGrid::visualPoints($element, $unit);
         if (count($points) < 2) {
             return '';
         }
-        $step = max(6.0, 60 / $cmPerUnit);
+        $step = max(6.0, Units::fromCm(60, $unit));
         $out = '';
         $travelled = 0.0;
         for ($index = 1; $index < count($points); $index += 1) {
@@ -887,10 +1011,10 @@ final class SvgExporter
     private static function outdoorArea(array $element, float $x, float $y, float $w, float $h, string $color, float $stroke, array $canvas): string
     {
         $type = (string) $element['type'];
-        $cmPerUnit = PlanGrid::cmPerUnit((string) ($canvas['unit'] ?? 'cm'));
+        $unit = Units::GEOMETRY_UNIT;
         $out = '<rect x="' . self::n($x) . '" y="' . self::n($y) . '" width="' . self::n($w) . '" height="' . self::n($h) . '" rx="2" fill="#f8fafc" stroke="' . self::x($color) . '" stroke-width="' . self::n($stroke) . '"/>' . "\n";
         if ($type === 'crosswalk') {
-            $step = max(6.0, 100 / $cmPerUnit);
+            $step = max(6.0, Units::fromCm(100, $unit));
             $bar = $step / 2;
             $horizontal = $w >= $h;
             $span = $horizontal ? $w : $h;
@@ -905,8 +1029,8 @@ final class SvgExporter
             }
             return $out;
         }
-        $bayWidth = max(4.0, 250 / $cmPerUnit);
-        $bayDepth = max(4.0, 500 / $cmPerUnit);
+        $bayWidth = max(4.0, Units::fromCm(250, $unit));
+        $bayDepth = max(4.0, Units::fromCm(500, $unit));
         $columns = max(1, (int) round($w / $bayWidth));
         $rows = max(1, (int) round($h / $bayDepth));
         for ($column = 1; $column < $columns; $column += 1) {
@@ -953,8 +1077,23 @@ final class SvgExporter
             . ' ' . self::n($rightX) . ',' . self::n($rightY) . '" fill="' . self::x($color) . '"/>' . "\n";
     }
 
+    /**
+     * Rótulo de una cota.
+     *
+     * Si el elemento lleva medida declarada, se rotula esa (NORMIA-006 §5.1):
+     * es la cifra que el usuario reconoce. Si no, la distancia geométrica. En
+     * los dos casos la cifra se lee en la **unidad de trabajo** del plano, no en
+     * la unidad en la que está guardada la geometría.
+     */
     private static function measurement(array $element, array $canvas): string
     {
+        $unit = (string) ($canvas['unit'] ?? 'cm');
+        $measured = ElementMeasure::measuredCm($element);
+        if ($measured !== null) {
+            $value = Units::fromCm($measured, $unit);
+            $decimals = $unit === 'mm' ? 0 : ($unit === 'm' ? 2 : 1);
+            return number_format($value, $decimals, ',', '.') . ' ' . $unit;
+        }
         $points = self::pointList($element);
         if (count($points) < 2) {
             return '';
@@ -962,7 +1101,6 @@ final class SvgExporter
         $a = $points[0];
         $b = $points[count($points) - 1];
         $distance = hypot((float) $b['x'] - (float) $a['x'], (float) $b['y'] - (float) $a['y']);
-        $unit = (string) ($canvas['unit'] ?? 'cm');
         return number_format($distance, 1, ',', '.') . ' ' . $unit;
     }
 
@@ -1027,9 +1165,9 @@ final class SvgExporter
         return text_limit($parts[0] ?? '', 60);
     }
 
-    private static function n(float|int $value): string
+    private static function n(float|int $value, int $decimals = 2): string
     {
-        $text = rtrim(rtrim(number_format((float) $value, 2, '.', ''), '0'), '.');
+        $text = rtrim(rtrim(number_format((float) $value, max(0, $decimals), '.', ''), '0'), '.');
         return $text === '' || $text === '-0' ? '0' : $text;
     }
 

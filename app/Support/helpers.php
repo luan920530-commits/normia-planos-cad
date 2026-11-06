@@ -23,6 +23,17 @@ function asset(string $path): string
     return Url::asset($path);
 }
 
+/**
+ * Ruta interna que se está viendo (`projects/12/...`), sin barras en los
+ * extremos. La usa la cabecera para marcar el apartado actual; no es una
+ * fuente de autorización: cada controlador vuelve a comprobar los permisos.
+ */
+function current_route(): string
+{
+    $route = $_GET['r'] ?? '';
+    return is_string($route) ? trim($route, '/') : '';
+}
+
 function csrf_field(): string
 {
     return '<input type="hidden" name="_token" value="' . e(Csrf::token()) . '">';
@@ -65,6 +76,19 @@ function slug_filename(string $value, string $fallback = 'plano'): string
     if ($value === '') {
         return $fallback;
     }
+    /*
+     * Los acentos se resuelven aquí y no con `iconv`: según la biblioteca del
+     * sistema, `TRANSLIT` convierte «í» en «?» o directamente la descarta, y el
+     * archivo acababa llamándose «plano-sin-t-tulo». Con la tabla explícita,
+     * «Plano sin título» es `plano-sin-titulo` en todos los sistemas.
+     */
+    $value = strtr($value, [
+        'á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u', 'ü' => 'u', 'ñ' => 'n',
+        'Á' => 'A', 'É' => 'E', 'Í' => 'I', 'Ó' => 'O', 'Ú' => 'U', 'Ü' => 'U', 'Ñ' => 'N',
+        'à' => 'a', 'è' => 'e', 'ì' => 'i', 'ò' => 'o', 'ù' => 'u', 'â' => 'a', 'ê' => 'e',
+        'î' => 'i', 'ô' => 'o', 'û' => 'u', 'ä' => 'a', 'ë' => 'e', 'ï' => 'i', 'ö' => 'o',
+        'ã' => 'a', 'õ' => 'o', 'å' => 'a', 'ø' => 'o', 'ç' => 'c', 'æ' => 'ae', 'œ' => 'oe',
+    ]);
     $converted = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $value);
     if ($converted !== false) {
         $value = $converted;
