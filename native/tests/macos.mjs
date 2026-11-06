@@ -24,6 +24,9 @@ const canvas = read('CanvasView.m');
 const canvasHeader = read('CanvasView.h');
 const plist = read('Info.plist');
 const makefile = read('Makefile');
+const leerFlujo = (name) => fs.readFileSync(path.join(repoRoot, '.github', 'workflows', name), 'utf8');
+const verifyWorkflow = leerFlujo('verify.yml');
+const desktopWorkflow = leerFlujo('dist-desktop.yml');
 /**
  * El código sin comentarios. Los comentarios explican justamente por qué no se
  * usa un WebView, así que no pueden contar como si se usara.
@@ -266,6 +269,24 @@ report.check('Al cambiar el zoom se dice en la barra de estado',
 
 report.check('El paquete declara macOS 12 Monterey como mínimo',
   /<key>LSMinimumSystemVersion<\/key>\s*<string>12\.0<\/string>/.test(plist), 'LSMinimumSystemVersion 12.0');
+
+// El Info.plist es una promesa; el binario es lo que el sistema mira. Si se
+// compila sin destino, clang toma el macOS del runner (15) y el paquete no abre
+// en Monterey aunque la cabecera diga 12.0.
+report.check('El binario se compila con destino macOS 12, no con el del runner',
+  /DEPLOYMENT \?= 12\.0/.test(makefile)
+  && /-mmacosx-version-min=\$\(DEPLOYMENT\)/.test(makefile)
+  && /export MACOSX_DEPLOYMENT_TARGET := \$\(DEPLOYMENT\)/.test(makefile),
+  'make -C native/macos · -mmacosx-version-min=12.0');
+
+report.check('El flujo de verificación comprueba el minos del Mach-O',
+  /otool -l/.test(verifyWorkflow) && /LC_BUILD_VERSION/.test(verifyWorkflow)
+  && /minos/.test(verifyWorkflow) && /DEPLOYMENT=12\.0/.test(verifyWorkflow),
+  'otool · minos 12.0');
+
+report.check('El escritorio compila el intérprete de PHP con destino macOS 12',
+  /MACOSX_DEPLOYMENT_TARGET: '12\.0'/.test(desktopWorkflow) && /otool -l/.test(desktopWorkflow),
+  'dist-desktop.yml · MACOSX_DEPLOYMENT_TARGET');
 
 report.check('El paquete se identifica aparte de las ediciones existentes',
   /co\.normia\.estudio\.nativo/.test(plist) && /CFBundleDocumentTypes/.test(plist)

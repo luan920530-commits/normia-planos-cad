@@ -135,7 +135,9 @@ jobs:
           fi
           # Si clang se queja, el motivo se copia a las anotaciones del trabajo.
           set +e
-          make -C native/macos CFLAGS="-O2 -Wall -Wextra -Werror -Wno-unused-parameter" > "$RUNNER_TEMP/macos.log" 2>&1
+          # El runner es macOS 15, pero el paquete promete macOS 12: se compila
+          # con ese destino para que el binario no exija nada más nuevo.
+          make -C native/macos DEPLOYMENT=12.0 CFLAGS="-O2 -Wall -Wextra -Werror -Wno-unused-parameter" > "$RUNNER_TEMP/macos.log" 2>&1
           ESTADO=$?
           set -e
           paso "ventana: make -C native/macos terminó con $ESTADO"
@@ -154,11 +156,21 @@ jobs:
       - name: Comprobar el paquete y el mínimo de macOS
         run: |
           APP="native/macos/build/NormiaEstudio.app"
-          test -x "$APP/Contents/MacOS/NormiaEstudio"
+          BIN="$APP/Contents/MacOS/NormiaEstudio"
+          test -x "$BIN"
           MIN="$(/usr/libexec/PlistBuddy -c 'Print :LSMinimumSystemVersion' "$APP/Contents/Info.plist")"
           echo "LSMinimumSystemVersion: $MIN"
           case "$MIN" in 12.*) ;; *) echo "::error title=macOS::el paquete exige macOS $MIN"; exit 1 ;; esac
           plutil -lint "$APP/Contents/Info.plist"
+          # El Info.plist es una promesa; el Mach-O es lo que el sistema mira.
+          # `minos` tiene que ser 12.0 aunque el runner sea macOS 15.
+          MINOS="$(otool -l "$BIN" | awk '/LC_BUILD_VERSION/{visto=1} visto && /minos/{print $2; exit}')"
+          echo "minos del binario: ${MINOS:-sin LC_BUILD_VERSION}"
+          case "$MINOS" in
+            12.0) ;;
+            *) echo "::error title=macOS::el binario exige macOS ${MINOS:-desconocido}, no 12.0"; exit 1 ;;
+          esac
+          otool -l "$BIN" | grep -E "LC_BUILD_VERSION|minos|sdk" | head -6
 
       - name: Arrancar la aplicación sin ventana
         run: |

@@ -281,7 +281,7 @@ selección por proximidad y el **sobre oficial** de ida y vuelta.
 | `native/tests/test_document.c` | muros, deshacer, selección, guardar y abrir, unidades, rutas | **33/33** |
 | `native/tests/test_svg.c` | cifras es-CO y SVG con escala física (etapa N2) | **25/25** |
 | `native/tests/parity.mjs` | paridad C contra PHP, dígito a dígito, también en el SVG, el auditor y la revisión | **64/64** |
-| `native/tests/macos.mjs` | contrato de la ventana: AppKit, sin WebView, menú en español, atajos, sobre oficial, macOS 12, herramientas, ruta y cajón de revisión | **52/52** |
+| `native/tests/macos.mjs` | contrato de la ventana: AppKit, sin WebView, menú en español, atajos, sobre oficial, macOS 12, herramientas, ruta y cajón de revisión | **55/55** |
 | `native/tests/core.mjs` | compilación estricta y los tres programas de prueba del núcleo | **7/7** |
 
 Y en el flujo de verificación hay un trabajo nuevo en **`macos-15-intel`** que
@@ -293,8 +293,20 @@ compila con `-Werror`, arma el `.app`, comprueba el `LSMinimumSystemVersion` con
 - **La ventana en pantalla**: no se puede probar desde el entorno donde se
   escribió (Linux sin pantalla ni Xcode). Lo que sí está comprobado, en un runner
   de `macos-15-intel`: el `.app` **compila con `clang` y `-Werror`**, su
-  `LSMinimumSystemVersion` es **12.0** y la aplicación **arranca con `--check`**.
-  El primer uso real con ratón y teclado lo hace una persona.
+  `LSMinimumSystemVersion` es **12.0**, el **`minos` del Mach-O también es 12.0**
+  y la aplicación **arranca con `--check`**. El primer uso real con ratón y
+  teclado lo hace una persona.
+
+**El runner es macOS 15; el paquete es de macOS 12.** Son dos cosas distintas y
+hay que decirlo porque el binario es el que manda, no el `Info.plist`: si se
+compila sin destino, clang toma el macOS del equipo que compila y el resultado
+exige Monterey o más, aunque la cabecera prometa 12.0. Por eso
+`native/macos/Makefile` compila y enlaza con `-mmacosx-version-min=12.0`
+(`DEPLOYMENT ?= 12.0`, también exportado como `MACOSX_DEPLOYMENT_TARGET`), y el
+flujo no se cree la promesa: lee el `LC_BUILD_VERSION` con `otool -l` y falla si
+`minos` no es **12.0**. Lo mismo con el intérprete de PHP del paquete de
+escritorio, que se compila con `MACOSX_DEPLOYMENT_TARGET=12.0` y se verifica
+igual.
 - **Firma y notarización**: la `.app` sale sin firmar, como el estudio.
 - **Paridad visual exacta** con el editor web: colores y grosores son los del
   lienzo nativo, no una copia píxel a píxel.
@@ -314,7 +326,7 @@ para sacar el plano sin el motor PHP:
 | `norma-core --svg plano.json` | `native/src/cli.c` | hecho |
 | Herramientas del lienzo `V · M · P · A · D · R` con borrador y previsualización | `native/macos/CanvasView.m` | hecho |
 | Exportar SVG con panel del sistema (`⌘E`) | `native/macos/AppDelegate.m` | escrito |
-| Abrir reciente (10 archivos, preferencia del sistema, se limpia sola) | `native/macos/AppDelegate.m` | hecho · **52/52** |
+| Abrir reciente (10 archivos, preferencia del sistema, se limpia sola) | `native/macos/AppDelegate.m` | hecho · **55/55** |
 | Lienzo abierto: zoom 2 %–4000 % sobre el cursor, desplazamiento con el botón central o derecho y rejilla adaptativa | `native/macos/CanvasView.m` | hecho |
 | Imprimir en A4 horizontal y exportar PDF con el fondo en blanco | `native/macos/AppDelegate.m`, `CanvasView.m` | hecho |
 
@@ -334,7 +346,7 @@ Lo que da el SVG del núcleo, medido en el plano de prueba A4 a 1:100:
 
 - **La ventana con las herramientas nuevas no se ha compilado**: en el entorno
   donde se escribe esto no hay AppKit. El contrato se comprueba con
-  `native/tests/macos.mjs` (52/52) y la compilación real la hace el trabajo
+  `native/tests/macos.mjs` (55/55) y la compilación real la hace el trabajo
   `macos-nativo` del flujo.
 - **Recientes e impresión** ya están escritos, pero quien los usa con ratón y
   teclado es una persona: aquí solo se comprueba su contrato y que compilen.
@@ -362,7 +374,7 @@ en la web.
 | Camino | `native/src/grid.c` (`norma_grid_path`) | Dijkstra de ocho vecinos sobre la rejilla, sin cortar esquinas, con el exterior permitido o no según el tramo; puntos simplificados por línea de vista y longitud en metros redondeada al centímetro |
 | Simulacro | `native/src/drill.c` | Tiempo objetivo por ruta (reacción + camino + tramo al punto de encuentro), objetivo del piso, tiempo medido y su diferencia; tres hallazgos propios |
 | Programa | `native/src/cli.c` | `norma-core --audit plano.json` incluye salidas, recorrido, señalización, primeros auxilios, simulacro y hallazgos; `--sign-board hoja.svg` dibuja el catálogo completo |
-| Pruebas | `native/tests/test_audit.c` · `test_signs.c` · `test_extinguishers.c` | **67/67**, **30/30** y **32/32** (documento **33/33**, ventana **52/52**) |
+| Pruebas | `native/tests/test_audit.c` · `test_signs.c` · `test_extinguishers.c` | **67/67**, **30/30** y **32/32** (documento **33/33**, ventana **55/55**) |
 | Paridad | `native/tests/parity.mjs` | **64/64** |
 
 El caso de prueba y sus cifras, idénticas en C y en PHP: una habitación de
@@ -580,7 +592,7 @@ va en **verde de evacuación**, con **punta de flecha** en el sentido de salida 
 la longitud rotulada junto al extremo, con la misma cifra que dará el informe.
 
 La herramienta se comprueba donde se puede comprobar aquí, sobre el código
-fuente (`native/tests/macos.mjs`, **52/52**); dibujarla con el ratón en un Mac es
+fuente (`native/tests/macos.mjs`, **55/55**); dibujarla con el ratón en un Mac es
 lo que sigue viendo una persona.
 
 ### El cajón de revisión, dentro de la ventana

@@ -868,7 +868,7 @@ Resultados esperados de la última ejecución completa:
 ✓ Modo estudio PHP 8.3 · 35/35
 ✓ Núcleo en C (compilación estricta) · 3.9s
 ✓ Núcleo nativo (paridad C/PHP) · 64/64
-✓ Ventana nativa (macOS) · 52/52
+✓ Ventana nativa (macOS) · 55/55
 ✓ Escritorio (instaladores) · 37/37
 ✓ Android (APK) · 52/52
 ✓ Escritorio (Electron) · 52/52
@@ -1187,7 +1187,13 @@ y eso es una sola función.
   tiempo de cada ruta, encuentro, objetivo, medido y el texto del aviso—, no solo
   la lista de códigos.
 - **Pruebas**: auditor **67/67**, señalización **30/30**, extintores **32/32**,
-  documento **33/33**, ventana de macOS **52/52** y paridad C/PHP **64/64**.
+  documento **33/33**, ventana de macOS **55/55** y paridad C/PHP **64/64**.
+- **macOS 12 de verdad, no solo en el `Info.plist`**: los runners compilan en macOS
+  15, así que la aplicación nativa se enlaza con `-mmacosx-version-min=12.0` y el
+  flujo lee el `minos` del binario con `otool -l` y falla si no es 12.0; el
+  intérprete de PHP del paquete de escritorio se compila con
+  `MACOSX_DEPLOYMENT_TARGET=12.0` y se verifica igual. Lo que se entrega abre en
+  Monterey, no solo lo promete.
 
 ## Cambios de la versión 1.29.0
 
