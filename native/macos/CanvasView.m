@@ -1,9 +1,12 @@
 /*
  * Normia nativo · lienzo.
  *
- * Herramientas (etapa N2):
- *   · selección: clic elige el elemento más cercano; arrastrar mueve un nodo o
- *     el trazo completo;
+ * Herramientas (etapa N4: las mismas del editor web, con el inspector al lado):
+ *   · V · selección: clic elige el elemento más cercano; arrastrar mueve un nodo,
+ *     el trazo completo o una esquina de la caja para escalarlo;
+ *   · H · mano: arrastra el lienzo sin tocar el plano;
+ *   · L · línea y B/O · rectángulo y elipse: dos clics, como el editor web;
+ *   · T · texto suelto: un clic y se escribe el contenido en el inspector;
  *   · M · muro por tramos de dos clics;
  *   · P · pluma de nodos: un clic por nodo, Enter o doble clic cierra;
  *   · A · arco de tres puntos: inicio, punto de paso y fin;
@@ -32,20 +35,13 @@ static const CGFloat kToleranceScreen = 8.0;
 static const int kMaxDraftNodes = 64;
 /* π a mano: con `-std=c11` estricto, `M_PI` no está garantizado. */
 static const double kPi = 3.14159265358979323846;
+
+/** Tipo de entorno que dibuja cada herramienta (se define más abajo). */
+static const char *environment_type(NormiaTool tool);
 static const double kHalfPi = 1.57079632679489661923;
 
-typedef NS_ENUM(NSInteger, CanvasTool) {
-    CanvasToolSelect = 0,
-    CanvasToolWall,
-    CanvasToolPen,
-    CanvasToolArc,
-    CanvasToolDimension,
-    CanvasToolRoute,
-    CanvasToolInsert,
-};
-
 @interface CanvasView ()
-@property(nonatomic) CanvasTool tool;
+@property(nonatomic) NormiaTool tool;
 @property(nonatomic) BOOL draggingNode;
 @property(nonatomic) norma_point dragOrigin;
 @property(nonatomic) NSInteger selectedElement;
@@ -55,6 +51,11 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
 - (void)clampZoom:(double *)zoom;
 - (void)zoomBy:(double)factor atPoint:(NSPoint)anchor;
 - (void)panByDeltaX:(CGFloat)dx deltaY:(CGFloat)dy;
+- (void)announceSelection;
+- (void)drawShape:(const norma_element *)element selected:(BOOL)selected context:(CGContextRef)context zoom:(CGFloat)zoom;
+- (void)drawSelectionHandlesInContext:(CGContextRef)context;
+- (NSInteger)resizeCornerAtPlanPoint:(norma_point)point tolerance:(double)tolerance;
+- (void)nudgeSelectionByX:(double)dx y:(double)dy;
 @end
 
 @implementation CanvasView {
@@ -81,7 +82,19 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
        salte el objeto bajo el puntero. */
     double _dragOffsetX;
     double _dragOffsetY;
+    /* Mano: se guarda el desplazamiento de la vista al empezar a arrastrar. */
+    BOOL _panning;
+    NSPoint _panStart;
+    double _panStartX;
+    double _panStartY;
+    /* Escalado por esquinas: -1 ninguna, 0..3 noroeste, noreste, suroeste, sureste. */
+    NSInteger _resizeCorner;
+    norma_point _resizeAnchor;
 }
+
+/* El acceso a la rejilla se escribe a mano (repinta), así que el ivar se
+   declara explícitamente. */
+@synthesize showsGrid = _showsGrid;
 
 - (instancetype)initWithFrame:(NSRect)frame
 {
@@ -89,7 +102,9 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
     if (self != nil) {
         _selectedNode = -1;
         _selectedElement = -1;
-        _tool = CanvasToolSelect;
+        _tool = NormiaToolSelect;
+        _showsGrid = YES;
+        _resizeCorner = -1;
         self.wantsLayer = YES;
         // `acceptsFirstResponder` es de solo lectura: se responde YES en su
         // método (abajo), que es como AppKit pregunta si el lienzo toma el teclado.
@@ -102,6 +117,55 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
     return YES;
 }
 
+/* --------------------------- propiedades públicas ------------------------ */
+
+- (NormiaTool)toolMode
+{
+    return _tool;
+}
+
+/** Armar otra herramienta cancela el borrador y lo dice en la barra. */
+- (void)setToolMode:(NormiaTool)tool
+{
+    [self cancelDraft];
+    _tool = tool;
+    _insertType[0] = '\0';
+    [self.window makeFirstResponder:self];
+    [self.delegate canvasStatus:self message:[self hintForTool]];
+    if ([self.delegate respondsToSelector:@selector(canvas:didChooseTool:)]) {
+        [self.delegate canvas:self didChooseTool:tool];
+    }
+    [self setNeedsDisplay:YES];
+}
+
+- (NSInteger)selectedElementIndex
+{
+    return _selectedElement;
+}
+
+- (BOOL)showsGrid
+{
+    return _showsGrid;
+}
+
+- (void)setShowsGrid:(BOOL)showsGrid
+{
+    _showsGrid = showsGrid;
+    [self setNeedsDisplay:YES];
+}
+
+- (void)documentDidChangeExternally
+{
+    [self setNeedsDisplay:YES];
+}
+
+- (void)announceSelection
+{
+    if ([self.delegate respondsToSelector:@selector(canvasSelectionDidChange:)]) {
+        [self.delegate canvasSelectionDidChange:self];
+    }
+}
+
 - (BOOL)isFlipped
 {
     // Coordenadas del plano: origen arriba a la izquierda, como en el editor.
@@ -112,10 +176,12 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
 {
     _selectedElement = -1;
     _selectedNode = -1;
-    _tool = CanvasToolSelect;
+    _tool = NormiaToolSelect;
     _draftCount = 0;
     _hasCursor = NO;
     _insertType[0] = '\0';
+    _resizeCorner = -1;
+    _panning = NO;
     _viewReady = NO; /* plano nuevo: se vuelve a ajustar a la ventana */
     [self setNeedsDisplay:YES];
 }
@@ -553,6 +619,196 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
     CGContextStrokeRect(context, CGRectMake(element->x + w * 0.18, element->y + h * 0.18, w * 0.64, h * 0.64));
 }
 
+/** Color `#rrggbb` del elemento, o el oscuro de dibujo si no tiene uno. */
+static NSColor *colour_from_hex(const char *hex)
+{
+    unsigned int red = 0;
+    unsigned int green = 0;
+    unsigned int blue = 0;
+    if (hex != NULL && hex[0] == '#' && strlen(hex) == 7
+        && sscanf(hex + 1, "%2x%2x%2x", &red, &green, &blue) == 3) {
+        return [NSColor colorWithCalibratedRed:(CGFloat) red / 255.0
+                                         green:(CGFloat) green / 255.0
+                                          blue:(CGFloat) blue / 255.0
+                                         alpha:1.0];
+    }
+    return [NSColor colorWithCalibratedRed:0.20 green:0.25 blue:0.33 alpha:1.0];
+}
+
+/** Color con el que se pinta un elemento: el suyo, o el de su familia. */
+- (NSColor *)strokeColourForElement:(const norma_element *)element
+{
+    if (element->colour[0] == '#') {
+        return colour_from_hex(element->colour);
+    }
+    /* Los oficios del entorno llevan el mismo color que en el SVG. */
+    const char *type = element->type;
+    if (strcmp(type, "road") == 0 || strcmp(type, "crosswalk") == 0) {
+        return colour_from_hex("#64748b");
+    }
+    if (strcmp(type, "sidewalk") == 0) {
+        return colour_from_hex("#94a3b8");
+    }
+    if (strcmp(type, "parking") == 0) {
+        return colour_from_hex("#475569");
+    }
+    if (strcmp(type, "property") == 0) {
+        return colour_from_hex("#7c3d12");
+    }
+    if (strcmp(type, "pipe") == 0) {
+        return colour_from_hex("#2563eb");
+    }
+    if (strcmp(type, "conduit") == 0) {
+        return colour_from_hex("#ea580c");
+    }
+    if (element->node_count < 2) {
+        return [self colourForObject:element];
+    }
+    return colour_from_hex(NULL);
+}
+
+/**
+ * Vía, andén, paso peatonal y parqueadero: zonas con su trama, no pictogramas.
+ *
+ * Se pintan en coordenadas del plano, con el grosor dividido por el zoom, para
+ * que la trama no engorde al acercarse.
+ */
+- (void)drawEnvironment:(const norma_element *)element selected:(BOOL)selected
+                context:(CGContextRef)context zoom:(CGFloat)zoom
+{
+    const CGFloat w = (CGFloat) element->w;
+    const CGFloat h = (CGFloat) element->h;
+    const CGRect box = CGRectMake((CGFloat) element->x, (CGFloat) element->y, w, h);
+    NSColor *colour = [self strokeColourForElement:element];
+    const char *type = element->type;
+
+    if (strcmp(type, "road") == 0) {
+        CGContextSetFillColorWithColor(context, [NSColor colorWithCalibratedWhite:0.93 alpha:1.0].CGColor);
+        CGContextFillRect(context, box);
+    } else if (strcmp(type, "sidewalk") == 0) {
+        CGContextSetFillColorWithColor(context, [NSColor colorWithCalibratedWhite:0.98 alpha:1.0].CGColor);
+        CGContextFillRect(context, box);
+    } else if (strcmp(type, "crosswalk") == 0) {
+        CGContextSetFillColorWithColor(context, [NSColor whiteColor].CGColor);
+        CGContextFillRect(context, box);
+        CGContextSetFillColorWithColor(context, [NSColor colorWithCalibratedWhite:0.80 alpha:1.0].CGColor);
+        const int stripes = 6;
+        for (int stripe = 0; stripe < stripes; stripe += 1) {
+            const CGFloat stripeWidth = w * 0.5f / (CGFloat) stripes;
+            CGContextFillRect(context, CGRectMake(box.origin.x + w * ((CGFloat) stripe + 0.25f) / (CGFloat) stripes,
+                                                  box.origin.y + h * 0.12f, stripeWidth, h * 0.76f));
+        }
+    }
+
+    CGContextSetStrokeColorWithColor(context, colour.CGColor);
+    CGContextSetLineWidth(context, (CGFloat) (selected ? 2.2 : 1.2) / zoom);
+    CGContextStrokeRect(context, box);
+
+    if (strcmp(type, "road") == 0) {
+        /* Eje discontinuo de la vía. */
+        const CGFloat dash[2] = {12.0f / zoom, 8.0f / zoom};
+        CGContextSetLineDash(context, 0.0, dash, 2);
+        CGContextMoveToPoint(context, box.origin.x, box.origin.y + h / 2.0f);
+        CGContextAddLineToPoint(context, box.origin.x + w, box.origin.y + h / 2.0f);
+        CGContextStrokePath(context);
+        CGContextSetLineDash(context, 0.0, NULL, 0);
+    }
+}
+
+/**
+ * Rectángulo y elipse: figuras del editor web.
+ *
+ * Se dibujan por lo que son —un rectángulo y una elipse—, no por su caja, y
+ * respetan el giro del inspector alrededor de su centro.
+ */
+- (void)drawShape:(const norma_element *)element selected:(BOOL)selected context:(CGContextRef)context
+             zoom:(CGFloat)zoom
+{
+    const double w = element->w;
+    const double h = element->h;
+    NSColor *colour = [self strokeColourForElement:element];
+    CGContextSetStrokeColorWithColor(context, colour.CGColor);
+    CGContextSetLineWidth(context, (CGFloat) (selected ? 2.4 : 1.4) / zoom);
+
+    CGContextSaveGState(context);
+    if (element->rotation != 0.0) {
+        const double cx = element->x + w / 2.0;
+        const double cy = element->y + h / 2.0;
+        CGContextTranslateCTM(context, (CGFloat) cx, (CGFloat) cy);
+        /* El lienzo tiene el eje Y hacia abajo: el giro se aplica al revés. */
+        CGContextRotateCTM(context, (CGFloat) (-element->rotation * kPi / 180.0));
+        CGContextTranslateCTM(context, (CGFloat) -cx, (CGFloat) -cy);
+    }
+    if (strcmp(element->type, "ellipse") == 0) {
+        CGContextStrokeEllipseInRect(context, CGRectMake(element->x, element->y, w, h));
+    } else {
+        CGContextStrokeRect(context, CGRectMake(element->x, element->y, w, h));
+    }
+    CGContextRestoreGState(context);
+
+    if (selected) {
+        CGContextSetRGBStrokeColor(context, 0.22, 0.52, 1.0, 0.9);
+        CGContextSetLineWidth(context, 1.0 / zoom);
+        CGContextStrokeRect(context, CGRectMake(element->x - 3.0 / zoom, element->y - 3.0 / zoom,
+                                                w + 6.0 / zoom, h + 6.0 / zoom));
+    }
+}
+
+/**
+ * Tiradores de la caja seleccionada: cuatro esquinas para escalarla con el
+ * ratón. Son la versión nativa de los tiradores del editor web.
+ */
+- (void)drawSelectionHandlesInContext:(CGContextRef)context
+{
+    if (_selectedElement < 0 || _selectedElement >= (NSInteger) self.document->count) {
+        return;
+    }
+    const norma_element *element = &self.document->elements[_selectedElement];
+    if (element->node_count >= 2) {
+        return;
+    }
+    const NSPoint corners[4] = {
+        [self viewPointForPlan:((norma_point) {element->x, element->y})],
+        [self viewPointForPlan:((norma_point) {element->x + element->w, element->y})],
+        [self viewPointForPlan:((norma_point) {element->x, element->y + element->h})],
+        [self viewPointForPlan:((norma_point) {element->x + element->w, element->y + element->h})],
+    };
+    for (int corner = 0; corner < 4; corner += 1) {
+        const CGFloat size = 7.0;
+        const CGRect handle = CGRectMake(corners[corner].x - size / 2.0, corners[corner].y - size / 2.0,
+                                         size, size);
+        CGContextSetRGBFillColor(context, 1.0, 1.0, 1.0, 1.0);
+        CGContextFillRect(context, handle);
+        CGContextSetRGBStrokeColor(context, 0.22, 0.52, 1.0, 1.0);
+        CGContextSetLineWidth(context, 1.5);
+        CGContextStrokeRect(context, handle);
+    }
+}
+
+/** Esquina de escalado bajo el puntero, o -1 si no hay ninguna. */
+- (NSInteger)resizeCornerAtPlanPoint:(norma_point)point tolerance:(double)tolerance
+{
+    if (_selectedElement < 0 || _selectedElement >= (NSInteger) self.document->count) {
+        return -1;
+    }
+    const norma_element *element = &self.document->elements[_selectedElement];
+    if (element->node_count >= 2) {
+        return -1;
+    }
+    const norma_point corners[4] = {
+        {element->x, element->y},
+        {element->x + element->w, element->y},
+        {element->x, element->y + element->h},
+        {element->x + element->w, element->y + element->h},
+    };
+    for (int corner = 0; corner < 4; corner += 1) {
+        if (norma_distance(point, corners[corner]) <= tolerance) {
+            return corner;
+        }
+    }
+    return -1;
+}
+
 - (void)drawRect:(NSRect)dirtyRect
 {
     (void) dirtyRect;
@@ -572,7 +828,7 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
     // Rejilla de referencia en todo el espacio de trabajo: el lienzo es
     // infinito y se puede dibujar fuera de la hoja. Al alejarse, la rejilla se
     // agranda para no dibujar miles de líneas.
-    if (!self.printing) {
+    if (!self.printing && _showsGrid) {
         double grid = 20.0;
         while (grid * (double) zoom < 9.0) {
             grid *= 5.0;
@@ -612,6 +868,22 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
         const BOOL selected = (NSInteger) index == _selectedElement;
         const BOOL isDimension = strcmp(element->type, "dimension") == 0;
 
+        /* Rectángulo y elipse: figuras por lo que son, no por su caja. */
+        if (strcmp(element->type, "rect") == 0 || strcmp(element->type, "ellipse") == 0) {
+            [self drawShape:element selected:selected context:context zoom:zoom];
+            continue;
+        }
+        /* El texto suelto se rotula abajo, en coordenadas de ventana. */
+        if (strcmp(element->type, "text") == 0) {
+            continue;
+        }
+
+        /* Vías, andenes, pasos y parqueaderos: zonas con su trama. */
+        if (element->node_count < 2 && norma_environment_is(element->type)) {
+            [self drawEnvironment:element selected:selected context:context zoom:zoom];
+            continue;
+        }
+
         /* Puertas y objetos con caja se dibujan aparte: no son trazos. */
         if (element->node_count < 2 && norma_object_is_door(element->type)) {
             [self drawDoor:element selected:selected context:context zoom:zoom];
@@ -635,6 +907,19 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
             // Verde de evacuación, el mismo de la edición web.
             CGContextSetRGBStrokeColor(context, 0.14, 0.50, 0.32, 1.0);
             CGContextSetLineWidth(context, 2.4 / zoom);
+        } else if (strcmp(element->type, "property") == 0) {
+            /* Lindero discontinuo, como en el plano impreso. */
+            CGContextSetStrokeColorWithColor(context, [self strokeColourForElement:element].CGColor);
+            CGContextSetLineWidth(context, (CGFloat) (element->stroke > 0.0 ? element->stroke : 2.0) / zoom);
+            const CGFloat dash[2] = {8.0 / zoom, 5.0 / zoom};
+            CGContextSetLineDash(context, 0.0, dash, 2);
+        } else if (strcmp(element->type, "pipe") == 0 || strcmp(element->type, "conduit") == 0) {
+            CGContextSetStrokeColorWithColor(context, [self strokeColourForElement:element].CGColor);
+            CGContextSetLineWidth(context, (CGFloat) (element->stroke > 0.0 ? element->stroke : 3.0) / zoom);
+        } else if (strcmp(element->type, "line") == 0) {
+            /* Línea de dibujo: su color, o el oscuro de las figuras. */
+            CGContextSetStrokeColorWithColor(context, [self strokeColourForElement:element].CGColor);
+            CGContextSetLineWidth(context, (CGFloat) (element->stroke > 0.0 ? element->stroke : 1.4) / zoom);
         } else {
             CGContextSetRGBStrokeColor(context, 0.85, 0.22, 0.24, 1.0);
             CGContextSetLineWidth(context, 1.4 / zoom);
@@ -656,6 +941,7 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
                 }
             }
             CGContextStrokePath(context);
+            CGContextSetLineDash(context, 0.0, NULL, 0);
             if (strcmp(element->type, "route") == 0 && element->node_count >= 2) {
                 // Punta de flecha en el sentido de la evacuación.
                 const norma_point end = element->nodes[element->node_count - 1];
@@ -713,6 +999,18 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
         CGContextMoveToPoint(context, _draft[_draftCount - 1].x, _draft[_draftCount - 1].y);
         CGContextAddLineToPoint(context, _cursorPoint.x, _cursorPoint.y);
         CGContextStrokePath(context);
+
+        /* Rectángulo y elipse se previsualizan como van a quedar. */
+        if (_tool == NormiaToolRect || _tool == NormiaToolEllipse || environment_type(_tool) != NULL) {
+            const CGRect box = CGRectMake(_draft[0].x, _draft[0].y,
+                                          _cursorPoint.x - _draft[0].x, _cursorPoint.y - _draft[0].y);
+            const CGRect normal = CGRectStandardize(box);
+            if (_tool == NormiaToolEllipse) {
+                CGContextStrokeEllipseInRect(context, normal);
+            } else {
+                CGContextStrokeRect(context, normal);
+            }
+        }
     }
 
     // La revisión: un anillo por hallazgo con punto en el plano.
@@ -727,10 +1025,35 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
 
     CGContextRestoreGState(context);
 
+    /* Los tiradores, en puntos de pantalla: no crecen con el zoom. */
+    if (!self.printing) {
+        [self drawSelectionHandlesInContext:context];
+    }
+
     // Las cifras se dibujan en coordenadas de la ventana: si se hicieran dentro
     // de la transformación, el texto crecería con el zoom.
     for (size_t index = 0; index < self.document->count; index += 1) {
         const norma_element *element = &self.document->elements[index];
+        if (strcmp(element->type, "text") == 0) {
+            /* El texto se lee en el plano: su tamaño en pantalla sigue al zoom,
+               con un mínimo para que no desaparezca al alejarse. */
+            NSString *content = element->label[0] != '\0' ? [NSString stringWithUTF8String:element->label] : @"Texto";
+            NSFont *font = [NSFont systemFontOfSize:fmax(9.0, 12.0 * (double) zoom)];
+            NSDictionary *attributes = @{
+                NSFontAttributeName: font,
+                NSForegroundColorAttributeName: [self strokeColourForElement:element],
+            };
+            const NSPoint origin = [self viewPointForPlan:((norma_point) {element->x, element->y})];
+            [content drawAtPoint:origin withAttributes:attributes];
+            if ((NSInteger) index == _selectedElement) {
+                const NSSize size = [content sizeWithAttributes:attributes];
+                CGContextSetRGBStrokeColor(context, 0.22, 0.52, 1.0, 0.9);
+                CGContextSetLineWidth(context, 1.0);
+                CGContextStrokeRect(context, CGRectMake(origin.x - 3.0, origin.y - 2.0, size.width + 6.0,
+                                                       size.height + 4.0));
+            }
+            continue;
+        }
         if (element->node_count < 2) {
             NSString *caption = [self captionForObject:element];
             if (caption != nil) {
@@ -799,6 +1122,9 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
     if (strcmp(type, "text") == 0) {
         return nil; /* el texto ya se rotula con su contenido */
     }
+    if (strcmp(type, "parking") == 0) {
+        return @"P";
+    }
     /* Cualquier otra pieza del catálogo se rotula con el nombre que tiene en el
        catálogo —«Ascensor accesible», «Estantería 4 niveles»—, que es lo que
        hace legible un plano con 820 objetos disponibles. */
@@ -824,6 +1150,21 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
 /* -------------------------------- edición -------------------------------- */
 
 /** Cierra el borrador: muro con nodos, arco de tres puntos o cota. */
+/** Tipo de entorno que dibuja cada herramienta (NULL si no es del entorno). */
+static const char *environment_type(NormiaTool tool)
+{
+    switch (tool) {
+    case NormiaToolRoad: return "road";
+    case NormiaToolSidewalk: return "sidewalk";
+    case NormiaToolCrosswalk: return "crosswalk";
+    case NormiaToolParking: return "parking";
+    case NormiaToolProperty: return "property";
+    case NormiaToolPipe: return "pipe";
+    case NormiaToolConduit: return "conduit";
+    default: return NULL;
+    }
+}
+
 - (void)commitDraft
 {
     if (self.document == NULL || _draftCount < 2) {
@@ -832,13 +1173,13 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
     }
     norma_document_begin_edit(self.document);
     long index = -1;
-    if (_tool == CanvasToolDimension) {
+    if (_tool == NormiaToolDimension) {
         index = norma_document_add_dimension(self.document, _draft[0], _draft[1], NULL);
 
         char caption[64];
         norma_format_measure_cm(norma_distance(_draft[0], _draft[1]), self.document->unit, caption, sizeof(caption));
         [self.delegate canvasStatus:self message:[NSString stringWithFormat:@"Cota de %s", caption]];
-    } else if (_tool == CanvasToolArc) {
+    } else if (_tool == NormiaToolArc) {
         norma_arc arc = norma_arc_from_points(_draft[0], _draft[1], _draft[2]);
         if (arc.valid) {
             const norma_point nodes[2] = {_draft[0], _draft[2]};
@@ -847,8 +1188,16 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
         } else {
             [self.delegate canvasStatus:self message:@"El arco no es válido: los tres puntos están en línea." ];
         }
-    } else if (_tool == CanvasToolRoute) {
+    } else if (_tool == NormiaToolRoute) {
         index = norma_document_add_route(self.document, _draft, (size_t) _draftCount, NULL, NULL);
+    } else if (_tool == NormiaToolLine) {
+        index = norma_document_add_shape(self.document, "line", _draft[0], _draft[1], NULL);
+    } else if (_tool == NormiaToolRect) {
+        index = norma_document_add_shape(self.document, "rect", _draft[0], _draft[1], NULL);
+    } else if (_tool == NormiaToolEllipse) {
+        index = norma_document_add_shape(self.document, "ellipse", _draft[0], _draft[1], NULL);
+    } else if (environment_type(_tool) != NULL) {
+        index = norma_document_add_environment(self.document, environment_type(_tool), _draft[0], _draft[1], NULL);
     } else {
         index = norma_document_add_wall(self.document, _draft, (size_t) _draftCount, NULL, NULL);
     }
@@ -856,6 +1205,11 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
         _selectedElement = index;
         _selectedNode = -1;
         [self.delegate canvasDidChange:self];
+        [self announceSelection];
+    } else if (_tool == NormiaToolRect || _tool == NormiaToolEllipse || _tool == NormiaToolLine
+               || environment_type(_tool) != NULL) {
+        [self.delegate canvasStatus:self
+                            message:@"El elemento quedó sin área: los dos clics están en el mismo punto."];
     }
     _draftCount = 0;
     [self setNeedsDisplay:YES];
@@ -868,19 +1222,39 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
     }
     const norma_point point = [self planPointForEvent:event];
 
-    if (_tool == CanvasToolInsert && _insertType[0] != '\0') {
+    /* Mano: arrastrar el lienzo no toca el plano. */
+    if (_tool == NormiaToolPan) {
+        _panning = YES;
+        _panStart = [self convertPoint:event.locationInWindow fromView:nil];
+        _panStartX = _panX;
+        _panStartY = _panY;
+        return;
+    }
+
+    if (_tool == NormiaToolInsert && _insertType[0] != '\0') {
         [self placeInsertedObject:point];
         return;
     }
 
-    if (_tool == CanvasToolDimension || _tool == CanvasToolArc || _tool == CanvasToolWall) {
+    /* Texto: un clic y queda escrito «Texto», listo para renombrar. */
+    if (_tool == NormiaToolText) {
+        [self.delegate canvasStatus:self message:[self addTextAtPoint:point]];
+        return;
+    }
+
+    if (_tool == NormiaToolDimension || _tool == NormiaToolArc || _tool == NormiaToolWall
+        || _tool == NormiaToolLine || _tool == NormiaToolRect || _tool == NormiaToolEllipse
+        || environment_type(_tool) != NULL) {
         if (_draftCount < kMaxDraftNodes) {
             _draft[_draftCount] = point;
             _draftCount += 1;
         }
-        if ((_tool == CanvasToolDimension && _draftCount == 2)
-            || (_tool == CanvasToolArc && _draftCount == 3)
-            || (_tool == CanvasToolWall && _draftCount == 2)) {
+        if ((_tool == NormiaToolDimension && _draftCount == 2)
+            || (_tool == NormiaToolArc && _draftCount == 3)
+            || (_tool == NormiaToolWall && _draftCount == 2)
+            || ((_tool == NormiaToolLine || _tool == NormiaToolRect || _tool == NormiaToolEllipse
+                 || environment_type(_tool) != NULL)
+                && _draftCount == 2)) {
             [self commitDraft];
         } else {
             [self.delegate canvasStatus:self message:[self hintForTool]];
@@ -889,7 +1263,7 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
         return;
     }
 
-    if (_tool == CanvasToolPen || _tool == CanvasToolRoute) {
+    if (_tool == NormiaToolPen || _tool == NormiaToolRoute) {
         if (_draftCount < kMaxDraftNodes) {
             _draft[_draftCount] = point;
             _draftCount += 1;
@@ -905,10 +1279,31 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
     }
 
     const double planTolerance = (double) kToleranceScreen / (double) [self scale];
+
+    /* Antes de elegir otra cosa: ¿se agarró una esquina de la caja? */
+    const NSInteger corner = [self resizeCornerAtPlanPoint:point tolerance:planTolerance];
+    if (corner >= 0 && _selectedElement >= 0) {
+        const norma_element *selectedElement = &self.document->elements[_selectedElement];
+        const norma_point corners[4] = {
+            {selectedElement->x, selectedElement->y},
+            {selectedElement->x + selectedElement->w, selectedElement->y},
+            {selectedElement->x, selectedElement->y + selectedElement->h},
+            {selectedElement->x + selectedElement->w, selectedElement->y + selectedElement->h},
+        };
+        /* La esquina opuesta queda quieta mientras se arrastra. */
+        _resizeAnchor = corners[3 - corner];
+        _resizeCorner = corner;
+        _draggingNode = NO;
+        _editBegun = NO;
+        [self setNeedsDisplay:YES];
+        return;
+    }
+
     const long hit = norma_document_hit_test(self.document, point, planTolerance);
     _selectedElement = hit;
     _selectedNode = -1;
     _draggingNode = NO;
+    [self announceSelection];
     if (hit >= 0) {
         const norma_element *element = &self.document->elements[hit];
         for (size_t node = 0; node < element->node_count; node += 1) {
@@ -936,7 +1331,7 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
         return;
     }
     snprintf(_insertType, sizeof(_insertType), "%s", spec->type);
-    _tool = CanvasToolInsert;
+    _tool = NormiaToolInsert;
     _draftCount = 0;
     _hasCursor = NO;
     _selectedNode = -1;
@@ -996,24 +1391,48 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
 - (NSString *)hintForTool
 {
     switch (_tool) {
-    case CanvasToolWall:
+    case NormiaToolWall:
         return @"Muro: segundo clic para cerrar el tramo. Esc termina.";
-    case CanvasToolPen:
+    case NormiaToolPen:
         return @"Pluma: un clic por nodo. Enter o doble clic cierra el trazo; Retroceso quita el último nodo.";
-    case CanvasToolArc:
+    case NormiaToolArc:
         return @"Arco: tercer clic para cerrar la curva por el punto de paso.";
-    case CanvasToolRoute:
+    case NormiaToolRoute:
         return @"Ruta: un clic por nodo. Enter o doble clic cierra el trazo; el auditor dirá si llega a una salida.";
-    case CanvasToolDimension:
+    case NormiaToolDimension:
         return @"Cota: segundo clic para medir el tramo.";
-    case CanvasToolInsert: {
+    case NormiaToolInsert: {
         const norma_object_spec *spec = norma_object_find(_insertType);
         if (spec == NULL) {
             return @"";
         }
         return [NSString stringWithFormat:@"%s: un clic en el plano para colocar. Esc termina.", spec->name];
     }
-    case CanvasToolSelect:
+    case NormiaToolPan:
+        return @"Mano: arrastra el lienzo. La rueda acerca y aleja; Esc vuelve a seleccionar.";
+    case NormiaToolLine:
+        return @"Línea: segundo clic para cerrarla.";
+    case NormiaToolRect:
+        return @"Rectángulo: segundo clic en la esquina opuesta.";
+    case NormiaToolEllipse:
+        return @"Elipse: segundo clic define la caja que la contiene.";
+    case NormiaToolText:
+        return @"Texto: un clic en el plano y se escribe en el inspector.";
+    case NormiaToolRoad:
+        return @"Vía: segundo clic en la esquina opuesta. Se guarda como zona, no como trazo.";
+    case NormiaToolSidewalk:
+        return @"Andén: segundo clic en la esquina opuesta.";
+    case NormiaToolCrosswalk:
+        return @"Paso peatonal: segundo clic en la esquina opuesta.";
+    case NormiaToolParking:
+        return @"Parqueadero: segundo clic en la esquina opuesta.";
+    case NormiaToolProperty:
+        return @"Lindero: segundo clic para cerrar el tramo discontinuo.";
+    case NormiaToolPipe:
+        return @"Tubería: segundo clic para cerrar el tramo.";
+    case NormiaToolConduit:
+        return @"Canaleta: segundo clic para cerrar el tramo.";
+    case NormiaToolSelect:
     default:
         return @"";
     }
@@ -1021,10 +1440,41 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
 
 - (void)mouseDragged:(NSEvent *)event
 {
+    const norma_point point = [self planPointForEvent:event];
+    if ([self.delegate respondsToSelector:@selector(canvas:didTrackPlanPoint:)]) {
+        [self.delegate canvas:self didTrackPlanPoint:point];
+    }
+
+    if (_panning) {
+        const NSPoint local = [self convertPoint:event.locationInWindow fromView:nil];
+        _panX = _panStartX + ((double) local.x - (double) _panStart.x);
+        _panY = _panStartY + ((double) local.y - (double) _panStart.y);
+        [self setNeedsDisplay:YES];
+        return;
+    }
+
+    /* Escalado por esquina: la esquina opuesta queda quieta. */
+    if (_resizeCorner >= 0 && _selectedElement >= 0
+        && (size_t) _selectedElement < self.document->count) {
+        if (!_editBegun) {
+            norma_document_begin_edit(self.document);
+            _editBegun = YES;
+        }
+        double width = fabs(point.x - _resizeAnchor.x);
+        double height = fabs(point.y - _resizeAnchor.y);
+        if (width < 5.0) { width = 5.0; }
+        if (height < 5.0) { height = 5.0; }
+        norma_document_set_box(self.document, (size_t) _selectedElement,
+                               round(fmin(_resizeAnchor.x, point.x)), round(fmin(_resizeAnchor.y, point.y)),
+                               round(width), round(height));
+        [self.delegate canvasDidChange:self];
+        [self setNeedsDisplay:YES];
+        return;
+    }
+
     if (self.document == NULL || _selectedElement < 0 || !_draggingNode) {
         return;
     }
-    const norma_point point = [self planPointForEvent:event];
     if (!_editBegun) {
         norma_document_begin_edit(self.document);
         _editBegun = YES;
@@ -1059,16 +1509,22 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
     (void) event;
     _draggingNode = NO;
     _editBegun = NO;
+    _panning = NO;
+    _resizeCorner = -1;
+    [self announceSelection];
+    [self setNeedsDisplay:YES];
 }
 
 - (void)mouseMoved:(NSEvent *)event
 {
-    if (_draftCount == 0) {
-        return;
-    }
     _cursorPoint = [self planPointForEvent:event];
     _hasCursor = YES;
-    [self setNeedsDisplay:YES];
+    if ([self.delegate respondsToSelector:@selector(canvas:didTrackPlanPoint:)]) {
+        [self.delegate canvas:self didTrackPlanPoint:_cursorPoint];
+    }
+    if (_draftCount > 0) {
+        [self setNeedsDisplay:YES];
+    }
 }
 
 - (void)viewDidMoveToWindow
@@ -1097,7 +1553,7 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
     NSString *characters = [event.charactersIgnoringModifiers lowercaseString];
     if (![self selectToolWithKey:characters]) {
         if (event.keyCode == 53) { // Esc
-            _tool = CanvasToolSelect;
+            _tool = NormiaToolSelect;
             _draftCount = 0;
             _hasCursor = NO;
             _insertType[0] = '\0';
@@ -1105,50 +1561,86 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
             [self setNeedsDisplay:YES];
             return;
         } else if (event.keyCode == 36 || event.keyCode == 76) { // Return y Enter
-            if ((_tool == CanvasToolPen || _tool == CanvasToolRoute) && _draftCount >= 2) {
+            if ((_tool == NormiaToolPen || _tool == NormiaToolRoute) && _draftCount >= 2) {
                 [self commitDraft];
             }
             return;
+        } else if (event.keyCode >= 123 && event.keyCode <= 126) { // Flechas
+            const double step = (event.modifierFlags & NSEventModifierFlagShift) != 0 ? 10.0 : 1.0;
+            double dx = 0.0;
+            double dy = 0.0;
+            if (event.keyCode == 123) { dx = -step; }
+            if (event.keyCode == 124) { dx = step; }
+            if (event.keyCode == 125) { dy = step; }
+            if (event.keyCode == 126) { dy = -step; }
+            [self nudgeSelectionByX:dx y:dy];
+            return;
         } else if (event.keyCode == 51 || event.keyCode == 117) { // Retroceso y Suprimir
-            if ((_tool == CanvasToolPen || _tool == CanvasToolRoute) && _draftCount > 0) {
+            if ((_tool == NormiaToolPen || _tool == NormiaToolRoute) && _draftCount > 0) {
                 _draftCount -= 1;
                 [self setNeedsDisplay:YES];
                 return;
             }
-            if (_selectedElement >= 0) {
-                norma_document_begin_edit(self.document);
-                norma_document_remove(self.document, (size_t) _selectedElement);
-                _selectedElement = -1;
-                _selectedNode = -1;
-                [self.delegate canvasDidChange:self];
-                [self setNeedsDisplay:YES];
-            }
+            [self.delegate canvasStatus:self message:[self deleteSelection]];
             return;
         } else {
             [super keyDown:event];
             return;
         }
     }
-    [self.delegate canvasStatus:self message:[self hintForTool]];
+    /* La pista de la herramienta ya la dejó `selectToolWithKey:`; aquí solo se
+       repinta (así el aviso de la rejilla no se borra). */
     [self setNeedsDisplay:YES];
 }
 
 - (BOOL)selectToolWithKey:(NSString *)key
 {
     NSString *caracter = [key lowercaseString];
-    CanvasTool tool = CanvasToolSelect;
+    CanvasTool tool = NormiaToolSelect;
     if ([caracter isEqualToString:@"m"]) {
-        tool = CanvasToolWall;
+        tool = NormiaToolWall;
     } else if ([caracter isEqualToString:@"p"]) {
-        tool = CanvasToolPen;
+        tool = NormiaToolPen;
     } else if ([caracter isEqualToString:@"a"]) {
-        tool = CanvasToolArc;
+        tool = NormiaToolArc;
     } else if ([caracter isEqualToString:@"d"]) {
-        tool = CanvasToolDimension;
+        tool = NormiaToolDimension;
     } else if ([caracter isEqualToString:@"r"]) {
-        tool = CanvasToolRoute;
+        tool = NormiaToolRoute;
     } else if ([caracter isEqualToString:@"v"]) {
-        tool = CanvasToolSelect;
+        tool = NormiaToolSelect;
+    } else if ([caracter isEqualToString:@"h"]) {
+        tool = NormiaToolPan;
+    } else if ([caracter isEqualToString:@"l"]) {
+        tool = NormiaToolLine;
+    } else if ([caracter isEqualToString:@"b"]) {
+        tool = NormiaToolRect;
+    } else if ([caracter isEqualToString:@"o"]) {
+        tool = NormiaToolEllipse;
+    } else if ([caracter isEqualToString:@"t"]) {
+        tool = NormiaToolText;
+    } else if ([caracter isEqualToString:@"i"]) {
+        tool = NormiaToolInsert;
+    } else if ([caracter isEqualToString:@"e"]) {
+        tool = NormiaToolRoad;
+    } else if ([caracter isEqualToString:@"n"]) {
+        tool = NormiaToolSidewalk;
+    } else if ([caracter isEqualToString:@"c"]) {
+        tool = NormiaToolCrosswalk;
+    } else if ([caracter isEqualToString:@"k"]) {
+        tool = NormiaToolParking;
+    } else if ([caracter isEqualToString:@"j"]) {
+        tool = NormiaToolProperty;
+    } else if ([caracter isEqualToString:@"q"]) {
+        tool = NormiaToolPipe;
+    } else if ([caracter isEqualToString:@"w"]) {
+        tool = NormiaToolConduit;
+    } else if ([caracter isEqualToString:@"g"]) {
+        /* Rejilla: es una ayuda de dibujo, no una herramienta. */
+        self.showsGrid = !self.showsGrid;
+        [self.delegate canvasStatus:self
+                            message:self.showsGrid ? @"Rejilla de referencia visible" : @"Rejilla oculta"];
+        return YES;
     } else {
         return NO;
     }
@@ -1156,6 +1648,9 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
     _draftCount = 0;
     _hasCursor = NO;
     [self.delegate canvasStatus:self message:[self hintForTool]];
+    if ([self.delegate respondsToSelector:@selector(canvas:didChooseTool:)]) {
+        [self.delegate canvas:self didChooseTool:tool];
+    }
     [self setNeedsDisplay:YES];
     return YES;
 }
@@ -1197,12 +1692,171 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
     [self setNeedsDisplay:YES];
 }
 
+/* --------------------------- acciones del inspector ---------------------- */
+
+- (NSString *)deleteSelection
+{
+    if (self.document == NULL || _selectedElement < 0
+        || (size_t) _selectedElement >= self.document->count) {
+        return @"No hay nada seleccionado.";
+    }
+    norma_document_begin_edit(self.document);
+    norma_document_remove(self.document, (size_t) _selectedElement);
+    _selectedElement = -1;
+    _selectedNode = -1;
+    _draftCount = 0;
+    [self.delegate canvasDidChange:self];
+    [self announceSelection];
+    [self setNeedsDisplay:YES];
+    return @"Elemento borrado. ⌘Z lo devuelve.";
+}
+
+- (NSString *)addTextAtPoint:(norma_point)point
+{
+    if (self.document == NULL) {
+        return @"No hay plano abierto.";
+    }
+    norma_document_begin_edit(self.document);
+    const long index = norma_document_add_text(self.document, point, 180.0, 32.0, "Texto", NULL);
+    if (index < 0) {
+        return @"No se pudo añadir el texto.";
+    }
+    _selectedElement = index;
+    _selectedNode = -1;
+    [self.delegate canvasDidChange:self];
+    [self announceSelection];
+    [self setNeedsDisplay:YES];
+    return @"Texto colocado: escribe su contenido en el inspector (⌘L lleva el cursor al rótulo).";
+}
+
+- (NSString *)duplicateSelection
+{
+    if (self.document == NULL || _selectedElement < 0
+        || (size_t) _selectedElement >= self.document->count) {
+        return @"Selecciona un elemento para duplicarlo.";
+    }
+    norma_document_begin_edit(self.document);
+    const long index = norma_document_duplicate(self.document, (size_t) _selectedElement);
+    if (index < 0) {
+        return @"No se pudo duplicar el elemento.";
+    }
+    _selectedElement = index;
+    _selectedNode = -1;
+    [self.delegate canvasDidChange:self];
+    [self announceSelection];
+    [self setNeedsDisplay:YES];
+    return @"Duplicado 20 cm a la derecha, ya seleccionado.";
+}
+
+- (NSString *)rotateSelection
+{
+    if (self.document == NULL || _selectedElement < 0
+        || (size_t) _selectedElement >= self.document->count) {
+        return @"Selecciona un elemento para girarlo.";
+    }
+    norma_document_begin_edit(self.document);
+    const size_t index = (size_t) _selectedElement;
+    const norma_element *element = &self.document->elements[index];
+    if (element->node_count < 2) {
+        if (!norma_document_set_rotation(self.document, index, element->rotation + 90.0)) {
+            return @"El elemento no gira.";
+        }
+    } else {
+        /* Un trazo gira nodo a nodo alrededor del centro de su caja. */
+        double minX = element->nodes[0].x;
+        double maxX = minX;
+        double minY = element->nodes[0].y;
+        double maxY = minY;
+        for (size_t node = 1; node < element->node_count; node += 1) {
+            const norma_point point = element->nodes[node];
+            if (point.x < minX) { minX = point.x; }
+            if (point.x > maxX) { maxX = point.x; }
+            if (point.y < minY) { minY = point.y; }
+            if (point.y > maxY) { maxY = point.y; }
+        }
+        const double cx = (minX + maxX) / 2.0;
+        const double cy = (minY + maxY) / 2.0;
+        for (size_t node = 0; node < element->node_count; node += 1) {
+            const norma_point point = element->nodes[node];
+            const double dx = point.x - cx;
+            const double dy = point.y - cy;
+            norma_document_move_node(self.document, index, node,
+                                     round(cx - dy), round(cy + dx));
+        }
+    }
+    [self.delegate canvasDidChange:self];
+    [self setNeedsDisplay:YES];
+    return @"Girado 90°.";
+}
+
+/** Flechas del teclado: un centímetro, o diez con Mayúsculas. */
+- (void)nudgeSelectionByX:(double)dx y:(double)dy
+{
+    if (self.document == NULL || _selectedElement < 0
+        || (size_t) _selectedElement >= self.document->count) {
+        return;
+    }
+    norma_document_begin_edit(self.document);
+    const size_t index = (size_t) _selectedElement;
+    norma_element *element = &self.document->elements[index];
+    if (element->node_count >= 2) {
+        for (size_t node = 0; node < element->node_count; node += 1) {
+            norma_document_move_node(self.document, index, node,
+                                     element->nodes[node].x + dx, element->nodes[node].y + dy);
+        }
+    } else {
+        norma_document_move_object(self.document, index, element->x + dx, element->y + dy);
+    }
+    [self.delegate canvasDidChange:self];
+    [self.delegate canvasStatus:self
+                        message:[NSString stringWithFormat:@"Movido %.0f cm · %.0f", dx, dy]];
+    [self setNeedsDisplay:YES];
+}
+
+- (double)zoomPercent
+{
+    /* Antes del primer dibujo la vista no tiene encuadre: se informa el 100 %
+       en vez de un cero que no significa nada. */
+    return (_zoom > 0.0 ? _zoom : 1.0) * 100.0;
+}
+
+- (void)zoomToPercent:(double)percent
+{
+    if (self.document == NULL || percent <= 0.0) {
+        return;
+    }
+    [self ensureView];
+    const NSPoint center = NSMakePoint(NSWidth(self.bounds) / 2.0, NSHeight(self.bounds) / 2.0);
+    const double planX = ((double) center.x - _panX) / _zoom;
+    const double planY = ((double) center.y - _panY) / _zoom;
+    double zoom = percent / 100.0;
+    [self clampZoom:&zoom];
+    _zoom = zoom;
+    _panX = (double) center.x - planX * zoom;
+    _panY = (double) center.y - planY * zoom;
+    [self setNeedsDisplay:YES];
+}
+
+- (void)focusSelection
+{
+    if (self.document == NULL || _selectedElement < 0
+        || (size_t) _selectedElement >= self.document->count) {
+        return;
+    }
+    const norma_element *element = &self.document->elements[_selectedElement];
+    if (element->node_count >= 2) {
+        [self focusOnPoint:element->nodes[0]];
+    } else {
+        [self focusOnPoint:((norma_point) {element->x + element->w / 2.0, element->y + element->h / 2.0})];
+    }
+}
+
 - (void)cancelDraft
 {
     _draftCount = 0;
     _hasCursor = NO;
     _insertType[0] = '\0';
-    _tool = CanvasToolSelect;
+    _tool = NormiaToolSelect;
     [self.delegate canvasStatus:self message:@""];
     [self setNeedsDisplay:YES];
 }

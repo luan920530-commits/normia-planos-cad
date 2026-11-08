@@ -8,9 +8,13 @@
 #import "AppDelegate.h"
 #import "CanvasView.h"
 #import "CatalogPicker.h"
+#import "InspectorPanel.h"
+#import "ToolRail.h"
 
+#import <QuartzCore/QuartzCore.h>
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -23,8 +27,24 @@
 
 static const char *kAppName = "Normia Estudio";
 
-@interface AppDelegate ()
+@interface AppDelegate () <ToolRailDelegate, InspectorPanelDelegate>
 @property(nonatomic, strong) NSWindow *window;
+/* La ventana se compone como un CAD: tira de iconos arriba, paleta a la
+   izquierda, lienzo en el centro, inspector a la derecha, línea de comando y
+   barra de estado abajo. */
+@property(nonatomic, strong) NSView *topBar;
+@property(nonatomic, strong) NSView *commandBar;
+@property(nonatomic, strong) NSView *statusBar;
+@property(nonatomic, strong) ToolRail *rail;
+@property(nonatomic, strong) NSScrollView *railScroll;
+@property(nonatomic, strong) InspectorPanel *inspector;
+@property(nonatomic, strong) NSTextField *commandField;
+@property(nonatomic, strong) NSTextField *coordinateLabel;
+@property(nonatomic, strong) NSTextField *zoomLabel;
+@property(nonatomic, strong) NSSegmentedControl *layoutTabs;
+/** Último comando escrito: Intro con la línea vacía lo repite, como en un CAD. */
+@property(nonatomic, copy) NSString *lastCommand;
+@property(nonatomic) norma_point lastPoint;
 @property(nonatomic, strong) CanvasView *canvas;
 @property(nonatomic, strong) NSTextField *statusLabel;
 @property(nonatomic) norma_document document;
@@ -59,6 +79,21 @@ static const char *kAppName = "Normia Estudio";
 - (void)invalidateInspection;
 - (void)loadObjectCatalog;
 - (void)insertFromPicker:(id)sender;
+- (void)buildTopBar:(NSView *)content;
+- (void)buildRail:(NSView *)content;
+- (void)buildInspector:(NSView *)content;
+- (void)buildCommandBar:(NSView *)content;
+- (void)buildStatusBar:(NSView *)content;
+- (void)layoutChrome;
+- (void)applyTool:(NormiaTool)tool;
+- (void)runCommand:(id)sender;
+- (void)updateStatusReadout;
+- (void)toggleGrid:(id)sender;
+- (void)duplicateSelection:(id)sender;
+- (void)rotateSelection:(id)sender;
+- (void)focusLabel:(id)sender;
+- (void)exportPlan:(id)sender;
+- (void)chooseLayoutTab:(id)sender;
 @end
 
 /** Preferencia donde viven los últimos planos: archivo del equipo, nunca la app. */
@@ -96,6 +131,9 @@ static const NSUInteger kRecentLimit = 10;
     [self buildMenu];
     [self buildWindow];
     [self.canvas documentDidLoad];
+    self.rail.tool = self.canvas.toolMode;
+    [self.inspector reload];
+    [self updateStatusReadout];
     [self refreshTitle];
     if (self.catalogError != nil) {
         [self canvasStatus:self.canvas message:self.catalogError];
@@ -115,9 +153,19 @@ static const NSUInteger kRecentLimit = 10;
     return YES;
 }
 
+/* ------------------------------ la ventana ------------------------------- */
+
+static const CGFloat kTopBarHeight = 48.0;
+static const CGFloat kCommandHeight = 30.0;
+static const CGFloat kStatusHeight = 28.0;
+static const CGFloat kPaletteWidth = 236.0;
+static const CGFloat kInspectorWidth = 300.0;
+
+static NSColor *chromeBackground(void) { return [NSColor colorWithCalibratedRed:0.17 green:0.18 blue:0.20 alpha:1.0]; }
+
 - (void)buildWindow
 {
-    const NSRect frame = NSMakeRect(0, 0, 1280, 860);
+    const NSRect frame = NSMakeRect(0, 0, 1440, 900);
     self.window = [[NSWindow alloc] initWithContentRect:frame
                                              styleMask:(NSWindowStyleMaskTitled | NSWindowStyleMaskClosable
                                                         | NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskResizable)
@@ -125,29 +173,628 @@ static const NSUInteger kRecentLimit = 10;
                                                  defer:NO];
     self.window.title = @"Normia Estudio";
     self.window.delegate = self;
-    self.window.minSize = NSMakeSize(900, 600);
-    self.window.backgroundColor = [NSColor colorWithCalibratedWhite:0.16 alpha:1.0];
+    self.window.minSize = NSMakeSize(1040, 680);
+    self.window.backgroundColor = chromeBackground();
 
     NSView *content = self.window.contentView;
-    self.canvas = [[CanvasView alloc] initWithFrame:content.bounds];
-    self.canvas.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
+    content.wantsLayer = YES;
+    content.layer.backgroundColor = chromeBackground().CGColor;
+
+    /* El lienzo se añade primero: los paneles van encima. */
+    self.canvas = [[CanvasView alloc] initWithFrame:NSMakeRect(kPaletteWidth, kStatusHeight + kCommandHeight,
+                                                               NSWidth(content.bounds) - kPaletteWidth - kInspectorWidth,
+                                                               NSHeight(content.bounds) - kTopBarHeight
+                                                                   - kStatusHeight - kCommandHeight)];
     self.canvas.delegate = self;
     self.canvas.document = &_document;
     [content addSubview:self.canvas];
 
+    [self buildTopBar:content];
+    [self buildRail:content];
+    [self buildInspector:content];
     [self buildAuditPanel:content];
-
-    // Barra de estado sobria, debajo del lienzo.
-    self.statusLabel = [NSTextField labelWithString:@""];
-    self.statusLabel.font = [NSFont systemFontOfSize:11.0];
-    self.statusLabel.textColor = [NSColor colorWithCalibratedWhite:0.75 alpha:1.0];
-    self.statusLabel.frame = NSMakeRect(16, 8, NSWidth(content.bounds) - 32, 16);
-    self.statusLabel.autoresizingMask = NSViewWidthSizable | NSViewMaxYMargin;
-    [content addSubview:self.statusLabel];
+    [self buildCommandBar:content];
+    [self buildStatusBar:content];
+    [self layoutChrome];
 
     [self.window center];
     [self.window makeKeyAndOrderFront:nil];
     [self.window makeFirstResponder:self.canvas];
+}
+
+/** Tira de iconos: las herramientas a un clic, como en la captura de referencia. */
+- (void)buildTopBar:(NSView *)content
+{
+    NSView *bar = [[NSView alloc] initWithFrame:NSMakeRect(0, NSHeight(content.bounds) - kTopBarHeight,
+                                                           NSWidth(content.bounds), kTopBarHeight)];
+    bar.autoresizingMask = NSViewWidthSizable | NSViewMinYMargin;
+    bar.wantsLayer = YES;
+    bar.layer.backgroundColor = chromeBackground().CGColor;
+    self.topBar = bar;
+
+    /* Marca de la aplicación, a la izquierda. */
+    NSTextField *brand = [NSTextField labelWithString:@"NORMIA"];
+    brand.font = [NSFont systemFontOfSize:12.0 weight:NSFontWeightBold];
+    brand.textColor = [NSColor whiteColor];
+    brand.frame = NSMakeRect(14.0, 16.0, 74.0, 16.0);
+    [bar addSubview:brand];
+
+    NSTextField *edition = [NSTextField labelWithString:@"ESTUDIO"];
+    edition.font = [NSFont systemFontOfSize:9.0 weight:NSFontWeightMedium];
+    edition.textColor = [NSColor colorWithCalibratedWhite:0.55 alpha:1.0];
+    edition.frame = NSMakeRect(14.0, 7.0, 74.0, 12.0);
+    [bar addSubview:edition];
+
+    /* Iconos: las doce herramientas del lienzo. */
+    NSArray<NSArray<NSString *> *> *icons = @[
+        @[ @"cursorarrow", @"Seleccionar (V)", @"0" ],
+        @[ @"hand.raised", @"Mano (H)", @"7" ],
+        @[ @"rectangle.split.3x1", @"Muro (M)", @"1" ],
+        @[ @"line.diagonal", @"Línea (L)", @"8" ],
+        @[ @"rectangle", @"Rectángulo (B)", @"9" ],
+        @[ @"circle", @"Elipse (O)", @"10" ],
+        @[ @"scribble", @"Pluma (P)", @"2" ],
+        @[ @"arrow.up.right", @"Arco (A)", @"3" ],
+        @[ @"textformat", @"Texto (T)", @"11" ],
+        @[ @"ruler", @"Cota (D)", @"4" ],
+        @[ @"arrow.turn.up.right", @"Ruta de evacuación (R)", @"5" ],
+        @[ @"plus.square", @"Insertar del catálogo", @"6" ],
+    ];
+    CGFloat x = 96.0;
+    NSInteger index = 0;
+    for (NSArray<NSString *> *icon in icons) {
+        if (index == 6 || index == 9) {
+            /* Separadores finos entre los bloques de herramientas. */
+            NSBox *separator = [[NSBox alloc] initWithFrame:NSMakeRect(x, 12.0, 1.0, 24.0)];
+            separator.boxType = NSBoxSeparator;
+            [bar addSubview:separator];
+            x += 9.0;
+        }
+        NSImage *image = [NSImage imageWithSystemSymbolName:icon[0] accessibilityDescription:icon[1]];
+        image.template = YES;
+        NSButton *button = [[NSButton alloc] initWithFrame:NSMakeRect(x, 9.0, 34.0, 30.0)];
+        button.image = image;
+        button.imagePosition = NSImageOnly;
+        button.bezelStyle = NSBezelStyleTexturedRounded;
+        button.contentTintColor = [NSColor colorWithCalibratedWhite:0.88 alpha:1.0];
+        button.target = self;
+        button.action = @selector(chooseToolButton:);
+        button.identifier = [NSString stringWithFormat:@"tool:%@", icon[2]];
+        button.toolTip = icon[1];
+        [bar addSubview:button];
+        x += 37.0;
+        index += 1;
+    }
+
+    /* A la derecha: buscar, revisar y estado de la herramienta. */
+    NSArray<NSArray<NSString *> *> *actions = @[
+        @[ @"magnifyingglass", @"Buscar e insertar (⌘⇧I)", @"action:catalog", @"100.0" ],
+        @[ @"checklist", @"Revisar el plano (⌘R)", @"action:audit", @"64.0" ],
+        @[ @"square.and.arrow.down", @"Exportar SVG", @"action:export", @"64.0" ],
+    ];
+    CGFloat right = 12.0;
+    for (NSArray<NSString *> *action in actions) {
+        const CGFloat width = action[3].doubleValue;
+        NSButton *button = [[NSButton alloc] initWithFrame:NSMakeRect(NSWidth(bar.bounds) - right - width,
+                                                                     9.0, width, 30.0)];
+        button.autoresizingMask = NSViewMinXMargin;
+        NSImage *image = [NSImage imageWithSystemSymbolName:action[0] accessibilityDescription:action[1]];
+        image.template = YES;
+        button.image = image;
+        button.imagePosition = NSImageLeading;
+        button.title = [action[2] isEqualToString:@"action:catalog"] ? @"Buscar" : @"";
+        button.font = [NSFont systemFontOfSize:11.0];
+        button.bezelStyle = NSBezelStyleTexturedRounded;
+        button.contentTintColor = [NSColor colorWithCalibratedWhite:0.88 alpha:1.0];
+        button.target = self;
+        button.action = @selector(chooseToolButton:);
+        button.identifier = action[2];
+        button.toolTip = action[1];
+        [bar addSubview:button];
+        right += width + 8.0;
+    }
+
+    NSBox *bottom = [[NSBox alloc] initWithFrame:NSMakeRect(0, 0, NSWidth(bar.bounds), 1.0)];
+    bottom.boxType = NSBoxSeparator;
+    bottom.autoresizingMask = NSViewWidthSizable;
+    [bar addSubview:bottom];
+
+    [content addSubview:bar];
+}
+
+/** Paleta de conjuntos de herramientas, en su columna con desplazamiento. */
+- (void)buildRail:(NSView *)content
+{
+    const CGFloat height = NSHeight(content.bounds) - kTopBarHeight - kStatusHeight - kCommandHeight;
+    NSScrollView *scroll = [[NSScrollView alloc] initWithFrame:NSMakeRect(0, kStatusHeight + kCommandHeight,
+                                                                         kPaletteWidth, height)];
+    scroll.autoresizingMask = NSViewHeightSizable;
+    scroll.hasVerticalScroller = YES;
+    scroll.autohidesScrollers = YES;
+    scroll.drawsBackground = YES;
+    scroll.backgroundColor = [NSColor colorWithCalibratedRed:0.14 green:0.15 blue:0.17 alpha:1.0];
+    scroll.borderType = NSNoBorder;
+
+    ToolRail *rail = [[ToolRail alloc] initWithFrame:NSMakeRect(0, 0, kPaletteWidth, [ToolRail preferredHeight])];
+    rail.autoresizingMask = NSViewWidthSizable;
+    rail.delegate = self;
+    scroll.documentView = rail;
+
+    self.rail = rail;
+    self.railScroll = scroll;
+    [content addSubview:scroll];
+}
+
+/** Inspector: capas arriba y ficha del elemento debajo. */
+- (void)buildInspector:(NSView *)content
+{
+    const CGFloat height = NSHeight(content.bounds) - kTopBarHeight - kStatusHeight - kCommandHeight;
+    InspectorPanel *panel = [[InspectorPanel alloc] initWithFrame:NSMakeRect(NSWidth(content.bounds) - kInspectorWidth,
+                                                                            kStatusHeight + kCommandHeight,
+                                                                            kInspectorWidth, height)];
+    panel.autoresizingMask = NSViewMinXMargin | NSViewHeightSizable;
+    panel.delegate = self;
+    panel.document = &_document;
+    panel.elementIndex = -1;
+    self.inspector = panel;
+    [content addSubview:panel];
+}
+
+/** Línea de comando: se escribe y se ejecuta con Intro, como en un CAD. */
+- (void)buildCommandBar:(NSView *)content
+{
+    NSView *bar = [[NSView alloc] initWithFrame:NSMakeRect(0, kStatusHeight, NSWidth(content.bounds), kCommandHeight)];
+    bar.autoresizingMask = NSViewWidthSizable;
+    bar.wantsLayer = YES;
+    bar.layer.backgroundColor = [NSColor colorWithCalibratedRed:0.12 green:0.13 blue:0.15 alpha:1.0].CGColor;
+    self.commandBar = bar;
+
+    NSTextField *prompt = [NSTextField labelWithString:@"Comando:"];
+    prompt.font = [NSFont systemFontOfSize:11.0 weight:NSFontWeightMedium];
+    prompt.textColor = [NSColor colorWithCalibratedWhite:0.70 alpha:1.0];
+    prompt.frame = NSMakeRect(12.0, 7.0, 66.0, 16.0);
+    [bar addSubview:prompt];
+
+    self.commandField = [[NSTextField alloc] initWithFrame:NSMakeRect(80.0, 3.0, NSWidth(content.bounds) - 260.0, 24.0)];
+    self.commandField.autoresizingMask = NSViewWidthSizable;
+    self.commandField.font = [NSFont userFixedPitchFontOfSize:12.0];
+    self.commandField.placeholderString = @"muro · linea · rect · elipse · texto · cota · ruta · capa <nombre> · zoom <n> · ayuda";
+    self.commandField.textColor = [NSColor colorWithCalibratedWhite:0.95 alpha:1.0];
+    self.commandField.backgroundColor = [NSColor colorWithCalibratedRed:0.18 green:0.19 blue:0.22 alpha:1.0];
+    self.commandField.drawsBackground = YES;
+    self.commandField.bezeled = YES;
+    self.commandField.bezelStyle = NSTextFieldRoundedBezel;
+    self.commandField.target = self;
+    self.commandField.action = @selector(runCommand:);
+    [bar addSubview:self.commandField];
+
+    NSTextField *hint = [NSTextField labelWithString:@"Intro ejecuta · vacío repite"];
+    hint.font = [NSFont systemFontOfSize:10.0];
+    hint.textColor = [NSColor colorWithCalibratedWhite:0.48 alpha:1.0];
+    hint.frame = NSMakeRect(NSWidth(bar.bounds) - 172.0, 8.0, 160.0, 14.0);
+    hint.alignment = NSTextAlignmentRight;
+    hint.autoresizingMask = NSViewMinXMargin;
+    [bar addSubview:hint];
+
+    [content addSubview:bar];
+}
+
+/** Barra de estado: pestañas Modelo/Hoja, coordenadas, avisos y zoom. */
+- (void)buildStatusBar:(NSView *)content
+{
+    NSView *bar = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, NSWidth(content.bounds), kStatusHeight)];
+    bar.autoresizingMask = NSViewWidthSizable;
+    bar.wantsLayer = YES;
+    bar.layer.backgroundColor = chromeBackground().CGColor;
+    self.statusBar = bar;
+
+    NSBox *top = [[NSBox alloc] initWithFrame:NSMakeRect(0, kStatusHeight - 1.0, NSWidth(bar.bounds), 1.0)];
+    top.boxType = NSBoxSeparator;
+    top.autoresizingMask = NSViewWidthSizable | NSViewMinYMargin;
+    [bar addSubview:top];
+
+    self.layoutTabs = [NSSegmentedControl segmentedControlWithLabels:@[ @"Modelo", @"Hoja A4" ]
+                                                       trackingMode:NSSegmentSwitchTrackingSelectOne
+                                                             target:self
+                                                             action:@selector(chooseLayoutTab:)];
+    self.layoutTabs.frame = NSMakeRect(10.0, 3.0, 150.0, 22.0);
+    self.layoutTabs.selectedSegment = 0;
+    self.layoutTabs.toolTip = @"Modelo: el lienzo abierto. Hoja A4: la referencia de impresión.";
+    [bar addSubview:self.layoutTabs];
+
+    self.coordinateLabel = [NSTextField labelWithString:@"X 0 · Y 0 cm"];
+    self.coordinateLabel.font = [NSFont userFixedPitchFontOfSize:10.5];
+    self.coordinateLabel.textColor = [NSColor colorWithCalibratedWhite:0.78 alpha:1.0];
+    self.coordinateLabel.frame = NSMakeRect(170.0, 7.0, 200.0, 15.0);
+    [bar addSubview:self.coordinateLabel];
+
+    self.statusLabel = [NSTextField labelWithString:@""];
+    self.statusLabel.font = [NSFont systemFontOfSize:11.0];
+    self.statusLabel.textColor = [NSColor colorWithCalibratedWhite:0.88 alpha:1.0];
+    self.statusLabel.frame = NSMakeRect(378.0, 7.0, NSWidth(bar.bounds) - 378.0 - 150.0, 15.0);
+    self.statusLabel.autoresizingMask = NSViewWidthSizable;
+    [bar addSubview:self.statusLabel];
+
+    self.zoomLabel = [NSTextField labelWithString:@"1:100 · 100 %"];
+    self.zoomLabel.font = [NSFont userFixedPitchFontOfSize:10.5];
+    self.zoomLabel.textColor = [NSColor colorWithCalibratedWhite:0.78 alpha:1.0];
+    self.zoomLabel.alignment = NSTextAlignmentRight;
+    self.zoomLabel.frame = NSMakeRect(NSWidth(bar.bounds) - 144.0, 7.0, 132.0, 15.0);
+    self.zoomLabel.autoresizingMask = NSViewMinXMargin;
+    [bar addSubview:self.zoomLabel];
+
+    [content addSubview:bar];
+}
+
+/** Reparte la ventana: paleta, lienzo, inspector, cajón de revisión y barras. */
+- (void)layoutChrome
+{
+    NSView *content = self.window.contentView;
+    const NSRect bounds = content.bounds;
+    const CGFloat width = NSWidth(bounds);
+    const CGFloat height = NSHeight(bounds);
+    const CGFloat bottom = kStatusHeight + kCommandHeight;
+    const CGFloat body = height - kTopBarHeight - bottom;
+
+    self.topBar.frame = NSMakeRect(0.0, height - kTopBarHeight, width, kTopBarHeight);
+    self.statusBar.frame = NSMakeRect(0.0, 0.0, width, kStatusHeight);
+    self.commandBar.frame = NSMakeRect(0.0, kStatusHeight, width, kCommandHeight);
+    self.railScroll.frame = NSMakeRect(0.0, bottom, kPaletteWidth, body);
+    self.inspector.frame = NSMakeRect(width - kInspectorWidth, bottom, kInspectorWidth, body);
+
+    CGFloat canvasRight = width - kInspectorWidth;
+    if (self.auditVisible) {
+        const CGFloat auditWidth = 330.0;
+        self.auditPanel.frame = NSMakeRect(canvasRight - auditWidth, bottom, auditWidth, body);
+        self.auditPanel.hidden = NO;
+        canvasRight -= auditWidth;
+    } else {
+        self.auditPanel.hidden = YES;
+    }
+    self.canvas.frame = NSMakeRect(kPaletteWidth, bottom, MAX(120.0, canvasRight - kPaletteWidth), body);
+    [self.canvas setNeedsDisplay:YES];
+    [self updateStatusReadout];
+}
+
+- (void)windowDidResize:(NSNotification *)notification
+{
+    (void) notification;
+    [self layoutChrome];
+}
+
+/** Lo que se lee abajo a la derecha: la posición del puntero y el zoom. */
+- (void)updateStatusReadout
+{
+    self.coordinateLabel.stringValue = [NSString stringWithFormat:@"X %.0f · Y %.0f cm",
+                                                                  self.lastPoint.x, self.lastPoint.y];
+    self.zoomLabel.stringValue = [NSString stringWithFormat:@"%s · %ld %%",
+                                                            self.document.scale[0] != '\0' ? self.document.scale : "1:100",
+                                                            (long) lround([self.canvas zoomPercent])];
+}
+
+/* ------------------------------ herramientas ----------------------------- */
+
+- (void)applyTool:(NormiaTool)tool
+{
+    [self.window makeFirstResponder:self.canvas];
+    self.canvas.toolMode = tool;
+    self.rail.tool = tool;
+}
+
+- (void)chooseToolButton:(NSButton *)sender
+{
+    NSString *identifier = sender.identifier ?: @"";
+    if ([identifier hasPrefix:@"tool:"]) {
+        [self applyTool:(NormiaTool)[[identifier substringFromIndex:5] integerValue]];
+        return;
+    }
+    if ([identifier isEqualToString:@"action:catalog"]) {
+        [self insertFromPicker:nil];
+    } else if ([identifier isEqualToString:@"action:audit"]) {
+        [self toggleAudit:nil];
+    } else if ([identifier isEqualToString:@"action:export"]) {
+        [self exportSvg:nil];
+    }
+}
+
+- (void)selectToolFromMenu:(NSMenuItem *)sender
+{
+    [self applyTool:(NormiaTool) sender.tag];
+}
+
+/* --------------------------- paleta de herramientas ---------------------- */
+
+- (void)toolRail:(ToolRail *)rail didChooseTool:(NormiaTool)tool
+{
+    (void) rail;
+    [self applyTool:tool];
+}
+
+- (void)toolRailDidRequestCatalog:(ToolRail *)rail
+{
+    (void) rail;
+    [self insertFromPicker:nil];
+}
+
+- (void)toolRail:(ToolRail *)rail didChooseAction:(NSString *)action
+{
+    (void) rail;
+    if ([action isEqualToString:@"duplicate"]) {
+        [self duplicateSelection:nil];
+    } else if ([action isEqualToString:@"rotate"]) {
+        [self rotateSelection:nil];
+    } else if ([action isEqualToString:@"delete"]) {
+        [self deleteSelection:nil];
+    } else if ([action isEqualToString:@"grid"]) {
+        [self toggleGrid:nil];
+    } else if ([action isEqualToString:@"label"]) {
+        [self focusLabel:nil];
+    } else if ([action isEqualToString:@"fit"]) {
+        [self zoomToFit:nil];
+    } else if ([action isEqualToString:@"catalog"]) {
+        [self insertFromPicker:nil];
+    }
+}
+
+/* ------------------------------- inspector ------------------------------- */
+
+- (void)inspector:(InspectorPanel *)panel didEditDocumentWithMessage:(NSString *)message
+{
+    (void) panel;
+    [self refreshTitle];
+    [self invalidateInspection];
+    [self.canvas documentDidChangeExternally];
+    [self canvasStatus:self.canvas message:message];
+    [self updateStatusReadout];
+}
+
+- (void)inspector:(InspectorPanel *)panel status:(NSString *)message
+{
+    (void) panel;
+    [self canvasStatus:self.canvas message:message];
+}
+
+- (void)inspectorDidRequestDuplicate:(InspectorPanel *)panel
+{
+    (void) panel;
+    [self canvasStatus:self.canvas message:[self.canvas duplicateSelection]];
+    [self.inspector reload];
+}
+
+- (void)inspectorDidRequestDelete:(InspectorPanel *)panel
+{
+    (void) panel;
+    [self deleteSelection:nil];
+    [self.inspector reload];
+}
+
+- (void)inspectorDidRequestExit:(InspectorPanel *)panel
+{
+    (void) panel;
+    [self toggleExit:nil];
+    [self.inspector reload];
+}
+
+- (void)canvas:(CanvasView *)view didChooseTool:(NormiaTool)tool
+{
+    (void) view;
+    self.rail.tool = tool;
+}
+
+- (void)canvas:(CanvasView *)view didTrackPlanPoint:(norma_point)point
+{
+    (void) view;
+    self.lastPoint = point;
+    [self updateStatusReadout];
+}
+
+- (void)canvasSelectionDidChange:(CanvasView *)view
+{
+    self.inspector.elementIndex = view.selectedElementIndex;
+    [self.inspector reload];
+}
+
+- (void)duplicateSelection:(id)sender
+{
+    (void) sender;
+    [self.window makeFirstResponder:self.canvas];
+    [self canvasStatus:self.canvas message:[self.canvas duplicateSelection]];
+    [self.inspector reload];
+}
+
+- (void)rotateSelection:(id)sender
+{
+    (void) sender;
+    [self.window makeFirstResponder:self.canvas];
+    [self canvasStatus:self.canvas message:[self.canvas rotateSelection]];
+    [self.inspector reload];
+}
+
+- (void)toggleGrid:(id)sender
+{
+    (void) sender;
+    self.canvas.showsGrid = !self.canvas.showsGrid;
+    [self canvasStatus:self.canvas message:self.canvas.showsGrid ? @"Rejilla de referencia visible" : @"Rejilla oculta"];
+}
+
+- (void)focusLabel:(id)sender
+{
+    (void) sender;
+    if (self.canvas.selectedElementIndex < 0) {
+        [self canvasStatus:self.canvas message:@"Selecciona un elemento para ponerle rótulo."];
+        return;
+    }
+    [self.inspector focusLabelField];
+}
+
+- (void)focusSelection:(id)sender
+{
+    (void) sender;
+    [self.canvas focusSelection];
+    [self canvasStatus:self.canvas message:@"La selección quedó en el centro de la vista."];
+}
+
+- (void)chooseLayoutTab:(id)sender
+{
+    (void) sender;
+    if (self.layoutTabs.selectedSegment == 1) {
+        [self zoomToFit:nil];
+        [self canvasStatus:self.canvas message:@"Hoja A4: la referencia de impresión y exportación."];
+        return;
+    }
+    [self canvasStatus:self.canvas message:@"Modelo: lienzo abierto, tan grande como haga falta."];
+}
+
+/* ----------------------------- línea de comando -------------------------- */
+
+/** Sin tildes y en minúsculas: «Línea», «linea» y «LÍNEA» valen igual. */
+static NSString *command_word(NSString *word)
+{
+    NSString *folded = [word stringByFoldingWithOptions:NSDiacriticInsensitiveSearch
+                                                 locale:[NSLocale localeWithLocaleIdentifier:@"es"]];
+    return [folded lowercaseString];
+}
+
+- (void)runCommand:(id)sender
+{
+    (void) sender;
+    NSString *line = [self.commandField.stringValue stringByTrimmingCharactersInSet:
+                      [NSCharacterSet whitespaceAndNewlineCharacterSet]];
+    self.commandField.stringValue = @"";
+
+    if (line.length == 0) {
+        /* Intro en vacío repite el último comando, como en AutoCAD. */
+        line = self.lastCommand;
+        if (line.length == 0) {
+            return;
+        }
+    }
+    self.lastCommand = line;
+
+    NSMutableArray<NSString *> *words = [NSMutableArray array];
+    for (NSString *word in [line componentsSeparatedByCharactersInSet:
+                            [NSCharacterSet whitespaceCharacterSet]]) {
+        if (word.length > 0) {
+            [words addObject:word];
+        }
+    }
+    if (words.count == 0) {
+        return;
+    }
+    NSString *verb = command_word(words[0]);
+    NSString *argument = words.count > 1 ? words[1] : nil;
+
+    NSDictionary<NSString *, NSNumber *> *tools = @{
+        @"seleccionar": @(NormiaToolSelect), @"seleccion": @(NormiaToolSelect),
+        @"mano": @(NormiaToolPan), @"muro": @(NormiaToolWall), @"pared": @(NormiaToolWall),
+        @"linea": @(NormiaToolLine), @"rectangulo": @(NormiaToolRect), @"rect": @(NormiaToolRect),
+        @"elipse": @(NormiaToolEllipse), @"ovalo": @(NormiaToolEllipse),
+        @"pluma": @(NormiaToolPen), @"polilinea": @(NormiaToolPen),
+        @"arco": @(NormiaToolArc), @"texto": @(NormiaToolText),
+        @"cota": @(NormiaToolDimension), @"medida": @(NormiaToolDimension),
+        @"ruta": @(NormiaToolRoute), @"evacuacion": @(NormiaToolRoute),
+        @"via": @(NormiaToolRoad), @"calle": @(NormiaToolRoad), @"road": @(NormiaToolRoad),
+        @"anden": @(NormiaToolSidewalk), @"sidewalk": @(NormiaToolSidewalk),
+        @"paso": @(NormiaToolCrosswalk), @"pasopeatonal": @(NormiaToolCrosswalk),
+        @"parqueadero": @(NormiaToolParking), @"parking": @(NormiaToolParking),
+        @"lindero": @(NormiaToolProperty), @"property": @(NormiaToolProperty),
+        @"tuberia": @(NormiaToolPipe), @"pipe": @(NormiaToolPipe),
+        @"canaleta": @(NormiaToolConduit), @"conduit": @(NormiaToolConduit),
+    };
+    if (tools[verb] != nil) {
+        [self applyTool:(NormiaTool) tools[verb].integerValue];
+        [self canvasStatus:self.canvas
+                   message:[NSString stringWithFormat:@"Herramienta armada: %@", words[0]]];
+        return;
+    }
+    if ([verb isEqualToString:@"insertar"] || [verb isEqualToString:@"insert"]) {
+        if (argument != nil) {
+            [self.window makeFirstResponder:self.canvas];
+            [self.canvas beginInsert:argument];
+            return;
+        }
+        [self insertFromPicker:nil];
+        return;
+    }
+    if ([verb isEqualToString:@"duplicar"] || [verb isEqualToString:@"copia"]) {
+        [self duplicateSelection:nil];
+        return;
+    }
+    if ([verb isEqualToString:@"girar"] || [verb isEqualToString:@"rotar"]) {
+        [self rotateSelection:nil];
+        return;
+    }
+    if ([verb isEqualToString:@"borrar"] || [verb isEqualToString:@"eliminar"]) {
+        [self deleteSelection:nil];
+        return;
+    }
+    if ([verb isEqualToString:@"rejilla"]) {
+        [self toggleGrid:nil];
+        return;
+    }
+    if ([verb isEqualToString:@"rotulo"] || [verb isEqualToString:@"etiqueta"]) {
+        [self focusLabel:nil];
+        return;
+    }
+    if ([verb isEqualToString:@"capa"] && argument != nil) {
+        if (norma_document_set_current_layer(&_document, argument.UTF8String)) {
+            [self.inspector reload];
+            [self refreshTitle];
+            [self canvasStatus:self.canvas message:[NSString stringWithFormat:@"Capa activa: %@", argument]];
+        } else {
+            [self canvasStatus:self.canvas message:@"Ese nombre de capa no cabe (32 caracteres)."];
+        }
+        return;
+    }
+    if ([verb isEqualToString:@"ajustar"] || [verb isEqualToString:@"ajustar-a-la-hoja"]) {
+        [self zoomToFit:nil];
+        return;
+    }
+    if ([verb isEqualToString:@"zoom"] && argument != nil) {
+        const double percent = [argument stringByReplacingOccurrencesOfString:@"," withString:@"."].doubleValue;
+        if (percent >= 10.0 && percent <= 2000.0) {
+            [self.canvas zoomToPercent:percent];
+            [self updateStatusReadout];
+            [self canvasStatus:self.canvas message:[NSString stringWithFormat:@"Zoom %.0f %%", percent]];
+        } else {
+            [self canvasStatus:self.canvas message:@"El zoom va entre 10 y 2000 %."];
+        }
+        return;
+    }
+    if ([verb isEqualToString:@"revisar"]) {
+        if (!self.auditVisible) {
+            [self toggleAudit:nil];
+        } else {
+            [self refreshInspection:nil];
+        }
+        return;
+    }
+    if ([verb isEqualToString:@"deshacer"]) {
+        [self undoEdit:nil];
+        return;
+    }
+    if ([verb isEqualToString:@"rehacer"]) {
+        [self redoEdit:nil];
+        return;
+    }
+    if ([verb isEqualToString:@"guardar"]) {
+        [self savePlan:nil];
+        return;
+    }
+    if ([verb isEqualToString:@"exportar"]) {
+        [self exportSvg:nil];
+        return;
+    }
+    if ([verb isEqualToString:@"ayuda"] || [verb isEqualToString:@"help"] || [verb isEqualToString:@"?"]) {
+        [self showHelp:nil];
+        return;
+    }
+    if ([verb isEqualToString:@"salir"] || [verb isEqualToString:@"quit"]) {
+        [NSApp terminate:nil];
+        return;
+    }
+    [self canvasStatus:self.canvas
+               message:[NSString stringWithFormat:@"No conozco «%@». Escribe «ayuda» para ver los comandos.", words[0]]];
 }
 
 /* --------------------------- cajón de revisión ---------------------------- */
@@ -227,11 +874,7 @@ static const NSUInteger kRecentLimit = 10;
 /** El lienzo ocupa lo que deja el cajón y la barra de estado. */
 - (void)layoutCanvas
 {
-    NSView *content = self.window.contentView;
-    const CGFloat panel = self.auditVisible ? NSWidth(self.auditPanel.frame) : 0.0;
-    const NSRect bounds = content.bounds;
-    self.canvas.frame = NSMakeRect(0.0, 0.0, NSWidth(bounds) - panel, NSHeight(bounds));
-    [self.canvas setNeedsDisplay:YES];
+    [self layoutChrome];
 }
 
 /** Carpeta de catálogos dentro del paquete (`Contents/Resources/resources`). */
@@ -478,6 +1121,59 @@ static const NSUInteger kRecentLimit = 10;
     insertItem.submenu = insertMenu;
     [menubar addItem:insertItem];
 
+    /* Menú Herramientas: lo mismo que la paleta, con atajos para lo que más se
+       usa. Las letras sueltas son del lienzo (V, M, L…), así que aquí van con
+       ⌘ para no robarle el teclado. */
+    NSMenuItem *toolsItem = [[NSMenuItem alloc] init];
+    NSMenu *toolsMenu = [[NSMenu alloc] initWithTitle:@"Herramientas"];
+    NSArray<NSArray *> *toolEntries = @[
+        @[ @"Seleccionar", @(NormiaToolSelect) ],
+        @[ @"Mano", @(NormiaToolPan) ],
+        @[ @"Muro", @(NormiaToolWall) ],
+        @[ @"Línea", @(NormiaToolLine) ],
+        @[ @"Rectángulo", @(NormiaToolRect) ],
+        @[ @"Elipse", @(NormiaToolEllipse) ],
+        @[ @"Pluma de nodos", @(NormiaToolPen) ],
+        @[ @"Arco de tres puntos", @(NormiaToolArc) ],
+        @[ @"Texto", @(NormiaToolText) ],
+        @[ @"Cota", @(NormiaToolDimension) ],
+        @[ @"Ruta de evacuación", @(NormiaToolRoute) ],
+        @[ @"Vía", @(NormiaToolRoad) ],
+        @[ @"Andén", @(NormiaToolSidewalk) ],
+        @[ @"Paso peatonal", @(NormiaToolCrosswalk) ],
+        @[ @"Parqueadero", @(NormiaToolParking) ],
+        @[ @"Lindero", @(NormiaToolProperty) ],
+        @[ @"Tubería", @(NormiaToolPipe) ],
+        @[ @"Canaleta", @(NormiaToolConduit) ],
+    ];
+    for (NSArray *entry in toolEntries) {
+        NSMenuItem *item = [toolsMenu addItemWithTitle:entry[0]
+                                                action:@selector(selectToolFromMenu:)
+                                         keyEquivalent:@""];
+        item.tag = [entry[1] integerValue];
+        item.toolTip = @"Herramienta de la paleta; también con su letra en el lienzo";
+    }
+    [toolsMenu addItem:[NSMenuItem separatorItem]];
+    NSMenuItem *duplicate = [toolsMenu addItemWithTitle:@"Duplicar lo seleccionado"
+                                                 action:@selector(duplicateSelection:)
+                                          keyEquivalent:@"d"];
+    duplicate.toolTip = @"Copia el elemento 20 cm a la derecha";
+    NSMenuItem *rotate = [toolsMenu addItemWithTitle:@"Girar 90°"
+                                              action:@selector(rotateSelection:)
+                                       keyEquivalent:@"r"];
+    rotate.keyEquivalentModifierMask = NSEventModifierFlagCommand | NSEventModifierFlagOption;
+    [toolsMenu addItemWithTitle:@"Poner o cambiar el rótulo"
+                         action:@selector(focusLabel:)
+                  keyEquivalent:@"l"];
+    NSMenuItem *grid = [toolsMenu addItemWithTitle:@"Mostrar u ocultar la rejilla"
+                                            action:@selector(toggleGrid:)
+                                     keyEquivalent:@"g"];
+    grid.toolTip = @"Rejilla de referencia: no se imprime ni sale en el SVG";
+    [toolsMenu addItem:[NSMenuItem separatorItem]];
+    [toolsMenu addItemWithTitle:@"Enfocar lo seleccionado" action:@selector(focusSelection:) keyEquivalent:@""];
+    toolsItem.submenu = toolsMenu;
+    [menubar addItem:toolsItem];
+
     NSMenuItem *helpItem = [[NSMenuItem alloc] init];
     NSMenu *helpMenu = [[NSMenu alloc] initWithTitle:@"Ayuda"];
     [helpMenu addItemWithTitle:@"Cómo se usa el lienzo" action:@selector(showHelp:) keyEquivalent:@"?"];
@@ -631,6 +1327,12 @@ static const NSUInteger kRecentLimit = 10;
     if (self.hasInspection) {
         [self invalidateInspection];
     }
+    /* La ficha sigue al plano: al arrastrar, el inspector enseña las cifras
+       nuevas. */
+    if (self.inspector != nil) {
+        self.inspector.elementIndex = self.canvas.selectedElementIndex;
+        [self.inspector reload];
+    }
 }
 
 - (void)canvasStatus:(CanvasView *)view message:(NSString *)message
@@ -669,6 +1371,9 @@ static const NSUInteger kRecentLimit = 10;
     self.filePath = nil;
     self.planName = @"Plano sin título";
     [self.canvas documentDidLoad];
+    self.rail.tool = self.canvas.toolMode;
+    [self.inspector reload];
+    [self updateStatusReadout];
     [self refreshTitle];
     [self canvasStatus:self.canvas message:@"Plano nuevo. Pulsa M para dibujar un muro."];
     [self invalidateInspection];
@@ -708,6 +1413,9 @@ static const NSUInteger kRecentLimit = 10;
     self.planName = path.lastPathComponent.stringByDeletingPathExtension;
     [self rememberPath:path];
     [self.canvas documentDidLoad];
+    self.rail.tool = self.canvas.toolMode;
+    [self.inspector reload];
+    [self updateStatusReadout];
     [self refreshTitle];
     [self canvasStatus:self.canvas message:[NSString stringWithFormat:@"Plano abierto · %@", self.planName]];
     [self invalidateInspection];
@@ -765,6 +1473,8 @@ static const NSUInteger kRecentLimit = 10;
     if (norma_document_undo(&_document)) {
         [self.canvas setNeedsDisplay:YES];
         [self refreshTitle];
+        [self.inspector reload];
+        [self canvasStatus:self.canvas message:@"Deshecho."];
     }
 }
 
@@ -774,22 +1484,17 @@ static const NSUInteger kRecentLimit = 10;
     if (norma_document_redo(&_document)) {
         [self.canvas setNeedsDisplay:YES];
         [self refreshTitle];
+        [self.inspector reload];
+        [self canvasStatus:self.canvas message:@"Rehecho."];
     }
 }
 
 - (void)deleteSelection:(id)sender
 {
     (void) sender;
-    [self.canvas keyDown:[NSEvent keyEventWithType:NSEventTypeKeyDown
-                                         location:NSZeroPoint
-                                    modifierFlags:0
-                                        timestamp:0
-                                     windowNumber:self.window.windowNumber
-                                          context:nil
-                                       characters:@"\x7f"
-                      charactersIgnoringModifiers:@"\x7f"
-                                        isARepeat:NO
-                                          keyCode:51]];
+    [self.window makeFirstResponder:self.canvas];
+    [self.canvas deleteSelection];
+    [self.inspector reload];
 }
 
 - (void)exportSvg:(id)sender
@@ -880,25 +1585,29 @@ static const NSUInteger kRecentLimit = 10;
 - (void)zoomIn:(id)sender
 {
     (void) sender;
-    [self.canvas zoomIn];
+    [self.canvas zoomIn]
+    [self updateStatusReadout];
 }
 
 - (void)zoomOut:(id)sender
 {
     (void) sender;
-    [self.canvas zoomOut];
+    [self.canvas zoomOut]
+    [self updateStatusReadout];
 }
 
 - (void)zoomReset:(id)sender
 {
     (void) sender;
-    [self.canvas zoomReset];
+    [self.canvas zoomReset]
+    [self updateStatusReadout];
 }
 
 - (void)zoomToFit:(id)sender
 {
     (void) sender;
-    [self.canvas zoomToFit];
+    [self.canvas zoomToFit]
+    [self updateStatusReadout];
 }
 
 /* ------------------------------- insertar -------------------------------- */
@@ -940,21 +1649,29 @@ static const NSUInteger kRecentLimit = 10;
 {
     (void) sender;
     NSAlert *alert = [[NSAlert alloc] init];
-    alert.messageText = @"Cómo se usa el lienzo";
-    alert.informativeText = @"V vuelve a la selección: clic en un muro lo elige y, si aciertas en un nodo, arrastrarlo lo mueve.\n"
-                            @"M · muro por tramos de dos clics.\n"
-                            @"P · pluma de nodos: un clic por nodo, Enter o doble clic cierra.\n"
-                            @"A · arco de tres puntos: inicio, paso y fin.\n"
-                            @"D · cota entre dos puntos, con la cifra y la unidad.\n"
-                            @"R · ruta de evacuación: un clic por nodo, Enter o doble clic cierra.\n"
-                            @"Insertar · puertas, extintor, botiquín, camilla, DEA, punto de encuentro y señales: "
-                            @"se elige en el menú y se coloca con un clic (Esc termina de insertar).\n"
-                            @"⌘⇧E marca o desmarca la puerta elegida como salida de emergencia: el auditor "
-                            @"mide desde ahí el recorrido y la cuenta como salida.\n"
-                            @"Esc cancela la herramienta; Retroceso quita el último nodo o borra lo seleccionado; ⌘Z deshace.\n"
-                            @"⌘P imprime el plano en A4 horizontal y Archivo › Exportar PDF guarda esa misma hoja.\n"
-                            @"El lienzo es tan grande como haga falta: rueda del ratón o pellizco para acercar, "
-                            @"arrastrar con el botón central o derecho para moverse, ⌘0 ajusta la hoja y ⌘1 deja el zoom al 100 %.\n\n"
+    alert.messageText = @"Cómo se usa Normia Estudio";
+    alert.informativeText = @"La ventana es la de un CAD: la paleta de la izquierda agrupa las herramientas, "
+                            @"la tira de arriba las repite como iconos y el inspector de la derecha edita la ficha "
+                            @"del elemento seleccionado.\n\n"
+                            @"V · seleccionar: el clic elige el elemento; arrastrar mueve un nodo, el trazo completo "
+                            @"o una esquina de la caja seleccionada, que la escala.\n"
+                            @"H · mano: arrastra el lienzo sin tocar el plano.\n"
+                            @"M · muro por tramos de dos clics. L · línea, B · rectángulo y O · elipse: dos clics.\n"
+                            @"P · pluma de nodos y R · ruta de evacuación: un clic por nodo, Enter o doble clic cierra.\n"
+                            @"A · arco de tres puntos. D · cota. T · texto: un clic y se escribe en el inspector.\n"
+                            @"I · insertar del catálogo (820 piezas), también con ⌘⇧I y el buscador.\n"
+                            @"E · vía, N · andén, C · paso peatonal, K · parqueadero, J · lindero, "
+                            @"Q · tubería y W · canaleta: el entorno del editor web, dos clics cada uno.\n\n"
+                            @"El inspector: capas arriba —la activa recibe lo nuevo— y la ficha debajo: X, Y, ancho, "
+                            @"alto, giro, grosor, color, rótulo y capa. Intro o «Aplicar cambios» lo llevan al plano; "
+                            @"Duplicar, Borrar y Salida quedan a un clic. ⌘D duplica y ⌘⌥R gira 90°.\n\n"
+                            @"La línea de comando de abajo entiende «muro», «linea», «rect», «elipse», «texto», "
+                            @"«cota», «ruta», «capa <nombre>», «zoom <n>», «duplicar», «girar», «borrar», "
+                            @"«rejilla», «revisar», «ajustar», «exportar», «guardar» y «ayuda». Intro en vacío "
+                            @"repite el último comando.\n\n"
+                            @"Esc cancela la herramienta; Retroceso borra lo seleccionado; las flechas mueven un "
+                            @"centímetro, diez con Mayúsculas; ⌘Z deshace. Rueda o pellizco para acercar, "
+                            @"botón central o derecho para desplazarse, ⌘0 ajusta la hoja y ⌘1 deja el zoom al 100 %.\n\n"
                             @"Los planos son esquemas de apoyo: no sustituyen la verificación de un "
                             @"profesional ni la normativa vigente.";
     [alert runModal];

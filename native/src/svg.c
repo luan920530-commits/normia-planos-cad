@@ -237,6 +237,10 @@ static void poner(norma_buffer *buffer, double value)
 /** Color de cada equipo: el mismo criterio en la pantalla y en el papel. */
 static const char *object_colour(const norma_element *element)
 {
+    /* El color que eligió la persona manda sobre el de la familia. */
+    if (element->colour[0] == '#') {
+        return element->colour;
+    }
     const char *type = element->type;
     /* Todos los extintores del catálogo empiezan igual; el lienzo hace la misma
        comprobación por prefijo. */
@@ -255,6 +259,28 @@ static const char *object_colour(const norma_element *element)
     }
     if (strcmp(type, "cad_emg_meeting") == 0) {
         return "#047857";
+    }
+    /* Elementos del entorno (paleta web): cada oficio con su color. */
+    if (strcmp(type, "road") == 0) {
+        return "#64748b";
+    }
+    if (strcmp(type, "sidewalk") == 0) {
+        return "#94a3b8";
+    }
+    if (strcmp(type, "crosswalk") == 0) {
+        return "#64748b";
+    }
+    if (strcmp(type, "parking") == 0) {
+        return "#475569";
+    }
+    if (strcmp(type, "property") == 0) {
+        return "#7c3d12";
+    }
+    if (strcmp(type, "pipe") == 0) {
+        return "#2563eb";
+    }
+    if (strcmp(type, "conduit") == 0) {
+        return "#ea580c";
     }
     /* Cualquier otro objeto del catálogo trae su color de familia. */
     const norma_object_spec *spec = norma_object_find(type);
@@ -602,6 +628,130 @@ static void write_box_object(norma_buffer *buffer, const norma_element *element,
     const double w = element->w;
     const double h = element->h > 0.0 ? element->h : element->w;
     const char *colour = object_colour(element);
+
+    /* Entorno: vías, andenes, pasos peatonales y parqueaderos no llevan
+       pictograma del catálogo; llevan su trama, como en el editor web. */
+    if (strcmp(element->type, "road") == 0) {
+        norma_buffer_raw(buffer, "    <g fill=\"#e2e8f0\" stroke=\"#94a3b8\" stroke-width=\"1.2\">\n      <rect x=\"");
+        poner(buffer, element->x);
+        norma_buffer_raw(buffer, "\" y=\"");
+        poner(buffer, element->y);
+        norma_buffer_raw(buffer, "\" width=\"");
+        poner(buffer, w);
+        norma_buffer_raw(buffer, "\" height=\"");
+        poner(buffer, h);
+        norma_buffer_raw(buffer, "\"/>\n    </g>\n    <path fill=\"none\" stroke=\"#cbd5e1\" stroke-width=\"1\" "
+                                 "stroke-dasharray=\"12 8\" d=\"M ");
+        poner(buffer, element->x);
+        norma_buffer_raw(buffer, " ");
+        poner(buffer, element->y + h / 2.0);
+        norma_buffer_raw(buffer, " L ");
+        poner(buffer, element->x + w);
+        norma_buffer_raw(buffer, " ");
+        poner(buffer, element->y + h / 2.0);
+        norma_buffer_raw(buffer, "\"/>\n");
+        return;
+    }
+    if (strcmp(element->type, "sidewalk") == 0) {
+        norma_buffer_raw(buffer, "    <rect x=\"");
+        poner(buffer, element->x);
+        norma_buffer_raw(buffer, "\" y=\"");
+        poner(buffer, element->y);
+        norma_buffer_raw(buffer, "\" width=\"");
+        poner(buffer, w);
+        norma_buffer_raw(buffer, "\" height=\"");
+        poner(buffer, h);
+        norma_buffer_raw(buffer, "\" fill=\"#f8fafc\" stroke=\"#94a3b8\" stroke-width=\"1\"/>\n");
+        return;
+    }
+    if (strcmp(element->type, "crosswalk") == 0) {
+        norma_buffer_raw(buffer, "    <g fill=\"#ffffff\" stroke=\"#64748b\" stroke-width=\"1.2\">\n      <rect x=\"");
+        poner(buffer, element->x);
+        norma_buffer_raw(buffer, "\" y=\"");
+        poner(buffer, element->y);
+        norma_buffer_raw(buffer, "\" width=\"");
+        poner(buffer, w);
+        norma_buffer_raw(buffer, "\" height=\"");
+        poner(buffer, h);
+        norma_buffer_raw(buffer, "\"/>\n    </g>\n    <g fill=\"#cbd5e1\">\n");
+        const int stripes = (int) fmax(3.0, fmin(12.0, round(w / 40.0)));
+        for (int stripe = 0; stripe < stripes; stripe += 1) {
+            norma_buffer_raw(buffer, "      <rect x=\"");
+            poner(buffer, element->x + w * ((double) stripe + 0.25) / (double) stripes);
+            norma_buffer_raw(buffer, "\" y=\"");
+            poner(buffer, element->y + h * 0.12);
+            norma_buffer_raw(buffer, "\" width=\"");
+            poner(buffer, w * 0.5 / (double) stripes);
+            norma_buffer_raw(buffer, "\" height=\"");
+            poner(buffer, h * 0.76);
+            norma_buffer_raw(buffer, "\"/>\n");
+        }
+        norma_buffer_raw(buffer, "    </g>\n");
+        return;
+    }
+    if (strcmp(element->type, "parking") == 0) {
+        norma_buffer_raw(buffer, "    <g fill=\"none\" stroke=\"#475569\" stroke-width=\"1.4\">\n      <rect x=\"");
+        poner(buffer, element->x);
+        norma_buffer_raw(buffer, "\" y=\"");
+        poner(buffer, element->y);
+        norma_buffer_raw(buffer, "\" width=\"");
+        poner(buffer, w);
+        norma_buffer_raw(buffer, "\" height=\"");
+        poner(buffer, h);
+        norma_buffer_raw(buffer, "\"/>\n    </g>\n    <text x=\"");
+        poner(buffer, element->x + w / 2.0);
+        norma_buffer_raw(buffer, "\" y=\"");
+        poner(buffer, element->y + h / 2.0 + fmin(w, h) * 0.12);
+        norma_buffer_raw(buffer, "\" text-anchor=\"middle\" font-family=\"Helvetica, Arial, sans-serif\" font-size=\"");
+        poner(buffer, fmax(8.0, fmin(w, h) * 0.34));
+        norma_buffer_raw(buffer, "\" fill=\"#475569\">P</text>\n");
+        return;
+    }
+
+    /* Figuras de la paleta (N4): se dibujan por lo que son, no como caja. */
+    if (strcmp(element->type, "line") == 0 || strcmp(element->type, "rect") == 0
+        || strcmp(element->type, "ellipse") == 0) {
+        norma_buffer_raw(buffer, "    <g fill=\"none\" stroke=\"");
+        norma_buffer_raw(buffer, colour);
+        norma_buffer_raw(buffer, "\" stroke-width=\"");
+        poner(buffer, element->stroke > 0.0 ? element->stroke : 2.0);
+        norma_buffer_raw(buffer, "\">\n");
+        if (strcmp(element->type, "line") == 0 && element->node_count >= 2) {
+            norma_buffer_raw(buffer, "      <path d=\"M ");
+            poner(buffer, element->nodes[0].x);
+            norma_buffer_raw(buffer, " ");
+            poner(buffer, element->nodes[0].y);
+            for (size_t node = 1; node < element->node_count; node += 1) {
+                norma_buffer_raw(buffer, " L ");
+                poner(buffer, element->nodes[node].x);
+                norma_buffer_raw(buffer, " ");
+                poner(buffer, element->nodes[node].y);
+            }
+            norma_buffer_raw(buffer, "\"/>\n");
+        } else if (strcmp(element->type, "ellipse") == 0) {
+            norma_buffer_raw(buffer, "      <ellipse cx=\"");
+            poner(buffer, element->x + w / 2.0);
+            norma_buffer_raw(buffer, "\" cy=\"");
+            poner(buffer, element->y + h / 2.0);
+            norma_buffer_raw(buffer, "\" rx=\"");
+            poner(buffer, w / 2.0);
+            norma_buffer_raw(buffer, "\" ry=\"");
+            poner(buffer, h / 2.0);
+            norma_buffer_raw(buffer, "\"/>\n");
+        } else {
+            norma_buffer_raw(buffer, "      <rect x=\"");
+            poner(buffer, element->x);
+            norma_buffer_raw(buffer, "\" y=\"");
+            poner(buffer, element->y);
+            norma_buffer_raw(buffer, "\" width=\"");
+            poner(buffer, w);
+            norma_buffer_raw(buffer, "\" height=\"");
+            poner(buffer, h);
+            norma_buffer_raw(buffer, "\"/>\n");
+        }
+        norma_buffer_raw(buffer, "    </g>\n");
+        return;
+    }
     /* El catálogo completo trae el pictograma de las 817 piezas (422 objetos CAD
        y 395 señales): se inserta tal cual, escalado a la caja. */
     const norma_object_spec *spec = norma_object_find(element->type);
@@ -785,8 +935,26 @@ char *norma_document_to_svg(const norma_document *document, const norma_svg_opti
         if (!norma_svg_path_cm(element, path, sizeof(path))) {
             continue;
         }
-        const char *colour = strcmp(element->type, "wall") == 0 ? "#0f172a" : "#334155";
-        const double stroke = strcmp(element->type, "wall") == 0 ? 1.5 : 1.1;
+        /* Muros y rutas conservan su trazo de siempre; los oficios del entorno
+           llevan su color y su grosor, y el lindero va discontinuo. */
+        const char *type = element->type;
+        const char *colour = "#334155";
+        double stroke = 1.1;
+        const char *dash = NULL;
+        if (strcmp(type, "wall") == 0) {
+            colour = "#0f172a";
+            stroke = 1.5;
+        } else if (strcmp(type, "pipe") == 0) {
+            colour = "#2563eb";
+            stroke = element->stroke > 0.0 ? element->stroke : 3.5;
+        } else if (strcmp(type, "conduit") == 0) {
+            colour = "#ea580c";
+            stroke = element->stroke > 0.0 ? element->stroke : 2.6;
+        } else if (strcmp(type, "property") == 0) {
+            colour = "#7c3d12";
+            stroke = 2.0;
+            dash = "\" stroke-dasharray=\"8 5";
+        }
         norma_buffer_raw(&buffer, "    <path d=\"");
         norma_buffer_raw(&buffer, path);
         norma_buffer_raw(&buffer, "\" stroke=\"");
@@ -794,6 +962,9 @@ char *norma_document_to_svg(const norma_document *document, const norma_svg_opti
         norma_buffer_raw(&buffer, "\" stroke-width=\"");
         norma_svg_number(stroke, value, sizeof(value));
         norma_buffer_raw(&buffer, value);
+        if (dash != NULL) {
+            norma_buffer_raw(&buffer, dash);
+        }
         norma_buffer_raw(&buffer, "\"/>\n");
     }
     norma_buffer_raw(&buffer, "  </g>\n");

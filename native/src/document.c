@@ -316,6 +316,307 @@ int norma_document_move_object(norma_document *document, size_t element, double 
     return 1;
 }
 
+/** `#rrggbb`, en minúsculas o mayúsculas; lo demás no se acepta. */
+static int valid_colour(const char *colour)
+{
+    if (colour == NULL || colour[0] != '#' || strlen(colour) != 7) {
+        return 0;
+    }
+    for (size_t index = 1; index < 7; index += 1) {
+        const char letter = colour[index];
+        const int digit = (letter >= '0' && letter <= '9') || (letter >= 'a' && letter <= 'f')
+                          || (letter >= 'A' && letter <= 'F');
+        if (!digit) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+/** Elemento listo para editar: comprueba el documento y el índice una sola vez. */
+static norma_element *editable(norma_document *document, size_t element)
+{
+    if (document == NULL || element >= document->count) {
+        return NULL;
+    }
+    return &document->elements[element];
+}
+
+int norma_document_set_box(norma_document *document, size_t element, double x, double y, double w, double h)
+{
+    norma_element *item = editable(document, element);
+    if (item == NULL || item->node_count >= 2 || w <= 0.0 || h <= 0.0) {
+        return 0;
+    }
+    if (item->x == x && item->y == y && item->w == w && item->h == h) {
+        return 0;
+    }
+    item->x = x;
+    item->y = y;
+    item->w = w;
+    item->h = h;
+    document->dirty = 1;
+    return 1;
+}
+
+int norma_document_set_rotation(norma_document *document, size_t element, double degrees)
+{
+    norma_element *item = editable(document, element);
+    if (item == NULL) {
+        return 0;
+    }
+    /* Se guarda en el rango de un giro completo: 370° y 10° son lo mismo y así
+       el inspector no enseña cifras raras. */
+    double value = fmod(degrees, 360.0);
+    if (value < 0.0) {
+        value += 360.0;
+    }
+    if (item->rotation == value) {
+        return 0;
+    }
+    item->rotation = value;
+    document->dirty = 1;
+    return 1;
+}
+
+int norma_document_set_stroke(norma_document *document, size_t element, double stroke)
+{
+    norma_element *item = editable(document, element);
+    if (item == NULL || stroke < 0.0) {
+        return 0;
+    }
+    if (item->stroke == stroke) {
+        return 0;
+    }
+    item->stroke = stroke;
+    document->dirty = 1;
+    return 1;
+}
+
+int norma_document_set_colour(norma_document *document, size_t element, const char *colour)
+{
+    norma_element *item = editable(document, element);
+    if (item == NULL) {
+        return 0;
+    }
+    if (colour == NULL || colour[0] == '\0') {
+        if (item->colour[0] == '\0') {
+            return 0;
+        }
+        item->colour[0] = '\0';
+        document->dirty = 1;
+        return 1;
+    }
+    if (!valid_colour(colour) || strcmp(item->colour, colour) == 0) {
+        return 0;
+    }
+    set_text(item->colour, sizeof(item->colour), colour, "");
+    document->dirty = 1;
+    return 1;
+}
+
+int norma_document_set_label(norma_document *document, size_t element, const char *label)
+{
+    norma_element *item = editable(document, element);
+    if (item == NULL) {
+        return 0;
+    }
+    const char *text = label != NULL ? label : "";
+    if (strcmp(item->label, text) == 0) {
+        return 0;
+    }
+    set_text(item->label, sizeof(item->label), text, "");
+    document->dirty = 1;
+    return 1;
+}
+
+int norma_document_set_layer(norma_document *document, size_t element, const char *layer)
+{
+    norma_element *item = editable(document, element);
+    if (item == NULL || layer == NULL || layer[0] == '\0') {
+        return 0;
+    }
+    if (strcmp(item->layer, layer) == 0) {
+        return 0;
+    }
+    set_text(item->layer, sizeof(item->layer), layer, NORMA_DEFAULT_LAYER);
+    document->dirty = 1;
+    return 1;
+}
+
+int norma_document_set_current_layer(norma_document *document, const char *layer)
+{
+    if (document == NULL || layer == NULL || layer[0] == '\0' || strcmp(document->layer, layer) == 0) {
+        return 0;
+    }
+    set_text(document->layer, sizeof(document->layer), layer, NORMA_DEFAULT_LAYER);
+    return 1;
+}
+
+/* ------------------------- figuras y texto (N4) --------------------------- */
+
+/** ¿Es una de las figuras que se dibujan de dos esquinas? */
+static int is_shape(const char *type)
+{
+    return type != NULL
+           && (strcmp(type, "line") == 0 || strcmp(type, "rect") == 0 || strcmp(type, "ellipse") == 0);
+}
+
+long norma_document_add_shape(norma_document *document, const char *type, norma_point a, norma_point b,
+                              const char *layer)
+{
+    if (document == NULL || !is_shape(type) || !reserve_element(document)) {
+        return -1;
+    }
+    norma_element element;
+    memset(&element, 0, sizeof(element));
+    document->identifier += 1;
+    snprintf(element.id, sizeof(element.id), "objeto_%d", document->identifier);
+    set_text(element.type, sizeof(element.type), type, "rect");
+    set_text(element.layer, sizeof(element.layer), layer, document->layer);
+    element.x = fmin(a.x, b.x);
+    element.y = fmin(a.y, b.y);
+    element.w = fabs(b.x - a.x);
+    element.h = fabs(b.y - a.y);
+    element.stroke = 2.0;
+    if (strcmp(type, "line") == 0) {
+        /* La línea se guarda por sus nodos, como los muros: así se puede partir
+           y medir con las mismas funciones. */
+        element.nodes[0] = a;
+        element.nodes[1] = b;
+        element.node_count = 2;
+    } else if (element.w <= 0.0 || element.h <= 0.0) {
+        /* Un rectángulo o una elipse sin área no se dibuja. */
+        return -1;
+    }
+    document->elements[document->count] = element;
+    document->count += 1;
+    document->dirty = 1;
+    return (long) (document->count - 1);
+}
+
+/* Dimensiones con las que nace cada elemento del entorno, en centímetros y
+   con el mismo criterio que la paleta web: una vía de seis metros, un andén de
+   metro veinte, un parqueadero de dos metros y medio por cinco. */
+typedef struct {
+    const char *type;
+    double width;
+    double height;
+    double stroke;
+    int box;
+} norma_environment_spec;
+
+static const norma_environment_spec kEnvironments[] = {
+    {"road", 600.0, 300.0, 0.0, 1},
+    {"sidewalk", 300.0, 120.0, 0.0, 1},
+    {"crosswalk", 300.0, 120.0, 0.0, 1},
+    {"parking", 250.0, 500.0, 1.5, 1},
+    {"property", 0.0, 0.0, 2.0, 0},
+    {"pipe", 0.0, 0.0, 4.0, 0},
+    {"conduit", 0.0, 0.0, 3.0, 0},
+};
+
+static const norma_environment_spec *environment_spec(const char *type)
+{
+    if (type == NULL) {
+        return NULL;
+    }
+    for (size_t index = 0; index < sizeof(kEnvironments) / sizeof(kEnvironments[0]); index += 1) {
+        if (strcmp(kEnvironments[index].type, type) == 0) {
+            return &kEnvironments[index];
+        }
+    }
+    return NULL;
+}
+
+int norma_environment_is(const char *type)
+{
+    return environment_spec(type) != NULL;
+}
+
+long norma_document_add_environment(norma_document *document, const char *type, norma_point a,
+                                    norma_point b, const char *layer)
+{
+    const norma_environment_spec *spec = environment_spec(type);
+    if (document == NULL || spec == NULL || !reserve_element(document)) {
+        return -1;
+    }
+    if (spec->box) {
+        /* Dos esquinas: el mismo gesto que un rectángulo en el editor web. */
+        if (fabs(b.x - a.x) <= 0.0 || fabs(b.y - a.y) <= 0.0) {
+            return -1;
+        }
+    } else if (fabs(b.x - a.x) <= 0.0 && fabs(b.y - a.y) <= 0.0) {
+        return -1;
+    }
+
+    norma_element element;
+    memset(&element, 0, sizeof(element));
+    document->identifier += 1;
+    snprintf(element.id, sizeof(element.id), "objeto_%d", document->identifier);
+    set_text(element.type, sizeof(element.type), spec->type, "road");
+    set_text(element.layer, sizeof(element.layer), layer, document->layer);
+    element.stroke = spec->stroke;
+    if (spec->box) {
+        element.x = fmin(a.x, b.x);
+        element.y = fmin(a.y, b.y);
+        element.w = fabs(b.x - a.x);
+        element.h = fabs(b.y - a.y);
+    } else {
+        element.nodes[0] = a;
+        element.nodes[1] = b;
+        element.node_count = 2;
+    }
+    document->elements[document->count] = element;
+    document->count += 1;
+    document->dirty = 1;
+    return (long) (document->count - 1);
+}
+
+long norma_document_add_text(norma_document *document, norma_point origin, double width, double height,
+                             const char *text, const char *layer)
+{
+    if (document == NULL || text == NULL || text[0] == '\0' || !reserve_element(document)) {
+        return -1;
+    }
+    norma_element element;
+    memset(&element, 0, sizeof(element));
+    document->identifier += 1;
+    snprintf(element.id, sizeof(element.id), "objeto_%d", document->identifier);
+    set_text(element.type, sizeof(element.type), "text", "text");
+    set_text(element.layer, sizeof(element.layer), layer, document->layer);
+    set_text(element.label, sizeof(element.label), text, "");
+    element.x = origin.x;
+    element.y = origin.y;
+    element.w = width > 0.0 ? width : 180.0;
+    element.h = height > 0.0 ? height : 32.0;
+    element.stroke = 0.0;
+    document->elements[document->count] = element;
+    document->count += 1;
+    document->dirty = 1;
+    return (long) (document->count - 1);
+}
+
+long norma_document_duplicate(norma_document *document, size_t element)
+{
+    if (document == NULL || element >= document->count || !reserve_element(document)) {
+        return -1;
+    }
+    norma_element copy = document->elements[element];
+    document->identifier += 1;
+    snprintf(copy.id, sizeof(copy.id), "objeto_%d", document->identifier);
+    copy.x += 20.0;
+    copy.y += 20.0;
+    for (size_t node = 0; node < copy.node_count; node += 1) {
+        copy.nodes[node].x += 20.0;
+        copy.nodes[node].y += 20.0;
+    }
+    document->elements[document->count] = copy;
+    document->count += 1;
+    document->dirty = 1;
+    return (long) (document->count - 1);
+}
+
 int norma_document_move_node(norma_document *document, size_t element, size_t node, double x, double y)
 {
     if (document == NULL || element >= document->count) {
@@ -508,6 +809,12 @@ static void write_box(norma_buffer *buffer, const norma_element *element)
     if (element->stroke != 2.0) {
         norma_buffer_raw(buffer, ",\"stroke\":");
         norma_buffer_number(buffer, element->stroke);
+    }
+    /* El color propio viaja con el plano: sin esto, abrir un plano de la web y
+       volver a guardarlo cambiaba los colores que la persona había elegido. */
+    if (element->colour[0] != '\0') {
+        norma_buffer_raw(buffer, ",\"color\":");
+        norma_buffer_string(buffer, element->colour);
     }
     if (element->width_m != 2.0) {
         norma_buffer_raw(buffer, ",\"widthM\":");
@@ -803,6 +1110,10 @@ int norma_document_from_json(norma_document *document, const char *text, size_t 
         element.h = norma_json_number(norma_json_get(source, "h"), 0.0);
         element.rotation = norma_json_number(norma_json_get(source, "rotation"), 0.0);
         element.stroke = norma_json_number(norma_json_get(source, "stroke"), 2.0);
+        const char *colour = norma_json_string(norma_json_get(source, "color"));
+        if (valid_colour(colour)) {
+            set_text(element.colour, sizeof(element.colour), colour, "");
+        }
         element.width_m = norma_json_number(norma_json_get(source, "widthM"), 2.0);
         element.measured_m = norma_json_number(norma_json_get(source, "measuredM"), 0.0);
         element.is_exit = norma_json_bool_at(source, "isExit", 0);

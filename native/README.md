@@ -58,17 +58,17 @@ es lo que comprueba `tests/parity.mjs`.
 | Camino | `include/normia/grid.h` (`norma_grid_path`), `src/grid.c` | Dijkstra de 8 vecinos sobre la rejilla, sin cortar esquinas, con los puntos simplificados por línea de vista y la longitud en metros |
 | Objetos | `include/normia/object.h`, `src/object.c` | **El catálogo completo: 820 piezas** (3 puertas + 422 objetos CAD + 395 señales) en 41 familias, con nombre, familia, color y pictograma; se leen de `resources/` en tiempo de ejecución y hay once de respaldo por si faltan. `norma_document_add_object/set_exit/move_object` los guardan en el plano |
 | Extintores | `include/normia/extinguisher.h`, `src/extinguisher.c` | NTC 2885 + Resolución 2400 y NFPA 10: recorrido por clase y riesgo, área por número de A, zonas descubiertas con su motivo y acciones cuantificadas (añadir, reubicar, subir rótulo) |
-| Ventana de macOS | `macos/` | AppKit puro: menú en español, lienzo con Core Graphics, herramientas `V · M · P · A · D · R`, **menú Insertar** con una entrada por familia y un **buscador** del catálogo (`⌘⇧I`, `CatalogPicker.m`), salida de emergencia con `⌘⇧E`, puertas con su arco, equipos y señales con su color y su nombre, cotas, rutas de evacuación, **lienzo abierto con zoom y desplazamiento**, abrir reciente, imprimir (⌘P), exportar SVG (⌘E) y PDF, abrir y guardar con los paneles del sistema, macOS 12 |
+| Ventana de macOS | `macos/` | AppKit puro, con la maqueta de un CAD: **paleta de conjuntos de herramientas** a la izquierda (`ToolRail.m`), **tira de iconos** arriba, **inspector de capas y propiedades** a la derecha (`InspectorPanel.m`), **línea de comando** y **barra de estado con coordenadas** abajo. Las herramientas del editor web: seleccionar, mano, muro, línea, rectángulo, elipse, pluma, arco, texto, cota, ruta, insertar del catálogo (820 piezas, buscador en `⌘⇧I`), y el entorno —vía, andén, paso peatonal, parqueadero, lindero, tubería y canaleta—. Duplicar, girar, escalar por esquinas, rótulo, capa, color y salida de emergencia. macOS 12 |
 
 ## Compilar y probar
 
 ```sh
 make -C native            # construye native/build/norma-core
-make -C native test       # núcleo (23), documento (33), SVG (31), auditor (67), señalización (30),
+make -C native test       # núcleo (23), documento (60), SVG (31), auditor (67), señalización (30),
                           # extintores (32) y catálogo completo (26)
 node native/tests/core.mjs         # compila en estricto y corre los cuatro (8)
 node native/tests/parity.mjs 8.3   # paridad contra el motor PHP (64)
-node native/tests/macos.mjs        # contrato de la ventana nativa (80)
+node native/tests/macos.mjs        # contrato de la ventana nativa (97)
 ```
 
 Y en macOS, con las herramientas de Xcode:
@@ -119,8 +119,11 @@ JavaScript, sin Electron**. Compila con `clang -fobjc-arc` y enlaza solo `Cocoa`
 | Pieza | Archivo | Qué hace |
 | --- | --- | --- |
 | Arranque | `main.m` | `--check` sin ventana; si no, abre la aplicación |
-| Ventana y menú | `AppDelegate.m` | Archivo / Editar / Ver / Ayuda en español, `⌘N ⌘O ⌘S ⇧⌘S ⌘Z ⇧⌘Z`, paneles del sistema, aviso al cerrar con cambios |
-| Lienzo | `CanvasView.m` | Dibujo con Core Graphics, rejilla de 20 cm, muros con arcos, equipos; clic selecciona, arrastrar mueve, `M` dibuja muros, `P` pluma, `A` arco, `D` cota, `R` ruta de evacuación (verde, con punta de flecha y su longitud rotulada), `Esc` sale, Retroceso borra |
+| Ventana y menú | `AppDelegate.m` | Reparte paleta, lienzo, inspector, línea de comando y barra de estado; menús Archivo / Editar / Ver / Herramientas / Insertar / Ayuda en español, `⌘N ⌘O ⌘S ⇧⌘S ⌘Z ⇧⌘Z`, paneles del sistema, aviso al cerrar con cambios |
+| Paleta | `ToolRail.m` | «Conjuntos de herramientas»: Dibujo, Modificar, Texto, Acotación, Rutas, Entorno, Instalaciones y Biblioteca, cada grupo con sus botones y la herramienta armada marcada |
+| Inspector | `InspectorPanel.m` | Capas (la activa recibe lo nuevo) y ficha del elemento: X, Y, ancho, alto, giro, grosor, color, rótulo y capa, con Aplicar, Duplicar, Borrar y Salida. Todo pasa por el núcleo |
+| Lienzo | `CanvasView.m` | Dibujo con Core Graphics, rejilla de 20 cm, muros con arcos, equipos, figuras y entorno; seleccionar con tiradores de esquina, `H` mano, `L · B · O` línea, rectángulo y elipse, `T` texto, `M · P · A · D · R` muro, pluma, arco, cota y ruta, `E · N · C · K · J · Q · W` entorno, flechas para mover un centímetro, `Esc` sale, Retroceso borra |
+| Comando | `AppDelegate.m` | Línea de comando: `muro`, `linea`, `rect`, `elipse`, `texto`, `cota`, `ruta`, `via`, `anden`, `paso`, `parqueadero`, `lindero`, `tuberia`, `canaleta`, `insertar <tipo>`, `capa <nombre>`, `zoom <n>`, `duplicar`, `girar`, `borrar`, `rejilla`, `revisar`, `ajustar`, `exportar`, `guardar` y `ayuda`; Intro en vacío repite |
 
 El documento en C es lo que se edita:
 
@@ -134,6 +137,13 @@ El documento en C es lo que se edita:
 | `norma_document_to_json` / `from_json` | Sobre oficial de ida y vuelta |
 | `norma_document_add_dimension` | Cota entre dos puntos, con su cifra y su unidad (N2) |
 | `norma_document_add_route` | Ruta de evacuación: trazo de tipo `route` con su id y su grosor (N3) |
+| `norma_document_set_box` / `set_rotation` / `set_stroke` | Inspector: caja, giro y grosor, validados en el núcleo (N4) |
+| `norma_document_set_colour` / `set_label` / `set_layer` | Color `#rrggbb`, rótulo y capa del elemento (N4) |
+| `norma_document_set_current_layer` | Capa activa, la que reciben los elementos nuevos (N4) |
+| `norma_document_add_shape` | Línea, rectángulo y elipse, con su SVG (N4) |
+| `norma_document_add_text` | Texto suelto con su caja y su contenido (N4) |
+| `norma_document_add_environment` | Vía, andén, paso peatonal, parqueadero, lindero, tubería y canaleta (N4) |
+| `norma_document_duplicate` | Copia del elemento desplazada 20 cm (N4) |
 | `norma_document_to_svg` | SVG con escala física, rejilla, franja y cotas (N2) |
 | `norma_format_measure_cm` | Cifra de una medida en es-CO, con su unidad (N2) |
 
@@ -165,7 +175,8 @@ ni notarizar.
 | **N2** | Cotas, pluma de nodos, arcos, SVG del núcleo, recientes, impresión y PDF | **hecho** en código; compila y exporta en el flujo de macOS |
 | N3 | Rejilla y aforo en C, con paridad | **hecho**: rejilla, salidas, recorridos, hallazgos, señalización, primeros auxilios, extintores, escenarios, rutas y su herramienta de dibujo; **menú Insertar** con puertas, equipos y señales ya pintados en el lienzo |
 | N4a | Catálogo completo en el editor nativo y paquete de macOS 12 | **hecho**: 820 piezas en 41 familias, buscador, pictogramas en el SVG y trabajo `dist-nativo.yml` que arma el `.app` universal para Monterey |
-| N4b | Windows (Win32) y Linux (GTK) | pendiente |
+| N4b | La ventana como un CAD: paleta, tira de iconos, inspector, línea de comando y estado | **hecho** en código: las 19 herramientas del editor web, figuras, texto, entorno, escalado por esquinas, duplicar y girar |
+| N4c | Windows (Win32) y Linux (GTK) | pendiente |
 
 Las reglas no cambian: sin procedimientos metrológicos obligatorios, sin
 calibraciones, sin afirmar certificación, y **nunca** un cambio silencioso de

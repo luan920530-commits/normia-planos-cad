@@ -12,6 +12,7 @@
 #include <string.h>
 
 #include "normia/document.h"
+#include "normia/svg.h"
 #include "normia/json.h"
 
 static int checks = 0;
@@ -262,6 +263,219 @@ static void test_units(void)
     norma_document_free(&document);
 }
 
+/*
+ * El inspector de la ventana edita el documento con estas funciones: si alguna
+ * dejara de avisar del cambio, el plano se guardaría como si no se hubiera
+ * tocado. Aquí se comprueban una por una, y que el color viaje en el archivo.
+ */
+static void test_inspector(void)
+{
+    norma_document document;
+    norma_document_init(&document);
+    const long index = norma_document_add_object(&document, "cad_emg_aed", (norma_point) {500.0, 400.0}, NULL);
+    check("El inspector parte de un objeto colocado", index == 0, NULL);
+
+    norma_element *element = &document.elements[0];
+    const double start_x = element->x;
+    const double start_y = element->y;
+
+    check("Cambiar la caja mueve y redimensiona el objeto",
+          norma_document_set_box(&document, 0, start_x + 40.0, start_y + 30.0, 120.0, 90.0) == 1
+              && close_to(element->x, start_x + 40.0, 1e-9) && close_to(element->w, 120.0, 1e-9),
+          "x · y · w · h");
+    check("Una caja sin área se rechaza en vez de guardarse invisible",
+          norma_document_set_box(&document, 0, 10.0, 10.0, 0.0, 40.0) == 0,
+          NULL);
+    check("El giro se guarda dentro de una vuelta completa",
+          norma_document_set_rotation(&document, 0, -90.0) == 1 && close_to(element->rotation, 270.0, 1e-9),
+          "370° y 10° son lo mismo");
+    check("El grosor del trazo se puede cambiar, pero no a negativo",
+          norma_document_set_stroke(&document, 0, 3.5) == 1 && close_to(element->stroke, 3.5, 1e-9)
+              && norma_document_set_stroke(&document, 0, -1.0) == 0,
+          "3,5 cm");
+    check("El color propio se acepta en #rrggbb y lo demás no",
+          norma_document_set_colour(&document, 0, "#0ea5e9") == 1
+              && strcmp(element->colour, "#0ea5e9") == 0
+              && norma_document_set_colour(&document, 0, "azul") == 0,
+          "#0ea5e9");
+    check("Quitar el color devuelve el objeto al de su familia",
+          norma_document_set_colour(&document, 0, NULL) == 1 && element->colour[0] == '\0',
+          "vacío = familia");
+    check("El rótulo y la capa se cambian desde el inspector",
+          norma_document_set_label(&document, 0, "DEA recepción") == 1
+              && strcmp(element->label, "DEA recepción") == 0
+              && norma_document_set_layer(&document, 0, "capa_equipos") == 1
+              && strcmp(element->layer, "capa_equipos") == 0,
+          "rótulo · capa");
+    check("La capa activa recibe lo que se dibuja después",
+          norma_document_set_current_layer(&document, "capa_rutas") == 1
+              && strcmp(document.layer, "capa_rutas") == 0,
+          "capa_rutas");
+
+    /* El color propio tiene que sobrevivir al archivo: es lo que se elige en el
+       inspector y lo que se ve en el plano impreso. */
+    norma_document_set_colour(&document, 0, "#7c3aed");
+    char *json = norma_document_to_json(&document, "Inspector");
+    check("El color propio se escribe en el archivo",
+          json != NULL && strstr(json, "\"color\":\"#7c3aed\"") != NULL,
+          "color");
+    norma_document other;
+    norma_document_init(&other);
+    char error[128];
+    const int ok = json != NULL && norma_document_from_json(&other, json, strlen(json), error, sizeof(error));
+    check("Abrir el plano devuelve el mismo color",
+          ok && other.count == 1 && strcmp(other.elements[0].colour, "#7c3aed") == 0,
+          ok ? "ida y vuelta" : error);
+    free(json);
+    norma_document_free(&other);
+    norma_document_free(&document);
+}
+
+/** Las figuras de la paleta: línea, rectángulo, elipse y texto. */
+static void test_shapes(void)
+{
+    norma_document document;
+    norma_document_init(&document);
+    const long line = norma_document_add_shape(&document, "line", (norma_point) {100.0, 400.0},
+                                               (norma_point) {300.0, 500.0}, NULL);
+    const long rect = norma_document_add_shape(&document, "rect", (norma_point) {500.0, 400.0},
+                                               (norma_point) {620.0, 480.0}, NULL);
+    const long ellipse = norma_document_add_shape(&document, "ellipse", (norma_point) {700.0, 400.0},
+                                                  (norma_point) {800.0, 460.0}, NULL);
+    check("La línea se guarda por sus dos nodos",
+          line == 0 && document.elements[0].node_count == 2
+              && close_to(document.elements[0].nodes[1].x, 300.0, 1e-9),
+          "2 nodos");
+    check("El rectángulo y la elipse se guardan como caja, sin importar el orden de las esquinas",
+          rect == 1 && ellipse == 2 && close_to(document.elements[1].x, 500.0, 1e-9)
+              && close_to(document.elements[1].w, 120.0, 1e-9) && close_to(document.elements[2].h, 60.0, 1e-9),
+          "500 × 400 · 120 × 80");
+    check("Una figura que no es de la paleta se rechaza",
+          norma_document_add_shape(&document, "hexágono", (norma_point) {0.0, 0.0}, (norma_point) {10.0, 10.0},
+                                   NULL) == -1,
+          NULL);
+
+    const long text = norma_document_add_text(&document, (norma_point) {100.0, 600.0}, 200.0, 30.0,
+                                              "Salida de emergencia", NULL);
+    check("El texto nace con su caja y su contenido",
+          text == 3 && strcmp(document.elements[3].type, "text") == 0
+              && strcmp(document.elements[3].label, "Salida de emergencia") == 0,
+          "texto");
+    check("Un texto vacío no se crea",
+          norma_document_add_text(&document, (norma_point) {0.0, 0.0}, 100.0, 20.0, "", NULL) == -1,
+          NULL);
+
+    const long copy = norma_document_duplicate(&document, (size_t) rect);
+    check("Duplicar copia el elemento desplazado y con su propio identificador",
+          copy == 4 && strcmp(document.elements[4].type, "rect") == 0
+              && close_to(document.elements[4].x, document.elements[1].x + 20.0, 1e-9)
+              && strcmp(document.elements[4].id, document.elements[1].id) != 0,
+          "+20 cm");
+
+    norma_svg_options options = {0, 0, "Paleta"};
+    char *svg = norma_document_to_svg(&document, &options);
+    check("El SVG dibuja la línea, el rectángulo, la elipse y el texto por lo que son",
+          svg != NULL && strstr(svg, "M 100 400 L 300 500") != NULL
+              && strstr(svg, "<rect x=\"500\" y=\"400\" width=\"120\" height=\"80\"/>") != NULL
+              && strstr(svg, "<ellipse cx=\"750\" cy=\"430\"") != NULL
+              && strstr(svg, ">Salida de emergencia</text>") != NULL,
+          "line · rect · ellipse · text");
+    free(svg);
+    norma_document_free(&document);
+}
+
+/** Entorno: las herramientas del editor web que no salen del catálogo. */
+static void test_environment(void)
+{
+    norma_document document;
+    norma_document_init(&document);
+    norma_document_begin_edit(&document);
+
+    const long road = norma_document_add_environment(&document, "road", (norma_point) {0.0, 0.0},
+                                                     (norma_point) {600.0, 300.0}, "Vías");
+    const long sidewalk = norma_document_add_environment(&document, "sidewalk", (norma_point) {600.0, 300.0},
+                                                         (norma_point) {300.0, 420.0}, NULL);
+    const long crosswalk = norma_document_add_environment(&document, "crosswalk", (norma_point) {0.0, 300.0},
+                                                          (norma_point) {300.0, 420.0}, NULL);
+    const long parking = norma_document_add_environment(&document, "parking", (norma_point) {700.0, 100.0},
+                                                        (norma_point) {950.0, 600.0}, NULL);
+    check("La vía, el andén, el paso y el parqueadero nacen de dos esquinas como caja",
+          road == 0 && sidewalk == 1 && crosswalk == 2 && parking == 3
+              && close_to(document.elements[0].w, 600.0, 1e-9)
+              && close_to(document.elements[1].x, 300.0, 1e-9)
+              && close_to(document.elements[3].h, 500.0, 1e-9)
+              && document.elements[3].node_count == 0
+              && strcmp(document.elements[1].layer, "capa_planta") == 0,
+          "vía · andén · paso · parqueadero");
+    check("El andén acepta las esquinas en cualquier orden",
+          close_to(document.elements[1].w, 300.0, 1e-9) && close_to(document.elements[1].h, 120.0, 1e-9),
+          "300 × 120");
+
+    const long property = norma_document_add_environment(&document, "property", (norma_point) {0.0, 700.0},
+                                                         (norma_point) {900.0, 700.0}, "Lindero");
+    const long pipe = norma_document_add_environment(&document, "pipe", (norma_point) {100.0, 800.0},
+                                                     (norma_point) {400.0, 800.0}, NULL);
+    const long conduit = norma_document_add_environment(&document, "conduit", (norma_point) {100.0, 850.0},
+                                                        (norma_point) {400.0, 850.0}, NULL);
+    check("El lindero, la tubería y la canaleta se guardan por sus nodos, con su grosor",
+          property == 4 && pipe == 5 && conduit == 6
+              && document.elements[4].node_count == 2 && close_to(document.elements[4].stroke, 2.0, 1e-9)
+              && close_to(document.elements[5].stroke, 4.0, 1e-9)
+              && close_to(document.elements[6].stroke, 3.0, 1e-9)
+              && strcmp(document.elements[4].layer, "Lindero") == 0,
+          "lindero 2 cm · tubería 4 cm · canaleta 3 cm");
+
+    check("Un elemento de entorno sin área no se crea",
+          norma_document_add_environment(&document, "road", (norma_point) {10.0, 10.0},
+                                         (norma_point) {10.0, 60.0}, NULL) == -1
+              && norma_document_add_environment(&document, "pipe", (norma_point) {5.0, 5.0},
+                                                (norma_point) {5.0, 5.0}, NULL) == -1,
+          NULL);
+    check("Solo los siete oficios del entorno se reconocen como tales",
+          norma_environment_is("road") && norma_environment_is("sidewalk")
+              && norma_environment_is("crosswalk") && norma_environment_is("parking")
+              && norma_environment_is("property") && norma_environment_is("pipe")
+              && norma_environment_is("conduit")
+              && !norma_environment_is("wall") && !norma_environment_is(NULL),
+          "7 oficios");
+
+    norma_svg_options options = {0, 0, "Entorno"};
+    char *svg = norma_document_to_svg(&document, &options);
+    check("El SVG dibuja la trama de la vía, el andén, el paso y el parqueadero",
+          svg != NULL && strstr(svg, "stroke-dasharray=\"12 8\"") != NULL
+              && strstr(svg, "fill=\"#f8fafc\"") != NULL
+              && strstr(svg, ">P</text>") != NULL,
+          "vía · andén · paso · parqueadero");
+    check("El lindero va discontinuo y la tubería y la canaleta con su color",
+          svg != NULL && strstr(svg, "stroke=\"#7c3d12\"") != NULL
+              && strstr(svg, "stroke-dasharray=\"8 5\"") != NULL
+              && strstr(svg, "stroke=\"#2563eb\"") != NULL
+              && strstr(svg, "stroke=\"#ea580c\"") != NULL,
+          "lindero · tubería · canaleta");
+    free(svg);
+
+    char *json = norma_document_to_json(&document, "Entorno");
+    norma_document otro;
+    norma_document_init(&otro);
+    char error[256] = "";
+    const int loaded = json != NULL
+        && norma_document_from_json(&otro, json, strlen(json), error, sizeof(error));
+    check("El entorno se guarda y se vuelve a abrir sin perder su oficio ni su grosor",
+          loaded && otro.count == document.count
+              && strcmp(otro.elements[0].type, "road") == 0
+              && strcmp(otro.elements[5].type, "pipe") == 0
+              && close_to(otro.elements[5].stroke, 4.0, 1e-9)
+              && otro.elements[2].node_count == 0,
+          "road · pipe · canaleta");
+    free(json);
+    norma_document_free(&otro);
+
+    norma_document_undo(&document);
+    check("Deshacer devuelve el documento al estado anterior al entorno",
+          document.count == 0, "sin elementos");
+    norma_document_free(&document);
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IOLBF, 0);
@@ -277,6 +491,12 @@ int main(void)
     test_roundtrip();
     printf("\nUnidades\n");
     test_units();
+    printf("\nInspector\n");
+    test_inspector();
+    printf("\nFiguras y texto\n");
+    test_shapes();
+    printf("\nEntorno\n");
+    test_environment();
     printf("\n%d/%d comprobaciones correctas.\n", checks - failures, checks);
     return failures == 0 ? 0 : 1;
 }

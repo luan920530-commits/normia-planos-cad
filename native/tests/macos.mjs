@@ -24,6 +24,10 @@ const canvas = read('CanvasView.m');
 const canvasHeader = read('CanvasView.h');
 const plist = read('Info.plist');
 const picker = read('CatalogPicker.m');
+const rail = read('ToolRail.m');
+const railHeader = read('ToolRail.h');
+const inspector = read('InspectorPanel.m');
+const inspectorHeader = read('InspectorPanel.h');
 const pickerHeader = read('CatalogPicker.h');
 const catalogH = fs.readFileSync(path.join(repoRoot, 'native', 'include', 'normia', 'object.h'), 'utf8');
 const catalogC = fs.readFileSync(path.join(repoRoot, 'native', 'src', 'object.c'), 'utf8');
@@ -45,7 +49,7 @@ const strip = (source) => source
   .replace(/\/\*[\s\S]*?\*\//g, ' ')
   .replace(/\/\/[^\n]*/g, ' ')
   .split('\n').filter((line) => !/^\s*#/.test(line)).join('\n');
-const all = strip([main, delegate, canvas, canvasHeader].join('\n'));
+const all = strip([main, delegate, canvas, canvasHeader, rail, inspector].join('\n'));
 const code = [strip(main), strip(delegate), strip(canvas)].join('\n');
 
 /* ------------------------- 1 · es AppKit, no un navegador ------------------------ */
@@ -124,16 +128,16 @@ report.check('El lienzo responde al teclado y se adapta a la ventana',
 /* --------------------------- 4b · herramientas de N2 --------------------------- */
 
 report.check('La pluma de nodos cierra con Enter o doble clic y quita el último nodo',
-  /CanvasToolPen/.test(canvas) && /keyCode == 36 \|\| event\.keyCode == 76/.test(canvas)
+  /NormiaToolPen/.test(canvas) && /keyCode == 36 \|\| event\.keyCode == 76/.test(canvas)
   && /clickCount >= 2/.test(canvas) && /_draftCount -= 1/.test(canvas),
   'Enter · doble clic · Retroceso');
 
 report.check('El arco de tres puntos se arma con el núcleo, no con una aproximación',
-  /CanvasToolArc/.test(canvas) && /norma_arc_from_points\(_draft\[0\], _draft\[1\], _draft\[2\]\)/.test(canvas)
+  /NormiaToolArc/.test(canvas) && /norma_arc_from_points\(_draft\[0\], _draft\[1\], _draft\[2\]\)/.test(canvas)
   && /El arco no es válido/.test(canvas), 'tres puntos');
 
 report.check('La cota se rotula con la cifra y la unidad del plano',
-  /CanvasToolDimension/.test(canvas) && /norma_format_measure_cm/.test(canvas)
+  /NormiaToolDimension/.test(canvas) && /norma_format_measure_cm/.test(canvas)
   && /norma_document_add_dimension/.test(canvas), 'norma_format_measure_cm');
 
 report.check('Cada herramienta tiene su tecla y Esc vuelve a la selección',
@@ -156,19 +160,19 @@ report.check('El lienzo pinta las cotas con su línea, sus marcas y su cifra',
 /* ---------------------- 4b2 · la herramienta de rutas de N3 ---------------------- */
 
 report.check('R elige la herramienta de ruta y la pista dice cómo se cierra',
-  /CanvasToolRoute/.test(canvas) && /isEqualToString:@"r"/.test(canvas)
+  /NormiaToolRoute/.test(canvas) && /isEqualToString:@"r"/.test(canvas)
   && /Ruta: un clic por nodo/.test(canvas)
   && /selectToolWithKey:/.test(canvas) && /selectToolWithKey:/.test(canvasHeader),
   'R · Enter · doble clic');
 
 report.check('La ruta usa el mismo borrador de polilínea que la pluma',
-  /_tool == CanvasToolPen \|\| _tool == CanvasToolRoute/.test(canvas)
-  && /_tool == CanvasToolRoute\) && _draftCount >= 2/.test(canvas),
+  /_tool == NormiaToolPen \|\| _tool == NormiaToolRoute/.test(canvas)
+  && /_tool == NormiaToolRoute\) && _draftCount >= 2/.test(canvas),
   'borrador compartido');
 
 report.check('La ruta se guarda con el núcleo como tipo ruta, no como un muro',
   /norma_document_add_route\(self\.document, _draft, \(size_t\) _draftCount/.test(canvas)
-  && !/norma_document_add_wall\(self\.document, _draft, \(size_t\) _draftCount\)\s*;\n?\s*\}\s*else if \(_tool == CanvasToolRoute/.test(canvas),
+  && !/norma_document_add_wall\(self\.document, _draft, \(size_t\) _draftCount\)\s*;\n?\s*\}\s*else if \(_tool == NormiaToolRoute/.test(canvas),
   'norma_document_add_route');
 
 report.check('La ruta se pinta con su color, su punta de flecha y su longitud',
@@ -344,9 +348,9 @@ report.check('Marcar o desmarcar una salida está en el menú Insertar y no en e
   '⌘⇧E');
 
 report.check('La herramienta de inserción coloca el objeto con un clic y Esc la termina',
-  /CanvasToolInsert/.test(canvas) && /- \(void\)beginInsert:\(NSString \*\)type/.test(canvasHeader)
+  /NormiaToolInsert/.test(canvas) && /- \(void\)beginInsert:\(NSString \*\)type/.test(canvasHeader)
   && /norma_document_add_object\(self\.document, _insertType, point, NULL\)/.test(canvas)
-  && /if \(_tool == CanvasToolInsert && _insertType\[0\] != '\\0'\)/.test(canvas)
+  && /if \(_tool == NormiaToolInsert && _insertType\[0\] != '\\0'\)/.test(canvas)
   && (canvas.match(/_insertType\[0\] = '\\0';/g) || []).length >= 2,
   'beginInsert: · Esc · cancelDraft');
 
@@ -460,9 +464,120 @@ report.check('El paquete se identifica aparte de las ediciones existentes',
 report.check('La aplicación responde a --check sin abrir ventana',
   /--check/.test(main) && /norma_document_length_cm/.test(main), 'humo del núcleo');
 
-/* -------------------------------- 6 · coherencia ------------------------------- */
+/* ---------------------------- 6 · la ventana como un CAD ---------------------- */
 
-for (const [name, source] of [['main.m', main], ['AppDelegate.m', delegate], ['CanvasView.m', canvas]]) {
+// La captura de referencia no es un adorno: pide paleta de conjuntos, tira de
+// iconos, inspector con capas, línea de comando y coordenadas. Todo eso tiene
+// que existir en el código, no solo en la documentación.
+report.check('La paleta agrupa las herramientas como el conjunto de herramientas de la captura',
+  /@"DIBUJO"/.test(rail) && /@"MODIFICAR"/.test(rail) && /@"TEXTO"/.test(rail)
+  && /@"ACOTACIÓN"/.test(rail) && /@"RUTAS"/.test(rail) && /@"BIBLIOTECA"/.test(rail)
+  && /CONJUNTOS DE HERRAMIENTAS/.test(rail),
+  'Dibujo · Modificar · Texto · Acotación · Rutas · Biblioteca');
+
+const herramientas = ['Select', 'Pan', 'Wall', 'Line', 'Rect', 'Ellipse', 'Pen', 'Arc', 'Text',
+  'Dimension', 'Route', 'Road', 'Sidewalk', 'Crosswalk', 'Parking', 'Property', 'Pipe', 'Conduit'];
+report.check('La paleta ofrece las mismas herramientas que el editor web, una por una',
+  herramientas.every((name) => rail.includes(`NormiaTool${name}`))
+  && (rail.match(/@"tool": @\(NormiaTool/g) || []).length >= 18
+  && /@"action": @"duplicate"/.test(rail) && /@"action": @"catalog"/.test(rail),
+  'seleccionar · mano · muro · línea · rectángulo · elipse · pluma · arco · texto · cota · ruta');
+
+report.check('La tira superior repite las herramientas con iconos del sistema',
+  /- \(void\)buildTopBar:/.test(delegate) && /imageWithSystemSymbolName:/.test(delegate)
+  && /NSBezelStyleTexturedRounded/.test(delegate)
+  && /@selector\(chooseToolButton:\)/.test(delegate), 'buildTopBar: · SF Symbols');
+
+report.check('La ventana reparte paleta, lienzo, inspector, comando y estado',
+  /- \(void\)buildRail:/.test(delegate) && /- \(void\)buildInspector:/.test(delegate)
+  && /- \(void\)buildCommandBar:/.test(delegate) && /- \(void\)buildStatusBar:/.test(delegate)
+  && /- \(void\)layoutChrome/.test(delegate)
+  && /kPaletteWidth/.test(delegate) && /kInspectorWidth/.test(delegate),
+  'paleta · lienzo · inspector · comando · estado');
+
+report.check('La barra de estado tiene las pestañas Modelo y Hoja A4 y las coordenadas',
+  /NSSegmentedControl segmentedControlWithLabels:@\[ @"Modelo", @"Hoja A4" \]/.test(delegate)
+  && /coordinateLabel/.test(delegate) && /X %\.0f · Y %\.0f cm/.test(delegate),
+  'Modelo · Hoja A4 · X · Y');
+
+report.check('El inspector edita la ficha completa con el núcleo, no por su cuenta',
+  /norma_document_set_box/.test(inspector) && /norma_document_set_rotation/.test(inspector)
+  && /norma_document_set_stroke/.test(inspector) && /norma_document_set_colour/.test(inspector)
+  && /norma_document_set_label/.test(inspector) && /norma_document_set_layer/.test(inspector)
+  && /norma_document_set_current_layer/.test(inspector),
+  'X · Y · ancho · alto · giro · grosor · color · rótulo · capa');
+
+report.check('El inspector tiene capas y los campos que se ven en la captura',
+  /CAPAS/.test(inspector) && /ELEMENTO SELECCIONADO/.test(inspector)
+  && /@"X \(cm\)"/.test(inspector) && /@"Y \(cm\)"/.test(inspector)
+  && /@"Ancho \(cm\)"/.test(inspector) && /@"Alto \(cm\)"/.test(inspector)
+  && /@"Giro \(°\)"/.test(inspector) && /@"Grosor \(cm\)"/.test(inspector)
+  && /@"Color"/.test(inspector) && /@"Rótulo"/.test(inspector) && /@"Capa"/.test(inspector),
+  'capas · X · Y · ancho · alto · giro · grosor · color · rótulo');
+
+report.check('La línea de comando entiende los verbos del editor y repite con Intro vacío',
+  /- \(void\)runCommand:/.test(delegate)
+  && /@"muro"/.test(delegate) && /@"linea"/.test(delegate) && /@"rect"/.test(delegate)
+  && /@"elipse"/.test(delegate) && /@"texto"/.test(delegate) && /@"ruta"/.test(delegate)
+  && /@"capa"/.test(delegate) && /@"zoom"/.test(delegate) && /@"ayuda"/.test(delegate)
+  && /line = self\.lastCommand/.test(delegate),
+  'comando · repetir · ayuda');
+
+report.check('El lienzo gana mano, línea, rectángulo, elipse y texto con el núcleo de figuras',
+  /NormiaToolPan/.test(canvas) && /NormiaToolLine/.test(canvas)
+  && /NormiaToolRect/.test(canvas) && /NormiaToolEllipse/.test(canvas)
+  && /NormiaToolText/.test(canvas)
+  && /norma_document_add_shape\(self\.document, "line"/.test(canvas)
+  && /norma_document_add_shape\(self\.document, "rect"/.test(canvas)
+  && /norma_document_add_shape\(self\.document, "ellipse"/.test(canvas)
+  && /norma_document_add_text\(self\.document, point/.test(canvas),
+  'mano · línea · rectángulo · elipse · texto');
+
+report.check('La selección se escala por esquinas y se mueve con las flechas',
+  /_resizeCorner/.test(canvas) && /resizeCornerAtPlanPoint:/.test(canvas)
+  && /norma_document_set_box\(self\.document, \(size_t\) _selectedElement/.test(canvas)
+  && /nudgeSelectionByX:/.test(canvas) && /keyCode >= 123 && event\.keyCode <= 126/.test(canvas),
+  'tiradores · flechas');
+
+report.check('El entorno del editor web está en el núcleo, no simulado en la ventana',
+  /norma_document_add_environment/.test(documentH) && /norma_environment_is/.test(documentH)
+  && /norma_document_add_environment/.test(fs.readFileSync(path.join(repoRoot, 'native', 'src', 'document.c'), 'utf8'))
+  && /NormiaToolRoad/.test(rail) && /NormiaToolSidewalk/.test(rail) && /NormiaToolCrosswalk/.test(rail)
+  && /NormiaToolParking/.test(rail) && /NormiaToolProperty/.test(rail)
+  && /"pipe"/.test(canvas) && /"conduit"/.test(canvas)
+  && /@"ENTORNO"/.test(rail) && /@"INSTALACIONES"/.test(rail),
+  'vía · andén · paso · parqueadero · lindero · tubería · canaleta');
+
+report.check('La vía, el andén, el paso y el parqueadero se dibujan con su trama y su rótulo',
+  /drawEnvironment:/.test(canvas) && /CGContextSetLineDash/.test(canvas)
+  && /strcmp\(type, "parking"\) == 0/.test(canvas)
+  && /norma_environment_is\(element->type\)/.test(canvas),
+  'trama · eje discontinuo · P');
+
+report.check('El SVG exporta la trama del entorno y el lindero discontinuo',
+  /strcmp\(element->type, "road"\) == 0/.test(svgC) && /strcmp\(element->type, "crosswalk"\) == 0/.test(svgC)
+  && /strcmp\(type, "property"\) == 0/.test(svgC) && /stroke-dasharray/.test(svgC)
+  && /#2563eb/.test(svgC) && /#ea580c/.test(svgC),
+  'road · crosswalk · property · pipe · conduit');
+
+report.check('Duplicar y girar usan las operaciones nuevas del documento',
+  /norma_document_duplicate\(self\.document/.test(canvas)
+  && /norma_document_set_rotation\(self\.document, index/.test(canvas)
+  && /- \(NSString \*\)duplicateSelection/.test(canvasHeader)
+  && /- \(NSString \*\)rotateSelection/.test(canvasHeader),
+  'duplicar · girar 90°');
+
+report.check('La paleta y el inspector se compilan y se marcan solos al cambiar de herramienta',
+  /ToolRail\.m/.test(makefile) && /InspectorPanel\.m/.test(makefile)
+  && /- \(void\)toolRail:\(ToolRail \*\)rail didChooseTool:\(NormiaTool\)tool/.test(delegate)
+  && /- \(void\)canvas:\(CanvasView \*\)view didChooseTool:\(NormiaTool\)tool/.test(delegate)
+  && /canvasSelectionDidChange:/.test(delegate) && /canvasSelectionDidChange:/.test(canvasHeader),
+  'ToolRail · InspectorPanel · selección');
+
+/* -------------------------------- 7 · coherencia ------------------------------- */
+
+for (const [name, source] of [['main.m', main], ['AppDelegate.m', delegate], ['CanvasView.m', canvas],
+                              ['ToolRail.m', rail], ['InspectorPanel.m', inspector]]) {
   const open = (source.match(/\{/g) || []).length;
   const close = (source.match(/\}/g) || []).length;
   report.check(`${name} tiene las llaves equilibradas`, open === close, `${open} abre · ${close} cierra`);

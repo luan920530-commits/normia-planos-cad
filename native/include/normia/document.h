@@ -54,6 +54,12 @@ typedef struct {
     double measured_m;
     /** Puerta marcada como salida de emergencia. */
     int is_exit;
+    /**
+     * Color propio del elemento (`#rrggbb`), el que elige la persona en el
+     * inspector. Vacío = el de su familia en el catálogo, que es como se han
+     * dibujado siempre los equipos y las señales.
+     */
+    char colour[16];
     /* Datos de norma de un extintor (NTC 2885 / NFPA 10). Se guardan tal como
        vienen del plano: los valores que falten los completa el análisis con los
        del catálogo, igual que `DesignValidator::extinguisherFields()` en la web. */
@@ -181,6 +187,65 @@ int norma_document_set_exit(norma_document *document, size_t element, int is_exi
  * Los trazos se mueven nodo a nodo con `norma_document_move_node`.
  */
 int norma_document_move_object(norma_document *document, size_t element, double x, double y);
+
+/**
+ * Cambia la caja de un elemento (x, y, ancho y alto, en centímetros).
+ * Solo vale para elementos con caja: un trazo se mueve nodo a nodo.
+ * Devuelve 1 si cambió algo.
+ */
+int norma_document_set_box(norma_document *document, size_t element, double x, double y, double w, double h);
+
+/** Gira un elemento con caja (grados). Devuelve 1 si cambió. */
+int norma_document_set_rotation(norma_document *document, size_t element, double degrees);
+
+/** Grosor del trazo en centímetros (0 o más). Devuelve 1 si cambió. */
+int norma_document_set_stroke(norma_document *document, size_t element, double stroke);
+
+/**
+ * Color propio del elemento. Con `NULL` o `""` vuelve al de su familia.
+ * Solo acepta `#rrggbb`; cualquier otra cosa deja el elemento como estaba.
+ */
+int norma_document_set_colour(norma_document *document, size_t element, const char *colour);
+
+/** Rótulo del elemento (el nombre que se lee en el plano). `""` lo quita. */
+int norma_document_set_label(norma_document *document, size_t element, const char *label);
+
+/** Capa del elemento. `NULL` o `""` no cambia nada. */
+int norma_document_set_layer(norma_document *document, size_t element, const char *layer);
+
+/** Capa activa: la que reciben los elementos nuevos. */
+int norma_document_set_current_layer(norma_document *document, const char *layer);
+
+/**
+ * Elementos de dibujo que no son trazos libres: `line`, `rect` y `ellipse`.
+ * Nacen de dos esquinas, con el color y el grosor de la herramienta.
+ * Devuelve el índice o -1 si el tipo no es uno de esos.
+ */
+long norma_document_add_shape(norma_document *document, const char *type, norma_point a, norma_point b,
+                              const char *layer);
+
+/**
+ * Elementos del entorno que no salen del catálogo, como en el editor web:
+ * `road` (vía), `sidewalk` (andén), `crosswalk` (paso peatonal), `parking`
+ * (parqueadero) y `property` (lindero); y las instalaciones `pipe` (tubería) y
+ * `conduit` (canaleta).
+ *
+ * Vías, andenes, pasos y parqueaderos nacen de dos esquinas y se guardan como
+ * caja; linderos, tuberías y canaletas se guardan por sus dos nodos, con el
+ * grosor de su oficio. Devuelve el índice o -1 si el tipo no es de entorno.
+ */
+long norma_document_add_environment(norma_document *document, const char *type, norma_point a,
+                                    norma_point b, const char *layer);
+
+/** 1 si el tipo es uno de los elementos de entorno de arriba. */
+int norma_environment_is(const char *type);
+
+/** Texto suelto en el plano: nace con su caja y su contenido. */
+long norma_document_add_text(norma_document *document, norma_point origin, double width, double height,
+                             const char *text, const char *layer);
+
+/** Copia un elemento desplazado 20 cm y lo deja encima. Devuelve su índice o -1. */
+long norma_document_duplicate(norma_document *document, size_t element);
 
 /** Mueve un nodo de un trazo. Devuelve 1 si se movió. */
 int norma_document_move_node(norma_document *document, size_t element, size_t node, double x, double y);

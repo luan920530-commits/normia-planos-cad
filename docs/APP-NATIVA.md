@@ -3,8 +3,9 @@
 **Estado:** en marcha. Hechas la **etapa N0** (núcleo en C con paridad
 verificada contra el motor PHP, § 11), la **etapa N1** (documento editable y
 ventana nativa de macOS con lienzo propio, sin WebView, § 12), la **N2** (§ 13) y
-la **N3** (§ 14). De la **N4** ya está el catálogo completo con el paquete de macOS 12
-(§ 15); quedan Windows y Linux.
+la **N3** (§ 14). De la **N4** ya están el catálogo completo con el paquete de macOS 12
+(§ 15) y la ventana con la maqueta de un CAD y todas las herramientas del editor
+web (§ 16); quedan Windows y Linux.
 
 **Pregunta que responde:** ¿Normia Estudio puede ser una aplicación nativa de
 verdad —como AutoCAD— y no una app con Electron?
@@ -840,10 +841,110 @@ Lo que esto **no** es: no hay certificado de Apple, así que Gatekeeper avisa la
 primera vez; no hay notarización; y la prueba en un Mac con Monterey de verdad
 sigue pendiente de una persona con el equipo delante.
 
+## 16. Etapa N4(b), hecha: la ventana como un CAD (2026-11-08)
+
+La captura de referencia no pedía «más botones»: pedía la **maqueta** de un CAD y
+las herramientas del editor web. Eso es lo que hay ahora en `native/macos/`.
+
+### El reparto de la ventana
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│ NORMIA  [iconos de las doce herramientas]      Buscar  Revisar  SVG  │  tira superior
+├────────────┬─────────────────────────────────────┬───────────────────┤
+│ CONJUNTOS  │                                     │ CAPAS             │
+│   DE       │              lienzo                 │  [capa activa ▾]  │
+│ HERRAMIEN- │        (Core Graphics, sin WebView) │  [nueva capa  ＋] │
+│   TAS      │                                     │ ELEMENTO          │
+│ Dibujo     │                                     │  X · Y            │
+│ Modificar  │                                     │  ancho · alto     │
+│ Texto      │                                     │  giro · grosor    │
+│ Acotación  │                                     │  color · rótulo   │
+│ Rutas      │                                     │  capa             │
+│ Entorno    │                                     │  Duplicar Borrar  │
+│ Biblioteca │                                     │  Salida           │
+├────────────┴─────────────────────────────────────┴───────────────────┤
+│ Comando: muro · linea · capa <nombre> · zoom <n> · ayuda            │
+├──────────────────────────────────────────────────────────────────────┤
+│ [Modelo│Hoja A4]  X 420 · Y 297 cm      aviso       1:100 · 100 %   │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+| Pieza | Archivo | Qué hace |
+| --- | --- | --- |
+| Paleta | `ToolRail.m` | Ocho grupos con rótulo y sus botones; la herramienta armada se queda marcada, venga del botón, del menú, de la tecla o del comando |
+| Inspector | `InspectorPanel.m` | Capas y ficha del elemento; cada campo llama al núcleo y, si el núcleo rechaza el valor, el campo vuelve a lo que el documento dice |
+| Lienzo | `CanvasView.m` | Selección con tiradores de esquina, mano, figuras, texto, entorno, flechas y `⌘D` |
+| Ventana | `AppDelegate.m` | Reparto de paneles, tira de iconos, línea de comando, barra de estado y menú Herramientas |
+
+### Las herramientas, una por una
+
+Las mismas del editor web (`app/Views/editor/index.php`, `data-tool`):
+
+| Web | Nativa | Cómo |
+| --- | --- | --- |
+| `select` | Seleccionar | `V`; arrastrar mueve nodo, trazo o caja; las esquinas escalan |
+| `hand` | Mano | `H`; arrastra el lienzo |
+| `wall` | Muro | `M`; dos clics por tramo |
+| `line` | Línea | `L`; dos clics |
+| `rect` | Rectángulo | `B`; dos esquinas |
+| `ellipse` | Elipse | `O`; dos esquinas |
+| `text` | Texto | `T`; un clic y se escribe en el inspector (`⌘L`) |
+| `dimension` | Cota | `D`; dos clics, cifra del núcleo |
+| `route` | Ruta de evacuación | `R`; un clic por nodo |
+| `door` / `door_double` / `door_garage` | Insertar del catálogo | `⌃U`, `⌃⇧U`, `⌃G`, menú Insertar o `⌘⇧I` |
+| `road` | Vía | `E`; dos esquinas, zona con eje discontinuo |
+| `sidewalk` | Andén | `N`; dos esquinas |
+| `crosswalk` | Paso peatonal | `C`; dos esquinas con franjas |
+| `parking` | Parqueadero | `K`; dos esquinas y su «P» |
+| `property` | Lindero | `J`; tramo discontinuo |
+| `pipe` | Tubería | `Q`; tramo azul |
+| `conduit` | Canaleta | `W`; tramo naranja |
+
+La pluma (`P`) y el arco (`A`) del CAD siguen ahí. El catálogo completo sigue en
+el menú Insertar y en el buscador.
+
+### Lo que el núcleo aprendió
+
+- `norma_document_set_box`, `set_rotation`, `set_stroke`, `set_colour`,
+  `set_label`, `set_layer` y `set_current_layer`: el inspector no escribe el
+  modelo a mano. `set_colour` solo acepta `#rrggbb` y el giro se normaliza a
+  0–360; las funciones devuelven 1 solo si algo cambió, y el inspector lo dice.
+- `norma_document_add_shape` (`line`, `rect`, `ellipse`), `add_text` y
+  `duplicate`.
+- `norma_document_add_environment` y `norma_environment_is`: los siete oficios del
+  entorno, con sus medidas de nacimiento —vía 600 × 300 cm, andén 300 × 120,
+  parqueadero 250 × 500— y su SVG propio: trama de la vía, franjas del paso,
+  «P» del parqueadero, lindero discontinuo, tubería y canaleta con su color.
+- El sobre del plano guarda el `color` del elemento, así que un plano abierto en
+  la web y en la ventana nativa conserva lo que la persona eligió.
+
+### La línea de comando
+
+`Comando:` abajo, con Intro. Entiende los verbos de las herramientas, `capa
+<nombre>`, `zoom <n>`, `insertar <tipo>`, `duplicar`, `girar`, `borrar`,
+`rejilla`, `revisar`, `ajustar`, `exportar`, `guardar`, `deshacer`, `rehacer` y
+`ayuda`; sin tildes y en minúsculas. **Intro con la línea vacía repite el último
+comando**, como en AutoCAD.
+
+### Lo que se comprueba
+
+`native/tests/macos.mjs` pasa de 80 a **97 comprobaciones**: la paleta con sus
+ocho grupos, las 19 herramientas, la tira de iconos, el reparto de paneles, las
+pestañas Modelo/Hoja A4 y las coordenadas, los campos del inspector y que cada
+uno use su función del núcleo, los verbos de la línea de comando y su repetición,
+la mano, las figuras, el texto, los tiradores, las flechas, duplicar/girar y el
+entorno. `make -C native test` suma **27 comprobaciones** de entorno y figuras en
+`test_document.c` (60 en total).
+
+Lo que sigue sin poder probarse desde este entorno: **la ventana en pantalla**. El
+`.app` se compila y se arranca con `--check` en el flujo de macOS, pero el
+aspecto, el ratón y el teclado los ve una persona en su Mac.
+
 ### Lo que queda de la N4
 
 - **Windows (Win32) y Linux (GTK)**: el núcleo en C ya compila en los tres
   sistemas; lo que falta es la ventana.
 - **El lienzo dibuja el nombre, no el pictograma** de los 820: el `<svg>` completo
   va al SVG y al PDF, pero un renderizador de SVG en Core Graphics es otra etapa.
-- **Escalar, rotar y renombrar** un objeto desde el lienzo.
+- **Selección múltiple**: hoy se edita un elemento a la vez.
