@@ -14,6 +14,7 @@
 
 #include "normia/json.h"
 #include "normia/jsonw.h"
+#include "normia/object.h"
 
 #define NORMA_DEFAULT_LAYER "capa_planta"
 
@@ -252,6 +253,69 @@ long norma_document_add_marker(norma_document *document, const char *type, doubl
     return (long) (document->count - 1);
 }
 
+long norma_document_add_object(norma_document *document, const char *type, norma_point point,
+                               const char *layer)
+{
+    const norma_object_spec *spec = norma_object_find(type);
+    if (document == NULL || spec == NULL || !reserve_element(document)) {
+        return -1;
+    }
+    norma_element element;
+    memset(&element, 0, sizeof(element));
+    document->identifier += 1;
+    snprintf(element.id, sizeof(element.id), "objeto_%d", document->identifier);
+    set_text(element.type, sizeof(element.type), spec->type, "sign");
+    set_text(element.layer, sizeof(element.layer), layer, document->layer);
+    norma_object_place(spec, point, &element.x, &element.y);
+    element.w = spec->width;
+    element.h = spec->height;
+    element.stroke = spec->stroke;
+    element.node_count = 0;
+    document->elements[document->count] = element;
+    document->count += 1;
+    document->dirty = 1;
+    return (long) (document->count - 1);
+}
+
+int norma_document_set_exit(norma_document *document, size_t element, int is_exit)
+{
+    if (document == NULL || element >= document->count) {
+        return 0;
+    }
+    norma_element *item = &document->elements[element];
+    /* Solo una puerta puede ser salida: marcarlo en un extintor sería una
+       promesa que el auditor no puede cumplir. */
+    if (!norma_object_is_door(item->type)) {
+        return 0;
+    }
+    const int wanted = is_exit ? 1 : 0;
+    if (item->is_exit == wanted) {
+        return 0;
+    }
+    item->is_exit = wanted;
+    document->dirty = 1;
+    return 1;
+}
+
+int norma_document_move_object(norma_document *document, size_t element, double x, double y)
+{
+    if (document == NULL || element >= document->count) {
+        return 0;
+    }
+    norma_element *item = &document->elements[element];
+    /* Los trazos se mueven nodo a nodo: aquí solo cajas. */
+    if (item->node_count >= 2) {
+        return 0;
+    }
+    if (item->x == x && item->y == y) {
+        return 0;
+    }
+    item->x = x;
+    item->y = y;
+    document->dirty = 1;
+    return 1;
+}
+
 int norma_document_move_node(norma_document *document, size_t element, size_t node, double x, double y)
 {
     if (document == NULL || element >= document->count) {
@@ -345,7 +409,16 @@ long norma_document_hit_test(const norma_document *document, norma_point point, 
         const norma_element *item = &document->elements[index];
         double distance;
         if (item->node_count < 2) {
-            distance = hypot(point.x - item->x, point.y - item->y);
+            /* Una caja (puerta, extintor, señal) se elige por dentro, no solo
+               por su centro: si no, en un plano a 1:100 habría que acertarle a
+               un punto de 8 píxeles. */
+            if (item->w > 0.0 && item->h > 0.0) {
+                const double dx = fmax(fmax(item->x - point.x, point.x - (item->x + item->w)), 0.0);
+                const double dy = fmax(fmax(item->y - point.y, point.y - (item->y + item->h)), 0.0);
+                distance = hypot(dx, dy);
+            } else {
+                distance = hypot(point.x - item->x, point.y - item->y);
+            }
         } else {
             distance = tolerance + 1.0; /* el peor caso: solo cuenta si hay tramos */
             for (size_t node = 0; node + 1 < item->node_count; node += 1) {

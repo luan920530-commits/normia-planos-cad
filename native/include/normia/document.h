@@ -157,8 +157,28 @@ long norma_document_add_dimension(norma_document *document, norma_point a, norma
 long norma_document_add_route(norma_document *document, const norma_point *nodes, size_t count,
                               const norma_arc *through, const char *layer);
 
-/** Añade una señal o un equipo en un punto. Devuelve el índice o -1. */
+/** Añade una señal o un equipo en un punto (sin caja: el punto es el centro). Devuelve el índice o -1. */
 long norma_document_add_marker(norma_document *document, const char *type, double x, double y, const char *layer);
+
+/**
+ * Añade un objeto del catálogo (`norma/object.h`) donde se hizo clic: una
+ * puerta apoya su caja en el muro y un equipo o una señal se centran en el
+ * punto. Devuelve el índice o -1 si el tipo no se puede insertar.
+ */
+long norma_document_add_object(norma_document *document, const char *type, norma_point point,
+                               const char *layer);
+
+/**
+ * Marca o desmarca una puerta como salida de emergencia.
+ * Devuelve 1 si cambió y 0 si no (no es una puerta, o ya estaba así).
+ */
+int norma_document_set_exit(norma_document *document, size_t element, int is_exit);
+
+/**
+ * Mueve una caja (puerta, equipo, señal) llevando su esquina a `x`, `y`.
+ * Los trazos se mueven nodo a nodo con `norma_document_move_node`.
+ */
+int norma_document_move_object(norma_document *document, size_t element, double x, double y);
 
 /** Mueve un nodo de un trazo. Devuelve 1 si se movió. */
 int norma_document_move_node(norma_document *document, size_t element, size_t node, double x, double y);

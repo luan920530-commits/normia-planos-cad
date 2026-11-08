@@ -12,6 +12,7 @@
 
 #include "normia/document.h"
 #include "normia/format.h"
+#include "normia/object.h"
 #include "normia/svg.h"
 
 static int checks = 0;
@@ -25,6 +26,18 @@ static void check(const char *name, int condition, const char *detail)
     if (!condition) {
         failures += 1;
     }
+}
+
+/** Cuántas veces aparece `needle` en `haystack`. */
+static int count_of(const char *haystack, const char *needle)
+{
+    int total = 0;
+    const size_t size = strlen(needle);
+    for (const char *cursor = strstr(haystack, needle); cursor != NULL && size > 0;
+         cursor = strstr(cursor + size, needle)) {
+        total += 1;
+    }
+    return total;
 }
 
 static void test_numbers(void)
@@ -168,6 +181,60 @@ static void test_svg_roundtrip(void)
     norma_document_free(&other);
 }
 
+/**
+ * Lo que se inserta desde la ventana: la puerta, el portón y los equipos. Se
+ * comparan las piezas que se ven en el papel, no el archivo entero.
+ */
+static void test_inserted_objects(void)
+{
+    norma_document document;
+    norma_document_init(&document);
+    /* La puerta apoya su caja sobre el muro: el clic va en la línea del muro. */
+    const long door = norma_document_add_object(&document, "door", (norma_point) {90.0, 90.0}, NULL);
+    const long garage = norma_document_add_object(&document, "door_garage", (norma_point) {400.0, 200.0}, NULL);
+    (void) norma_document_add_object(&document, "cad_eds_extinguisher", (norma_point) {600.0, 300.0}, NULL);
+    (void) norma_document_add_object(&document, "cad_emg_firstaid", (norma_point) {800.0, 300.0}, NULL);
+    (void) norma_document_add_object(&document, "cad_emg_aed", (norma_point) {1000.0, 300.0}, NULL);
+
+    check("Los objetos del menú se insertan en el documento", door == 0 && garage == 1,
+          "door · door_garage");
+
+    norma_svg_options options = {0, 0, "Objetos"};
+    char *svg = norma_document_to_svg(&document, &options);
+    check("La puerta se exporta con jambas, umbral discontinuo, hoja y arco",
+          svg != NULL && strstr(svg, "M 45 90 V 76") != NULL
+              && strstr(svg, "M 45 90 H 135") != NULL
+              && strstr(svg, "stroke-dasharray=\"4 4\"") != NULL
+              && strstr(svg, "M 45 0 A 90 90 0 0 1 135 90") != NULL,
+          "jambas · umbral · hoja · arco");
+
+    check("El portón lleva su panel y sus barrotes",
+          svg != NULL && count_of(svg, "opacity=\".75\"") == 9
+              && strstr(svg, "fill-opacity=\".1\"") != NULL,
+          "panel · 9 barrotes");
+
+    check("El extintor se dibuja con su cuerpo y su manguera, no con una caja vacía",
+          svg != NULL && strstr(svg, "<g fill=\"#b91c1c\">") != NULL
+              && strstr(svg, "stroke=\"#b91c1c\" stroke-width=\"6.3\"") != NULL,
+          "cuerpo · manguera");
+
+    check("El botiquín y el DEA llevan su pictograma",
+          svg != NULL && strstr(svg, "<g fill=\"#15803d\">") != NULL
+              && strstr(svg, "<path fill=\"#7c3aed\" d=\"M ") != NULL,
+          "cruz · rayo");
+
+    if (svg != NULL && door >= 0) {
+        const int changed = norma_document_set_exit(&document, (size_t) door, 1);
+        char *green = norma_document_to_svg(&document, &options);
+        check("Una puerta marcada como salida va en verde de evacuación",
+              changed == 1 && green != NULL && strstr(green, "stroke=\"#237f52\"") != NULL,
+              "#237f52");
+        free(green);
+    }
+    free(svg);
+    norma_document_free(&document);
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IOLBF, 0);
@@ -177,6 +244,8 @@ int main(void)
     test_measures();
     printf("\nExportación\n");
     test_svg();
+    printf("\nObjetos insertados\n");
+    test_inserted_objects();
     printf("\nIda y vuelta\n");
     test_svg_roundtrip();
     printf("\n%d/%d comprobaciones correctas.\n", checks - failures, checks);

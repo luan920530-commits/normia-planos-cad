@@ -159,10 +159,10 @@ static void test_catalog(norma_library *library)
     free(svg_plano);
     options.library = NULL;
     char *svg_generico = norma_document_to_svg(&plano, &options);
-    check("Sin catálogo el marcador sigue siendo el genérico",
+    check("Sin catálogo la señal se dibuja como caja, no desaparece",
           svg_generico != NULL && strstr(svg_generico, "preserveAspectRatio") == NULL
-              && strstr(svg_generico, "stroke=\"#d97706\"") != NULL,
-          "marcador de reserva");
+              && strstr(svg_generico, "<rect x=\"300\" y=\"300\" width=\"60\" height=\"60\"") != NULL,
+          "caja de reserva");
     free(svg_generico);
     norma_document_free(&plano);
 }

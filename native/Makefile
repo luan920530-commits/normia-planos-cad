@@ -14,7 +14,7 @@ CPPFLAGS += -Iinclude
 LDLIBS += -lm
 
 BUILD := build
-SOURCES := src/units.c src/geometry.c src/json.c src/jsonw.c src/format.c src/plan.c src/document.c src/svg.c src/grid.c src/audit.c src/travel.c src/findings.c src/library.c src/signage.c src/firstaid.c src/extinguisher.c src/scenarios.c src/routes.c src/inspect.c src/drill.c
+SOURCES := src/units.c src/geometry.c src/json.c src/jsonw.c src/format.c src/plan.c src/document.c src/svg.c src/grid.c src/audit.c src/travel.c src/findings.c src/library.c src/signage.c src/firstaid.c src/extinguisher.c src/scenarios.c src/routes.c src/object.c src/inspect.c src/drill.c
 OBJECTS := $(SOURCES:src/%.c=$(BUILD)/%.o)
 HEADERS := $(wildcard include/normia/*.h)
 
