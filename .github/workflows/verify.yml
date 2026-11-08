@@ -230,5 +230,9 @@ jobs:
       - name: Construir y verificar los ZIP
         run: |
           bash tools/build-packages.sh
-          cp dist/*.zip dist/SHA256SUMS.txt dist/BUILD.txt paquetes/v"$(node -p 'require("./package.json").version')"/
+          # La carpeta de la versión puede no existir todavía: se crea aquí para
+          # que subir `NORMA_VERSION` no rompa el trabajo antes de publicar.
+          ENTREGA="paquetes/v$(node -p 'require("./package.json").version')"
+          mkdir -p "$ENTREGA"
+          cp dist/*.zip dist/SHA256SUMS.txt dist/BUILD.txt "$ENTREGA"/
           node tests/php/package.mjs 8.3
