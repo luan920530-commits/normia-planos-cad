@@ -42,6 +42,22 @@ NS_ASSUME_NONNULL_BEGIN
 /** Escala actual del plano en la ventana. */
 - (double)currentZoom;
 /**
+ * Arma la colocación de un objeto del catálogo (`norma/object.h`): el siguiente
+ * clic en el plano lo inserta. La herramienta sigue armada hasta Esc, para
+ * poner varios extintores seguidos.
+ */
+- (void)beginInsert:(NSString *)type;
+
+/** Tipo que se está insertando, o `nil` si no hay ninguno armado. */
+- (NSString *)insertingType;
+
+/**
+ * Marca o desmarca como salida de emergencia la puerta seleccionada y devuelve
+ * el mensaje para la barra de estado. Sin puerta seleccionada devuelve `nil`.
+ */
+- (NSString *)toggleSelectedExit;
+
+/**
  * Elige herramienta con la letra del lienzo (`m`, `p`, `a`, `d`, `r`, `v`).
  * Devuelve `NO` si la tecla no es de ninguna herramienta.
  */

@@ -18,6 +18,7 @@
 #include "normia/svg.h"
 
 #include "normia/document.h"
+#include "normia/object.h"
 
 static const char *kAppName = "Normia Estudio";
 
@@ -392,6 +393,36 @@ static const NSUInteger kRecentLimit = 10;
     [viewMenu addItemWithTitle:@"Pantalla completa" action:@selector(toggleFullScreen:) keyEquivalent:@"f"];
     viewItem.submenu = viewMenu;
     [menubar addItem:viewItem];
+
+    NSMenuItem *insertItem = [[NSMenuItem alloc] init];
+    NSMenu *insertMenu = [[NSMenu alloc] initWithTitle:@"Insertar"];
+    /* El lienzo usa letras sueltas para las herramientas, así que aquí los atajos
+       van con Control: ⌃ no produce caracteres muertos como ⌥ en un teclado
+       en español. */
+    NSArray<NSString *> *keys = @[@"u", @"U", @"g", @"e", @"b", @"c", @"d", @"m", @"1", @"2", @"a"];
+    for (size_t index = 0; index < norma_object_count(); index += 1) {
+        const norma_object_spec *spec = norma_object_at(index);
+        NSString *title = [NSString stringWithFormat:@"%s", spec->name];
+        NSString *key = index < keys.count ? keys[index] : @"";
+        NSMenuItem *item = [insertMenu addItemWithTitle:title action:@selector(insertObject:) keyEquivalent:key];
+        item.keyEquivalentModifierMask = NSEventModifierFlagControl;
+        item.representedObject = [NSString stringWithFormat:@"%s", spec->type];
+        item.tag = (NSInteger) index;
+        /* Las puertas primero y un separador antes de los equipos, como la web. */
+        if (strcmp(spec->type, "door_garage") == 0) {
+            [insertMenu addItem:[NSMenuItem separatorItem]];
+        }
+        if (strcmp(spec->type, "cad_emg_meeting") == 0) {
+            [insertMenu addItem:[NSMenuItem separatorItem]];
+        }
+    }
+    [insertMenu addItem:[NSMenuItem separatorItem]];
+    NSMenuItem *exitItem = [insertMenu addItemWithTitle:@"Marcar o desmarcar salida de emergencia"
+                                                 action:@selector(toggleExit:)
+                                          keyEquivalent:@"E"];
+    exitItem.keyEquivalentModifierMask = NSEventModifierFlagCommand | NSEventModifierFlagShift;
+    insertItem.submenu = insertMenu;
+    [menubar addItem:insertItem];
 
     NSMenuItem *helpItem = [[NSMenuItem alloc] init];
     NSMenu *helpMenu = [[NSMenu alloc] initWithTitle:@"Ayuda"];
@@ -794,6 +825,27 @@ static const NSUInteger kRecentLimit = 10;
     [self.canvas zoomToFit];
 }
 
+/* ------------------------------- insertar -------------------------------- */
+
+- (void)insertObject:(NSMenuItem *)sender
+{
+    NSString *type = sender.representedObject;
+    if (![type isKindOfClass:[NSString class]]) {
+        return;
+    }
+    [self.window makeFirstResponder:self.canvas];
+    [self.canvas beginInsert:type];
+}
+
+- (void)toggleExit:(id)sender
+{
+    (void) sender;
+    NSString *message = [self.canvas toggleSelectedExit];
+    [self canvasStatus:self.canvas
+               message:message != nil ? message
+                                      : @"Elige una puerta para marcarla como salida de emergencia."];
+}
+
 - (void)showHelp:(id)sender
 {
     (void) sender;
@@ -804,6 +856,11 @@ static const NSUInteger kRecentLimit = 10;
                             @"P · pluma de nodos: un clic por nodo, Enter o doble clic cierra.\n"
                             @"A · arco de tres puntos: inicio, paso y fin.\n"
                             @"D · cota entre dos puntos, con la cifra y la unidad.\n"
+                            @"R · ruta de evacuación: un clic por nodo, Enter o doble clic cierra.\n"
+                            @"Insertar · puertas, extintor, botiquín, camilla, DEA, punto de encuentro y señales: "
+                            @"se elige en el menú y se coloca con un clic (Esc termina de insertar).\n"
+                            @"⌘⇧E marca o desmarca la puerta elegida como salida de emergencia: el auditor "
+                            @"mide desde ahí el recorrido y la cuenta como salida.\n"
                             @"Esc cancela la herramienta; Retroceso quita el último nodo o borra lo seleccionado; ⌘Z deshace.\n"
                             @"⌘P imprime el plano en A4 horizontal y Archivo › Exportar PDF guarda esa misma hoja.\n"
                             @"El lienzo es tan grande como haga falta: rueda del ratón o pellizco para acercar, "

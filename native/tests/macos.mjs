@@ -23,6 +23,10 @@ const delegate = read('AppDelegate.m');
 const canvas = read('CanvasView.m');
 const canvasHeader = read('CanvasView.h');
 const plist = read('Info.plist');
+const svgC = fs.readFileSync(path.join(repoRoot, 'native', 'src', 'svg.c'), 'utf8');
+const objectH = fs.readFileSync(path.join(repoRoot, 'native', 'include', 'normia', 'object.h'), 'utf8');
+const documentH = fs.readFileSync(path.join(repoRoot, 'native', 'include', 'normia', 'document.h'), 'utf8');
+const signsTest = fs.readFileSync(path.join(repoRoot, 'native', 'tests', 'test_signs.c'), 'utf8');
 const makefile = read('Makefile');
 const leerFlujo = (name) => fs.readFileSync(path.join(repoRoot, '.github', 'workflows', name), 'utf8');
 const verifyWorkflow = leerFlujo('verify.yml');
@@ -264,6 +268,78 @@ report.check('Acercar, alejar y zoom 100 % están en el menú Ver con sus atajos
 
 report.check('Al cambiar el zoom se dice en la barra de estado',
   /Zoom %\.0f %%/.test(canvas), 'porcentaje');
+
+/* ------------------- 4e · el menú Insertar de la etapa N4 ------------------- */
+
+report.check('El menú Insertar se arma con el catálogo del núcleo, no con una lista copiada',
+  /NSMenu \*insertMenu = \[\[NSMenu alloc\] initWithTitle:@"Insertar"\]/.test(delegate)
+  && /for \(size_t index = 0; index < norma_object_count\(\); index \+= 1\)/.test(delegate)
+  && /const norma_object_spec \*spec = norma_object_at\(index\)/.test(delegate)
+  && /#include "normia\/object\.h"/.test(delegate)
+  && !/@"cad_emg_aed"/.test(delegate),
+  'norma_object_at · 11 objetos');
+
+report.check('Los objetos insertables son once: puertas, equipos de emergencia y señales',
+  /#define NORMA_OBJECT_COUNT 11/.test(objectH)
+  && ['door', 'door_double', 'door_garage', 'cad_eds_extinguisher', 'cad_emg_firstaid',
+    'cad_emg_stretcher', 'cad_emg_aed', 'cad_emg_meeting', 'iso_e001', 'iso_e007', 'sig_aqui']
+    .every((type) => fs.readFileSync(path.join(repoRoot, 'native', 'src', 'object.c'), 'utf8').includes(`"${type}"`)),
+  '11 objetos');
+
+report.check('Los atajos de Insertar van con ⌃ y no pisan las letras del lienzo',
+  /NSEventModifierFlagControl/.test(delegate)
+  && /item\.keyEquivalentModifierMask = NSEventModifierFlagControl;/.test(delegate)
+  && /NSArray<NSString \*> \*keys = @\[@"u", @"U", @"g", @"e", @"b", @"c", @"d", @"m", @"1", @"2", @"a"\]/.test(delegate),
+  '⌃U ⌃U ⌃G ⌃E ⌃B ⌃C ⌃D ⌃M ⌃1 ⌃2 ⌃A');
+
+report.check('Las puertas se separan de los equipos y de las señales con separadores',
+  /strcmp\(spec->type, "door_garage"\) == 0\) \{\s*\[insertMenu addItem:\[NSMenuItem separatorItem\]\]/.test(delegate)
+  && /strcmp\(spec->type, "cad_emg_meeting"\) == 0\) \{\s*\[insertMenu addItem:\[NSMenuItem separatorItem\]\]/.test(delegate),
+  'puertas · equipos · señales');
+
+report.check('Marcar o desmarcar una salida está en el menú Insertar y no en el lienzo',
+  /Marcar o desmarcar salida de emergencia/.test(delegate)
+  && /action:@selector\(toggleExit:\)/.test(delegate)
+  && /exitItem\.keyEquivalentModifierMask = NSEventModifierFlagCommand \| NSEventModifierFlagShift;/.test(delegate)
+  && /- \(void\)toggleExit:/.test(delegate),
+  '⌘⇧E');
+
+report.check('La herramienta de inserción coloca el objeto con un clic y Esc la termina',
+  /CanvasToolInsert/.test(canvas) && /- \(void\)beginInsert:\(NSString \*\)type/.test(canvasHeader)
+  && /norma_document_add_object\(self\.document, _insertType, point, NULL\)/.test(canvas)
+  && /if \(_tool == CanvasToolInsert && _insertType\[0\] != '\\0'\)/.test(canvas)
+  && (canvas.match(/_insertType\[0\] = '\\0';/g) || []).length >= 2,
+  'beginInsert: · Esc · cancelDraft');
+
+report.check('El núcleo sabe insertar, mover y marcar salida sin salir del documento',
+  /norma_document_add_object/.test(documentH) && /norma_document_set_exit/.test(documentH)
+  && /norma_document_move_object/.test(documentH)
+  && /norma_document_move_object\(self\.document, element, round\(point\.x - _dragOffsetX\)/.test(canvas),
+  'add_object · set_exit · move_object');
+
+report.check('La puerta se dibuja con jambas, umbral discontinuo, hoja y arco',
+  /- \(void\)drawDoor:\(const norma_element \*\)element selected:\(BOOL\)selected/.test(canvas)
+  && /CGContextSetLineDash\(context, 0\.0, dashes, 2\)/.test(canvas)
+  && /element->is_exit/.test(canvas) && /strcmp\(element->type, "door_garage"\) == 0/.test(canvas),
+  'jambas · umbral · hoja · arco');
+
+report.check('La exportación a SVG dibuja la misma puerta que la web',
+  /static void write_door\(norma_buffer \*buffer, const norma_element \*element\)/.test(svgC)
+  && /stroke-dasharray=\\"4 4\\"/.test(svgC) && /#237f52/.test(svgC) && /#475569/.test(svgC),
+  'write_door · verde de salida');
+
+report.check('Los equipos y las señales se dibujan con pictograma, y sin catálogo con su caja',
+  /- \(void\)drawObject:\(const norma_element \*\)element selected:\(BOOL\)selected/.test(canvas)
+  && /- \(NSColor \*\)colourForObject:/.test(canvas)
+  && /strcmp\(type, "cad_emg_firstaid"\) == 0/.test(canvas) && /strcmp\(type, "cad_emg_aed"\) == 0/.test(canvas)
+  && /static void write_box_object\(norma_buffer \*buffer, const norma_element \*element/.test(svgC)
+  && /caja, no desaparece/.test(signsTest),
+  'pictogramas · caja de reserva');
+
+report.check('Los objetos de una sola caja llevan su rótulo con la medida y la unidad del plano',
+  /- \(NSString \*\)captionForObject:\(const norma_element \*\)element/.test(canvas)
+  && /norma_format_measure_cm\(element->w, self\.document->unit/.test(canvas),
+  'captionForObject:');
 
 /* ------------------------------ 5 · sistema mínimo ----------------------------- */
 

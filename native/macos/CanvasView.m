@@ -10,6 +10,10 @@
  *   · D · cota entre dos puntos, rotulada con la cifra y la unidad;
  *   · R · ruta de evacuación: un clic por nodo, Enter o doble clic cierra; el
  *     auditor la mide después y dice si llega a una salida;
+ *   · Insertar · un objeto del catálogo (`norma/object.h`) se coloca con un
+ *     clic: puertas, extintor, botiquín, camilla, DEA, punto de encuentro y
+ *     señales. La herramienta sigue armada hasta Esc, y ⌘⇧E marca la puerta
+ *     seleccionada como salida de emergencia;
  *   · Esc cancela la herramienta y Retroceso borra lo seleccionado.
  *
  * La geometría, las medidas y el formato de las cifras viven en el núcleo en C:
@@ -18,12 +22,17 @@
 #import "CanvasView.h"
 
 #include <math.h>
+#include <stdio.h>
 #include <string.h>
 
 #include "normia/format.h"
+#include "normia/object.h"
 
 static const CGFloat kToleranceScreen = 8.0;
 static const int kMaxDraftNodes = 64;
+/* π a mano: con `-std=c11` estricto, `M_PI` no está garantizado. */
+static const double kPi = 3.14159265358979323846;
+static const double kHalfPi = 1.57079632679489661923;
 
 typedef NS_ENUM(NSInteger, CanvasTool) {
     CanvasToolSelect = 0,
@@ -32,6 +41,7 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
     CanvasToolArc,
     CanvasToolDimension,
     CanvasToolRoute,
+    CanvasToolInsert,
 };
 
 @interface CanvasView ()
@@ -41,6 +51,7 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
 @property(nonatomic) NSInteger selectedElement;
 @property(nonatomic) norma_point cursorPoint;
 - (void)ensureView;
+- (void)placeInsertedObject:(norma_point)point;
 - (void)clampZoom:(double *)zoom;
 - (void)zoomBy:(double)factor atPoint:(NSPoint)anchor;
 - (void)panByDeltaX:(CGFloat)dx deltaY:(CGFloat)dy;
@@ -62,6 +73,12 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
     /* Puntos de la revisión (hallazgos con posición), para verlos en el plano. */
     norma_point _findingPoints[64];
     size_t _findingCount;
+    /* Tipo armado para insertar ("" si no hay ninguno). */
+    char _insertType[24];
+    /* Desfase entre el clic y la esquina de la caja, para que al arrastrar no
+       salte el objeto bajo el puntero. */
+    double _dragOffsetX;
+    double _dragOffsetY;
 }
 
 - (instancetype)initWithFrame:(NSRect)frame
@@ -96,6 +113,7 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
     _tool = CanvasToolSelect;
     _draftCount = 0;
     _hasCursor = NO;
+    _insertType[0] = '\0';
     _viewReady = NO; /* plano nuevo: se vuelve a ajustar a la ventana */
     [self setNeedsDisplay:YES];
 }
@@ -296,6 +314,230 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
 
 /* -------------------------------- dibujo --------------------------------- */
 
+/** Color de cada equipo: el mismo que usa la exportación a SVG. */
+- (NSColor *)colourForObject:(const norma_element *)element
+{
+    const char *type = element->type;
+    if (strncmp(type, "cad_fire_ext", 12) == 0 || strcmp(type, "cad_eds_extinguisher") == 0
+        || strcmp(type, "cad_drg_extinguisher") == 0) {
+        return [NSColor colorWithCalibratedRed:0.73 green:0.11 blue:0.11 alpha:1.0];
+    }
+    if (strcmp(type, "cad_emg_firstaid") == 0) {
+        return [NSColor colorWithCalibratedRed:0.08 green:0.50 blue:0.24 alpha:1.0];
+    }
+    if (strcmp(type, "cad_emg_stretcher") == 0 || strcmp(type, "cad_hosp_stretcher") == 0) {
+        return [NSColor colorWithCalibratedRed:0.05 green:0.45 blue:0.56 alpha:1.0];
+    }
+    if (strcmp(type, "cad_emg_aed") == 0) {
+        return [NSColor colorWithCalibratedRed:0.49 green:0.23 blue:0.93 alpha:1.0];
+    }
+    if (strcmp(type, "cad_emg_meeting") == 0) {
+        return [NSColor colorWithCalibratedRed:0.02 green:0.47 blue:0.34 alpha:1.0];
+    }
+    return [NSColor colorWithCalibratedRed:0.20 green:0.25 blue:0.33 alpha:1.0];
+}
+
+/**
+ * Puerta en planta: jambas, umbral discontinuo, hoja y arco de apertura, el
+ * mismo dibujo que `SvgExporter::doorMarkup()` en la web y que la exportación
+ * del núcleo. La salida marcada va en verde de evacuación.
+ */
+- (void)drawDoor:(const norma_element *)element selected:(BOOL)selected context:(CGContextRef)context
+            zoom:(CGFloat)zoom
+{
+    const double x = element->x;
+    const double w = element->w > 0.0 ? element->w : 90.0;
+    const double h = element->h > 0.0 ? element->h : 90.0;
+    const double stroke = element->stroke > 0.0 ? element->stroke : 2.0;
+    const double edge = element->y + h;
+    const double jamb = fmin(14.0, fmax(5.0, h * 0.16));
+    const double frame = fmax(1.8, stroke * 1.15);
+    const double thin = fmax(1.0, stroke * 0.65);
+
+    if (selected) {
+        CGContextSetRGBStrokeColor(context, 0.22, 0.52, 1.0, 1.0);
+    } else if (element->is_exit) {
+        CGContextSetRGBStrokeColor(context, 0.14, 0.50, 0.32, 1.0);
+    } else {
+        CGContextSetRGBStrokeColor(context, 0.28, 0.33, 0.40, 1.0);
+    }
+    CGContextSetLineCap(context, kCGLineCapRound);
+    CGContextSetLineDash(context, 0.0, NULL, 0);
+
+    /* Jambas. */
+    CGContextSetLineWidth(context, (CGFloat) frame / zoom);
+    CGContextBeginPath(context);
+    CGContextMoveToPoint(context, x, edge);
+    CGContextAddLineToPoint(context, x, edge - jamb);
+    CGContextMoveToPoint(context, x + w, edge);
+    CGContextAddLineToPoint(context, x + w, edge - jamb);
+    CGContextStrokePath(context);
+
+    /* Umbral: la línea del muro, discontinua. */
+    const CGFloat dashes[2] = {(CGFloat) fmax(2.0, 4.0 / zoom), (CGFloat) fmax(2.0, 4.0 / zoom)};
+    CGContextSetLineDash(context, 0.0, dashes, 2);
+    CGContextSetLineWidth(context, (CGFloat) thin / zoom);
+    CGContextBeginPath(context);
+    CGContextMoveToPoint(context, x, edge);
+    CGContextAddLineToPoint(context, x + w, edge);
+    CGContextStrokePath(context);
+    CGContextSetLineDash(context, 0.0, NULL, 0);
+
+    if (strcmp(element->type, "door_garage") == 0) {
+        const double panel = fmin(30.0, fmax(10.0, h * 0.55));
+        const double top = edge - panel;
+        CGContextSetRGBFillColor(context, 0.28, 0.33, 0.40, 0.10);
+        CGContextFillRect(context, CGRectMake(x + 3.0, top, fmax(6.0, w - 6.0), panel));
+        CGContextSetLineWidth(context, (CGFloat) fmax(1.2, stroke * 0.75) / zoom);
+        CGContextStrokeRect(context, CGRectMake(x + 3.0, top, fmax(6.0, w - 6.0), panel));
+        const int bars = (int) fmax(3.0, fmin(14.0, round(w / 16.0)));
+        CGContextSetLineWidth(context, (CGFloat) fmax(0.9, stroke * 0.55) / zoom);
+        CGContextBeginPath(context);
+        for (int bar = 1; bar < bars; bar += 1) {
+            const double barX = x + 3.0 + (fmax(6.0, w - 6.0) * (double) bar) / (double) bars;
+            CGContextMoveToPoint(context, barX, top + 1.5);
+            CGContextAddLineToPoint(context, barX, edge - 1.5);
+        }
+        CGContextStrokePath(context);
+        return;
+    }
+
+    const BOOL doubleLeaf = strcmp(element->type, "door_double") == 0;
+    const double leaf = fmax(8.0, fmin(doubleLeaf ? w / 2.0 : w, h));
+    const double leafWidth = fmax(2.2, stroke * 1.2);
+    for (int side = 0; side < (doubleLeaf ? 2 : 1); side += 1) {
+        const double hinge = side == 0 ? x : x + w;
+        const double reach = side == 0 ? x + leaf : x + w - leaf;
+        CGContextSetLineWidth(context, (CGFloat) leafWidth / zoom);
+        CGContextBeginPath(context);
+        CGContextMoveToPoint(context, hinge, edge);
+        CGContextAddLineToPoint(context, hinge, edge - leaf);
+        CGContextStrokePath(context);
+        /* El arco de apertura se traza por puntos: con la vista invertida, un
+           `CGContextAddArc` con ángulos es más fácil de equivocar que de leer. */
+        const double from = -kHalfPi;
+        const double to = reach >= hinge ? 0.0 : -kPi;
+        const int steps = 24;
+        CGContextSetLineWidth(context, (CGFloat) fmax(1.0, stroke * 0.6) / zoom);
+        CGContextBeginPath(context);
+        for (int step = 0; step <= steps; step += 1) {
+            const double angle = from + (to - from) * (double) step / (double) steps;
+            const double px = hinge + leaf * cos(angle);
+            const double py = edge + leaf * sin(angle);
+            if (step == 0) {
+                CGContextMoveToPoint(context, px, py);
+            } else {
+                CGContextAddLineToPoint(context, px, py);
+            }
+        }
+        CGContextStrokePath(context);
+    }
+}
+
+/** Equipo o señal con caja: una caja con su pictograma dentro. */
+- (void)drawObject:(const norma_element *)element selected:(BOOL)selected context:(CGContextRef)context
+              zoom:(CGFloat)zoom
+{
+    const double w = element->w;
+    const double h = element->h > 0.0 ? element->h : element->w;
+    NSColor *colour = [self colourForObject:element];
+    CGColorRef cg = colour.CGColor;
+    CGContextSetStrokeColorWithColor(context, cg);
+    CGContextSetLineWidth(context, (CGFloat) (selected ? 2.6 : 1.4) / zoom);
+    const CGFloat radius = (CGFloat) fmin(4.0, fmin(w, h) * 0.12);
+    CGPathRef box = CGPathCreateWithRoundedRect(CGRectMake(element->x, element->y, w, h), radius, radius, NULL);
+    CGContextAddPath(context, box);
+    CGContextSetFillColorWithColor(context, [colour colorWithAlphaComponent:0.14].CGColor);
+    CGContextDrawPath(context, kCGPathFillStroke);
+    CGPathRelease(box);
+
+    CGContextSetFillColorWithColor(context, cg);
+    CGContextSetStrokeColorWithColor(context, cg);
+    const double cx = element->x + w / 2.0;
+    const double cy = element->y + h / 2.0;
+    const double size = fmin(w, h);
+    const char *type = element->type;
+
+    if (strcmp(type, "cad_emg_firstaid") == 0) {
+        /* Cruz blanca de botiquín. */
+        const double arm = size * 0.30;
+        const double thick = size * 0.13;
+        CGContextSetLineWidth(context, (CGFloat) thick);
+        CGContextSetLineCap(context, kCGLineCapButt);
+        CGContextBeginPath(context);
+        CGContextMoveToPoint(context, cx - arm, cy);
+        CGContextAddLineToPoint(context, cx + arm, cy);
+        CGContextMoveToPoint(context, cx, cy - arm);
+        CGContextAddLineToPoint(context, cx, cy + arm);
+        CGContextStrokePath(context);
+        return;
+    }
+    if (strcmp(type, "cad_emg_meeting") == 0) {
+        /* Cuatro flechas hacia fuera: el símbolo de punto de reunión. */
+        CGContextSetLineWidth(context, (CGFloat) (size * 0.09));
+        CGContextBeginPath(context);
+        const double inner = size * 0.16;
+        const double outer = size * 0.38;
+        for (int side = 0; side < 4; side += 1) {
+            const double angle = kHalfPi * (double) side;
+            const double dx = cos(angle);
+            const double dy = sin(angle);
+            CGContextMoveToPoint(context, cx + dx * inner, cy + dy * inner);
+            CGContextAddLineToPoint(context, cx + dx * outer, cy + dy * outer);
+            /* Punta de la flecha. */
+            const double tip = size * 0.11;
+            CGContextMoveToPoint(context, cx + dx * outer, cy + dy * outer);
+            CGContextAddLineToPoint(context, cx + dx * (outer - tip) - dy * tip * 0.7,
+                                    cy + dy * (outer - tip) + dx * tip * 0.7);
+            CGContextMoveToPoint(context, cx + dx * outer, cy + dy * outer);
+            CGContextAddLineToPoint(context, cx + dx * (outer - tip) + dy * tip * 0.7,
+                                    cy + dy * (outer - tip) - dx * tip * 0.7);
+        }
+        CGContextStrokePath(context);
+        return;
+    }
+    if (strcmp(type, "cad_emg_stretcher") == 0 || strcmp(type, "cad_hosp_stretcher") == 0) {
+        /* Camilla: dos barrotes y la cabecera. */
+        CGContextSetLineWidth(context, (CGFloat) (size * 0.07));
+        CGContextBeginPath(context);
+        CGContextMoveToPoint(context, cx - size * 0.34, cy - size * 0.16);
+        CGContextAddLineToPoint(context, cx + size * 0.34, cy - size * 0.16);
+        CGContextMoveToPoint(context, cx - size * 0.34, cy + size * 0.16);
+        CGContextAddLineToPoint(context, cx + size * 0.34, cy + size * 0.16);
+        CGContextStrokePath(context);
+        CGContextFillEllipseInRect(context, CGRectMake(cx - size * 0.40, cy - size * 0.12, size * 0.16,
+                                                      size * 0.24));
+        return;
+    }
+    if (strcmp(type, "cad_emg_aed") == 0) {
+        /* Rayo del desfibrilador. */
+        CGContextBeginPath(context);
+        CGContextMoveToPoint(context, cx + size * 0.06, cy - size * 0.30);
+        CGContextAddLineToPoint(context, cx - size * 0.18, cy + size * 0.04);
+        CGContextAddLineToPoint(context, cx + size * 0.02, cy + size * 0.04);
+        CGContextAddLineToPoint(context, cx - size * 0.08, cy + size * 0.30);
+        CGContextAddLineToPoint(context, cx + size * 0.20, cy - size * 0.06);
+        CGContextAddLineToPoint(context, cx, cy - size * 0.06);
+        CGContextClosePath(context);
+        CGContextFillPath(context);
+        return;
+    }
+    if (strncmp(type, "cad_fire_ext", 12) == 0 || strstr(type, "extinguisher") != NULL) {
+        /* Extintor: cuerpo y boquilla. */
+        CGContextFillRect(context, CGRectMake(cx - size * 0.13, cy - size * 0.18, size * 0.26, size * 0.42));
+        CGContextFillRect(context, CGRectMake(cx - size * 0.04, cy - size * 0.32, size * 0.08, size * 0.14));
+        CGContextSetLineWidth(context, (CGFloat) (size * 0.07));
+        CGContextBeginPath(context);
+        CGContextMoveToPoint(context, cx + size * 0.04, cy - size * 0.28);
+        CGContextAddLineToPoint(context, cx + size * 0.22, cy - size * 0.20);
+        CGContextStrokePath(context);
+        return;
+    }
+    /* Señal del catálogo: marco interior, como el pictograma que se imprime. */
+    CGContextSetLineWidth(context, (CGFloat) (size * 0.06));
+    CGContextStrokeRect(context, CGRectMake(element->x + w * 0.18, element->y + h * 0.18, w * 0.64, h * 0.64));
+}
+
 - (void)drawRect:(NSRect)dirtyRect
 {
     (void) dirtyRect;
@@ -354,6 +596,16 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
         const norma_element *element = &self.document->elements[index];
         const BOOL selected = (NSInteger) index == _selectedElement;
         const BOOL isDimension = strcmp(element->type, "dimension") == 0;
+
+        /* Puertas y objetos con caja se dibujan aparte: no son trazos. */
+        if (element->node_count < 2 && norma_object_is_door(element->type)) {
+            [self drawDoor:element selected:selected context:context zoom:zoom];
+            continue;
+        }
+        if (element->node_count < 2 && element->w > 0.0) {
+            [self drawObject:element selected:selected context:context zoom:zoom];
+            continue;
+        }
 
         if (selected) {
             CGContextSetRGBStrokeColor(context, 0.22, 0.52, 1.0, 1.0);
@@ -465,6 +717,12 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
     for (size_t index = 0; index < self.document->count; index += 1) {
         const norma_element *element = &self.document->elements[index];
         if (element->node_count < 2) {
+            NSString *caption = [self captionForObject:element];
+            if (caption != nil) {
+                [self drawLabel:caption
+                         atPlan:((norma_point) {element->x + element->w / 2.0,
+                                                element->y + (element->h > 0.0 ? element->h : 0.0) + 4.0})];
+            }
             continue;
         }
         if (strcmp(element->type, "route") == 0) {
@@ -486,6 +744,47 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
         norma_format_measure_cm(norma_distance(a, b), self.document->unit, caption, sizeof(caption));
         [self drawLabel:@(caption) atPlan:((norma_point) {(a.x + b.x) / 2.0, (a.y + b.y) / 2.0})];
     }
+}
+
+/**
+ * Rótulo del objeto. No inventa nombres: usa el que la persona le puso; si no
+ * hay, el código de la señal (`iso_e001` → `E001`) o una abreviatura conocida.
+ * Lo que diga el informe lo decide el catálogo, no esto.
+ */
+- (NSString *)captionForObject:(const norma_element *)element
+{
+    if (element->label[0] != '\0') {
+        return [NSString stringWithUTF8String:element->label];
+    }
+    if (norma_object_is_door(element->type)) {
+        return element->is_exit ? @"SALIDA" : nil;
+    }
+    const char *type = element->type;
+    if (strncmp(type, "iso_", 4) == 0 && strlen(type) == 8) {
+        return [[NSString stringWithUTF8String:type + 4] uppercaseString];
+    }
+    if (strncmp(type, "sig_", 4) == 0) {
+        return [NSString stringWithUTF8String:type + 4];
+    }
+    if (strcmp(type, "cad_ems_extinguisher") == 0 || strstr(type, "extinguisher") != NULL) {
+        return @"EXT";
+    }
+    if (strcmp(type, "cad_emg_firstaid") == 0) {
+        return @"BOTIQUÍN";
+    }
+    if (strcmp(type, "cad_emg_stretcher") == 0 || strcmp(type, "cad_hosp_stretcher") == 0) {
+        return @"CAMILLA";
+    }
+    if (strcmp(type, "cad_emg_aed") == 0) {
+        return @"DEA";
+    }
+    if (strcmp(type, "cad_emg_meeting") == 0) {
+        return @"ENCUENTRO";
+    }
+    if (strcmp(type, "text") == 0) {
+        return nil; /* el texto ya se rotula con su contenido */
+    }
+    return nil;
 }
 
 - (void)drawLabel:(NSString *)text atPlan:(norma_point)point
@@ -547,6 +846,11 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
     }
     const norma_point point = [self planPointForEvent:event];
 
+    if (_tool == CanvasToolInsert && _insertType[0] != '\0') {
+        [self placeInsertedObject:point];
+        return;
+    }
+
     if (_tool == CanvasToolDimension || _tool == CanvasToolArc || _tool == CanvasToolWall) {
         if (_draftCount < kMaxDraftNodes) {
             _draft[_draftCount] = point;
@@ -594,8 +898,77 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
         _draggingNode = YES;
         _editBegun = NO;
         _dragOrigin = point;
+        /* El desfase se mide desde la esquina de la caja: así el objeto no salta
+           bajo el puntero al empezar a arrastrar. */
+        _dragOffsetX = point.x - element->x;
+        _dragOffsetY = point.y - element->y;
     }
     [self setNeedsDisplay:YES];
+}
+
+- (void)beginInsert:(NSString *)type
+{
+    const norma_object_spec *spec = norma_object_find(type.UTF8String);
+    if (spec == NULL) {
+        [self.delegate canvasStatus:self message:@"Ese objeto no se puede insertar."];
+        return;
+    }
+    snprintf(_insertType, sizeof(_insertType), "%s", spec->type);
+    _tool = CanvasToolInsert;
+    _draftCount = 0;
+    _hasCursor = NO;
+    _selectedNode = -1;
+    [self.delegate canvasStatus:self
+                        message:[NSString stringWithFormat:@"%s: un clic en el plano para colocar. Esc termina.",
+                                                           spec->name]];
+    [self.window makeFirstResponder:self];
+    [self setNeedsDisplay:YES];
+}
+
+- (NSString *)insertingType
+{
+    return _insertType[0] != '\0' ? [NSString stringWithUTF8String:_insertType] : nil;
+}
+
+/** Coloca el objeto armado en el punto del clic y lo deja seleccionado. */
+- (void)placeInsertedObject:(norma_point)point
+{
+    norma_document_begin_edit(self.document);
+    const long index = norma_document_add_object(self.document, _insertType, point, NULL);
+    if (index < 0) {
+        [self.delegate canvasStatus:self message:@"No se pudo colocar el objeto."];
+        return;
+    }
+    _selectedElement = index;
+    _selectedNode = -1;
+    const norma_element *element = &self.document->elements[index];
+    [self.delegate canvasDidChange:self];
+    char caption[64];
+    norma_format_measure_cm(element->w, self.document->unit, caption, sizeof(caption));
+    [self.delegate canvasStatus:self
+                        message:[NSString stringWithFormat:@"Colocado: %s de ancho. Esc termina de insertar.",
+                                                           caption]];
+    [self setNeedsDisplay:YES];
+}
+
+- (NSString *)toggleSelectedExit
+{
+    if (self.document == NULL || _selectedElement < 0 || _selectedElement >= (NSInteger) self.document->count) {
+        return nil;
+    }
+    const size_t element = (size_t) _selectedElement;
+    if (!norma_object_is_door(self.document->elements[element].type)) {
+        return @"Solo una puerta puede marcarse como salida de emergencia.";
+    }
+    norma_document_begin_edit(self.document);
+    const int wanted = self.document->elements[element].is_exit ? 0 : 1;
+    if (!norma_document_set_exit(self.document, element, wanted)) {
+        return @"La puerta ya estaba así.";
+    }
+    [self.delegate canvasDidChange:self];
+    [self setNeedsDisplay:YES];
+    return wanted ? @"Puerta marcada como salida de emergencia: el auditor ya cuenta el recorrido hasta ella."
+                  : @"Puerta desmarcada como salida.";
 }
 
 - (NSString *)hintForTool
@@ -611,6 +984,13 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
         return @"Ruta: un clic por nodo. Enter o doble clic cierra el trazo; el auditor dirá si llega a una salida.";
     case CanvasToolDimension:
         return @"Cota: segundo clic para medir el tramo.";
+    case CanvasToolInsert: {
+        const norma_object_spec *spec = norma_object_find(_insertType);
+        if (spec == NULL) {
+            return @"";
+        }
+        return [NSString stringWithFormat:@"%s: un clic en el plano para colocar. Esc termina.", spec->name];
+    }
     case CanvasToolSelect:
     default:
         return @"";
@@ -643,9 +1023,10 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
         }
         _dragOrigin = point;
     } else {
-        item->x = point.x;
-        item->y = point.y;
-        self.document->dirty = 1;
+        /* Caja: se mueve por su esquina, redondeando al centímetro para que el
+           plano guarde medidas limpias. */
+        norma_document_move_object(self.document, element, round(point.x - _dragOffsetX),
+                                   round(point.y - _dragOffsetY));
     }
     [self.delegate canvasDidChange:self];
     [self setNeedsDisplay:YES];
@@ -697,6 +1078,7 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
             _tool = CanvasToolSelect;
             _draftCount = 0;
             _hasCursor = NO;
+            _insertType[0] = '\0';
             [self.delegate canvasStatus:self message:@""];
             [self setNeedsDisplay:YES];
             return;
@@ -797,6 +1179,7 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
 {
     _draftCount = 0;
     _hasCursor = NO;
+    _insertType[0] = '\0';
     _tool = CanvasToolSelect;
     [self.delegate canvasStatus:self message:@""];
     [self setNeedsDisplay:YES];
