@@ -106,11 +106,18 @@ jobs:
           done
           echo "El binario corre en Monterey (12) y posteriores, en los dos Mac." >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Comprobar que arranca el núcleo sin abrir ventana
+      # Las dos órdenes terminan solas: `--check` comprueba el núcleo y
+      # `--objects` cuenta el catálogo que quedó dentro del `.app`. Ninguna abre
+      # ventana, que es lo que colgaría el trabajo en un runner sin pantalla.
+      - name: Comprobar el núcleo y el catálogo dentro del .app, sin abrir ventana
         run: |
           set -e
           "$BIN" --check
-          "$BIN" --objects | head -n 8
+          "$BIN" --objects > catalog.txt
+          head -n 3 catalog.txt
+          grep -q "820 piezas" catalog.txt
+          grep -q "41 familias" catalog.txt
+          { echo '### Catálogo dentro del paquete'; echo '```'; head -n 6 catalog.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Firmar en modo ad-hoc y comprimir el .app
         run: |

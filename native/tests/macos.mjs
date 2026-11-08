@@ -415,9 +415,16 @@ report.check('Con una etiqueta, el paquete se adjunta a la release',
   && /permissions:\s*\n\s*contents: write/.test(nativeWorkflow),
   'v* · gh release');
 
-report.check('El trabajo arranca la aplicación sin ventana y lista el catálogo antes de publicar',
-  /"\$BIN" --check/.test(nativeWorkflow) && /--objects/.test(nativeWorkflow),
+report.check('El trabajo arranca la aplicación sin ventana y cuenta el catálogo del paquete',
+  /"\$BIN" --check/.test(nativeWorkflow) && /"\$BIN" --objects/.test(nativeWorkflow)
+  && /820 piezas/.test(nativeWorkflow) && /41 familias/.test(nativeWorkflow),
   '--check · --objects');
+
+report.check('La aplicación responde a --objects sin abrir ventana, con su propio catálogo',
+  /--objects/.test(main) && /runObjects/.test(main)
+  && /stringByAppendingPathComponent:@"resources"/.test(main)
+  && /norma_object_catalog_load\(&catalog/.test(main) && /catálogo completo · %lu piezas · %lu familias/.test(main),
+  'Contents/Resources/resources');
 
 /* ------------------------------ 5 · sistema mínimo ----------------------------- */
 
