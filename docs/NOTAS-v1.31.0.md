@@ -26,6 +26,7 @@ Todo lo de las etapas anteriores sigue ahí: la maqueta de un CAD —paleta de c
 | --- | --- |
 | `normia-planos-cad-1.31.0-macos-{arm64,x64}.dmg` y `.zip` | Edición Electron · macOS (Apple Silicon e Intel) |
 | `normia-planos-cad-1.31.0-windows-x64-instalador.exe` y `.zip` | Edición Electron · Windows 10/11 x64 |
+| `normia-planos-cad-1.31.0-macos-{arm64,x64}.pkg` y `normia-planos-cad-1.31.0-windows-x64.exe` | Edición de escritorio con PHP estático compilado (instalador de macOS y carpeta ejecutable de Windows) |
 | `normia-planos-cad-1.31.0-linux-x86_64.AppImage` | Edición Electron · Linux x64 |
 | `normia-planos-cad-1.31.0-android.apk` | Editor completo para Android |
 | `normia-electron-*.SHA256SUMS.txt` | Sumas de cada paquete de Electron |
