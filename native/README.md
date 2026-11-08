@@ -66,7 +66,7 @@ make -C native            # construye native/build/norma-core
 make -C native test       # núcleo (23), documento (33), SVG (31), auditor (67), señalización (30) y extintores (32)
 node native/tests/core.mjs         # compila en estricto y corre los cuatro (8)
 node native/tests/parity.mjs 8.3   # paridad contra el motor PHP (64)
-node native/tests/macos.mjs        # contrato de la ventana nativa (67)
+node native/tests/macos.mjs        # contrato de la ventana nativa (68)
 ```
 
 Y en macOS, con las herramientas de Xcode:

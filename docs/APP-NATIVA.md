@@ -281,7 +281,7 @@ selección por proximidad y el **sobre oficial** de ida y vuelta.
 | `native/tests/test_document.c` | muros, deshacer, selección, guardar y abrir, unidades, rutas | **33/33** |
 | `native/tests/test_svg.c` | cifras es-CO, SVG con escala física y los objetos insertados: puerta, portón, extintor, botiquín y DEA | **31/31** |
 | `native/tests/parity.mjs` | paridad C contra PHP, dígito a dígito, también en el SVG, el auditor y la revisión | **64/64** |
-| `native/tests/macos.mjs` | contrato de la ventana: AppKit, sin WebView, menú en español, atajos, sobre oficial, macOS 12, herramientas, ruta, cajón de revisión, **menú Insertar**, puertas con su arco y equipos con pictograma | **67/67** |
+| `native/tests/macos.mjs` | contrato de la ventana: AppKit, sin WebView, menú en español, atajos, sobre oficial, macOS 12, herramientas, ruta, cajón de revisión, **menú Insertar**, puertas con su arco y equipos con pictograma | **68/68** |
 | `native/tests/core.mjs` | compilación estricta y los tres programas de prueba del núcleo | **7/7** |
 
 Y en el flujo de verificación hay un trabajo nuevo en **`macos-15-intel`** que
@@ -326,7 +326,7 @@ para sacar el plano sin el motor PHP:
 | `norma-core --svg plano.json` | `native/src/cli.c` | hecho |
 | Herramientas del lienzo `V · M · P · A · D · R` con borrador y previsualización | `native/macos/CanvasView.m` | hecho |
 | Exportar SVG con panel del sistema (`⌘E`) | `native/macos/AppDelegate.m` | escrito |
-| Abrir reciente (10 archivos, preferencia del sistema, se limpia sola) | `native/macos/AppDelegate.m` | hecho · **67/67** |
+| Abrir reciente (10 archivos, preferencia del sistema, se limpia sola) | `native/macos/AppDelegate.m` | hecho · **68/68** |
 | Lienzo abierto: zoom 2 %–4000 % sobre el cursor, desplazamiento con el botón central o derecho y rejilla adaptativa | `native/macos/CanvasView.m` | hecho |
 | Imprimir en A4 horizontal y exportar PDF con el fondo en blanco | `native/macos/AppDelegate.m`, `CanvasView.m` | hecho |
 
@@ -346,7 +346,7 @@ Lo que da el SVG del núcleo, medido en el plano de prueba A4 a 1:100:
 
 - **La ventana con las herramientas nuevas no se ha compilado**: en el entorno
   donde se escribe esto no hay AppKit. El contrato se comprueba con
-  `native/tests/macos.mjs` (67/67) y la compilación real la hace el trabajo
+  `native/tests/macos.mjs` (68/68) y la compilación real la hace el trabajo
   `macos-nativo` del flujo.
 - **Recientes e impresión** ya están escritos, pero quien los usa con ratón y
   teclado es una persona: aquí solo se comprueba su contrato y que compilen.
@@ -377,7 +377,7 @@ en la web.
 | Objetos | `native/include/normia/object.h`, `native/src/object.c` | Los once objetos insertables —tres puertas, extintor, botiquín, camilla, DEA, punto de encuentro, E001, E007 y «usted está aquí»— con su tamaño al nacer, si apoyan sobre el muro y si son puertas |
 | Puertas y equipos en el SVG | `native/src/svg.c` | `write_door()` dibuja jambas, umbral discontinuo, hoja y arco (y el portón, su panel); `write_box_object()` pone el pictograma del catálogo o, si no lo encuentra, una caja con su rótulo |
 | Insertar en la ventana | `native/macos/AppDelegate.m` · `CanvasView.m` | Menú **Insertar** con `⌃`, un clic para colocar, arrastre del objeto entero y `⌘⇧E` para marcar o desmarcar una salida |
-| Pruebas | `native/tests/test_audit.c` · `test_signs.c` · `test_extinguishers.c` | **67/67**, **30/30** y **32/32** (documento **33/33**, ventana **67/67**) |
+| Pruebas | `native/tests/test_audit.c` · `test_signs.c` · `test_extinguishers.c` | **67/67**, **30/30** y **32/32** (documento **33/33**, ventana **68/68**) |
 | Paridad | `native/tests/parity.mjs` | **64/64** |
 
 El caso de prueba y sus cifras, idénticas en C y en PHP: una habitación de
@@ -595,7 +595,7 @@ va en **verde de evacuación**, con **punta de flecha** en el sentido de salida 
 la longitud rotulada junto al extremo, con la misma cifra que dará el informe.
 
 La herramienta se comprueba donde se puede comprobar aquí, sobre el código
-fuente (`native/tests/macos.mjs`, **67/67**); dibujarla con el ratón en un Mac es
+fuente (`native/tests/macos.mjs`, **68/68**); dibujarla con el ratón en un Mac es
 lo que sigue viendo una persona.
 
 ### El cajón de revisión, dentro de la ventana
