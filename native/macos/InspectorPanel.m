@@ -136,6 +136,22 @@ static double parse_number(NSString *text)
 @property(nonatomic, strong) NSSlider *guideOpacitySlider;
 @property(nonatomic, strong) NSMutableArray<NSButton *> *swatches;
 @property(nonatomic, strong) NSMutableArray<NSView *> *blocks;
+/* Red de tubería y circuito: dos fichas del inspector web. */
+@property(nonatomic, strong) NSView *pipeGroup;
+@property(nonatomic, strong) NSView *circuitGroup;
+@property(nonatomic, strong) NSTextField *mepTitle;
+@property(nonatomic, strong) NSPopUpButton *networkPopup;
+@property(nonatomic, strong) NSPopUpButton *diameterPopup;
+@property(nonatomic, strong) NSPopUpButton *materialPopup;
+@property(nonatomic, strong) NSPopUpButton *voltagePopup;
+@property(nonatomic, strong) NSPopUpButton *gaugePopup;
+@property(nonatomic, strong) NSPopUpButton *phasesPopup;
+@property(nonatomic, strong) NSPopUpButton *lanesPopup;
+/** Redes del catálogo (`resources/mep-networks.json`): clave, rótulo y valores. */
+@property(nonatomic, strong) NSArray<NSDictionary<NSString *, NSString *> *> *mepNetworks;
+/** Materiales y diámetros del catálogo, para los desplegables. */
+@property(nonatomic, strong) NSArray<NSString *> *mepDiameters;
+@property(nonatomic, strong) NSArray<NSString *> *mepMaterials;
 /** Fila del tamaño de letra: solo tiene sentido en un texto. */
 @property(nonatomic, strong) NSView *fontRow;
 
@@ -157,6 +173,12 @@ static double parse_number(NSString *text)
 - (void)lockToggled:(id)sender;
 - (void)doorToggled:(id)sender;
 - (void)extinguisherChanged:(id)sender;
+- (void)loadMepCatalog;
+- (void)refreshMepForElement:(const norma_element *)element;
+- (void)mepChanged:(id)sender;
+- (void)networkChosen:(id)sender;
+- (void)circuitChanged:(id)sender;
+- (void)lanesChanged:(id)sender;
 - (void)guideOpacityChanged:(NSSlider *)sender;
 - (void)guideVisibilityToggled:(id)sender;
 - (void)guideLockToggled:(id)sender;
@@ -173,6 +195,7 @@ static double parse_number(NSString *text)
     if (self != nil) {
         _elementIndex = -1;
         self.wantsLayer = YES;
+        [self loadMepCatalog];
         [self buildPanel];
     }
     return self;
@@ -190,6 +213,53 @@ static double parse_number(NSString *text)
     NSRectFill(self.bounds);
     [[NSColor colorWithCalibratedWhite:0.24 alpha:1.0] setFill];
     NSRectFill(NSMakeRect(0.0, 0.0, 1.0, NSHeight(self.bounds)));
+}
+
+/* ------------------------------- catálogo MEP ---------------------------- */
+
+/**
+ * Lee las redes del catálogo que ya usa la web (`resources/mep-networks.json`).
+ *
+ * No se copia la tabla al código: si mañana cambia un diámetro de referencia o
+ * se añade una red, la ventana la ofrece sola. Si el archivo no está (una copia
+ * suelta del `.app`), quedan unos valores mínimos para no dejar el desplegable
+ * vacío.
+ */
+- (void)loadMepCatalog
+{
+    NSString *path = [[[NSBundle mainBundle] resourcePath]
+        stringByAppendingPathComponent:@"resources/mep-networks.json"];
+    NSData *data = [NSData dataWithContentsOfFile:path];
+    NSDictionary *root = data != nil
+        ? [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL] : nil;
+    NSDictionary *hydraulic = [root isKindOfClass:[NSDictionary class]] ? root[@"hydraulic"] : nil;
+    NSMutableArray<NSDictionary<NSString *, NSString *> *> *networks = [NSMutableArray array];
+    if ([hydraulic isKindOfClass:[NSDictionary class]]) {
+        for (NSString *key in hydraulic) {
+            NSDictionary *info = hydraulic[key];
+            if (![info isKindOfClass:[NSDictionary class]]) {
+                continue;
+            }
+            [networks addObject:@{
+                @"key": key,
+                @"label": info[@"label"] != nil ? info[@"label"] : key,
+                @"short": info[@"short"] != nil ? info[@"short"] : key,
+                @"diameter": info[@"diameter"] != nil ? info[@"diameter"] : @"",
+                @"material": info[@"material"] != nil ? info[@"material"] : @"",
+                @"pressure": [NSString stringWithFormat:@"%g", [info[@"pressureKpa"] doubleValue]],
+            }];
+        }
+    }
+    [networks sortUsingComparator:^NSComparisonResult(NSDictionary *a, NSDictionary *b) {
+        return [a[@"label"] localizedCaseInsensitiveCompare:b[@"label"]];
+    }];
+    self.mepNetworks = networks;
+    NSArray *diameters = [root isKindOfClass:[NSDictionary class]] ? root[@"diameters"] : nil;
+    self.mepDiameters = [diameters isKindOfClass:[NSArray class]] ? diameters : @[ @"1/2\"", @"3/4\"", @"1\"", @"2\"", @"4\"" ];
+    NSDictionary *materials = [root isKindOfClass:[NSDictionary class]] ? root[@"materials"] : nil;
+    self.mepMaterials = [materials isKindOfClass:[NSDictionary class]]
+        ? [[materials allValues] sortedArrayUsingSelector:@selector(localizedCaseInsensitiveCompare:)]
+        : @[ @"pvc", @"cpvc", @"acero", @"cobre", @"pead" ];
 }
 
 /* ------------------------------ construcción ----------------------------- */
@@ -498,7 +568,7 @@ static double parse_number(NSString *text)
     [door addSubview:self.exitSwitch];
 
     /* --------------------------- vía y entorno --------------------------- */
-    NSView *outdoor = [self blockWithHeight:78.0];
+    NSView *outdoor = [self blockWithHeight:118.0];
     [self addTitle:@"VÍA Y ENTORNO" to:outdoor at:0.0];
     NSTextField *outdoorLabel = [NSTextField labelWithString:@"Ancho declarado (m)"];
     outdoorLabel.font = [NSFont systemFontOfSize:10.0];
@@ -509,11 +579,167 @@ static double parse_number(NSString *text)
     widthField.frame = NSMakeRect(kInset, 32.0, kPanelWidth - kInset * 2.0 - 1.0, 22.0);
     widthField.toolTip = @"Ancho de la vía o del andén; cuenta como exterior en el auditor";
     [outdoor addSubview:widthField];
-    NSTextField *outdoorHint = [NSTextField labelWithString:@"Nombre en el plano: el del rótulo."];
+    /* Carriles: solo para la vía, como el campo «Carriles» de la web. */
+    NSTextField *lanesCaption = [NSTextField labelWithString:@"Carriles"];
+    lanesCaption.font = [NSFont systemFontOfSize:10.0];
+    lanesCaption.textColor = panelMuted();
+    lanesCaption.frame = NSMakeRect(kInset, 58.0, 74.0, 13.0);
+    [outdoor addSubview:lanesCaption];
+    self.lanesPopup = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(kInset + 78.0, 54.0,
+                                                                      kPanelWidth - kInset * 2.0 - 78.0 - 1.0, 24.0)
+                                                  pullsDown:NO];
+    self.lanesPopup.font = [NSFont systemFontOfSize:11.0];
+    self.lanesPopup.target = self;
+    self.lanesPopup.action = @selector(lanesChanged:);
+    [self.lanesPopup addItemsWithTitles:@[ @"1 carril", @"2 carriles", @"3 carriles",
+                                          @"4 carriles", @"5 carriles", @"6 carriles" ]];
+    self.lanesPopup.toolTip = @"Carriles de la vía: cuentan para el ancho útil del auditor";
+    [outdoor addSubview:self.lanesPopup];
+
+    NSTextField *outdoorHint = [NSTextField labelWithString:@"El nombre en el plano es el rótulo."];
     outdoorHint.font = [NSFont systemFontOfSize:10.0];
     outdoorHint.textColor = panelMuted();
-    outdoorHint.frame = NSMakeRect(kInset, 58.0, kPanelWidth - kInset * 2.0 - 1.0, 14.0);
+    outdoorHint.frame = NSMakeRect(kInset, 86.0, kPanelWidth - kInset * 2.0 - 1.0, 26.0);
+    outdoorHint.maximumNumberOfLines = 2;
+    outdoorHint.lineBreakMode = NSLineBreakByWordWrapping;
     [outdoor addSubview:outdoorHint];
+
+    /* --------------------- red de tubería y circuito --------------------- */
+    NSView *mep = [self blockWithHeight:224.0];
+    self.mepTitle = [NSTextField labelWithString:@"RED DE TUBERÍA"];
+    self.mepTitle.font = [NSFont systemFontOfSize:10.0 weight:NSFontWeightBold];
+    self.mepTitle.textColor = panelMuted();
+    self.mepTitle.frame = NSMakeRect(kInset, 0.0, kPanelWidth - kInset * 2.0 - 1.0, 14.0);
+    [mep addSubview:self.mepTitle];
+
+    /* Tubería: red, diámetro, material, pendiente y presión. */
+    self.pipeGroup = [[NSView alloc] initWithFrame:NSMakeRect(0.0, 18.0, kPanelWidth, 200.0)];
+    [mep addSubview:self.pipeGroup];
+
+    NSTextField *networkCaption = [NSTextField labelWithString:@"Red"];
+    networkCaption.font = [NSFont systemFontOfSize:10.0];
+    networkCaption.textColor = panelMuted();
+    networkCaption.frame = NSMakeRect(kInset, 0.0, kPanelWidth - kInset * 2.0 - 1.0, 13.0);
+    [self.pipeGroup addSubview:networkCaption];
+    self.networkPopup = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(kInset, 14.0,
+                                                                       kPanelWidth - kInset * 2.0 - 1.0, 24.0)
+                                                     pullsDown:NO];
+    self.networkPopup.font = [NSFont systemFontOfSize:11.0];
+    self.networkPopup.target = self;
+    self.networkPopup.action = @selector(networkChosen:);
+    self.networkPopup.toolTip = @"Al cambiar de red se aplican el diámetro, el material y la presión de referencia";
+    [self.pipeGroup addSubview:self.networkPopup];
+
+    NSTextField *diameterCaption = [NSTextField labelWithString:@"Diámetro"];
+    diameterCaption.font = [NSFont systemFontOfSize:10.0];
+    diameterCaption.textColor = panelMuted();
+    diameterCaption.frame = NSMakeRect(kInset, 44.0, half, 13.0);
+    [self.pipeGroup addSubview:diameterCaption];
+    self.diameterPopup = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(kInset, 58.0, half, 24.0) pullsDown:NO];
+    self.diameterPopup.font = [NSFont systemFontOfSize:11.0];
+    self.diameterPopup.target = self;
+    self.diameterPopup.action = @selector(mepChanged:);
+    [self.pipeGroup addSubview:self.diameterPopup];
+
+    NSTextField *materialCaption = [NSTextField labelWithString:@"Material"];
+    materialCaption.font = [NSFont systemFontOfSize:10.0];
+    materialCaption.textColor = panelMuted();
+    materialCaption.frame = NSMakeRect(kInset + half + 8.0, 44.0, half, 13.0);
+    [self.pipeGroup addSubview:materialCaption];
+    self.materialPopup = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(kInset + half + 8.0, 58.0, half, 24.0)
+                                                     pullsDown:NO];
+    self.materialPopup.font = [NSFont systemFontOfSize:11.0];
+    self.materialPopup.target = self;
+    self.materialPopup.action = @selector(mepChanged:);
+    [self.pipeGroup addSubview:self.materialPopup];
+
+    NSTextField *slopeCaption = [NSTextField labelWithString:@"Pendiente (%)"];
+    slopeCaption.font = [NSFont systemFontOfSize:10.0];
+    slopeCaption.textColor = panelMuted();
+    slopeCaption.frame = NSMakeRect(kInset, 88.0, half, 13.0);
+    [self.pipeGroup addSubview:slopeCaption];
+    NSTextField *slopeField = [self fieldWithKey:@"mepSlope"];
+    slopeField.frame = NSMakeRect(kInset, 102.0, half, 22.0);
+    [self.pipeGroup addSubview:slopeField];
+
+    NSTextField *pressureCaption = [NSTextField labelWithString:@"Presión (kPa)"];
+    pressureCaption.font = [NSFont systemFontOfSize:10.0];
+    pressureCaption.textColor = panelMuted();
+    pressureCaption.frame = NSMakeRect(kInset + half + 8.0, 88.0, half, 13.0);
+    [self.pipeGroup addSubview:pressureCaption];
+    NSTextField *pressureField = [self fieldWithKey:@"mepPressure"];
+    pressureField.frame = NSMakeRect(kInset + half + 8.0, 102.0, half, 22.0);
+    [self.pipeGroup addSubview:pressureField];
+
+    NSTextField *mepHint = [NSTextField labelWithString:@"La pendiente y la presión son referencias de diseño: "
+                                                        "el desagüe real se verifica en obra."];
+    mepHint.font = [NSFont systemFontOfSize:10.0];
+    mepHint.textColor = panelMuted();
+    mepHint.frame = NSMakeRect(kInset, 130.0, kPanelWidth - kInset * 2.0 - 1.0, 40.0);
+    mepHint.maximumNumberOfLines = 3;
+    mepHint.lineBreakMode = NSLineBreakByWordWrapping;
+    [self.pipeGroup addSubview:mepHint];
+
+    /* Canaleta: circuito, tensión, calibre y fases. */
+    self.circuitGroup = [[NSView alloc] initWithFrame:NSMakeRect(0.0, 18.0, kPanelWidth, 200.0)];
+    [mep addSubview:self.circuitGroup];
+
+    NSTextField *codeCaption = [NSTextField labelWithString:@"Circuito"];
+    codeCaption.font = [NSFont systemFontOfSize:10.0];
+    codeCaption.textColor = panelMuted();
+    codeCaption.frame = NSMakeRect(kInset, 0.0, half, 13.0);
+    [self.circuitGroup addSubview:codeCaption];
+    NSTextField *codeField = [self fieldWithKey:@"circuitCode"];
+    codeField.frame = NSMakeRect(kInset, 14.0, half, 22.0);
+    codeField.toolTip = @"Los tramos con el mismo código forman un circuito";
+    [self.circuitGroup addSubview:codeField];
+
+    NSTextField *voltageCaption = [NSTextField labelWithString:@"Tensión"];
+    voltageCaption.font = [NSFont systemFontOfSize:10.0];
+    voltageCaption.textColor = panelMuted();
+    voltageCaption.frame = NSMakeRect(kInset + half + 8.0, 0.0, half, 13.0);
+    [self.circuitGroup addSubview:voltageCaption];
+    self.voltagePopup = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(kInset + half + 8.0, 14.0, half, 24.0)
+                                                    pullsDown:NO];
+    self.voltagePopup.font = [NSFont systemFontOfSize:11.0];
+    self.voltagePopup.target = self;
+    self.voltagePopup.action = @selector(circuitChanged:);
+    [self.voltagePopup addItemsWithTitles:@[ @"110 V", @"208 V", @"220 V", @"440 V" ]];
+    [self.circuitGroup addSubview:self.voltagePopup];
+
+    NSTextField *gaugeCaption = [NSTextField labelWithString:@"Calibre (AWG)"];
+    gaugeCaption.font = [NSFont systemFontOfSize:10.0];
+    gaugeCaption.textColor = panelMuted();
+    gaugeCaption.frame = NSMakeRect(kInset, 44.0, half, 13.0);
+    [self.circuitGroup addSubview:gaugeCaption];
+    self.gaugePopup = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(kInset, 58.0, half, 24.0) pullsDown:NO];
+    self.gaugePopup.font = [NSFont systemFontOfSize:11.0];
+    self.gaugePopup.target = self;
+    self.gaugePopup.action = @selector(circuitChanged:);
+    [self.gaugePopup addItemsWithTitles:@[ @"14", @"12", @"10", @"8", @"6", @"4", @"2" ]];
+    [self.circuitGroup addSubview:self.gaugePopup];
+
+    NSTextField *phasesCaption = [NSTextField labelWithString:@"Fases"];
+    phasesCaption.font = [NSFont systemFontOfSize:10.0];
+    phasesCaption.textColor = panelMuted();
+    phasesCaption.frame = NSMakeRect(kInset + half + 8.0, 44.0, half, 13.0);
+    [self.circuitGroup addSubview:phasesCaption];
+    self.phasesPopup = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(kInset + half + 8.0, 58.0, half, 24.0)
+                                                   pullsDown:NO];
+    self.phasesPopup.font = [NSFont systemFontOfSize:11.0];
+    self.phasesPopup.target = self;
+    self.phasesPopup.action = @selector(circuitChanged:);
+    [self.phasesPopup addItemsWithTitles:@[ @"Monofásico (1)", @"Trifásico (3)" ]];
+    [self.circuitGroup addSubview:self.phasesPopup];
+
+    NSTextField *circuitHint = [NSTextField labelWithString:@"Los tramos con el mismo código forman un circuito. "
+                                                             "El panel Redes de la web suma cargas y estima la caída de tensión."];
+    circuitHint.font = [NSFont systemFontOfSize:10.0];
+    circuitHint.textColor = panelMuted();
+    circuitHint.frame = NSMakeRect(kInset, 88.0, kPanelWidth - kInset * 2.0 - 1.0, 40.0);
+    circuitHint.maximumNumberOfLines = 3;
+    circuitHint.lineBreakMode = NSLineBreakByWordWrapping;
+    [self.circuitGroup addSubview:circuitHint];
 
     /* ------------------------------ extintor ----------------------------- */
     NSView *extinguisher = [self blockWithHeight:198.0];
@@ -724,8 +950,10 @@ static double parse_number(NSString *text)
         visible[@"appearance"] = @0;
         visible[@"door"] = @0;
         visible[@"outdoor"] = @0;
+        visible[@"mep"] = @0;
         visible[@"extinguisher"] = @0;
         visible[@"organization"] = @0;
+        self.lanesPopup.hidden = YES;
     } else {
         double x = 0.0;
         double y = 0.0;
@@ -835,6 +1063,17 @@ static double parse_number(NSString *text)
         }
         self.typePopup.enabled = (pathType || box) && !element->locked;
 
+        const BOOL pipe = strcmp(element->type, "pipe") == 0;
+        const BOOL conduit = strcmp(element->type, "conduit") == 0;
+        self.lanesPopup.hidden = strcmp(element->type, "road") != 0;
+        if (strcmp(element->type, "road") == 0) {
+            const int lanes = element->lanes > 0 ? element->lanes : 2;
+            [self.lanesPopup selectItemAtIndex:lanes - 1];
+            self.lanesPopup.enabled = !element->locked;
+        }
+        [self refreshMepForElement:element];
+        visible[@"mep"] = @(pipe || conduit);
+
         visible[@"geometry"] = @1;
         visible[@"appearance"] = @1;
         self.fontRow.hidden = strcmp(element->type, "text") != 0;
@@ -860,12 +1099,103 @@ static double parse_number(NSString *text)
     /* La geometría y la apariencia se ocultan sin selección; las capas y la
        maqueta siempre están. */
     const NSArray<NSString *> *order = @[ @"layers", @"hero", @"geometry", @"appearance", @"door",
-                                          @"outdoor", @"extinguisher", @"organization", @"guide" ];
+                                          @"outdoor", @"mep", @"extinguisher", @"organization", @"guide" ];
     for (NSUInteger index = 0; index < self.blocks.count && index < order.count; index += 1) {
         NSNumber *flag = visible[order[index]];
         self.blocks[index].hidden = flag != nil && flag.boolValue == NO;
     }
     [self layoutBlocks];
+}
+
+/**
+ * Llena la ficha de red o de circuito con lo que dice el documento.
+ *
+ * Los desplegables se rehacen en cada lectura porque las redes salen del
+ * catálogo y el elemento puede traer un valor que no esté en la tabla; en ese
+ * caso se añade al final para no perderlo al guardar.
+ */
+- (void)refreshMepForElement:(const norma_element *)element
+{
+    const BOOL pipe = strcmp(element->type, "pipe") == 0;
+    self.mepTitle.stringValue = pipe ? @"RED DE TUBERÍA" : @"CIRCUITO ELÉCTRICO";
+    self.pipeGroup.hidden = !pipe;
+    self.circuitGroup.hidden = pipe;
+
+    if (pipe) {
+        [self.networkPopup removeAllItems];
+        NSInteger selected = -1;
+        NSInteger index = 0;
+        for (NSDictionary<NSString *, NSString *> *network in self.mepNetworks) {
+            [self.networkPopup addItemWithTitle:[NSString stringWithFormat:@"%@ (%@)",
+                                                 network[@"label"], network[@"short"]]];
+            if (strcmp(element->mep_network, network[@"key"].UTF8String) == 0) {
+                selected = index;
+            }
+            index += 1;
+        }
+        if (self.mepNetworks.count == 0) {
+            [self.networkPopup addItemWithTitle:@"Sin catálogo de redes"];
+        }
+        if (selected >= 0) {
+            [self.networkPopup selectItemAtIndex:selected];
+        }
+
+        NSMutableArray<NSString *> *diameters = [self.mepDiameters mutableCopy];
+        if (element->mep_diameter[0] != '\0'
+            && ![diameters containsObject:[NSString stringWithUTF8String:element->mep_diameter]]) {
+            [diameters insertObject:[NSString stringWithUTF8String:element->mep_diameter] atIndex:0];
+        }
+        [self.diameterPopup removeAllItems];
+        [self.diameterPopup addItemsWithTitles:diameters];
+        if (element->mep_diameter[0] != '\0') {
+            [self.diameterPopup selectItemWithTitle:[NSString stringWithUTF8String:element->mep_diameter]];
+        }
+
+        NSMutableArray<NSString *> *materials = [self.mepMaterials mutableCopy];
+        if (element->mep_material[0] != '\0'
+            && ![materials containsObject:[NSString stringWithUTF8String:element->mep_material]]) {
+            [materials insertObject:[NSString stringWithUTF8String:element->mep_material] atIndex:0];
+        }
+        [self.materialPopup removeAllItems];
+        [self.materialPopup addItemsWithTitles:materials];
+        if (element->mep_material[0] != '\0') {
+            [self.materialPopup selectItemWithTitle:[NSString stringWithUTF8String:element->mep_material]];
+        }
+
+        [self setField:@"mepSlope" value:element->mep_slope > 0.0
+            ? [NSString stringWithFormat:@"%g", element->mep_slope] : @""];
+        [self setField:@"mepPressure" value:element->mep_pressure > 0.0
+            ? [NSString stringWithFormat:@"%g", element->mep_pressure] : @""];
+
+        const BOOL editable = !element->locked;
+        self.networkPopup.enabled = editable;
+        self.diameterPopup.enabled = editable;
+        self.materialPopup.enabled = editable;
+    } else {
+        [self setField:@"circuitCode" value:element->circuit[0] != '\0'
+            ? [NSString stringWithUTF8String:element->circuit] : @"C1"];
+
+        const int voltages[4] = {110, 208, 220, 440};
+        NSInteger selected = -1;
+        for (int index = 0; index < 4; index += 1) {
+            if (voltages[index] == element->circuit_voltage) {
+                selected = index;
+            }
+        }
+        [self.voltagePopup selectItemAtIndex:selected >= 0 ? selected : 2];
+        self.voltagePopup.enabled = !element->locked;
+
+        NSString *gauge = element->circuit_gauge[0] != '\0'
+            ? [NSString stringWithUTF8String:element->circuit_gauge] : @"12";
+        if ([self.gaugePopup indexOfItemWithTitle:gauge] < 0) {
+            [self.gaugePopup addItemWithTitle:gauge];
+        }
+        [self.gaugePopup selectItemWithTitle:gauge];
+        self.gaugePopup.enabled = !element->locked;
+
+        [self.phasesPopup selectItemAtIndex:element->circuit_phases >= 3 ? 1 : 0];
+        self.phasesPopup.enabled = !element->locked;
+    }
 }
 
 /** Coloca los bloques visibles uno tras otro y ajusta el alto del contenido. */
@@ -1165,6 +1495,93 @@ static double parse_number(NSString *text)
         return;
     }
     [self.delegate inspector:self status:@"Ese nombre de capa no cabe (32 caracteres como máximo)."];
+}
+
+/* ---------------------- red de tubería, circuito y carriles -------------- */
+
+/** Red elegida: aplica también el diámetro, el material y la presión de la tabla. */
+- (void)networkChosen:(id)sender
+{
+    (void) sender;
+    const norma_element *element = [self selectedElement];
+    if (self.document == NULL || element == NULL || element->locked) {
+        return;
+    }
+    const NSInteger index = self.networkPopup.indexOfSelectedItem;
+    if (index < 0 || (NSUInteger) index >= self.mepNetworks.count) {
+        return;
+    }
+    NSDictionary<NSString *, NSString *> *network = self.mepNetworks[(NSUInteger) index];
+    norma_document_begin_edit(self.document);
+    const int changed = norma_document_set_mep(self.document, (size_t) self.elementIndex,
+                                               network[@"key"].UTF8String,
+                                               network[@"diameter"].length > 0 ? network[@"diameter"].UTF8String : NULL,
+                                               network[@"material"].length > 0 ? network[@"material"].UTF8String : NULL,
+                                               -1.0, network[@"pressure"].doubleValue);
+    [self reload];
+    if (changed) {
+        [self.delegate inspector:self
+            didEditDocumentWithMessage:[NSString stringWithFormat:@"Red %@: %@ · %@ · %@ kPa",
+                                                                  network[@"label"], network[@"diameter"],
+                                                                  network[@"material"], network[@"pressure"]]];
+    }
+}
+
+/** Diámetro, material, pendiente y presión: lo que se edita a mano. */
+- (void)mepChanged:(id)sender
+{
+    (void) sender;
+    const norma_element *element = [self selectedElement];
+    if (self.document == NULL || element == NULL || element->locked) {
+        return;
+    }
+    NSString *diameter = self.diameterPopup.titleOfSelectedItem;
+    NSString *material = self.materialPopup.titleOfSelectedItem;
+    const double slope = parse_number([(NSTextField *) self.fields[@"mepSlope"] stringValue]);
+    const double pressure = parse_number([(NSTextField *) self.fields[@"mepPressure"] stringValue]);
+    norma_document_begin_edit(self.document);
+    if (norma_document_set_mep(self.document, (size_t) self.elementIndex, NULL,
+                               diameter.UTF8String, material.UTF8String, slope, pressure)) {
+        [self reload];
+        [self.delegate inspector:self didEditDocumentWithMessage:@"Red de tubería actualizada"];
+    }
+}
+
+- (void)circuitChanged:(id)sender
+{
+    (void) sender;
+    const norma_element *element = [self selectedElement];
+    if (self.document == NULL || element == NULL || element->locked) {
+        return;
+    }
+    const int voltages[4] = {110, 208, 220, 440};
+    const NSInteger voltageIndex = self.voltagePopup.indexOfSelectedItem;
+    NSString *code = [(NSTextField *) self.fields[@"circuitCode"] stringValue];
+    NSString *gauge = self.gaugePopup.titleOfSelectedItem;
+    const int phases = self.phasesPopup.indexOfSelectedItem == 1 ? 3 : 1;
+    norma_document_begin_edit(self.document);
+    if (norma_document_set_circuit(self.document, (size_t) self.elementIndex,
+                                   code.length > 0 ? code.UTF8String : NULL,
+                                   voltageIndex >= 0 && voltageIndex < 4 ? voltages[voltageIndex] : 0,
+                                   gauge.UTF8String, phases, -1.0)) {
+        [self reload];
+        [self.delegate inspector:self didEditDocumentWithMessage:@"Circuito actualizado"];
+    }
+}
+
+- (void)lanesChanged:(id)sender
+{
+    (void) sender;
+    if (self.document == NULL || self.elementIndex < 0) {
+        return;
+    }
+    const NSInteger index = self.lanesPopup.indexOfSelectedItem;
+    norma_document_begin_edit(self.document);
+    if (norma_document_set_lanes(self.document, (size_t) self.elementIndex, (int) index + 1)) {
+        [self reload];
+        [self.delegate inspector:self
+            didEditDocumentWithMessage:[NSString stringWithFormat:@"Vía de %ld carriles", (long) index + 1]];
+    }
 }
 
 /* -------------------------------- maqueta -------------------------------- */

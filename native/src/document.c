@@ -792,6 +792,105 @@ int norma_document_set_extinguisher(norma_document *document, size_t element, co
     return changed;
 }
 
+int norma_document_set_mep(norma_document *document, size_t element, const char *network,
+                           const char *diameter, const char *material, double slope, double pressure)
+{
+    norma_element *item = editable(document, element);
+    if (item == NULL || strcmp(item->type, "pipe") != 0) {
+        return 0;
+    }
+    int changed = 0;
+    if (network != NULL && network[0] != '\0' && strcmp(item->mep_network, network) != 0) {
+        set_text(item->mep_network, sizeof(item->mep_network), network, "");
+        changed = 1;
+    }
+    if (diameter != NULL && diameter[0] != '\0' && strcmp(item->mep_diameter, diameter) != 0) {
+        set_text(item->mep_diameter, sizeof(item->mep_diameter), diameter, "");
+        changed = 1;
+    }
+    if (material != NULL && material[0] != '\0' && strcmp(item->mep_material, material) != 0) {
+        set_text(item->mep_material, sizeof(item->mep_material), material, "");
+        changed = 1;
+    }
+    /* La pendiente va de 0 a 15 % y la presión de 0 a 5000 kPa: los mismos topes
+       del inspector web, que no son cifras de cálculo sino de referencia. Un
+       negativo significa «no lo toques», para poder cambiar solo la red. */
+    if (slope >= 0.0) {
+        const double wanted_slope = slope > 15.0 ? 15.0 : slope;
+        if (fabs(item->mep_slope - wanted_slope) > 1e-6) {
+            item->mep_slope = wanted_slope;
+            changed = 1;
+        }
+    }
+    if (pressure >= 0.0) {
+        const double wanted_pressure = pressure > 5000.0 ? 5000.0 : pressure;
+        if (fabs(item->mep_pressure - wanted_pressure) > 1e-6) {
+            item->mep_pressure = wanted_pressure;
+            changed = 1;
+        }
+    }
+    if (changed) {
+        document->dirty = 1;
+    }
+    return changed;
+}
+
+int norma_document_set_circuit(norma_document *document, size_t element, const char *code,
+                               int voltage, const char *gauge, int phases, double load_va)
+{
+    norma_element *item = editable(document, element);
+    if (item == NULL || strcmp(item->type, "conduit") != 0) {
+        return 0;
+    }
+    int changed = 0;
+    if (code != NULL && code[0] != '\0' && strcmp(item->circuit, code) != 0) {
+        set_text(item->circuit, sizeof(item->circuit), code, "");
+        changed = 1;
+    }
+    const int wanted_voltage = voltage < 0 ? 0 : (voltage > 1000 ? 1000 : voltage);
+    if (item->circuit_voltage != wanted_voltage) {
+        item->circuit_voltage = wanted_voltage;
+        changed = 1;
+    }
+    if (gauge != NULL && gauge[0] != '\0' && strcmp(item->circuit_gauge, gauge) != 0) {
+        set_text(item->circuit_gauge, sizeof(item->circuit_gauge), gauge, "");
+        changed = 1;
+    }
+    /* Una instalación es monofásica o trifásica: no hay dos fases. */
+    const int wanted_phases = phases >= 3 ? 3 : 1;
+    if (item->circuit_phases != wanted_phases) {
+        item->circuit_phases = wanted_phases;
+        changed = 1;
+    }
+    /* Un negativo deja la carga como estaba: la canaleta no la edita, el
+       equipo eléctrico sí. */
+    const double wanted_load = load_va < 0.0 ? item->circuit_load_va
+                                             : (load_va > 100000.0 ? 100000.0 : load_va);
+    if (fabs(item->circuit_load_va - wanted_load) > 1e-6) {
+        item->circuit_load_va = wanted_load;
+        changed = 1;
+    }
+    if (changed) {
+        document->dirty = 1;
+    }
+    return changed;
+}
+
+int norma_document_set_lanes(norma_document *document, size_t element, int lanes)
+{
+    norma_element *item = editable(document, element);
+    if (item == NULL || strcmp(item->type, "road") != 0) {
+        return 0;
+    }
+    const int wanted = lanes < 1 ? 1 : (lanes > 6 ? 6 : lanes);
+    if (item->lanes == wanted) {
+        return 0;
+    }
+    item->lanes = wanted;
+    document->dirty = 1;
+    return 1;
+}
+
 int norma_document_move_node(norma_document *document, size_t element, size_t node, double x, double y)
 {
     norma_element *item = editable(document, element);
@@ -1044,6 +1143,52 @@ static void write_box(norma_buffer *buffer, const norma_element *element)
     if (element->has_ext_mount) {
         norma_buffer_raw(buffer, ",\"extMountCm\":");
         norma_buffer_number(buffer, element->ext_mount_cm);
+    }
+    /* Red de tubería y circuito eléctrico: las claves son las del editor web, así
+       que el plano se puede llevar de una ventana a la otra sin traducir nada. */
+    if (element->mep_network[0] != '\0') {
+        norma_buffer_raw(buffer, ",\"network\":");
+        norma_buffer_string(buffer, element->mep_network);
+    }
+    if (element->mep_diameter[0] != '\0') {
+        norma_buffer_raw(buffer, ",\"diameter\":");
+        norma_buffer_string(buffer, element->mep_diameter);
+    }
+    if (element->mep_material[0] != '\0') {
+        norma_buffer_raw(buffer, ",\"material\":");
+        norma_buffer_string(buffer, element->mep_material);
+    }
+    if (element->mep_slope > 0.0) {
+        norma_buffer_raw(buffer, ",\"slope\":");
+        norma_buffer_number(buffer, element->mep_slope);
+    }
+    if (element->mep_pressure > 0.0) {
+        norma_buffer_raw(buffer, ",\"pressure\":");
+        norma_buffer_number(buffer, element->mep_pressure);
+    }
+    if (element->circuit[0] != '\0') {
+        norma_buffer_raw(buffer, ",\"circuit\":");
+        norma_buffer_string(buffer, element->circuit);
+    }
+    if (element->circuit_voltage > 0) {
+        norma_buffer_raw(buffer, ",\"voltage\":");
+        norma_buffer_number(buffer, (double) element->circuit_voltage);
+    }
+    if (element->circuit_gauge[0] != '\0') {
+        norma_buffer_raw(buffer, ",\"gauge\":");
+        norma_buffer_string(buffer, element->circuit_gauge);
+    }
+    if (element->circuit_phases > 0) {
+        norma_buffer_raw(buffer, ",\"phases\":");
+        norma_buffer_number(buffer, (double) element->circuit_phases);
+    }
+    if (element->circuit_load_va > 0.0) {
+        norma_buffer_raw(buffer, ",\"load\":");
+        norma_buffer_number(buffer, element->circuit_load_va);
+    }
+    if (element->lanes > 0) {
+        norma_buffer_raw(buffer, ",\"lanes\":");
+        norma_buffer_number(buffer, (double) element->lanes);
     }
 }
 
@@ -1468,6 +1613,22 @@ int norma_document_from_json(norma_document *document, const char *text, size_t 
         element.ext_capacity_lb = norma_json_number(norma_json_get(source, "extCapacityLb"), 0.0);
         element.ext_mount_cm = norma_json_number(norma_json_get(source, "extMountCm"), 0.0);
         element.has_ext_mount = norma_json_get(source, "extMountCm") != NULL;
+        set_text(element.mep_network, sizeof(element.mep_network),
+                 norma_json_string(norma_json_get(source, "network")), "");
+        set_text(element.mep_diameter, sizeof(element.mep_diameter),
+                 norma_json_string(norma_json_get(source, "diameter")), "");
+        set_text(element.mep_material, sizeof(element.mep_material),
+                 norma_json_string(norma_json_get(source, "material")), "");
+        element.mep_slope = norma_json_number(norma_json_get(source, "slope"), 0.0);
+        element.mep_pressure = norma_json_number(norma_json_get(source, "pressure"), 0.0);
+        set_text(element.circuit, sizeof(element.circuit),
+                 norma_json_string(norma_json_get(source, "circuit")), "");
+        element.circuit_voltage = (int) norma_json_number(norma_json_get(source, "voltage"), 0.0);
+        set_text(element.circuit_gauge, sizeof(element.circuit_gauge),
+                 norma_json_string(norma_json_get(source, "gauge")), "");
+        element.circuit_phases = (int) norma_json_number(norma_json_get(source, "phases"), 0.0);
+        element.circuit_load_va = norma_json_number(norma_json_get(source, "load"), 0.0);
+        element.lanes = (int) norma_json_number(norma_json_get(source, "lanes"), 0.0);
         document->elements[document->count] = element;
         document->count += 1;
         document->identifier += 1;

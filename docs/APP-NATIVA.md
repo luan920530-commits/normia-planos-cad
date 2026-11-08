@@ -991,7 +991,9 @@ sección, y cada sección aparece solo cuando tiene sentido:
 | Geometría | X · Y · ancho · alto · rotación ±90° · medida declarada | `set_box`, `move_node`, `set_rotation` |
 | Apariencia | paleta de 20 colores, opacidad 10–100 %, grosor, rótulo, tamaño de letra | `set_colour`, `set_opacity`, `set_stroke`, `set_label`, `set_font_size` |
 | Puerta | cambiar bisagra, abrir al otro lado, salida de emergencia | `set_door_flips`, `set_exit` |
-| Vía y entorno | ancho declarado en metros | `set_width_m` |
+| Vía y entorno | ancho declarado en metros y carriles (1–6) | `set_width_m`, `set_lanes` |
+| Red de tubería | red, diámetro, material, pendiente (%) y presión (kPa) | `set_mep` |
+| Circuito eléctrico | circuito, tensión, calibre (AWG) y fases | `set_circuit` |
 | Extintor | agente, capacidad, clasificación, altura de montaje, riesgo | `set_extinguisher` |
 | Organización | capa del elemento y tipo de elemento (muro ↔ línea ↔ ruta ↔ cota; caja ↔ rectángulo ↔ elipse ↔ texto) | `set_layer`, `set_type` |
 | Maqueta de trazo | importar, opacidad, visible, bloqueada, quitar | `set_guide*`, `clear_guide` |
@@ -1049,6 +1051,9 @@ norma_document_set_locked       y `editable()` devuelve NULL si está bloqueado
 norma_document_set_type         muro/línea/ruta/cota y caja/rectángulo/elipse/texto, nunca trazo ↔ caja
 norma_document_set_width_m      ancho declarado de vía, andén, paso, parqueadero y lindero
 norma_document_set_extinguisher agente · clasificación · riesgo · capacidad · montaje
+norma_document_set_mep          red · diámetro · material · pendiente (0–15 %) · presión (0–5000 kPa)
+norma_document_set_circuit      circuito · tensión · calibre · fases (1 o 3) · carga
+norma_document_set_lanes        carriles de la vía (1–6)
 norma_document_set_guide        nombre · base64 · caja (opacidad inicial 45 %)
 norma_document_set_guide_opacity  0,05 – 1,00
 norma_document_set_guide_box      mover y escalar desde el lienzo o el inspector
@@ -1067,23 +1072,36 @@ En el sobre del plano, la maqueta va en la **raíz**, fuera de `design`:
 
 La web ignora las claves que no conoce, así que el mismo archivo abre en las dos
 sin cambios. Los campos nuevos del elemento (`flipX`, `flipY`, `opacity`,
-`fontSize`, `locked`, `widthM`) se escriben solo cuando valen algo distinto de lo
-habitual, para no engordar el JSON.
+`fontSize`, `locked`, `widthM`, `lanes`, `network`, `diameter`, `material`,
+`slope`, `pressure`, `circuit`, `voltage`, `gauge`, `phases`, `load`) se escriben
+solo cuando valen algo distinto de lo habitual, para no engordar el JSON.
+
+Las redes, diámetros y materiales de la ficha MEP **no están copiados en la
+ventana**: `InspectorPanel` lee `resources/mep-networks.json`, el mismo archivo
+que usa la web, con `NSJSONSerialization`. Al elegir una red se aplican su
+diámetro, su material y su presión de referencia, como en el inspector web.
 
 ### Lo que se comprueba
 
-`native/tests/macos.mjs` pasa de 98 a **111 comprobaciones**: las dos
+`native/tests/macos.mjs` pasa de 98 a **113 comprobaciones**: las dos
 bibliotecas en la paleta y en el menú, el buscador acotado por familia, las
-secciones nuevas del inspector y su llamada al núcleo, la paleta de colores del
-modelo web, el muro de nodo por nodo con cierre por el primer nodo y su trazo
-elástico, y la maqueta (menú, panel de archivo, base64, opacidad, dibujo debajo
-de la hoja, arrastre y bloqueo).
+secciones nuevas del inspector y su llamada al núcleo, la ficha de red y de
+circuito con sus redes leídas del catálogo, la paleta de colores del modelo web,
+el muro de nodo por nodo con cierre por el primer nodo y su trazo elástico, y la
+maqueta (menú, panel de archivo, base64, opacidad, dibujo debajo de la hoja,
+arrastre y bloqueo).
 
-`make -C native test` suma **20 comprobaciones** nuevas en `test_document.c`
+`make -C native test` suma **23 comprobaciones** nuevas en `test_document.c`
 (`test_inspector_web` y `test_guide`): bloqueo, opacidad, tamaño de letra,
-bisagra y abatimiento, conversión de tipo, ancho de vía, ficha del extintor y la
-maqueta con ida y vuelta dentro del sobre. En total, **80** en ese archivo.
+bisagra y abatimiento, conversión de tipo, ancho de vía, carriles, red de
+tubería, circuito, ficha del extintor y la maqueta con ida y vuelta dentro del
+sobre. En total, **83** en ese archivo.
 
 Sigue sin poder verse **la ventana en pantalla** desde aquí: el `.app` se compila
 y se arranca con `--check` en el flujo de macOS, pero el ratón, la importación
 real de una imagen y el aspecto los ve una persona en su Mac.
+
+Lo único que el inspector todavía no edita son **las curvas del trazo** (radio y
+flecha de un tramo curvo) y el **veredicto del extintor**: el núcleo guarda los
+arcos y calcula la cobertura en la revisión, pero no expone todavía un campo
+para cambiar el radio de un tramo ni una ficha resuelta por extintor.

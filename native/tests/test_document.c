@@ -454,21 +454,65 @@ static void test_inspector_web(void)
               && document.elements[3].has_ext_mount == 1,
           "pqs_abc · 2-A:10-B:C · ordinario");
 
+    check("La vía acepta sus carriles y no los acepta un andén",
+          norma_document_set_lanes(&document, 2, 4) == 1 && document.elements[2].lanes == 4
+              && norma_document_set_lanes(&document, 2, 9) == 1 && document.elements[2].lanes == 6
+              && norma_document_add_environment(&document, "sidewalk", (norma_point) {0.0, 0.0},
+                                               (norma_point) {300.0, 120.0}, NULL) == 4
+              && norma_document_set_lanes(&document, 4, 2) == 0
+              && norma_document_set_lanes(&document, 2, 4) == 1,
+          "4 carriles · 6 como tope");
+
+    /* Red de tubería y circuito eléctrico: la ficha MEP del inspector web. */
+    const long pipe = norma_document_add_environment(&document, "pipe", (norma_point) {0.0, 0.0},
+                                                     (norma_point) {600.0, 0.0}, NULL);
+    check("La tubería declara red, diámetro, material, pendiente y presión",
+          pipe == 5
+              && norma_document_set_mep(&document, 5, "agua_fria", "1/2\"", "pvc", 2.0, 300.0) == 1
+              && strcmp(document.elements[5].mep_network, "agua_fria") == 0
+              && strcmp(document.elements[5].mep_diameter, "1/2\"") == 0
+              && close_to(document.elements[5].mep_slope, 2.0, 1e-9)
+              && norma_document_set_mep(&document, 5, NULL, NULL, NULL, 40.0, 9000.0) == 1
+              && close_to(document.elements[5].mep_slope, 15.0, 1e-9)
+              && close_to(document.elements[5].mep_pressure, 5000.0, 1e-9)
+              && norma_document_set_mep(&document, 2, "gas", NULL, NULL, 0.0, 0.0) == 0,
+          "agua_fría · 1/2\" · pvc · 2 % · 300 kPa");
+
+    const long conduit = norma_document_add_environment(&document, "conduit", (norma_point) {0.0, 0.0},
+                                                        (norma_point) {400.0, 0.0}, NULL);
+    check("La canaleta declara circuito, tensión, calibre, fases y carga",
+          conduit == 6
+              && norma_document_set_circuit(&document, 6, "TA-2", 220, "12", 1, 1800.0) == 1
+              && strcmp(document.elements[6].circuit, "TA-2") == 0
+              && document.elements[6].circuit_voltage == 220
+              && strcmp(document.elements[6].circuit_gauge, "12") == 0
+              && document.elements[6].circuit_phases == 1
+              && close_to(document.elements[6].circuit_load_va, 1800.0, 1e-9)
+              && norma_document_set_circuit(&document, 5, "C9", 220, "12", 1, 0.0) == 0,
+          "TA-2 · 220 V · 12 AWG");
+
     /* Todo lo anterior tiene que viajar en el sobre oficial. */
     char *json = norma_document_to_json(&document, "Inspector web");
     check("Los campos nuevos se escriben en el plano",
           json != NULL && strstr(json, "\"flipX\":true") != NULL && strstr(json, "\"flipY\":true") != NULL
-              && strstr(json, "\"fontSize\":18") != NULL && strstr(json, "\"widthM\":7.5") != NULL,
-          "flipX · flipY · fontSize · widthM");
+              && strstr(json, "\"fontSize\":18") != NULL && strstr(json, "\"widthM\":7.5") != NULL
+              && strstr(json, "\"network\":\"agua_fria\"") != NULL
+              && strstr(json, "\"circuit\":\"TA-2\"") != NULL
+              && strstr(json, "\"lanes\":4") != NULL,
+          "flipX · flipY · fontSize · widthM · network · circuit · lanes");
     norma_document other;
     norma_document_init(&other);
     char error[128];
     const int ok = json != NULL && norma_document_from_json(&other, json, strlen(json), error, sizeof(error));
     check("Abrir el plano devuelve la ficha completa",
-          ok && other.count == 4 && other.elements[0].flip_x == 1 && other.elements[0].flip_y == 1
+          ok && other.count == 7 && other.elements[0].flip_x == 1 && other.elements[0].flip_y == 1
               && close_to(other.elements[1].font_size, 18.0, 1e-9)
               && close_to(other.elements[2].width_m, 7.5, 1e-9)
-              && strcmp(other.elements[3].ext_rating, "2-A:10-B:C") == 0,
+              && other.elements[2].lanes == 4
+              && strcmp(other.elements[3].ext_rating, "2-A:10-B:C") == 0
+              && strcmp(other.elements[5].mep_network, "agua_fria") == 0
+              && strcmp(other.elements[6].circuit, "TA-2") == 0
+              && other.elements[6].circuit_voltage == 220,
           ok ? "ida y vuelta" : error);
     free(json);
     norma_document_free(&other);

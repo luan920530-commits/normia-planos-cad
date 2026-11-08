@@ -539,6 +539,19 @@ report.check('La ficha nueva llama al núcleo: opacidad, letra, bisagra, tipo, a
   && /norma_document_set_font_size/.test(inspector),
   'opacity · flipX · flipY · locked · type · widthM · extintor');
 
+report.check('El inspector tiene la ficha de red, la de circuito y los carriles',
+  /@"RED DE TUBERÍA"/.test(inspector) && /@"CIRCUITO ELÉCTRICO"/.test(inspector)
+  && /norma_document_set_mep/.test(inspector) && /norma_document_set_circuit/.test(inspector)
+  && /@"Carriles"/.test(inspector) && /norma_document_set_lanes/.test(inspector)
+  && /@"Pendiente \(%\)"/.test(inspector) && /@"Presión \(kPa\)"/.test(inspector)
+  && /@"Calibre \(AWG\)"/.test(inspector) && /@"Fases"/.test(inspector),
+  'red · circuito · carriles');
+
+report.check('Las redes del inspector salen del catálogo de la web, no de una lista copiada',
+  /mep-networks\.json/.test(inspector) && /NSJSONSerialization/.test(inspector)
+  && /mepNetworks/.test(inspector) && /refreshMepForElement/.test(inspector),
+  'resources/mep-networks.json');
+
 report.check('El inspector usa la paleta de colores del editor web',
   /kColours/.test(inspector) && /#2563eb/.test(inspector) && /#b71f2e/.test(inspector)
   && /kColourCount/.test(inspector),

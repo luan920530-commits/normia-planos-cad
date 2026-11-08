@@ -79,6 +79,30 @@ typedef struct {
     double ext_mount_cm;
     /** 1 si el plano declaró la altura de montaje (0 cm es «sin dato»). */
     int has_ext_mount;
+    /* ---- red de tubería (MEP): la misma ficha del inspector web ---- */
+    /** Clave de la red declarada (`agua_fria`, `gas`, `aguas_negras`…). */
+    char mep_network[24];
+    /** Diámetro nominal tal como lo escribe el catálogo (`1/2"`, `4"`…). */
+    char mep_diameter[16];
+    /** Material de referencia (`pvc`, `cpvc`, `acero`, `cobre`…). */
+    char mep_material[24];
+    /** Pendiente de diseño en por ciento; 0 = sin declarar. */
+    double mep_slope;
+    /** Presión de trabajo en kPa; 0 = sin declarar. */
+    double mep_pressure;
+    /* ---- circuito eléctrico ---- */
+    /** Código del circuito (`C1`, `TA-2`…): los tramos del mismo código son uno. */
+    char circuit[16];
+    /** Tensión en voltios (110, 220, 440); 0 = sin declarar. */
+    int circuit_voltage;
+    /** Calibre del conductor en AWG (`14`, `12`, `10`…). */
+    char circuit_gauge[16];
+    /** Fases: 1 o 3. */
+    int circuit_phases;
+    /** Carga declarada del tramo o del equipo, en VA. */
+    double circuit_load_va;
+    /** Carriles declarados de la vía (1–6); 0 = sin declarar. */
+    int lanes;
 } norma_element;
 
 typedef struct {
@@ -322,6 +346,26 @@ int norma_document_set_width_m(norma_document *document, size_t element, double 
 int norma_document_set_extinguisher(norma_document *document, size_t element, const char *agent,
                                     const char *rating, const char *hazard, double capacity_lb,
                                     double mount_cm);
+
+/**
+ * Red de la tubería: clave de red, diámetro, material, pendiente (%) y presión
+ * (kPa). Solo vale en un `pipe`; los textos vacíos no tocan el campo y un
+ * negativo en la pendiente o en la presión deja ese valor como estaba.
+ * Devuelve 1 si cambió algo.
+ */
+int norma_document_set_mep(norma_document *document, size_t element, const char *network,
+                           const char *diameter, const char *material, double slope, double pressure);
+
+/**
+ * Circuito eléctrico: código, tensión (V), calibre (AWG), fases (1 o 3) y carga
+ * (VA). Solo vale en un `conduit`; una carga negativa deja la que hubiera.
+ * Devuelve 1 si cambió algo.
+ */
+int norma_document_set_circuit(norma_document *document, size_t element, const char *code,
+                               int voltage, const char *gauge, int phases, double load_va);
+
+/** Carriles declarados de una vía (1–6). Devuelve 1 si cambió. */
+int norma_document_set_lanes(norma_document *document, size_t element, int lanes);
 
 /** Pone la guía con su imagen ya codificada en base64 y la caja en centímetros. */
 int norma_document_set_guide(norma_document *document, const char *name, const char *data,
