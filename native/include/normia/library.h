@@ -36,6 +36,8 @@ typedef struct {
     char category[24];
     /** Color de la familia, el mismo de `LibraryRepository::SIGN_COLORS`. */
     char color[16];
+    /** Rótulo de la familia tal como lo escribe el catálogo («Respuesta contra incendios»). */
+    char family_label[72];
     /** Pictograma original, tal como está en el catálogo. */
     char *svg;
 } norma_sign;
@@ -91,6 +93,13 @@ void norma_library_number(double value, char *out, size_t size);
  */
 int norma_library_nested_svg(const norma_sign *sign, double x, double y, double w, double h,
                              const char *color, norma_buffer *out);
+
+/**
+ * Lo mismo, con el texto del `<svg>` a mano: lo usa el catálogo de objetos, que
+ * guarda el pictograma de un objeto CAD sin envolverlo en una `norma_sign`.
+ */
+int norma_library_nested_svg_text(const char *svg, double x, double y, double w, double h,
+                                  const char *color, norma_buffer *out);
 
 #ifdef __cplusplus
 }

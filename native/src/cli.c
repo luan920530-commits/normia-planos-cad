@@ -24,6 +24,7 @@
 #include "normia/extinguisher.h"
 #include "normia/firstaid.h"
 #include "normia/library.h"
+#include "normia/object.h"
 #include "normia/routes.h"
 #include "normia/scenarios.h"
 #include "normia/signage.h"
@@ -47,10 +48,12 @@ static void usage(FILE *out, const char *program)
             "  %s --audit plano.json   superficie libre y aforo, en JSON\n"
             "  %s --inspect plano.json resumen y hallazgos, como el cajón Revisión\n"
             "  %s --sign-board x.svg   hoja con todas las señalizaciones, en SVG\n"
+            "  %s --objects            catálogo completo de objetos y señales, en JSON\n"
             "  %s --help               esta ayuda\n\n"
             "Opciones:\n"
             "  --resources DIR         carpeta de catálogos (por omisión, ./resources)\n",
-            NORMA_CORE_VERSION, program, program, program, program, program, program, program, program);
+            NORMA_CORE_VERSION, program, program, program, program, program, program, program, program,
+            program);
 }
 
 /** Carpeta de catálogos pedida con `--resources` o con el entorno. */
@@ -84,6 +87,38 @@ static int load_library(norma_library *library, char *error, size_t error_size)
     for (size_t index = 0; index < count; index += 1) {
         if (norma_library_load(candidates[index], library, error, error_size)) {
             snprintf(g_resources_found, sizeof(g_resources_found), "%s", candidates[index]);
+            return 1;
+        }
+        snprintf(last, sizeof(last), "%s", error);
+    }
+    snprintf(error, error_size, "%s", last);
+    return 0;
+}
+
+/**
+ * Carga el catálogo completo (820 piezas) y lo deja activo, para que el SVG de
+ * un plano salga con el pictograma de cada objeto. Si no se encuentra, el
+ * programa sigue: los objetos se dibujan como caja con su nombre.
+ */
+static int load_objects(norma_object_catalog *catalog, char *error, size_t error_size)
+{
+    const char *candidates[8];
+    size_t count = 0;
+    if (g_resources != NULL && g_resources[0] != '\0') {
+        candidates[count++] = g_resources;
+    }
+    const char *from_env = getenv("NORMA_RESOURCES");
+    if (from_env != NULL && from_env[0] != '\0') {
+        candidates[count++] = from_env;
+    }
+    candidates[count++] = "resources";
+    candidates[count++] = "../resources";
+    candidates[count++] = "../../resources";
+    candidates[count++] = "../../../resources";
+    char last[256] = "No se encontró la carpeta «resources» con los catálogos.";
+    for (size_t index = 0; index < count; index += 1) {
+        if (norma_object_catalog_load(catalog, candidates[index], error, error_size)) {
+            norma_object_use(catalog);
             return 1;
         }
         snprintf(last, sizeof(last), "%s", error);
@@ -649,10 +684,19 @@ static int command_svg(const char *path)
     norma_library library;
     char library_error[256];
     const int has_library = load_library(&library, library_error, sizeof(library_error));
+    /* El catálogo completo pone el pictograma de los 422 objetos CAD y de las
+       395 señales; la biblioteca sigue haciendo falta para las rutas que trae
+       un plano hecho en la web con un código suelto. */
+    norma_object_catalog catalog;
+    char catalog_error[256];
+    const int has_objects = load_objects(&catalog, catalog_error, sizeof(catalog_error));
     norma_svg_options options = {1, 1, title, has_library ? &library : NULL};
     char *svg = norma_document_to_svg(&document, &options);
     if (has_library) {
         norma_library_free(&library);
+    }
+    if (has_objects) {
+        norma_object_catalog_free(&catalog);
     }
     norma_document_free(&document);
     if (svg == NULL) {
@@ -816,6 +860,75 @@ static int command_inspect(const char *path)
     return 0;
 }
 
+/**
+ * Catálogo completo en JSON: las familias con su rótulo y sus piezas. Es lo que
+ * la ventana usa para armar el menú Insertar, así que sirve para comprobar que
+ * el menú y el núcleo cuentan lo mismo.
+ */
+static int command_objects(void)
+{
+    norma_object_catalog catalog;
+    char error[256] = "";
+    if (!load_objects(&catalog, error, sizeof(error))) {
+        fprintf(stderr, "%s\n", error);
+        return 2;
+    }
+    printf("{\n  \"source\": ");
+    norma_buffer source;
+    norma_buffer_init(&source);
+    norma_buffer_string(&source, catalog.source);
+    fputs(norma_buffer_text(&source), stdout);
+    norma_buffer_free(&source);
+    printf(",\n  \"count\": %lu,\n  \"families\": [\n", (unsigned long) catalog.count);
+    const size_t families = norma_object_family_count();
+    for (size_t index = 0; index < families; index += 1) {
+        const char *key = norma_object_family_at(index);
+        norma_buffer line;
+        norma_buffer_init(&line);
+        norma_buffer_string(&line, key);
+        fputs("    {\"key\": ", stdout);
+        fputs(norma_buffer_text(&line), stdout);
+        norma_buffer_free(&line);
+        norma_buffer_init(&line);
+        norma_buffer_string(&line, norma_object_family_label_at(index));
+        fputs(", \"label\": ", stdout);
+        fputs(norma_buffer_text(&line), stdout);
+        norma_buffer_free(&line);
+        printf(", \"count\": %lu}", (unsigned long) norma_object_count_in(key));
+        printf("%s\n", index + 1 < families ? "," : "");
+    }
+    printf("  ],\n  \"objects\": [\n");
+    for (size_t index = 0; index < catalog.count; index += 1) {
+        const norma_object_spec *spec = &catalog.items[index];
+        norma_buffer line;
+        norma_buffer_init(&line);
+        norma_buffer_string(&line, spec->type);
+        fputs("    {\"type\": ", stdout);
+        fputs(norma_buffer_text(&line), stdout);
+        norma_buffer_free(&line);
+        norma_buffer_init(&line);
+        norma_buffer_string(&line, spec->name);
+        fputs(", \"name\": ", stdout);
+        fputs(norma_buffer_text(&line), stdout);
+        norma_buffer_free(&line);
+        norma_buffer_init(&line);
+        norma_buffer_string(&line, spec->family);
+        fputs(", \"family\": ", stdout);
+        fputs(norma_buffer_text(&line), stdout);
+        norma_buffer_free(&line);
+        norma_buffer_init(&line);
+        norma_buffer_string(&line, spec->colour);
+        fputs(", \"color\": ", stdout);
+        fputs(norma_buffer_text(&line), stdout);
+        norma_buffer_free(&line);
+        printf(", \"svg\": %s}", spec->svg != NULL ? "true" : "false");
+        printf("%s\n", index + 1 < catalog.count ? "," : "");
+    }
+    printf("  ]\n}\n");
+    norma_object_catalog_free(&catalog);
+    return 0;
+}
+
 int main(int argc, char **argv)
 {
     const char *program = argc > 0 ? argv[0] : "norma-core";
@@ -863,6 +976,9 @@ int main(int argc, char **argv)
             return 64;
         }
         return command_audit(args[1]);
+    }
+    if (strcmp(command, "--objects") == 0) {
+        return command_objects();
     }
     if (strcmp(command, "--sign-board") == 0) {
         if (count < 2) {

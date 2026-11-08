@@ -256,6 +256,11 @@ static const char *object_colour(const norma_element *element)
     if (strcmp(type, "cad_emg_meeting") == 0) {
         return "#047857";
     }
+    /* Cualquier otro objeto del catálogo trae su color de familia. */
+    const norma_object_spec *spec = norma_object_find(type);
+    if (spec != NULL && spec->colour[0] != '\0') {
+        return spec->colour;
+    }
     return "#334155";
 }
 
@@ -597,6 +602,13 @@ static void write_box_object(norma_buffer *buffer, const norma_element *element,
     const double w = element->w;
     const double h = element->h > 0.0 ? element->h : element->w;
     const char *colour = object_colour(element);
+    /* El catálogo completo trae el pictograma de las 817 piezas (422 objetos CAD
+       y 395 señales): se inserta tal cual, escalado a la caja. */
+    const norma_object_spec *spec = norma_object_find(element->type);
+    if (spec != NULL && spec->svg != NULL
+        && norma_library_nested_svg_text(spec->svg, element->x, element->y, w, h, colour, buffer)) {
+        return;
+    }
     if (library != NULL) {
         char code[64];
         const char *resolved = norma_library_code_for_type(library, element->type, code, sizeof(code));

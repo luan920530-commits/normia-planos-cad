@@ -30,7 +30,9 @@ extern "C" {
 
 typedef struct {
     char id[32];
-    char type[24];   /* "wall", "sign", "extinguisher"… */
+    /* "wall", "door", "cad_caf_counter_pickup", "iso_e001"…: el nombre más largo
+       del catálogo son 24 caracteres, así que el tipo tiene que caber entero. */
+    char type[48];
     char layer[32];
     /** Nombre que la persona le puso al objeto (vacío si no tiene). */
     char label[64];

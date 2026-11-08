@@ -23,6 +23,7 @@
 #include <stddef.h>
 
 #include "normia/document.h"
+#include "normia/object.h"
 #include "normia/findings.h"
 #include "normia/grid.h"
 #include "normia/json.h"
@@ -77,7 +78,8 @@ void norma_ext_parse_rating(const char *raw, int *rating_a, int *rating_b, int *
 
 typedef struct {
     char id[32];
-    char type[24];
+    /* El tipo lleva el nombre completo del catálogo (`cad_acc_accessible_lift`). */
+    char type[NORMA_OBJECT_TYPE];
     /** Centro del equipo (redondeado a dos decimales, como la web). */
     double cx;
     double cy;

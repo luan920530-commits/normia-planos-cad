@@ -47,7 +47,10 @@ $(BUILD)/tests-signs: tests/test_signs.c $(OBJECTS) $(HEADERS) | $(BUILD)
 $(BUILD)/tests-ext: tests/test_extinguishers.c $(OBJECTS) $(HEADERS) | $(BUILD)
 	$(CC) $(CPPFLAGS) $(CFLAGS) tests/test_extinguishers.c $(OBJECTS) -o $@ $(LDLIBS)
 
-test: $(BUILD)/tests $(BUILD)/tests-document $(BUILD)/tests-svg $(BUILD)/tests-audit $(BUILD)/tests-signs $(BUILD)/tests-ext $(BUILD)/norma-core
+$(BUILD)/tests-catalog: tests/test_catalog.c $(OBJECTS) $(HEADERS) | $(BUILD)
+	$(CC) $(CPPFLAGS) $(CFLAGS) tests/test_catalog.c $(OBJECTS) -o $@ $(LDLIBS)
+
+test: $(BUILD)/tests $(BUILD)/tests-document $(BUILD)/tests-svg $(BUILD)/tests-audit $(BUILD)/tests-signs $(BUILD)/tests-ext $(BUILD)/tests-catalog $(BUILD)/norma-core
 	@echo "· Pruebas del núcleo"
 	@$(BUILD)/tests
 	@echo "· Pruebas del documento"
@@ -60,6 +63,8 @@ test: $(BUILD)/tests $(BUILD)/tests-document $(BUILD)/tests-svg $(BUILD)/tests-a
 	@$(BUILD)/tests-signs
 	@echo "· Pruebas de la cobertura de extintores"
 	@$(BUILD)/tests-ext
+	@echo "· Pruebas del catálogo completo"
+	@$(BUILD)/tests-catalog
 	@echo "· El programa responde a --check"
 	@$(BUILD)/norma-core --check
 

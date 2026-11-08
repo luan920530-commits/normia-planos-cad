@@ -23,12 +23,18 @@ const delegate = read('AppDelegate.m');
 const canvas = read('CanvasView.m');
 const canvasHeader = read('CanvasView.h');
 const plist = read('Info.plist');
+const picker = read('CatalogPicker.m');
+const pickerHeader = read('CatalogPicker.h');
+const catalogH = fs.readFileSync(path.join(repoRoot, 'native', 'include', 'normia', 'object.h'), 'utf8');
+const catalogC = fs.readFileSync(path.join(repoRoot, 'native', 'src', 'object.c'), 'utf8');
+const cliC = fs.readFileSync(path.join(repoRoot, 'native', 'src', 'cli.c'), 'utf8');
 const svgC = fs.readFileSync(path.join(repoRoot, 'native', 'src', 'svg.c'), 'utf8');
 const objectH = fs.readFileSync(path.join(repoRoot, 'native', 'include', 'normia', 'object.h'), 'utf8');
 const documentH = fs.readFileSync(path.join(repoRoot, 'native', 'include', 'normia', 'document.h'), 'utf8');
 const signsTest = fs.readFileSync(path.join(repoRoot, 'native', 'tests', 'test_signs.c'), 'utf8');
 const makefile = read('Makefile');
 const leerFlujo = (name) => fs.readFileSync(path.join(repoRoot, '.github', 'workflows', name), 'utf8');
+const nativeWorkflow = leerFlujo('dist-nativo.yml');
 const verifyWorkflow = leerFlujo('verify.yml');
 const desktopWorkflow = leerFlujo('dist-desktop.yml');
 /**
@@ -279,29 +285,56 @@ report.check('Al cambiar el zoom se dice en la barra de estado',
 
 report.check('El menú Insertar se arma con el catálogo del núcleo, no con una lista copiada',
   /NSMenu \*insertMenu = \[\[NSMenu alloc\] initWithTitle:@"Insertar"\]/.test(delegate)
-  && /for \(size_t index = 0; index < norma_object_count\(\); index \+= 1\)/.test(delegate)
-  && /const norma_object_spec \*spec = norma_object_at\(index\)/.test(delegate)
+  && /norma_object_family_count\(\)/.test(delegate) && /norma_object_family_at\(family\)/.test(delegate)
+  && /norma_object_count_in\(key\)/.test(delegate) && /norma_object_at_in\(key, position\)/.test(delegate)
   && /#include "normia\/object\.h"/.test(delegate)
   && !/@"cad_emg_aed"/.test(delegate),
-  'norma_object_at · 11 objetos');
+  'un submenú por familia');
 
-report.check('Los objetos insertables son once: puertas, equipos de emergencia y señales',
-  /#define NORMA_OBJECT_COUNT 11/.test(objectH)
-  && ['door', 'door_double', 'door_garage', 'cad_eds_extinguisher', 'cad_emg_firstaid',
-    'cad_emg_stretcher', 'cad_emg_aed', 'cad_emg_meeting', 'iso_e001', 'iso_e007', 'sig_aqui']
-    .every((type) => fs.readFileSync(path.join(repoRoot, 'native', 'src', 'object.c'), 'utf8').includes(`"${type}"`)),
-  '11 objetos');
+report.check('La aplicación carga el catálogo completo al arrancar y lo deja activo para el SVG',
+  /- \(void\)loadObjectCatalog/.test(delegate)
+  && /norma_object_catalog_load\(&_catalog/.test(delegate) && /norma_object_use\(&_catalog\)/.test(delegate)
+  && /norma_object_use\(NULL\)/.test(delegate) && /norma_object_catalog_free\(&_catalog\)/.test(delegate),
+  '820 piezas · Contents/Resources/resources');
+
+report.check('El catálogo completo son 820 piezas: 3 puertas, 422 objetos CAD y 395 señales',
+  /norma_object_catalog_load/.test(catalogH) && /norma_object_catalog_load/.test(catalogC)
+  && /cad-objects\.json/.test(catalogC) && /norma_library_load/.test(catalogC)
+  && /sign:%s/.test(catalogC) && /cad:%s/.test(catalogC),
+  'object.c · cad-objects.json · library');
+
+report.check('Cada pieza trae nombre, familia, color y pictograma, y las puertas se dibujan a mano',
+  /char family\[NORMA_OBJECT_FAMILY\]/.test(catalogH) && /char colour\[NORMA_OBJECT_COLOUR\]/.test(catalogH)
+  && /char \*svg;/.test(catalogH) && /strncmp\(spec->type, "cad_", 4\)/.test(fs.readFileSync(path.join(repoRoot, 'native', 'tests', 'test_catalog.c'), 'utf8'))
+  && /norma_library_nested_svg_text\(spec->svg/.test(fs.readFileSync(path.join(repoRoot, 'native', 'src', 'svg.c'), 'utf8')),
+  'nombre · familia · color · svg');
+
+report.check('El tipo más largo del catálogo cabe en el elemento del plano',
+  /char type\[48\];/.test(fs.readFileSync(path.join(repoRoot, 'native', 'include', 'normia', 'document.h'), 'utf8')),
+  'type[48] · cad_acc_accessible_lift');
+
+report.check('Hay un buscador para las 820 piezas, porque un menú plano no se recorrería',
+  /Buscar en el catálogo…/.test(delegate) && /insertFromPicker:/.test(delegate)
+  && /NormiaCatalogPicker pickFromCatalog:&_catalog/.test(delegate)
+  && /NSSearchField/.test(picker) && /NSTableView/.test(picker)
+  && /pickFromCatalog:/.test(pickerHeader)
+  && /- \(void\)controlTextDidChange:/.test(picker),
+  '⌘⇧I · filtro sin tildes');
+
+report.check('El buscador es AppKit de verdad, sin WebView ni HTML',
+  !/WKWebView|innerHTML|document\.write/.test(strip([picker, pickerHeader].join('\n')))
+  && !/innerHTML/.test(all),
+  'NSSearchField · NSTableView');
 
 report.check('Los atajos de Insertar van con ⌃ y no pisan las letras del lienzo',
   /NSEventModifierFlagControl/.test(delegate)
   && /item\.keyEquivalentModifierMask = NSEventModifierFlagControl;/.test(delegate)
-  && /NSArray<NSString \*> \*keys = @\[@"u", @"U", @"g", @"e", @"b", @"c", @"d", @"m", @"1", @"2", @"a"\]/.test(delegate),
-  '⌃U ⌃U ⌃G ⌃E ⌃B ⌃C ⌃D ⌃M ⌃1 ⌃2 ⌃A');
+  && /NSArray<NSString \*> \*doorKeys = @\[@"u", @"U", @"g"\]/.test(delegate),
+  '⌃U ⌃U ⌃G · ⌘⇧I para buscar');
 
-report.check('Las puertas se separan de los equipos y de las señales con separadores',
-  /strcmp\(spec->type, "door_garage"\) == 0\) \{\s*\[insertMenu addItem:\[NSMenuItem separatorItem\]\]/.test(delegate)
-  && /strcmp\(spec->type, "cad_emg_meeting"\) == 0\) \{\s*\[insertMenu addItem:\[NSMenuItem separatorItem\]\]/.test(delegate),
-  'puertas · equipos · señales');
+report.check('El núcleo puede listar el catálogo completo, para que el menú y el núcleo cuenten lo mismo',
+  /--objects/.test(cliC) && /command_objects/.test(cliC) && /norma_object_family_count/.test(cliC),
+  'norma-core --objects');
 
 report.check('Marcar o desmarcar una salida está en el menú Insertar y no en el lienzo',
   /Marcar o desmarcar salida de emergencia/.test(delegate)
@@ -346,6 +379,45 @@ report.check('Los objetos de una sola caja llevan su rótulo con la medida y la 
   /- \(NSString \*\)captionForObject:\(const norma_element \*\)element/.test(canvas)
   && /norma_format_measure_cm\(element->w, self\.document->unit/.test(canvas),
   'captionForObject:');
+
+/* ------------- 4f · el trabajo que arma la app de Monterey (N4) ------------- */
+
+report.check('Hay un trabajo que arma la app nativa para macOS 12 y la publica',
+  /name: App nativa de macOS \(Monterey\)/.test(nativeWorkflow)
+  && /runs-on: macos-/.test(nativeWorkflow) && /workflow_dispatch:/.test(nativeWorkflow)
+  && /upload-artifact@v4/.test(nativeWorkflow),
+  'dist-nativo.yml');
+
+report.check('El paquete es universal: se compila con las dos arquitecturas en una pasada',
+  /ARCHS \?=/.test(makefile) && /ARCHFLAGS := \$\(foreach arch,\$\(ARCHS\),-arch \$\(arch\)\)/.test(makefile)
+  && /\$\(DEPLOY_FLAGS\) \$\(ARCHFLAGS\) \$\(CFLAGS\)/.test(makefile)
+  && /ARCHS="x86_64 arm64"/.test(nativeWorkflow)
+  && /lipo -archs/.test(nativeWorkflow),
+  'x86_64 + arm64 · lipo');
+
+report.check('El trabajo exige macOS 12 en el Mach-O de cada arquitectura, no solo en el plist',
+  /otool -l -arch "\$ARQ"/.test(nativeWorkflow)
+  && /LC_BUILD_VERSION/.test(nativeWorkflow) && /minos/.test(nativeWorkflow)
+  && /LSMinimumSystemVersion/.test(nativeWorkflow)
+  && /DEPLOYMENT: \$\{\{ github\.event\.inputs\.deployment \|\| '12\.0' \}\}/.test(nativeWorkflow),
+  'minos 12.0 · x86_64 y arm64');
+
+report.check('El paquete se firma en ad-hoc y se publica con su SHA-256',
+  /codesign --force --deep --sign -/.test(nativeWorkflow)
+  && /ditto -c -k --sequesterRsrc --keepParent/.test(nativeWorkflow)
+  && /shasum -a 256/.test(nativeWorkflow)
+  && /\*\.zip\.sha256/.test(nativeWorkflow),
+  'ad-hoc · ditto · SHA-256');
+
+report.check('Con una etiqueta, el paquete se adjunta a la release',
+  /startsWith\(github\.ref, 'refs\/tags\/v'\)/.test(nativeWorkflow)
+  && /gh release upload/.test(nativeWorkflow)
+  && /permissions:\s*\n\s*contents: write/.test(nativeWorkflow),
+  'v* · gh release');
+
+report.check('El trabajo arranca la aplicación sin ventana y lista el catálogo antes de publicar',
+  /"\$BIN" --check/.test(nativeWorkflow) && /--objects/.test(nativeWorkflow),
+  '--check · --objects');
 
 /* ------------------------------ 5 · sistema mínimo ----------------------------- */
 

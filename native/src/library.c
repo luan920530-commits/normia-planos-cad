@@ -135,6 +135,7 @@ static int load_catalog(const char *path, norma_library *library,
         return 0;
     }
     const norma_json *signs = norma_json_get(root, "signs");
+    const norma_json *categories = norma_json_get(root, "categories");
     const size_t total = norma_json_size(signs);
     if (total == 0) {
         norma_json_free(root);
@@ -166,6 +167,8 @@ static int load_catalog(const char *path, norma_library *library,
                  norma_json_string_at(sign, "category", "services"));
         set_text(target->color, sizeof(target->color),
                  norma_library_color_for(target->category));
+        set_text(target->family_label, sizeof(target->family_label),
+                 norma_json_string_at(norma_json_get(categories, target->category), "label", target->category));
         const size_t svg_length = strlen(svg);
         target->svg = (char *) malloc(svg_length + 1);
         if (target->svg == NULL) {
@@ -541,18 +544,27 @@ void norma_library_number(double value, char *out, size_t size)
 int norma_library_nested_svg(const norma_sign *sign, double x, double y, double w, double h,
                              const char *color, norma_buffer *out)
 {
-    if (sign == NULL || sign->svg == NULL || out == NULL) {
+    if (sign == NULL) {
         return 0;
     }
-    if (!norma_library_safe_svg(sign->svg)) {
+    return norma_library_nested_svg_text(sign->svg, x, y, w, h, color, out);
+}
+
+int norma_library_nested_svg_text(const char *svg, double x, double y, double w, double h,
+                                  const char *color, norma_buffer *out)
+{
+    if (svg == NULL || out == NULL) {
+        return 0;
+    }
+    if (!norma_library_safe_svg(svg)) {
         return 0;
     }
     /* viewBox del pictograma; si no lo declara, se asume 100 × 100. */
     char view_box[64] = "0 0 100 100";
-    root_attribute(sign->svg, "viewBox", view_box, sizeof(view_box));
+    root_attribute(svg, "viewBox", view_box, sizeof(view_box));
 
     /* Contenido interior, sin la etiqueta `<svg>` que lo envuelve. */
-    const char *open = strchr(sign->svg, '>');
+    const char *open = strchr(svg, '>');
     if (open == NULL) {
         return 0;
     }
@@ -584,10 +596,10 @@ int norma_library_nested_svg(const norma_sign *sign, double x, double y, double 
 
     /* Los atributos de presentación de la etiqueta raíz se heredan: sin ellos
        el pictograma se exporta sin relleno. */
-    const char *root = sign->svg;
+    const char *root = svg;
     while (root < open) {
         if (isalpha((unsigned char) *root)
-            && (root == sign->svg || !isalnum((unsigned char) root[-1]))) {
+            && (root == svg || !isalnum((unsigned char) root[-1]))) {
             char name[48];
             size_t length = 0;
             const char *cursor = root;
@@ -600,7 +612,7 @@ int norma_library_nested_svg(const norma_sign *sign, double x, double y, double 
             name[length] = '\0';
             if (length > 0 && cursor < open && *cursor == '=' && is_presentation(name)) {
                 char value[256];
-                if (root_attribute(sign->svg, name, value, sizeof(value))) {
+                if (root_attribute(svg, name, value, sizeof(value))) {
                     copy_presentation(out, name, value);
                 }
             }

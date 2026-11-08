@@ -40,7 +40,10 @@ const seccion = (titulo) => {
 
 for (const [titulo, etiqueta] of [['Pruebas del núcleo', 'Núcleo de cálculo'],
   ['Pruebas del documento', 'Documento'], ['Pruebas del SVG', 'SVG con escala física'],
-  ['Pruebas de la rejilla y el aforo', 'Rejilla y aforo']]) {
+  ['Pruebas de la rejilla y el aforo', 'Rejilla y aforo'],
+  ['Pruebas de la señalización y los primeros auxilios', 'Señalización y primeros auxilios'],
+  ['Pruebas de la cobertura de extintores', 'Extintores'],
+  ['Pruebas del catálogo completo', 'Catálogo completo']]) {
   const cifras = seccion(titulo);
   report.check(`${etiqueta}: todas sus comprobaciones correctas`,
     cifras !== null && cifras.hechas === cifras.total && cifras.total > 0,
