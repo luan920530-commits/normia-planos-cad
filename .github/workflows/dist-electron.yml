@@ -242,6 +242,5 @@ jobs:
             artifacts/**/*.AppImage
             artifacts/**/*.SHA256SUMS.txt
           fail_on_unmatched_files: false
-          body: |
-            Edición Electron de Normia Planos CAD: macOS (Intel y Apple Silicon),
-            Windows x64 y Linux x64, con PHP 8.3 compilado a WebAssembly.
+          # Sin `body`: las notas de la release se escriben una sola vez, a mano,
+          # y los cuatro flujos de distribución solo adjuntan sus archivos.

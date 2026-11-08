@@ -325,6 +325,7 @@ jobs:
             artefactos/*/*.exe
             artefactos/SHA256SUMS.txt
           fail_on_unmatched_files: false
-          body: |
-            Paquetes de escritorio de Normia Planos CAD generados por el flujo de trabajo.
-            macOS 12 o superior (Intel y Apple Silicon) y Windows 10/11 x64.
+          # Sin `body`: la release de la etiqueta ya trae sus notas escritas a
+          # mano y este paso solo adjunta los paquetes. Con `body`, cada flujo
+          # que publicaba en la misma etiqueta reemplazaba las notas por las
+          # suyas y ganaba el último en terminar.
