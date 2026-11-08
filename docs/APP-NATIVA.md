@@ -3,7 +3,8 @@
 **Estado:** en marcha. Hechas la **etapa N0** (núcleo en C con paridad
 verificada contra el motor PHP, § 11), la **etapa N1** (documento editable y
 ventana nativa de macOS con lienzo propio, sin WebView, § 12), la **N2** (§ 13) y
-la **N3** (§ 14). Queda la **N4**: Windows y Linux.
+la **N3** (§ 14). De la **N4** ya está el catálogo completo con el paquete de macOS 12
+(§ 15); quedan Windows y Linux.
 
 **Pregunta que responde:** ¿Normia Estudio puede ser una aplicación nativa de
 verdad —como AutoCAD— y no una app con Electron?
@@ -280,8 +281,9 @@ selección por proximidad y el **sobre oficial** de ida y vuelta.
 | `native/tests/test_core.c` | unidades, arcos, JSON, plano | **23/23** |
 | `native/tests/test_document.c` | muros, deshacer, selección, guardar y abrir, unidades, rutas | **33/33** |
 | `native/tests/test_svg.c` | cifras es-CO, SVG con escala física y los objetos insertados: puerta, portón, extintor, botiquín y DEA | **31/31** |
+| `native/tests/test_catalog.c` | el catálogo completo: 820 piezas, 41 familias, nombres, colores, pictogramas, colocación y el tipo más largo en el plano | **26/26** |
 | `native/tests/parity.mjs` | paridad C contra PHP, dígito a dígito, también en el SVG, el auditor y la revisión | **64/64** |
-| `native/tests/macos.mjs` | contrato de la ventana: AppKit, sin WebView, menú en español, atajos, sobre oficial, macOS 12, herramientas, ruta, cajón de revisión, **menú Insertar**, puertas con su arco y equipos con pictograma | **68/68** |
+| `native/tests/macos.mjs` | contrato de la ventana: AppKit, sin WebView, menú en español, atajos, sobre oficial, macOS 12, herramientas, ruta, cajón de revisión, **menú Insertar por familias con el catálogo completo**, buscador, puertas con su arco, equipos con pictograma y el trabajo `dist-nativo.yml` | **79/79** |
 | `native/tests/core.mjs` | compilación estricta y los tres programas de prueba del núcleo | **7/7** |
 
 Y en el flujo de verificación hay un trabajo nuevo en **`macos-15-intel`** que
@@ -326,7 +328,7 @@ para sacar el plano sin el motor PHP:
 | `norma-core --svg plano.json` | `native/src/cli.c` | hecho |
 | Herramientas del lienzo `V · M · P · A · D · R` con borrador y previsualización | `native/macos/CanvasView.m` | hecho |
 | Exportar SVG con panel del sistema (`⌘E`) | `native/macos/AppDelegate.m` | escrito |
-| Abrir reciente (10 archivos, preferencia del sistema, se limpia sola) | `native/macos/AppDelegate.m` | hecho · **68/68** |
+| Abrir reciente (10 archivos, preferencia del sistema, se limpia sola) | `native/macos/AppDelegate.m` | hecho · **79/79** |
 | Lienzo abierto: zoom 2 %–4000 % sobre el cursor, desplazamiento con el botón central o derecho y rejilla adaptativa | `native/macos/CanvasView.m` | hecho |
 | Imprimir en A4 horizontal y exportar PDF con el fondo en blanco | `native/macos/AppDelegate.m`, `CanvasView.m` | hecho |
 
@@ -346,7 +348,7 @@ Lo que da el SVG del núcleo, medido en el plano de prueba A4 a 1:100:
 
 - **La ventana con las herramientas nuevas no se ha compilado**: en el entorno
   donde se escribe esto no hay AppKit. El contrato se comprueba con
-  `native/tests/macos.mjs` (68/68) y la compilación real la hace el trabajo
+  `native/tests/macos.mjs` (79/79) y la compilación real la hace el trabajo
   `macos-nativo` del flujo.
 - **Recientes e impresión** ya están escritos, pero quien los usa con ratón y
   teclado es una persona: aquí solo se comprueba su contrato y que compilen.
@@ -377,7 +379,7 @@ en la web.
 | Objetos | `native/include/normia/object.h`, `native/src/object.c` | Los once objetos insertables —tres puertas, extintor, botiquín, camilla, DEA, punto de encuentro, E001, E007 y «usted está aquí»— con su tamaño al nacer, si apoyan sobre el muro y si son puertas |
 | Puertas y equipos en el SVG | `native/src/svg.c` | `write_door()` dibuja jambas, umbral discontinuo, hoja y arco (y el portón, su panel); `write_box_object()` pone el pictograma del catálogo o, si no lo encuentra, una caja con su rótulo |
 | Insertar en la ventana | `native/macos/AppDelegate.m` · `CanvasView.m` | Menú **Insertar** con `⌃`, un clic para colocar, arrastre del objeto entero y `⌘⇧E` para marcar o desmarcar una salida |
-| Pruebas | `native/tests/test_audit.c` · `test_signs.c` · `test_extinguishers.c` | **67/67**, **30/30** y **32/32** (documento **33/33**, ventana **68/68**) |
+| Pruebas | `native/tests/test_audit.c` · `test_signs.c` · `test_extinguishers.c` | **67/67**, **30/30** y **32/32** (documento **33/33**, ventana **79/79**) |
 | Paridad | `native/tests/parity.mjs` | **64/64** |
 
 El caso de prueba y sus cifras, idénticas en C y en PHP: una habitación de
@@ -595,7 +597,7 @@ va en **verde de evacuación**, con **punta de flecha** en el sentido de salida 
 la longitud rotulada junto al extremo, con la misma cifra que dará el informe.
 
 La herramienta se comprueba donde se puede comprobar aquí, sobre el código
-fuente (`native/tests/macos.mjs`, **68/68**); dibujarla con el ratón en un Mac es
+fuente (`native/tests/macos.mjs`, **79/79**); dibujarla con el ratón en un Mac es
 lo que sigue viendo una persona.
 
 ### El cajón de revisión, dentro de la ventana
@@ -753,3 +755,94 @@ sabía buscar el camino: `norma_grid_path()` recorre el espacio libre con los
 vecinos de siempre y el simulacro solo suma tramos. Lo que **no** entra en la
 ventana es la puesta en escena: las figuras moviéndose en modo presentación
 siguen en la web. Ver «El simulacro» más abajo.
+
+## 15. Etapa N4(a), hecha: el catálogo completo y el paquete de macOS 12
+
+La ventana nativa insertaba once objetos escogidos a mano. La web ofrece **820**:
+las 395 señales de los dos catálogos y los 422 objetos CAD. Esta etapa cierra esa
+diferencia y, de paso, produce el paquete que se puede instalar en un Mac con
+Monterey.
+
+### El catálogo completo, en el núcleo
+
+El catálogo **no se copia al código**. `norma_object_catalog_load()` lee en tiempo
+de ejecución los mismos tres archivos que usa la edición web
+(`cad-objects.json`, `iso7010-catalog.json` y `service-signs.json`) con el lector
+de JSON del propio núcleo, y arma una lista de 820 piezas:
+
+| Grupo | Cuántas | De dónde | Nace con |
+| --- | --- | --- | --- |
+| Puertas | 3 | escritas en C: no son un pictograma, las dibuja `write_door()` | 90 × 90, 120 × 60 y 160 × 50 cm, apoyadas en el muro |
+| Objetos CAD | 422 | `resources/cad-objects.json`, con su color y su `<svg>` | 90 × 90 cm |
+| Señales | 395 | 332 ISO 7010 + 63 propias, con el color de su familia | 64 × 64 cm |
+
+Cada pieza guarda **tipo, nombre, familia, rótulo de familia, color y el
+pictograma tal cual viene del catálogo**. Nada se reescribe: el mismo `<svg>` que
+inserta la web es el que se anida en el plano exportado
+(`norma_library_nested_svg_text`). Las **41 familias** son las de los catálogos:
+puertas, las 31 categorías CAD y las 9 de señalización, con su rótulo en español.
+
+Tres consecuencias que importan más de lo que parece:
+
+- **El tipo más largo ya cabe.** `cad_acc_accessible_lift` mide 24 caracteres y el
+  elemento guardaba 23: se cortaba en silencio y el objeto no se podía colocar.
+  Ahora el documento reserva 48 bytes para el tipo, y hay una prueba que lo fija.
+- **Un plano con cualquier objeto se guarda y se vuelve a abrir entero**: la
+  prueba de ida y vuelta usa justo ese tipo de 24 caracteres.
+- **Sin catálogos al lado no se rompe nada**: quedan las once piezas de respaldo y
+  la ventana lo dice en el menú. Sirve para `--check`, para un plano suelto y para
+  compilar el núcleo en un equipo sin la carpeta `resources/`.
+
+El programa de línea de órdenes gana `norma-core --objects`, que publica el
+catálogo en JSON (familias y piezas): es lo que permite comprobar desde fuera que
+el menú, el núcleo y la web cuentan lo mismo.
+
+### En la ventana: 41 submenús y un buscador
+
+Con 820 piezas, una lista plana no se recorre. El menú **Insertar** se arma
+recorriendo el catálogo del núcleo: las tres puertas arriba con `⌃U`, `⌃U` y `⌃G`,
+y **un submenú por familia** con su rótulo y su cuenta («Respuesta contra
+incendios (30)»). Para lo que no se busca en un menú está **Buscar en el
+catálogo…** (`⌘⇧I`): una hoja de AppKit —campo de búsqueda, tabla, Insertar y
+Cancelar— que filtra las 820 por nombre, familia y tipo **sin tildes ni
+mayúsculas** (`botiquin` encuentra «Botiquín»).
+
+El lienzo pinta cada pieza con el color de su familia y su nombre; los equipos de
+emergencia conservan su pictograma dibujado a mano con Core Graphics, y el SVG y el
+PDF salen con el pictograma real del catálogo.
+
+### El trabajo que arma la app de Monterey
+
+`.github/workflows/dist-nativo.yml` (**App nativa de macOS (Monterey)**) compila la
+aplicación **universal** —`make -C native/macos ARCHS="x86_64 arm64"`— y la enlaza
+con `-mmacosx-version-min=12.0`. Es un solo paso de clang por fuente, así que las
+dos arquitecturas salen del mismo comando; después el trabajo comprueba, con
+`lipo -archs` y `otool -l -arch` para cada una, que el Mach-O pide **12.0** y que
+el `Info.plist` dice lo mismo. Firma en modo ad-hoc (`codesign --force --deep
+--sign -`), arranca el binario con `--check` y `--objects` para saber que el
+paquete abre, y publica el ZIP con su SHA-256 como artefacto
+(`NormiaEstudio-nativo-macos12-universal`, con el `.sha256` al lado); con una
+etiqueta `v*`, se adjunta a la release.
+
+Para generarlo a mano: *Actions › App nativa de macOS (Monterey) › Run workflow*
+(la versión mínima de macOS se puede escribir en el campo `deployment`; por
+omisión `12.0`). Desde la terminal, lo mismo:
+
+```sh
+make -C native/macos ARCHS="x86_64 arm64" DEPLOYMENT=12.0
+lipo -archs native/macos/build/NormiaEstudio.app/Contents/MacOS/NormiaEstudio
+ditto -c -k --sequesterRsrc --keepParent native/macos/build/NormiaEstudio.app \
+  NormiaEstudio-nativo-macos12-universal.zip
+```
+
+Lo que esto **no** es: no hay certificado de Apple, así que Gatekeeper avisa la
+primera vez; no hay notarización; y la prueba en un Mac con Monterey de verdad
+sigue pendiente de una persona con el equipo delante.
+
+### Lo que queda de la N4
+
+- **Windows (Win32) y Linux (GTK)**: el núcleo en C ya compila en los tres
+  sistemas; lo que falta es la ventana.
+- **El lienzo dibuja el nombre, no el pictograma** de los 820: el `<svg>` completo
+  va al SVG y al PDF, pero un renderizador de SVG en Core Graphics es otra etapa.
+- **Escalar, rotar y renombrar** un objeto desde el lienzo.

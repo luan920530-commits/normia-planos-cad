@@ -14,10 +14,11 @@ señales del catálogo local), los **primeros auxilios** y los **extintores** (c
 medida otra vez por el motor), los **escenarios de ocupación temporal** y las
 **rutas** (longitud, llegada a la salida y cruces de muro), todos con paridad
 contra PHP, y la **herramienta de dibujo de rutas** en el lienzo (`R`). También el
-**menú Insertar**: once objetos (tres puertas, extintor, botiquín, camilla, DEA, punto
-de encuentro y tres señales) que se colocan con un clic, se arrastran enteros y se
-pintan con su pictograma; una puerta puede marcarse como **salida de emergencia**.
-Lo que todavía no hay: Windows y Linux (N4). El
+**menú Insertar con el catálogo completo**: **820 piezas** —las 3 puertas, los **422
+objetos CAD** y las **395 señales**— en 41 familias, que se colocan con un clic, se
+arrastran enteras y se exportan con su pictograma; hay un **buscador** (`⌘⇧I`) para
+no recorrer 820 nombres a mano, y una puerta puede marcarse como **salida de
+emergencia**. Lo que todavía no hay: Windows y Linux (N4). El
 **simulacro** ya entra en la nativa con su **tiempo objetivo** calculado por el núcleo
 (camino caminable, salida y punto de encuentro) y el **tiempo medido** con cronómetro, que
 solo se compara; la animación de las figuras en modo presentación sigue siendo de la web. El
@@ -55,18 +56,19 @@ es lo que comprueba `tests/parity.mjs`.
 | Escenarios | `include/normia/scenarios.h`, `src/scenarios.c` | Ocupación temporal: capacidad, ancho exigido y tiempos del evento, sin tocar el aforo del piso |
 | Simulacro | `include/normia/drill.h`, `src/drill.c` | Tiempo **objetivo** por ruta (reacción + camino caminable por el espacio libre hasta la salida y, si hay punto de encuentro, el tramo de fuera) y **medido** con cronómetro; reloj en «1 min 42 s» |
 | Camino | `include/normia/grid.h` (`norma_grid_path`), `src/grid.c` | Dijkstra de 8 vecinos sobre la rejilla, sin cortar esquinas, con los puntos simplificados por línea de vista y la longitud en metros |
-| Objetos | `include/normia/object.h`, `src/object.c` | Los once objetos insertables: tipo, nombre, tamaño al nacer, si apoyan sobre el muro y si son puertas; `norma_document_add_object/set_exit/move_object` los guardan en el plano |
+| Objetos | `include/normia/object.h`, `src/object.c` | **El catálogo completo: 820 piezas** (3 puertas + 422 objetos CAD + 395 señales) en 41 familias, con nombre, familia, color y pictograma; se leen de `resources/` en tiempo de ejecución y hay once de respaldo por si faltan. `norma_document_add_object/set_exit/move_object` los guardan en el plano |
 | Extintores | `include/normia/extinguisher.h`, `src/extinguisher.c` | NTC 2885 + Resolución 2400 y NFPA 10: recorrido por clase y riesgo, área por número de A, zonas descubiertas con su motivo y acciones cuantificadas (añadir, reubicar, subir rótulo) |
-| Ventana de macOS | `macos/` | AppKit puro: menú en español, lienzo con Core Graphics, herramientas `V · M · P · A · D · R`, **menú Insertar** (11 objetos con `⌃` y salida de emergencia con `⌘⇧E`), puertas con su arco, equipos y señales con pictograma, cotas, rutas de evacuación, **lienzo abierto con zoom y desplazamiento**, abrir reciente, imprimir (⌘P), exportar SVG (⌘E) y PDF, abrir y guardar con los paneles del sistema, macOS 12 |
+| Ventana de macOS | `macos/` | AppKit puro: menú en español, lienzo con Core Graphics, herramientas `V · M · P · A · D · R`, **menú Insertar** con una entrada por familia y un **buscador** del catálogo (`⌘⇧I`, `CatalogPicker.m`), salida de emergencia con `⌘⇧E`, puertas con su arco, equipos y señales con su color y su nombre, cotas, rutas de evacuación, **lienzo abierto con zoom y desplazamiento**, abrir reciente, imprimir (⌘P), exportar SVG (⌘E) y PDF, abrir y guardar con los paneles del sistema, macOS 12 |
 
 ## Compilar y probar
 
 ```sh
 make -C native            # construye native/build/norma-core
-make -C native test       # núcleo (23), documento (33), SVG (31), auditor (67), señalización (30) y extintores (32)
+make -C native test       # núcleo (23), documento (33), SVG (31), auditor (67), señalización (30),
+                          # extintores (32) y catálogo completo (26)
 node native/tests/core.mjs         # compila en estricto y corre los cuatro (8)
 node native/tests/parity.mjs 8.3   # paridad contra el motor PHP (64)
-node native/tests/macos.mjs        # contrato de la ventana nativa (68)
+node native/tests/macos.mjs        # contrato de la ventana nativa (79)
 ```
 
 Y en macOS, con las herramientas de Xcode:
@@ -75,6 +77,7 @@ Y en macOS, con las herramientas de Xcode:
 make -C native/macos       # arma native/macos/build/NormiaEstudio.app
 make -C native/macos check # arranca la aplicación sin ventana y comprueba el núcleo
 make -C native/macos run   # la abre
+make -C native/macos ARCHS="x86_64 arm64"   # universal (Intel + Apple Silicon)
 ```
 
 El programa:
@@ -143,10 +146,15 @@ ancho del papel y la cifra de una cota). Lo que sigue sin poder probarse desde
 este entorno (Linux, sin pantalla) es la ventana en sí: el ratón, el teclado y el
 dibujo en pantalla los ve una persona en su Mac.
 
-El `.app` se publica como **artefacto del trabajo «Ventana nativa de macOS»**
-(`NormiaEstudio-nativo-macos`): así se descarga y se abre en un Mac con Intel sin
-firma ni release. Al abrirlo por primera vez, macOS pide permiso en
-*Ajustes del Sistema › Privacidad y seguridad* porque llega sin firmar.
+El `.app` se publica en dos sitios: como artefacto del trabajo «Ventana nativa de
+macOS» del flujo de verificación (`NormiaEstudio-nativo-macos`) y, ya empaquetado
+para entregar, en el trabajo **«App nativa de macOS (Monterey)»**
+(`.github/workflows/dist-nativo.yml`): arma un **binario universal** (Intel y Apple
+Silicon) con destino **macOS 12**, comprueba el `minos` de las **dos**
+arquitecturas, lo firma en modo ad-hoc y publica el ZIP con su SHA-256; con una
+etiqueta `v*` se adjunta a la release. Al abrirlo por primera vez, macOS pide
+permiso en *Ajustes del Sistema › Privacidad y seguridad* porque llega sin firmar
+ni notarizar.
 
 ## Lo que sigue
 
@@ -156,7 +164,8 @@ firma ni release. Al abrirlo por primera vez, macOS pide permiso en
 | **N1** | Ventana nativa en macOS (AppKit/CoreGraphics), sin WebView: lienzo, selección, muros, deshacer, guardar y abrir | **hecho** en código; compila y arranca en el flujo de macOS |
 | **N2** | Cotas, pluma de nodos, arcos, SVG del núcleo, recientes, impresión y PDF | **hecho** en código; compila y exporta en el flujo de macOS |
 | N3 | Rejilla y aforo en C, con paridad | **hecho**: rejilla, salidas, recorridos, hallazgos, señalización, primeros auxilios, extintores, escenarios, rutas y su herramienta de dibujo; **menú Insertar** con puertas, equipos y señales ya pintados en el lienzo |
-| N4 | Windows (Win32) y Linux (GTK) | pendiente |
+| N4a | Catálogo completo en el editor nativo y paquete de macOS 12 | **hecho**: 820 piezas en 41 familias, buscador, pictogramas en el SVG y trabajo `dist-nativo.yml` que arma el `.app` universal para Monterey |
+| N4b | Windows (Win32) y Linux (GTK) | pendiente |
 
 Las reglas no cambian: sin procedimientos metrológicos obligatorios, sin
 calibraciones, sin afirmar certificación, y **nunca** un cambio silencioso de
