@@ -1596,7 +1596,7 @@ static const char *environment_type(NormiaTool tool)
 - (BOOL)selectToolWithKey:(NSString *)key
 {
     NSString *caracter = [key lowercaseString];
-    CanvasTool tool = NormiaToolSelect;
+    NormiaTool tool = NormiaToolSelect;
     if ([caracter isEqualToString:@"m"]) {
         tool = NormiaToolWall;
     } else if ([caracter isEqualToString:@"p"]) {
