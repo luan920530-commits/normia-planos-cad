@@ -11,7 +11,7 @@
 APP := build/NormiaEstudio.app
 BIN := $(APP)/Contents/MacOS/NormiaEstudio
 CORE := ../src/units.c ../src/geometry.c ../src/json.c ../src/jsonw.c ../src/format.c ../src/plan.c ../src/document.c ../src/svg.c ../src/grid.c ../src/audit.c ../src/travel.c ../src/findings.c ../src/library.c ../src/signage.c ../src/firstaid.c ../src/extinguisher.c ../src/scenarios.c ../src/routes.c ../src/object.c ../src/inspect.c ../src/drill.c
-OBJC := main.m AppDelegate.m CanvasView.m
+OBJC := main.m AppDelegate.m CanvasView.m CatalogPicker.m
 CFLAGS ?= -O2 -Wall -Wextra -Wno-unused-parameter
 # macOS 12 Monterey es el mínimo que se promete en Info.plist, así que el
 # binario se compila **contra** ese destino y no contra el macOS del equipo que
@@ -21,6 +21,11 @@ CFLAGS ?= -O2 -Wall -Wextra -Wno-unused-parameter
 DEPLOYMENT ?= 12.0
 export MACOSX_DEPLOYMENT_TARGET := $(DEPLOYMENT)
 DEPLOY_FLAGS := -mmacosx-version-min=$(DEPLOYMENT)
+# Binario universal: `make ARCHS="x86_64 arm64"` compila y enlaza las dos
+# arquitecturas en una sola pasada de clang, que es lo que entrega el trabajo
+# «App nativa de macOS (Monterey)». Vacío = solo la del equipo que compila.
+ARCHS ?=
+ARCHFLAGS := $(foreach arch,$(ARCHS),-arch $(arch))
 # Cocoa dibuja la ventana; UniformTypeIdentifiers da UTTypeJSON para los paneles.
 FRAMEWORKS := -framework Cocoa -framework UniformTypeIdentifiers
 
@@ -28,7 +33,7 @@ all: $(BIN)
 
 $(BIN): $(OBJC) Info.plist $(wildcard ../include/normia/*.h) $(CORE) $(wildcard ../../resources/*.json)
 	@mkdir -p $(APP)/Contents/MacOS $(APP)/Contents/Resources
-	clang -fobjc-arc -std=c11 $(DEPLOY_FLAGS) $(CFLAGS) -I../include \
+	clang -fobjc-arc -std=c11 $(DEPLOY_FLAGS) $(ARCHFLAGS) $(CFLAGS) -I../include \
 		$(OBJC) $(CORE) $(FRAMEWORKS) -lm -o $(BIN)
 	@cp Info.plist $(APP)/Contents/Info.plist
 	@# Los catálogos viajan dentro del paquete: sin ellos el cajón de revisión

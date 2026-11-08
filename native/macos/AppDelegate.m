@@ -7,6 +7,7 @@
  */
 #import "AppDelegate.h"
 #import "CanvasView.h"
+#import "CatalogPicker.h"
 
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 
@@ -39,6 +40,11 @@ static const char *kAppName = "Normia Estudio";
 @property(nonatomic) BOOL auditVisible;
 @property(nonatomic) norma_inspect_result inspection;
 @property(nonatomic) BOOL hasInspection;
+/* El catálogo completo (820 piezas) se lee una vez al arrancar y vive hasta que
+   se cierra la aplicación: el menú Insertar y el SVG lo consultan desde el
+   núcleo, no desde una copia en AppKit. */
+@property(nonatomic) norma_object_catalog catalog;
+@property(nonatomic) BOOL hasCatalog;
 
 - (void)buildAuditPanel:(NSView *)content;
 - (void)toggleAudit:(id)sender;
@@ -49,6 +55,8 @@ static const char *kAppName = "Normia Estudio";
 - (void)updateCanvasFindings;
 - (void)revealSelectedFinding:(id)sender;
 - (void)invalidateInspection;
+- (void)loadObjectCatalog;
+- (void)insertFromPicker:(id)sender;
 @end
 
 /** Preferencia donde viven los últimos planos: archivo del equipo, nunca la app. */
@@ -73,6 +81,8 @@ static const NSUInteger kRecentLimit = 10;
     if (_hasInspection) {
         norma_inspect_free(&_inspection);
     }
+    norma_object_use(NULL);
+    norma_object_catalog_free(&_catalog);
 }
 
 /* -------------------------------- arranque ------------------------------- */
@@ -80,6 +90,7 @@ static const NSUInteger kRecentLimit = 10;
 - (void)applicationDidFinishLaunching:(NSNotification *)notification
 {
     (void) notification;
+    [self loadObjectCatalog];
     [self buildMenu];
     [self buildWindow];
     [self.canvas documentDidLoad];
@@ -399,22 +410,60 @@ static const NSUInteger kRecentLimit = 10;
     /* El lienzo usa letras sueltas para las herramientas, así que aquí los atajos
        van con Control: ⌃ no produce caracteres muertos como ⌥ en un teclado
        en español. */
-    NSArray<NSString *> *keys = @[@"u", @"U", @"g", @"e", @"b", @"c", @"d", @"m", @"1", @"2", @"a"];
-    for (size_t index = 0; index < norma_object_count(); index += 1) {
-        const norma_object_spec *spec = norma_object_at(index);
-        NSString *title = [NSString stringWithFormat:@"%s", spec->name];
-        NSString *key = index < keys.count ? keys[index] : @"";
-        NSMenuItem *item = [insertMenu addItemWithTitle:title action:@selector(insertObject:) keyEquivalent:key];
-        item.keyEquivalentModifierMask = NSEventModifierFlagControl;
-        item.representedObject = [NSString stringWithFormat:@"%s", spec->type];
-        item.tag = (NSInteger) index;
-        /* Las puertas primero y un separador antes de los equipos, como la web. */
-        if (strcmp(spec->type, "door_garage") == 0) {
-            [insertMenu addItem:[NSMenuItem separatorItem]];
+    NSMenuItem *searchItem = [insertMenu addItemWithTitle:@"Buscar en el catálogo…"
+                                                   action:@selector(insertFromPicker:)
+                                            keyEquivalent:@"i"];
+    searchItem.keyEquivalentModifierMask = NSEventModifierFlagCommand | NSEventModifierFlagShift;
+    [insertMenu addItem:[NSMenuItem separatorItem]];
+
+    /*
+     * Un submenú por familia: con el catálogo completo son 820 piezas y 41
+     * familias, así que una lista plana no se podría recorrer. Las tres puertas
+     * se quedan arriba, con su tecla, porque son lo que se inserta todo el rato.
+     */
+    NSArray<NSString *> *doorKeys = @[@"u", @"U", @"g"];
+    size_t door_index = 0;
+    const size_t families = norma_object_family_count();
+    for (size_t family = 0; family < families; family += 1) {
+        const char *key = norma_object_family_at(family);
+        if (key == NULL) {
+            continue;
         }
-        if (strcmp(spec->type, "cad_emg_meeting") == 0) {
-            [insertMenu addItem:[NSMenuItem separatorItem]];
+        if (strcmp(key, "door") == 0) {
+            for (size_t position = 0; position < norma_object_count_in(key); position += 1) {
+                const norma_object_spec *spec = norma_object_at_in(key, position);
+                NSString *title = [NSString stringWithFormat:@"%s", spec->name];
+                NSString *equivalent = door_index < doorKeys.count ? doorKeys[door_index] : @"";
+                NSMenuItem *item = [insertMenu addItemWithTitle:title
+                                                        action:@selector(insertObject:)
+                                                 keyEquivalent:equivalent];
+                item.keyEquivalentModifierMask = NSEventModifierFlagControl;
+                item.representedObject = [NSString stringWithFormat:@"%s", spec->type];
+                door_index += 1;
+            }
+            continue;
         }
+        NSMenu *submenu = [[NSMenu alloc] initWithTitle:@"Familia"];
+        const size_t total = norma_object_count_in(key);
+        for (size_t position = 0; position < total; position += 1) {
+            const norma_object_spec *spec = norma_object_at_in(key, position);
+            NSMenuItem *item = [submenu addItemWithTitle:[NSString stringWithFormat:@"%s", spec->name]
+                                                  action:@selector(insertObject:)
+                                           keyEquivalent:@""];
+            item.representedObject = [NSString stringWithFormat:@"%s", spec->type];
+            item.toolTip = [NSString stringWithFormat:@"%s · %s", spec->type, spec->family_label];
+        }
+        NSMenuItem *familyItem = [[NSMenuItem alloc] init];
+        familyItem.title = [NSString stringWithFormat:@"%s (%lu)", norma_object_family_label_at(family),
+                                                      (unsigned long) total];
+        familyItem.submenu = submenu;
+        [insertMenu addItem:familyItem];
+    }
+    if (!self.hasCatalog) {
+        NSMenuItem *note = [insertMenu addItemWithTitle:@"Sin catálogo completo: solo once piezas"
+                                                 action:nil
+                                          keyEquivalent:@""];
+        note.enabled = NO;
     }
     [insertMenu addItem:[NSMenuItem separatorItem]];
     NSMenuItem *exitItem = [insertMenu addItemWithTitle:@"Marcar o desmarcar salida de emergencia"
@@ -431,6 +480,27 @@ static const NSUInteger kRecentLimit = 10;
     [menubar addItem:helpItem];
 
     NSApp.mainMenu = menubar;
+}
+
+/* ------------------------------- catálogo -------------------------------- */
+
+/**
+ * Carga el catálogo completo de objetos y señalización que viaja dentro del
+ * paquete (`Contents/Resources/resources`). Sin él la ventana sigue abriendo con
+ * las once piezas de respaldo; el menú y el SVG dicen cuál se está usando.
+ */
+- (void)loadObjectCatalog
+{
+    char error[256] = "";
+    const NSString *resources = [self resourcesPath];
+    if (norma_object_catalog_load(&_catalog, resources.fileSystemRepresentation, error, sizeof(error))
+        && norma_object_use(&_catalog)) {
+        self.hasCatalog = YES;
+        return;
+    }
+    self.hasCatalog = NO;
+    [self canvasStatus:self.canvas
+               message:[NSString stringWithFormat:@"Sin catálogo completo: %s", error]];
 }
 
 /* ------------------------------- recientes ------------------------------- */
@@ -731,8 +801,9 @@ static const NSUInteger kRecentLimit = 10;
     options.grid = 1;
     options.band = 1;
     options.title = self.planName.UTF8String;
-    /* El catálogo de señalización todavía no viaja dentro del paquete de la
-       ventana: sin él, las señales se exportan con el marcador genérico. */
+    /* El catálogo completo ya está activo (`loadObjectCatalog`): las 820 piezas
+       salen con su pictograma. `library` se deja en NULL porque el catálogo de
+       objetos ya resuelve tanto los objetos CAD como las señales. */
     options.library = NULL;
     char *svg = norma_document_to_svg(&_document, &options);
     if (svg == NULL) {
@@ -831,6 +902,20 @@ static const NSUInteger kRecentLimit = 10;
 {
     NSString *type = sender.representedObject;
     if (![type isKindOfClass:[NSString class]]) {
+        return;
+    }
+    [self.window makeFirstResponder:self.canvas];
+    [self.canvas beginInsert:type];
+}
+
+/** Buscar en las 820 piezas y colocar la elegida. */
+- (void)insertFromPicker:(id)sender
+{
+    (void) sender;
+    NSString *type = [NormiaCatalogPicker pickFromCatalog:&_catalog
+                                                forWindow:self.window
+                                                   prompt:@"Insertar del catálogo (820 objetos y señales)"];
+    if (type == nil) {
         return;
     }
     [self.window makeFirstResponder:self.canvas];

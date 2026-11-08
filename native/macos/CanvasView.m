@@ -74,7 +74,9 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
     norma_point _findingPoints[64];
     size_t _findingCount;
     /* Tipo armado para insertar ("" si no hay ninguno). */
-    char _insertType[24];
+    /* El tipo más largo del catálogo son 24 caracteres (`cad_acc_accessible_lift`):
+       con 24 bytes se cortaba y el objeto no se podía colocar. */
+    char _insertType[NORMA_OBJECT_TYPE];
     /* Desfase entre el clic y la esquina de la caja, para que al arrastrar no
        salte el objeto bajo el puntero. */
     double _dragOffsetX;
@@ -333,6 +335,19 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
     }
     if (strcmp(type, "cad_emg_meeting") == 0) {
         return [NSColor colorWithCalibratedRed:0.02 green:0.47 blue:0.34 alpha:1.0];
+    }
+    /* Cualquier otra pieza del catálogo trae su color de familia (`#rrggbb`). */
+    const norma_object_spec *spec = norma_object_find(type);
+    if (spec != NULL && spec->colour[0] == '#') {
+        unsigned int red = 0;
+        unsigned int green = 0;
+        unsigned int blue = 0;
+        if (sscanf(spec->colour + 1, "%2x%2x%2x", &red, &green, &blue) == 3) {
+            return [NSColor colorWithCalibratedRed:(CGFloat) red / 255.0
+                                             green:(CGFloat) green / 255.0
+                                              blue:(CGFloat) blue / 255.0
+                                             alpha:1.0];
+        }
     }
     return [NSColor colorWithCalibratedRed:0.20 green:0.25 blue:0.33 alpha:1.0];
 }
@@ -783,6 +798,13 @@ typedef NS_ENUM(NSInteger, CanvasTool) {
     }
     if (strcmp(type, "text") == 0) {
         return nil; /* el texto ya se rotula con su contenido */
+    }
+    /* Cualquier otra pieza del catálogo se rotula con el nombre que tiene en el
+       catálogo —«Ascensor accesible», «Estantería 4 niveles»—, que es lo que
+       hace legible un plano con 820 objetos disponibles. */
+    const norma_object_spec *spec = norma_object_find(type);
+    if (spec != NULL) {
+        return [NSString stringWithUTF8String:spec->name];
     }
     return nil;
 }
