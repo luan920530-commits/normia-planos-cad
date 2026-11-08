@@ -181,9 +181,12 @@ static NSImage *symbolImage(NSString *name)
             } else {
                 button.identifier = [NSString stringWithFormat:@"action:%@", row[@"action"]];
             }
-            button.toolTip = row[@"key"] != nil
-                ? [NSString stringWithFormat:@"%@ · %@", row[@"title"], row[@"key"]]
-                : row[@"title"];
+            /* El globo añade la pista de uso cuando la herramienta la tiene: el
+               muro, por ejemplo, explica que el primer nodo cierra el recinto. */
+            NSString *shortcut = row[@"key"] != nil
+                ? [NSString stringWithFormat:@"%@ · %@", row[@"title"], row[@"key"]] : row[@"title"];
+            button.toolTip = row[@"tip"] != nil
+                ? [NSString stringWithFormat:@"%@ — %@", shortcut, row[@"tip"]] : shortcut;
             [self addSubview:button];
             y += kRowHeight + kRowGap;
         }
