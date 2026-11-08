@@ -81,7 +81,23 @@ jobs:
             prefer-pre-built: true
           EOF
           cat craft.yml
-          ./spc craft
+          # `spc craft` descarga fuentes y binarios precompilados de varios
+          # servidores y muere en segundos si uno de esos cortes falla: es el
+          # fallo intermitente que se vio en la 1.29.0 y en la 1.31.0 del
+          # trabajo arm64 (siempre el mismo paso, ~20 s, y sin más explicación
+          # que «exit code 1»). Tres intentos con espera creciente cuestan
+          # minutos y evitan dejar la release sin sus paquetes.
+          intento=1
+          until ./spc craft; do
+            if [ "$intento" -ge 3 ]; then
+              echo "::error title=spc craft::falló tres veces seguidas; revisa la red del runner"
+              exit 1
+            fi
+            espera=$((intento * 20))
+            echo "::warning title=spc craft::el intento $intento falló; se reintenta en ${espera} s"
+            sleep "$espera"
+            intento=$((intento + 1))
+          done
           ls -la buildroot/bin
           BIN="$(find buildroot/bin -maxdepth 1 -type f -name 'php' | head -1)"
           echo "PHP_BIN=$PWD/$BIN" >> "$GITHUB_ENV"
