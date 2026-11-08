@@ -43,7 +43,7 @@ static NSColor *panelAccent(void) { return [NSColor colorWithCalibratedRed:0.16 
 @property(nonatomic, strong) NSTextField *typeField;
 @property(nonatomic, strong) NSTextField *hint;
 @property(nonatomic, strong) NSPopUpButton *layerPopup;
-@property(nonatomic, strong) NSTextField *newLayerField;
+@property(nonatomic, strong) NSTextField *layerField;
 @property(nonatomic, strong) NSButton *exitButton;
 - (void)buildPanel;
 - (NSTextField *)fieldWithKey:(NSString *)key;
@@ -156,17 +156,17 @@ static NSColor *panelAccent(void) { return [NSColor colorWithCalibratedRed:0.16 
     [self addSubview:self.layerPopup];
     y += 30.0;
 
-    self.newLayerField = [[NSTextField alloc] initWithFrame:NSMakeRect(kInset, y, kPanelWidth - kInset * 2.0 - 42.0 - 1.0, 22.0)];
-    self.newLayerField.placeholderString = @"Nueva capa activa…";
-    self.newLayerField.font = [NSFont systemFontOfSize:11.5];
-    self.newLayerField.textColor = panelText();
-    self.newLayerField.backgroundColor = panelField();
-    self.newLayerField.drawsBackground = YES;
-    self.newLayerField.bezeled = YES;
-    self.newLayerField.bezelStyle = NSTextFieldRoundedBezel;
-    self.newLayerField.target = self;
-    self.newLayerField.action = @selector(setCurrentLayerFromField:);
-    [self addSubview:self.newLayerField];
+    self.layerField = [[NSTextField alloc] initWithFrame:NSMakeRect(kInset, y, kPanelWidth - kInset * 2.0 - 42.0 - 1.0, 22.0)];
+    self.layerField.placeholderString = @"Nueva capa activa…";
+    self.layerField.font = [NSFont systemFontOfSize:11.5];
+    self.layerField.textColor = panelText();
+    self.layerField.backgroundColor = panelField();
+    self.layerField.drawsBackground = YES;
+    self.layerField.bezeled = YES;
+    self.layerField.bezelStyle = NSTextFieldRoundedBezel;
+    self.layerField.target = self;
+    self.layerField.action = @selector(setCurrentLayerFromField:);
+    [self addSubview:self.layerField];
 
     NSButton *createLayer = [NSButton buttonWithTitle:@"＋" target:self action:@selector(setCurrentLayerFromField:)];
     createLayer.frame = NSMakeRect(kPanelWidth - kInset - 36.0, y - 2.0, 36.0, 26.0);
@@ -502,7 +502,7 @@ static double parse_number(NSString *text)
         return;
     }
     NSString *title = self.layerPopup.titleOfSelectedItem;
-    if ([norma_document_set_current_layer(self.document, title.UTF8String)]) {
+    if (norma_document_set_current_layer(self.document, title.UTF8String) != 0) {
         [self.delegate inspector:self
             didEditDocumentWithMessage:[NSString stringWithFormat:@"Capa activa: %@", title]];
     }
@@ -514,14 +514,14 @@ static double parse_number(NSString *text)
     if (self.document == NULL) {
         return;
     }
-    NSString *name = [self.newLayerField.stringValue stringByTrimmingCharactersInSet:
+    NSString *name = [self.layerField.stringValue stringByTrimmingCharactersInSet:
                       [NSCharacterSet whitespaceAndNewlineCharacterSet]];
     if (name.length == 0) {
         [self.delegate inspector:self status:@"Escribe el nombre de la capa."];
         return;
     }
-    if ([norma_document_set_current_layer(self.document, name.UTF8String)]) {
-        self.newLayerField.stringValue = @"";
+    if (norma_document_set_current_layer(self.document, name.UTF8String) != 0) {
+        self.layerField.stringValue = @"";
         [self reload];
         [self.delegate inspector:self
             didEditDocumentWithMessage:[NSString stringWithFormat:@"Capa activa: %@", name]];
