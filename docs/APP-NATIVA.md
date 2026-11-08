@@ -279,9 +279,9 @@ selección por proximidad y el **sobre oficial** de ida y vuelta.
 | --- | --- | --- |
 | `native/tests/test_core.c` | unidades, arcos, JSON, plano | **23/23** |
 | `native/tests/test_document.c` | muros, deshacer, selección, guardar y abrir, unidades, rutas | **33/33** |
-| `native/tests/test_svg.c` | cifras es-CO y SVG con escala física (etapa N2) | **25/25** |
+| `native/tests/test_svg.c` | cifras es-CO, SVG con escala física y los objetos insertados: puerta, portón, extintor, botiquín y DEA | **31/31** |
 | `native/tests/parity.mjs` | paridad C contra PHP, dígito a dígito, también en el SVG, el auditor y la revisión | **64/64** |
-| `native/tests/macos.mjs` | contrato de la ventana: AppKit, sin WebView, menú en español, atajos, sobre oficial, macOS 12, herramientas, ruta y cajón de revisión | **56/56** |
+| `native/tests/macos.mjs` | contrato de la ventana: AppKit, sin WebView, menú en español, atajos, sobre oficial, macOS 12, herramientas, ruta, cajón de revisión, **menú Insertar**, puertas con su arco y equipos con pictograma | **67/67** |
 | `native/tests/core.mjs` | compilación estricta y los tres programas de prueba del núcleo | **7/7** |
 
 Y en el flujo de verificación hay un trabajo nuevo en **`macos-15-intel`** que
@@ -320,13 +320,13 @@ para sacar el plano sin el motor PHP:
 
 | Pieza | Archivo | Estado |
 | --- | --- | --- |
-| Cifras con formato colombiano (`400 cm`, `471,2 cm`, `112.123,9 cm`) | `native/src/format.c` | hecho · **25/25** entre las dos pruebas |
+| Cifras con formato colombiano (`400 cm`, `471,2 cm`, `112.123,9 cm`) | `native/src/format.c` | hecho · **31/31** entre las dos pruebas |
 | SVG con escala física: papel en milímetros, `viewBox` en centímetros, rejilla, franja de datos y cotas rotuladas | `native/src/svg.c` | hecho |
 | Cota como objeto del documento (`tipo: dimension`) | `native/src/document.c` | hecho |
 | `norma-core --svg plano.json` | `native/src/cli.c` | hecho |
 | Herramientas del lienzo `V · M · P · A · D · R` con borrador y previsualización | `native/macos/CanvasView.m` | hecho |
 | Exportar SVG con panel del sistema (`⌘E`) | `native/macos/AppDelegate.m` | escrito |
-| Abrir reciente (10 archivos, preferencia del sistema, se limpia sola) | `native/macos/AppDelegate.m` | hecho · **56/56** |
+| Abrir reciente (10 archivos, preferencia del sistema, se limpia sola) | `native/macos/AppDelegate.m` | hecho · **67/67** |
 | Lienzo abierto: zoom 2 %–4000 % sobre el cursor, desplazamiento con el botón central o derecho y rejilla adaptativa | `native/macos/CanvasView.m` | hecho |
 | Imprimir en A4 horizontal y exportar PDF con el fondo en blanco | `native/macos/AppDelegate.m`, `CanvasView.m` | hecho |
 
@@ -346,7 +346,7 @@ Lo que da el SVG del núcleo, medido en el plano de prueba A4 a 1:100:
 
 - **La ventana con las herramientas nuevas no se ha compilado**: en el entorno
   donde se escribe esto no hay AppKit. El contrato se comprueba con
-  `native/tests/macos.mjs` (56/56) y la compilación real la hace el trabajo
+  `native/tests/macos.mjs` (67/67) y la compilación real la hace el trabajo
   `macos-nativo` del flujo.
 - **Recientes e impresión** ya están escritos, pero quien los usa con ratón y
   teclado es una persona: aquí solo se comprueba su contrato y que compilen.
@@ -374,7 +374,10 @@ en la web.
 | Camino | `native/src/grid.c` (`norma_grid_path`) | Dijkstra de ocho vecinos sobre la rejilla, sin cortar esquinas, con el exterior permitido o no según el tramo; puntos simplificados por línea de vista y longitud en metros redondeada al centímetro |
 | Simulacro | `native/src/drill.c` | Tiempo objetivo por ruta (reacción + camino + tramo al punto de encuentro), objetivo del piso, tiempo medido y su diferencia; tres hallazgos propios |
 | Programa | `native/src/cli.c` | `norma-core --audit plano.json` incluye salidas, recorrido, señalización, primeros auxilios, simulacro y hallazgos; `--sign-board hoja.svg` dibuja el catálogo completo |
-| Pruebas | `native/tests/test_audit.c` · `test_signs.c` · `test_extinguishers.c` | **67/67**, **30/30** y **32/32** (documento **33/33**, ventana **56/56**) |
+| Objetos | `native/include/normia/object.h`, `native/src/object.c` | Los once objetos insertables —tres puertas, extintor, botiquín, camilla, DEA, punto de encuentro, E001, E007 y «usted está aquí»— con su tamaño al nacer, si apoyan sobre el muro y si son puertas |
+| Puertas y equipos en el SVG | `native/src/svg.c` | `write_door()` dibuja jambas, umbral discontinuo, hoja y arco (y el portón, su panel); `write_box_object()` pone el pictograma del catálogo o, si no lo encuentra, una caja con su rótulo |
+| Insertar en la ventana | `native/macos/AppDelegate.m` · `CanvasView.m` | Menú **Insertar** con `⌃`, un clic para colocar, arrastre del objeto entero y `⌘⇧E` para marcar o desmarcar una salida |
+| Pruebas | `native/tests/test_audit.c` · `test_signs.c` · `test_extinguishers.c` | **67/67**, **30/30** y **32/32** (documento **33/33**, ventana **67/67**) |
 | Paridad | `native/tests/parity.mjs` | **64/64** |
 
 El caso de prueba y sus cifras, idénticas en C y en PHP: una habitación de
@@ -592,7 +595,7 @@ va en **verde de evacuación**, con **punta de flecha** en el sentido de salida 
 la longitud rotulada junto al extremo, con la misma cifra que dará el informe.
 
 La herramienta se comprueba donde se puede comprobar aquí, sobre el código
-fuente (`native/tests/macos.mjs`, **56/56**); dibujarla con el ratón en un Mac es
+fuente (`native/tests/macos.mjs`, **67/67**); dibujarla con el ratón en un Mac es
 lo que sigue viendo una persona.
 
 ### El cajón de revisión, dentro de la ventana
@@ -694,11 +697,55 @@ animación de la web—, no simula aglomeraciones ni colas en la puerta, no mide
 ejercicio real y no reemplaza el tiempo que se toma en sitio. Da el número que el
 plano permite defender, para contrastarlo con el cronómetro.
 
+### El menú Insertar: puertas, equipos y señales en el lienzo (2026-11-06)
+
+Hasta aquí el lienzo nativo sabía dibujar trazos —muro, pluma, arco, cota y
+ruta— pero no **colocar** lo que un plano de evacuación necesita: puertas, un
+extintor, un botiquín, una camilla, un DEA, el punto de encuentro y las señales.
+Los objetos se insertaban solo en la web.
+
+Lo primero fue no copiar la lista en el menú. El catálogo vive en el núcleo
+(`native/include/normia/object.h`) y la ventana lo recorre con
+`norma_object_at()`: si mañana se añade un objeto al núcleo, aparece en el menú
+sin tocar AppKit. Son once, y el orden es el del uso: **puertas** (`door`,
+`door_double`, `door_garage`), **equipos** (extintor, botiquín, camilla, DEA,
+punto de encuentro) y **señales** (`iso_e001`, `iso_e007`, `sig_aqui`).
+
+Dos decisiones que no son cosméticas:
+
+- **Dónde nace la caja.** Una puerta apoya sobre el muro: su caja nace con la
+  línea del muro en el borde inferior (`y + h`), que es el punto por el que se
+  sale y desde el que `travel.c` siembra el recorrido. Un equipo o una señal se
+  centran en el clic (`x + w/2`, `y + h/2`), que es de donde mide el auditor.
+  Colocarlos al revés movía las cifras del recorrido sin que se notara.
+- **Atajos con `⌃`.** El lienzo usa letras sueltas (`M · P · A · D · R`) y `⌥`
+  produce caracteres muertos en un teclado en español; con `⌃` el menú no pisa
+  ninguna herramienta.
+
+En el plano, la puerta ya no es un marcador genérico: se dibuja con **jambas,
+umbral discontinuo, hoja y arco de apertura**, con las mismas proporciones que
+`SvgExporter::doorMarkup()`, y el portón con su panel y sus barrotes. Un equipo o
+una señal lleva su **pictograma** (cruz del botiquín, camilla, rayo del DEA,
+flechas del punto de encuentro, extintor) y el color de su familia; los equipos
+de una sola caja se rotulan con su ancho y la unidad del plano.
+
+La **exportación a SVG** dibuja lo mismo —`write_door()` y `write_box_object()`—
+para que la ventana y el archivo no cuenten cosas distintas. Y una señal que no
+esté en el catálogo ahora se dibuja como **caja con su rótulo** en vez de
+desaparecer: una prueba que exigía el marcador genérico se reescribió para exigir
+justo eso.
+
+Lo que cierra de la etapa anterior: la deuda que N3 dejó abierta era «pintar los
+pictogramas del catálogo en el lienzo». Los equipos del menú ya se pintan. Lo que
+sigue fuera se dice abajo.
+
 ### Lo que N3 todavía no tiene
 
-- **Pintar los pictogramas del catálogo en el lienzo** (el catálogo, la
-  validación del SVG y la hoja de señales ya están; el lienzo usa el marcador
-  genérico).
+- **El catálogo entero no está en el menú.** La web ofrece 422 objetos y la
+  ventana once; añadir los demás es repetir el patrón, no inventar nada, pero
+  hoy no está.
+- **Escalar, rotar y renombrar un objeto** desde el lienzo: se coloca, se mueve y
+  se marca la salida, y nada más.
 
 El **simulacro** también está: DEC-14 se revisó el mismo 2026-11-05, cuando el
 autor pidió llevarlo al núcleo. No hubo que duplicar motor, porque la rejilla ya
