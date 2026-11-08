@@ -40,8 +40,8 @@ static NSColor *railAccent(void) { return [NSColor colorWithCalibratedRed:0.16 g
 
 + (CGFloat)preferredHeight
 {
-    /* Grupos de la tabla de arriba: 8 rótulos y 25 botones, con sus holguras. */
-    return 960.0;
+    /* Grupos de la tabla de arriba: 8 rótulos y 27 botones, con sus holguras. */
+    return 1000.0;
 }
 
 - (instancetype)initWithFrame:(NSRect)frame
@@ -79,7 +79,8 @@ static NSColor *railAccent(void) { return [NSColor colorWithCalibratedRed:0.16 g
            @"rows": @[
                @{ @"title": @"Seleccionar", @"symbol": @"cursorarrow", @"tool": @(NormiaToolSelect), @"key": @"V" },
                @{ @"title": @"Mano", @"symbol": @"hand.raised", @"tool": @(NormiaToolPan), @"key": @"H" },
-               @{ @"title": @"Muro", @"symbol": @"rectangle.split.3x1", @"tool": @(NormiaToolWall), @"key": @"M" },
+               @{ @"title": @"Muro", @"symbol": @"rectangle.split.3x1", @"tool": @(NormiaToolWall), @"key": @"M",
+                  @"tip": @"Un clic por vértice; el primer nodo cierra el recinto" },
                @{ @"title": @"Línea", @"symbol": @"line.diagonal", @"tool": @(NormiaToolLine), @"key": @"L" },
                @{ @"title": @"Rectángulo", @"symbol": @"rectangle", @"tool": @(NormiaToolRect), @"key": @"B" },
                @{ @"title": @"Elipse", @"symbol": @"circle", @"tool": @(NormiaToolEllipse), @"key": @"O" },
@@ -122,7 +123,12 @@ static NSColor *railAccent(void) { return [NSColor colorWithCalibratedRed:0.16 g
            ] },
         @{ @"title": @"BIBLIOTECA",
            @"rows": @[
-               @{ @"title": @"Buscar e insertar…", @"symbol": @"magnifyingglass", @"action": @"catalog", @"key": @"⌘⇧I" },
+               @{ @"title": @"Señalización ISO 7010…", @"symbol": @"exclamationmark.triangle",
+                  @"action": @"librarySign", @"key": @"⌃⇧S" },
+               @{ @"title": @"Equipos y mobiliario…", @"symbol": @"cross.case",
+                  @"action": @"libraryCad", @"key": @"⌃⇧E" },
+               @{ @"title": @"Buscar e insertar…", @"symbol": @"magnifyingglass",
+                  @"action": @"catalog", @"key": @"⌘⇧I" },
            ] },
     ];
 }

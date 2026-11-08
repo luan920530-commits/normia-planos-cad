@@ -384,6 +384,163 @@ static void test_shapes(void)
     norma_document_free(&document);
 }
 
+/** La ficha del inspector web: bloqueo, opacidad, letra, puerta y tipo. */
+static void test_inspector_web(void)
+{
+    norma_document document;
+    norma_document_init(&document);
+
+    const long door = norma_document_add_object(&document, "door", (norma_point) {300.0, 400.0}, NULL);
+    const long text = norma_document_add_text(&document, (norma_point) {500.0, 400.0}, 180.0, 32.0,
+                                              "Salida", NULL);
+    check("Hay una puerta y un texto para editar como en el inspector web",
+          door == 0 && text == 1, "door · text");
+
+    check("La puerta acepta bisagra y abatimiento invertidos",
+          norma_document_set_door_flips(&document, 0, 1, 1) == 1
+              && document.elements[0].flip_x == 1 && document.elements[0].flip_y == 1
+              && norma_document_set_door_flips(&document, 0, 1, 1) == 0,
+          "flipX · flipY");
+    check("Solo una puerta acepta esos dos cambios",
+          norma_document_set_door_flips(&document, 1, 1, 0) == 0, NULL);
+
+    check("La opacidad se mueve entre el 10 % y el 100 %, como en la web",
+          norma_document_set_opacity(&document, 0, 0.55) == 1
+              && close_to(document.elements[0].opacity, 0.55, 1e-9)
+              && norma_document_set_opacity(&document, 0, 0.01) == 1
+              && close_to(document.elements[0].opacity, 0.1, 1e-9)
+              && norma_document_set_opacity(&document, 0, 3.0) == 1
+              && close_to(document.elements[0].opacity, 1.0, 1e-9),
+          "0,55 · 0,10 · 1,00");
+
+    check("El tamaño de letra del texto se puede fijar en centímetros",
+          norma_document_set_font_size(&document, 1, 18.0) == 1
+              && close_to(document.elements[1].font_size, 18.0, 1e-9)
+              && norma_document_set_font_size(&document, 1, 0.0) == 0,
+          "18 cm");
+
+    /* Bloqueo: protege de mover, pero no de desbloquear. */
+    check("Bloquear un elemento impide moverlo, redimensionarlo y borrarlo por accidente",
+          norma_document_set_locked(&document, 0, 1) == 1 && document.elements[0].locked == 1
+              && norma_document_move_object(&document, 0, 900.0, 900.0) == 0
+              && norma_document_set_box(&document, 0, 10.0, 10.0, 50.0, 50.0) == 0
+              && norma_document_set_opacity(&document, 0, 0.3) == 0
+              && norma_document_set_locked(&document, 0, 0) == 1,
+          "locked · desbloquear sí");
+
+    check("Un elemento se convierte a otro tipo del dibujo y conserva la caja",
+          norma_document_set_type(&document, 0, "rect") == 0
+              && norma_document_set_type(&document, 1, "rect") == 1
+              && strcmp(document.elements[1].type, "rect") == 0
+              && norma_document_set_type(&document, 1, "wall") == 0
+              && norma_document_set_type(&document, 1, "portal") == 0,
+          "texto → rectángulo");
+
+    check("El ancho declarado de una vía se guarda en metros",
+          norma_document_add_environment(&document, "road", (norma_point) {0.0, 0.0},
+                                         (norma_point) {600.0, 300.0}, NULL) == 2
+              && norma_document_set_width_m(&document, 2, 7.5) == 1
+              && close_to(document.elements[2].width_m, 7.5, 1e-9),
+          "7,5 m");
+
+    const long extinguisher = norma_document_add_object(&document, "cad_eds_extinguisher", (norma_point) {700.0, 500.0}, NULL);
+    check("La ficha del extintor acepta agente, clasificación, riesgo, capacidad y montaje",
+          extinguisher == 3
+              && norma_document_set_extinguisher(&document, 3, "pqs_abc", "2-A:10-B:C", "ordinary", 10.0, 120.0) == 1
+              && strcmp(document.elements[3].ext_agent, "pqs_abc") == 0
+              && strcmp(document.elements[3].ext_rating, "2-A:10-B:C") == 0
+              && strcmp(document.elements[3].ext_hazard, "ordinary") == 0
+              && close_to(document.elements[3].ext_capacity_lb, 10.0, 1e-9)
+              && document.elements[3].has_ext_mount == 1,
+          "pqs_abc · 2-A:10-B:C · ordinario");
+
+    /* Todo lo anterior tiene que viajar en el sobre oficial. */
+    char *json = norma_document_to_json(&document, "Inspector web");
+    check("Los campos nuevos se escriben en el plano",
+          json != NULL && strstr(json, "\"flipX\":true") != NULL && strstr(json, "\"flipY\":true") != NULL
+              && strstr(json, "\"fontSize\":18") != NULL && strstr(json, "\"widthM\":7.5") != NULL,
+          "flipX · flipY · fontSize · widthM");
+    norma_document other;
+    norma_document_init(&other);
+    char error[128];
+    const int ok = json != NULL && norma_document_from_json(&other, json, strlen(json), error, sizeof(error));
+    check("Abrir el plano devuelve la ficha completa",
+          ok && other.count == 4 && other.elements[0].flip_x == 1 && other.elements[0].flip_y == 1
+              && close_to(other.elements[1].font_size, 18.0, 1e-9)
+              && close_to(other.elements[2].width_m, 7.5, 1e-9)
+              && strcmp(other.elements[3].ext_rating, "2-A:10-B:C") == 0,
+          ok ? "ida y vuelta" : error);
+    free(json);
+    norma_document_free(&other);
+    norma_document_free(&document);
+}
+
+/** La maqueta de trazo: imagen de fondo y su caja. */
+static void test_guide(void)
+{
+    norma_document document;
+    norma_document_init(&document);
+    check("Un plano nuevo no tiene maqueta y no se pueden cambiar sus ajustes",
+          document.guide.present == 0 && norma_document_set_guide_opacity(&document, 0.5) == 0
+              && norma_document_set_guide_visible(&document, 1) == 0
+              && norma_document_clear_guide(&document) == 0,
+          "sin guía");
+
+    /* Un PNG mínimo, ya en base64 como lo entrega la ventana. */
+    const char *data = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==";
+    check("La maqueta se guarda con su nombre, su caja y su opacidad",
+          norma_document_set_guide(&document, "planta.png", data, 100.0, 80.0, 900.0, 600.0) == 1
+              && document.guide.present == 1 && document.guide.data_size == strlen(data)
+              && strcmp(document.guide.name, "planta.png") == 0
+              && close_to(document.guide.w, 900.0, 1e-9)
+              && close_to(document.guide.opacity, 0.45, 1e-9)
+              && document.guide.visible == 1,
+          "planta.png · 900 × 600 · 45 %");
+    check("La opacidad de la maqueta se mueve entre el 5 % y el 100 %",
+          norma_document_set_guide_opacity(&document, 0.0) == 1
+              && close_to(document.guide.opacity, 0.05, 1e-9)
+              && norma_document_set_guide_opacity(&document, 0.7) == 1
+              && close_to(document.guide.opacity, 0.7, 1e-9),
+          "0,05 · 0,70");
+    check("La caja de la maqueta se puede recolocar y escalar",
+          norma_document_set_guide_box(&document, 50.0, 40.0, 1000.0, 700.0) == 1
+              && close_to(document.guide.x, 50.0, 1e-9)
+              && norma_document_set_guide_box(&document, 50.0, 40.0, 0.0, 700.0) == 0,
+          "50 · 40 · 1000 × 700");
+    check("La maqueta se puede ocultar sin perderla y bloquear para calcar encima",
+          norma_document_set_guide_visible(&document, 0) == 1 && document.guide.visible == 0
+              && document.guide.present == 1
+              && norma_document_set_guide_locked(&document, 1) == 1 && document.guide.locked == 1,
+          "oculta · bloqueada");
+
+    char *json = norma_document_to_json(&document, "Con maqueta");
+    check("La maqueta viaja dentro del archivo del plano, en la raíz del sobre",
+          json != NULL && strstr(json, "\"guide\":{\"name\":\"planta.png\"") != NULL
+              && strstr(json, data) != NULL && strstr(json, "\"visible\":false") != NULL,
+          "guide.data");
+    norma_document other;
+    norma_document_init(&other);
+    char error[128];
+    const int ok = json != NULL && norma_document_from_json(&other, json, strlen(json), error, sizeof(error));
+    check("Abrir el plano devuelve la maqueta con su caja y su visibilidad",
+          ok && other.guide.present == 1 && other.guide.data_size == strlen(data)
+              && close_to(other.guide.x, 50.0, 1e-9) && other.guide.visible == 0
+              && other.guide.locked == 1 && other.count == 0,
+          ok ? "ida y vuelta" : error);
+    free(json);
+
+    check("Quitar la maqueta la borra del plano y libera su imagen",
+          norma_document_clear_guide(&other) == 1 && other.guide.present == 0
+              && other.guide.data == NULL && norma_document_clear_guide(&other) == 0,
+          "clear_guide");
+    char *clean = norma_document_to_json(&other, "Sin maqueta");
+    check("Un plano sin maqueta no escribe la sección",
+          clean != NULL && strstr(clean, "\"guide\"") == NULL, "sin guide");
+    free(clean);
+    norma_document_free(&other);
+    norma_document_free(&document);
+}
+
 /** Entorno: las herramientas del editor web que no salen del catálogo. */
 static void test_environment(void)
 {
@@ -497,6 +654,10 @@ int main(void)
     test_shapes();
     printf("\nEntorno\n");
     test_environment();
+    printf("\nInspector del editor web\n");
+    test_inspector_web();
+    printf("\nMaqueta de trazo\n");
+    test_guide();
     printf("\n%d/%d comprobaciones correctas.\n", checks - failures, checks);
     return failures == 0 ? 0 : 1;
 }

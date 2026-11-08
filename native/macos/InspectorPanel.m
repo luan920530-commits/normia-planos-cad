@@ -1,10 +1,14 @@
 /*
- * Normia nativo · inspector del plano (implementación).
+ * Normia nativo · inspector del plano.
  *
- * Panel derecho de la ventana: capas arriba, ficha del elemento seleccionado
- * debajo. Los campos se aplican con Intro o con el botón «Aplicar», y cada
- * cambio pasa por el núcleo: si el núcleo dice que no (un ancho de cero, un
- * color que no es `#rrggbb`), el campo vuelve a lo que el documento tiene.
+ * La misma ficha que el panel de propiedades del editor web, sección por
+ * sección: capas, la selección (con sus acciones), geometría, apariencia,
+ * puerta, vía y entorno, extintor y organización; y debajo, la maqueta de trazo.
+ *
+ * No edita por su cuenta: todo pasa por el documento en C
+ * (`norma_document_set_box`, `set_rotation`, `set_opacity`…), que es quien
+ * valida y quien deja el deshacer. Si el núcleo rechaza un valor, el campo
+ * vuelve a lo que el documento dice.
  */
 #import "InspectorPanel.h"
 
@@ -20,16 +24,16 @@
 static const CGFloat kPanelWidth = 300.0;
 static const CGFloat kInset = 14.0;
 static const CGFloat kRow = 30.0;
-/** Nombres de campo, en el orden en que se ven. */
-static NSString *const kFieldX = @"x";
-static NSString *const kFieldY = @"y";
-static NSString *const kFieldW = @"w";
-static NSString *const kFieldH = @"h";
-static NSString *const kFieldRotation = @"rotation";
-static NSString *const kFieldStroke = @"stroke";
-static NSString *const kFieldColour = @"colour";
-static NSString *const kFieldLabel = @"label";
-static NSString *const kFieldLayer = @"layer";
+
+/* Los colores de la paleta son los mismos del editor web (`COLORS` en
+   `assets/js/lib/model.js`); aquí se muestran los de uso corriente. */
+static NSString *const kColours[] = {
+    @"#0f172a", @"#334155", @"#64748b", @"#94a3b8", @"#ffffff",
+    @"#2563eb", @"#0f766e", @"#15803d", @"#237f52", @"#65a30d",
+    @"#b71f2e", @"#dc2626", @"#ea580c", @"#f59e0b", @"#eab308",
+    @"#7c3aed", @"#be185d", @"#0891b2", @"#0e7490", @"#b45309",
+};
+static const size_t kColourCount = sizeof(kColours) / sizeof(kColours[0]);
 
 static NSColor *panelBackground(void) { return [NSColor colorWithCalibratedRed:0.13 green:0.14 blue:0.16 alpha:1.0]; }
 static NSColor *panelText(void) { return [NSColor colorWithCalibratedWhite:0.93 alpha:1.0]; }
@@ -37,215 +41,35 @@ static NSColor *panelMuted(void) { return [NSColor colorWithCalibratedWhite:0.58
 static NSColor *panelField(void) { return [NSColor colorWithCalibratedRed:0.20 green:0.21 blue:0.24 alpha:1.0]; }
 static NSColor *panelAccent(void) { return [NSColor colorWithCalibratedRed:0.16 green:0.43 blue:0.78 alpha:1.0]; }
 
-@interface InspectorPanel ()
-@property(nonatomic, strong) NSMutableDictionary<NSString *, NSTextField *> *fields;
-@property(nonatomic, strong) NSTextField *summary;
-@property(nonatomic, strong) NSTextField *typeField;
-@property(nonatomic, strong) NSTextField *hint;
-@property(nonatomic, strong) NSPopUpButton *layerPopup;
-@property(nonatomic, strong) NSTextField *layerField;
-@property(nonatomic, strong) NSButton *exitButton;
-- (void)buildPanel;
-- (NSTextField *)fieldWithKey:(NSString *)key;
-- (NSTextField *)labelledRow:(NSString *)caption key:(NSString *)key y:(CGFloat)y enabled:(BOOL)enabled;
-- (void)populateLayers;
-- (void)setField:(NSString *)key value:(NSString *)value;
-- (void)applyFields:(id)sender;
-- (void)layerChosen:(id)sender;
-- (void)setCurrentLayerFromField:(id)sender;
-- (void)groupTitle:(NSString *)title y:(CGFloat)y;
-@end
-
-@implementation InspectorPanel
-
-- (instancetype)initWithFrame:(NSRect)frame
+/** Nombre legible del tipo, como `TYPE_NAMES` del inspector web. */
+static NSString *type_name(const char *type)
 {
-    self = [super initWithFrame:frame];
-    if (self != nil) {
-        _elementIndex = -1;
-        self.wantsLayer = YES;
-        [self buildPanel];
+    if (type == NULL) {
+        return @"—";
     }
-    return self;
-}
-
-- (BOOL)isFlipped
-{
-    /* De arriba abajo: es más fácil leer la ficha así. */
-    return YES;
-}
-
-- (void)drawRect:(NSRect)dirtyRect
-{
-    (void) dirtyRect;
-    [panelBackground() setFill];
-    NSRectFill(self.bounds);
-    [[NSColor colorWithCalibratedWhite:0.24 alpha:1.0] setFill];
-    NSRectFill(NSMakeRect(0.0, 0.0, 1.0, NSHeight(self.bounds)));
-}
-
-/* ------------------------------ construcción ----------------------------- */
-
-- (void)groupTitle:(NSString *)title y:(CGFloat)y
-{
-    NSTextField *label = [NSTextField labelWithString:title];
-    label.font = [NSFont systemFontOfSize:10.0 weight:NSFontWeightBold];
-    label.textColor = panelMuted();
-    label.frame = NSMakeRect(kInset, y, kPanelWidth - kInset * 2.0 - 1.0, 14.0);
-    [self addSubview:label];
-}
-
-- (NSTextField *)fieldWithKey:(NSString *)key
-{
-    if (self.fields == nil) {
-        self.fields = [NSMutableDictionary dictionary];
+    if (strcmp(type, "wall") == 0) { return @"Muro"; }
+    if (strcmp(type, "door") == 0) { return @"Puerta sencilla"; }
+    if (strcmp(type, "door_double") == 0) { return @"Puerta doble"; }
+    if (strcmp(type, "door_garage") == 0) { return @"Portón de garaje"; }
+    if (strcmp(type, "route") == 0) { return @"Ruta de evacuación"; }
+    if (strcmp(type, "text") == 0) { return @"Texto"; }
+    if (strcmp(type, "dimension") == 0) { return @"Medida"; }
+    if (strcmp(type, "line") == 0) { return @"Línea"; }
+    if (strcmp(type, "rect") == 0) { return @"Rectángulo"; }
+    if (strcmp(type, "ellipse") == 0) { return @"Elipse"; }
+    if (strcmp(type, "pipe") == 0) { return @"Tubería"; }
+    if (strcmp(type, "conduit") == 0) { return @"Tubería eléctrica"; }
+    if (strcmp(type, "road") == 0) { return @"Vía vehicular"; }
+    if (strcmp(type, "sidewalk") == 0) { return @"Andén"; }
+    if (strcmp(type, "crosswalk") == 0) { return @"Paso cebra"; }
+    if (strcmp(type, "parking") == 0) { return @"Parqueadero"; }
+    if (strcmp(type, "property") == 0) { return @"Límite de predio"; }
+    const norma_object_spec *spec = norma_object_find(type);
+    if (spec != NULL) {
+        return [NSString stringWithUTF8String:spec->name];
     }
-    NSTextField *field = [[NSTextField alloc] initWithFrame:NSMakeRect(0, 0, 0, 22.0)];
-    field.font = [NSFont systemFontOfSize:11.5];
-    field.textColor = panelText();
-    field.backgroundColor = panelField();
-    field.drawsBackground = YES;
-    field.bezeled = YES;
-    field.bezelStyle = NSTextFieldRoundedBezel;
-    field.editable = YES;
-    field.selectable = YES;
-    field.focusRingType = NSFocusRingTypeExterior;
-    field.target = self;
-    field.action = @selector(applyFields:);
-    field.toolTip = @"Intro aplica el cambio en el plano";
-    self.fields[key] = field;
-    return field;
+    return [NSString stringWithUTF8String:type];
 }
-
-- (NSTextField *)labelledRow:(NSString *)caption key:(NSString *)key y:(CGFloat)y enabled:(BOOL)enabled
-{
-    NSTextField *caption2 = [NSTextField labelWithString:caption];
-    caption2.font = [NSFont systemFontOfSize:11.0];
-    caption2.textColor = panelMuted();
-    caption2.frame = NSMakeRect(kInset, y + 3.0, 74.0, 16.0);
-    [self addSubview:caption2];
-
-    NSTextField *field = [self fieldWithKey:key];
-    field.frame = NSMakeRect(kInset + 78.0, y, kPanelWidth - kInset * 2.0 - 78.0 - 1.0, 22.0);
-    field.enabled = enabled;
-    [self addSubview:field];
-    return field;
-}
-
-- (void)buildPanel
-{
-    CGFloat y = 12.0;
-
-    NSTextField *title = [NSTextField labelWithString:@"PROPIEDADES DEL PLANO"];
-    title.font = [NSFont systemFontOfSize:10.0 weight:NSFontWeightBold];
-    title.textColor = panelMuted();
-    title.frame = NSMakeRect(kInset, y, kPanelWidth - kInset * 2.0 - 1.0, 14.0);
-    [self addSubview:title];
-    y += 22.0;
-
-    /* ------------------------------- capas ------------------------------- */
-    [self groupTitle:@"CAPAS" y:y];
-    y += 18.0;
-
-    self.layerPopup = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(kInset, y, kPanelWidth - kInset * 2.0 - 1.0, 24.0)
-                                                  pullsDown:NO];
-    self.layerPopup.font = [NSFont systemFontOfSize:11.5];
-    self.layerPopup.target = self;
-    self.layerPopup.action = @selector(layerChosen:);
-    self.layerPopup.toolTip = @"Capa activa: la que reciben los elementos nuevos";
-    [self addSubview:self.layerPopup];
-    y += 30.0;
-
-    self.layerField = [[NSTextField alloc] initWithFrame:NSMakeRect(kInset, y, kPanelWidth - kInset * 2.0 - 42.0 - 1.0, 22.0)];
-    self.layerField.placeholderString = @"Nueva capa activa…";
-    self.layerField.font = [NSFont systemFontOfSize:11.5];
-    self.layerField.textColor = panelText();
-    self.layerField.backgroundColor = panelField();
-    self.layerField.drawsBackground = YES;
-    self.layerField.bezeled = YES;
-    self.layerField.bezelStyle = NSTextFieldRoundedBezel;
-    self.layerField.target = self;
-    self.layerField.action = @selector(setCurrentLayerFromField:);
-    [self addSubview:self.layerField];
-
-    NSButton *createLayer = [NSButton buttonWithTitle:@"＋" target:self action:@selector(setCurrentLayerFromField:)];
-    createLayer.frame = NSMakeRect(kPanelWidth - kInset - 36.0, y - 2.0, 36.0, 26.0);
-    createLayer.bezelStyle = NSBezelStyleRounded;
-    createLayer.toolTip = @"Crear la capa y dejarla activa";
-    [self addSubview:createLayer];
-    y += 34.0;
-
-    /* ---------------------------- propiedades ---------------------------- */
-    [self groupTitle:@"ELEMENTO SELECCIONADO" y:y];
-    y += 18.0;
-
-    self.summary = [NSTextField labelWithString:@"Nada seleccionado"];
-    self.summary.font = [NSFont systemFontOfSize:11.5 weight:NSFontWeightMedium];
-    self.summary.textColor = panelText();
-    self.summary.frame = NSMakeRect(kInset, y, kPanelWidth - kInset * 2.0 - 1.0, 18.0);
-    [self addSubview:self.summary];
-    y += 22.0;
-
-    self.typeField = [self labelledRow:@"Tipo" key:@"type" y:y enabled:NO];
-    y += kRow;
-    [self labelledRow:@"X (cm)" key:kFieldX y:y enabled:YES];
-    y += kRow;
-    [self labelledRow:@"Y (cm)" key:kFieldY y:y enabled:YES];
-    y += kRow;
-    [self labelledRow:@"Ancho (cm)" key:kFieldW y:y enabled:YES];
-    y += kRow;
-    [self labelledRow:@"Alto (cm)" key:kFieldH y:y enabled:YES];
-    y += kRow;
-    [self labelledRow:@"Giro (°)" key:kFieldRotation y:y enabled:YES];
-    y += kRow;
-    [self labelledRow:@"Grosor (cm)" key:kFieldStroke y:y enabled:YES];
-    y += kRow;
-    [self labelledRow:@"Color" key:kFieldColour y:y enabled:YES];
-    y += kRow;
-    [self labelledRow:@"Rótulo" key:kFieldLabel y:y enabled:YES];
-    y += kRow;
-    [self labelledRow:@"Capa" key:kFieldLayer y:y enabled:YES];
-    y += kRow + 6.0;
-
-    NSButton *apply = [NSButton buttonWithTitle:@"Aplicar cambios" target:self action:@selector(applyFields:)];
-    apply.frame = NSMakeRect(kInset, y, kPanelWidth - kInset * 2.0 - 1.0, 28.0);
-    apply.bezelStyle = NSBezelStyleRounded;
-    apply.toolTip = @"Aplica lo escrito en los campos (Intro)";
-    [self addSubview:apply];
-    y += 36.0;
-
-    const CGFloat third = (kPanelWidth - kInset * 2.0 - 9.0 - 1.0) / 3.0;
-    NSButton *duplicate = [NSButton buttonWithTitle:@"Duplicar" target:self action:@selector(requestDuplicate:)];
-    duplicate.frame = NSMakeRect(kInset, y, third, 26.0);
-    duplicate.bezelStyle = NSBezelStyleRounded;
-    [self addSubview:duplicate];
-
-    NSButton *remove = [NSButton buttonWithTitle:@"Borrar" target:self action:@selector(requestDelete:)];
-    remove.frame = NSMakeRect(kInset + third + 4.5, y, third, 26.0);
-    remove.bezelStyle = NSBezelStyleRounded;
-    [self addSubview:remove];
-
-    self.exitButton = [NSButton buttonWithTitle:@"Salida" target:self action:@selector(requestExit:)];
-    self.exitButton.frame = NSMakeRect(kInset + (third + 4.5) * 2.0, y, third, 26.0);
-    self.exitButton.bezelStyle = NSBezelStyleRounded;
-    self.exitButton.toolTip = @"Marca la puerta como salida de emergencia";
-    [self addSubview:self.exitButton];
-    y += 34.0;
-
-    self.hint = [NSTextField labelWithString:@"Selecciona un elemento en el plano para editar su ficha."];
-    self.hint.font = [NSFont systemFontOfSize:10.5];
-    self.hint.textColor = panelMuted();
-    self.hint.frame = NSMakeRect(kInset, y, kPanelWidth - kInset * 2.0 - 1.0, 44.0);
-    self.hint.maximumNumberOfLines = 3;
-    self.hint.lineBreakMode = NSLineBreakByWordWrapping;
-    [self addSubview:self.hint];
-    y += 52.0;
-
-    self.frame = NSMakeRect(NSMinX(self.frame), NSMinY(self.frame), kPanelWidth, MAX(NSHeight(self.frame), y + 8.0));
-    [self reload];
-}
-
-/* -------------------------------- lectura -------------------------------- */
 
 /** Caja de un elemento: la de su caja o la de sus nodos, en centímetros. */
 static void element_bounds(const norma_element *element, double *x, double *y, double *w, double *h)
@@ -274,6 +98,542 @@ static void element_bounds(const norma_element *element, double *x, double *y, d
     *h = element->h;
 }
 
+/** Tipo del elemento, con el índice ya validado. */
+static const char *name_of_type(const norma_document *document, size_t index)
+{
+    if (document == NULL || index >= document->count) {
+        return "";
+    }
+    return document->elements[index].type;
+}
+
+/** Número escrito a la española o a la inglesa: «12,5» y «12.5» valen igual. */
+static double parse_number(NSString *text)
+{
+    NSString *clean = [text stringByReplacingOccurrencesOfString:@"," withString:@"."];
+    return [clean doubleValue];
+}
+
+@interface InspectorPanel ()
+@property(nonatomic, strong) NSMutableDictionary<NSString *, NSTextField *> *fields;
+@property(nonatomic, strong) NSScrollView *scroll;
+@property(nonatomic, strong) NSView *content;
+@property(nonatomic, strong) NSTextField *summary;
+@property(nonatomic, strong) NSTextField *kindLabel;
+@property(nonatomic, strong) NSTextField *metaLabel;
+@property(nonatomic, strong) NSPopUpButton *layerPopup;
+@property(nonatomic, strong) NSTextField *layerField;
+@property(nonatomic, strong) NSPopUpButton *currentLayerPopup;
+@property(nonatomic, strong) NSPopUpButton *typePopup;
+@property(nonatomic, strong) NSPopUpButton *extAgent;
+@property(nonatomic, strong) NSPopUpButton *extHazard;
+@property(nonatomic, strong) NSButton *lockSwitch;
+@property(nonatomic, strong) NSButton *flipXSwitch;
+@property(nonatomic, strong) NSButton *flipYSwitch;
+@property(nonatomic, strong) NSButton *exitSwitch;
+@property(nonatomic, strong) NSButton *guideVisibleSwitch;
+@property(nonatomic, strong) NSButton *guideLockSwitch;
+@property(nonatomic, strong) NSSlider *opacitySlider;
+@property(nonatomic, strong) NSSlider *guideOpacitySlider;
+@property(nonatomic, strong) NSMutableArray<NSButton *> *swatches;
+@property(nonatomic, strong) NSMutableArray<NSView *> *blocks;
+/** Fila del tamaño de letra: solo tiene sentido en un texto. */
+@property(nonatomic, strong) NSView *fontRow;
+
+- (void)buildPanel;
+- (NSView *)blockWithHeight:(CGFloat)height;
+- (void)addTitle:(NSString *)title to:(NSView *)block at:(CGFloat)y;
+- (NSTextField *)fieldWithKey:(NSString *)key;
+- (NSTextField *)labelledRow:(NSString *)caption key:(NSString *)key y:(CGFloat)y enabled:(BOOL)enabled
+                          in:(NSView *)block;
+- (void)populateLayers;
+- (void)setField:(NSString *)key value:(NSString *)value;
+- (void)applyFields:(id)sender;
+- (void)layerChosen:(id)sender;
+- (void)createLayer:(id)sender;
+- (void)rotateBy:(NSButton *)sender;
+- (void)colourChosen:(NSButton *)sender;
+- (void)opacityChanged:(NSSlider *)sender;
+- (void)typeChosen:(id)sender;
+- (void)lockToggled:(id)sender;
+- (void)doorToggled:(id)sender;
+- (void)extinguisherChanged:(id)sender;
+- (void)guideOpacityChanged:(NSSlider *)sender;
+- (void)guideVisibilityToggled:(id)sender;
+- (void)guideLockToggled:(id)sender;
+- (void)requestClearGuide:(id)sender;
+- (void)requestImportGuide:(id)sender;
+- (void)layoutBlocks;
+@end
+
+@implementation InspectorPanel
+
+- (instancetype)initWithFrame:(NSRect)frame
+{
+    self = [super initWithFrame:frame];
+    if (self != nil) {
+        _elementIndex = -1;
+        self.wantsLayer = YES;
+        [self buildPanel];
+    }
+    return self;
+}
+
+- (BOOL)isFlipped
+{
+    return YES;
+}
+
+- (void)drawRect:(NSRect)dirtyRect
+{
+    (void) dirtyRect;
+    [panelBackground() setFill];
+    NSRectFill(self.bounds);
+    [[NSColor colorWithCalibratedWhite:0.24 alpha:1.0] setFill];
+    NSRectFill(NSMakeRect(0.0, 0.0, 1.0, NSHeight(self.bounds)));
+}
+
+/* ------------------------------ construcción ----------------------------- */
+
+/** Un bloque del panel: su alto lo decide quien lo arma, y se muestra u oculta. */
+- (NSView *)blockWithHeight:(CGFloat)height
+{
+    NSView *block = [[NSView alloc] initWithFrame:NSMakeRect(0.0, 0.0, kPanelWidth, height)];
+    block.autoresizingMask = NSViewWidthSizable;
+    [self.blocks addObject:block];
+    [self.content addSubview:block];
+    return block;
+}
+
+- (void)addTitle:(NSString *)title to:(NSView *)block at:(CGFloat)y
+{
+    NSTextField *label = [NSTextField labelWithString:title];
+    label.font = [NSFont systemFontOfSize:10.0 weight:NSFontWeightBold];
+    label.textColor = panelMuted();
+    label.frame = NSMakeRect(kInset, y, kPanelWidth - kInset * 2.0 - 1.0, 14.0);
+    [block addSubview:label];
+}
+
+- (NSTextField *)fieldWithKey:(NSString *)key
+{
+    NSTextField *field = [[NSTextField alloc] initWithFrame:NSMakeRect(0, 0, 0, 22.0)];
+    field.font = [NSFont systemFontOfSize:11.5];
+    field.textColor = panelText();
+    field.backgroundColor = panelField();
+    field.drawsBackground = YES;
+    field.bezeled = YES;
+    field.bezelStyle = NSTextFieldRoundedBezel;
+    field.editable = YES;
+    field.selectable = YES;
+    field.focusRingType = NSFocusRingTypeExterior;
+    field.target = self;
+    field.action = @selector(applyFields:);
+    field.toolTip = @"Intro aplica el cambio en el plano";
+    self.fields[key] = field;
+    return field;
+}
+
+- (NSTextField *)labelledRow:(NSString *)caption key:(NSString *)key y:(CGFloat)y enabled:(BOOL)enabled
+                          in:(NSView *)block
+{
+    NSTextField *label = [NSTextField labelWithString:caption];
+    label.font = [NSFont systemFontOfSize:11.0];
+    label.textColor = panelMuted();
+    label.frame = NSMakeRect(kInset, y + 3.0, 74.0, 16.0);
+    [block addSubview:label];
+
+    NSTextField *field = [self fieldWithKey:key];
+    field.frame = NSMakeRect(kInset + 78.0, y, kPanelWidth - kInset * 2.0 - 78.0 - 1.0, 22.0);
+    field.enabled = enabled;
+    [block addSubview:field];
+    return field;
+}
+
+/** Interruptor con su explicación, como las filas `switch-row` de la web. */
+- (NSButton *)switchRow:(NSString *)title detail:(NSString *)detail action:(SEL)action
+{
+    NSButton *button = [NSButton checkboxWithTitle:title target:self action:action];
+    button.font = [NSFont systemFontOfSize:11.5];
+    button.contentTintColor = panelText();
+    button.toolTip = detail;
+    return button;
+}
+
+- (void)buildPanel
+{
+    self.fields = [NSMutableDictionary dictionary];
+    self.blocks = [NSMutableArray array];
+    self.swatches = [NSMutableArray array];
+
+    self.scroll = [[NSScrollView alloc] initWithFrame:self.bounds];
+    self.scroll.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
+    self.scroll.hasVerticalScroller = YES;
+    self.scroll.autohidesScrollers = YES;
+    self.scroll.drawsBackground = NO;
+    self.scroll.borderType = NSNoBorder;
+    self.content = [[NSView alloc] initWithFrame:NSMakeRect(0.0, 0.0, kPanelWidth, 1200.0)];
+    self.content.autoresizingMask = NSViewWidthSizable;
+    self.scroll.documentView = self.content;
+    [self addSubview:self.scroll];
+
+    /* ------------------------------- capas ------------------------------- */
+    NSView *layers = [self blockWithHeight:104.0];
+    [self addTitle:@"CAPAS" to:layers at:0.0];
+
+    self.currentLayerPopup = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(kInset, 18.0,
+                                                                             kPanelWidth - kInset * 2.0 - 1.0, 24.0)
+                                                       pullsDown:NO];
+    self.currentLayerPopup.font = [NSFont systemFontOfSize:11.5];
+    self.currentLayerPopup.target = self;
+    self.currentLayerPopup.action = @selector(layerChosen:);
+    self.currentLayerPopup.toolTip = @"Capa activa: la que reciben los elementos nuevos";
+    [layers addSubview:self.currentLayerPopup];
+
+    self.layerField = [[NSTextField alloc] initWithFrame:NSMakeRect(kInset, 48.0,
+                                                                    kPanelWidth - kInset * 2.0 - 42.0 - 1.0, 22.0)];
+    self.layerField.placeholderString = @"Nueva capa activa…";
+    self.layerField.font = [NSFont systemFontOfSize:11.5];
+    self.layerField.textColor = panelText();
+    self.layerField.backgroundColor = panelField();
+    self.layerField.drawsBackground = YES;
+    self.layerField.bezeled = YES;
+    self.layerField.bezelStyle = NSTextFieldRoundedBezel;
+    self.layerField.target = self;
+    self.layerField.action = @selector(createLayer:);
+    [layers addSubview:self.layerField];
+
+    NSButton *create = [NSButton buttonWithTitle:@"＋" target:self action:@selector(createLayer:)];
+    create.frame = NSMakeRect(kPanelWidth - kInset - 36.0, 46.0, 36.0, 26.0);
+    create.bezelStyle = NSBezelStyleRounded;
+    create.toolTip = @"Crear la capa y dejarla activa";
+    [layers addSubview:create];
+
+    NSTextField *hint = [NSTextField labelWithString:@"La capa activa recibe lo que se dibuja."];
+    hint.font = [NSFont systemFontOfSize:10.0];
+    hint.textColor = panelMuted();
+    hint.frame = NSMakeRect(kInset, 78.0, kPanelWidth - kInset * 2.0 - 1.0, 14.0);
+    [layers addSubview:hint];
+
+    /* ------------------------------ selección ---------------------------- */
+    NSView *hero = [self blockWithHeight:96.0];
+    self.kindLabel = [NSTextField labelWithString:@"SELECCIÓN"];
+    self.kindLabel.font = [NSFont systemFontOfSize:9.5 weight:NSFontWeightBold];
+    self.kindLabel.textColor = panelMuted();
+    self.kindLabel.frame = NSMakeRect(kInset, 2.0, kPanelWidth - kInset * 2.0 - 1.0, 12.0);
+    [hero addSubview:self.kindLabel];
+
+    self.summary = [NSTextField labelWithString:@"Nada seleccionado"];
+    self.summary.font = [NSFont systemFontOfSize:14.0 weight:NSFontWeightSemibold];
+    self.summary.textColor = panelText();
+    self.summary.lineBreakMode = NSLineBreakByTruncatingTail;
+    self.summary.frame = NSMakeRect(kInset, 16.0, kPanelWidth - kInset * 2.0 - 1.0, 20.0);
+    [hero addSubview:self.summary];
+
+    self.metaLabel = [NSTextField labelWithString:@""];
+    self.metaLabel.font = [NSFont systemFontOfSize:10.5];
+    self.metaLabel.textColor = panelMuted();
+    self.metaLabel.lineBreakMode = NSLineBreakByTruncatingTail;
+    self.metaLabel.frame = NSMakeRect(kInset, 38.0, kPanelWidth - kInset * 2.0 - 1.0, 16.0);
+    [hero addSubview:self.metaLabel];
+
+    /* Las tres acciones de la cabecera: bloquear, duplicar y borrar. */
+    NSArray<NSArray<NSString *> *> *heroActions = @[
+        @[ @"lock", @"Bloquear · ⌘L", @"toggleLockHero:" ],
+        @[ @"plus.square.on.square", @"Duplicar · ⌘D", @"duplicateHero:" ],
+        @[ @"trash", @"Eliminar · Supr", @"deleteHero:" ],
+    ];
+    CGFloat actionX = kInset;
+    for (NSArray<NSString *> *action in heroActions) {
+        NSImage *image = [NSImage imageWithSystemSymbolName:action[0] accessibilityDescription:action[1]];
+        image.template = YES;
+        NSButton *button = [[NSButton alloc] initWithFrame:NSMakeRect(actionX, 60.0, 34.0, 28.0)];
+        button.image = image;
+        button.imagePosition = NSImageOnly;
+        button.bezelStyle = NSBezelStyleTexturedRounded;
+        button.contentTintColor = panelText();
+        button.toolTip = action[1];
+        button.target = self;
+        button.action = NSSelectorFromString(action[2]);
+        [hero addSubview:button];
+        actionX += 38.0;
+    }
+    self.lockSwitch = [NSButton checkboxWithTitle:@"Bloqueado" target:self action:@selector(lockToggled:)];
+    self.lockSwitch.font = [NSFont systemFontOfSize:11.0];
+    self.lockSwitch.frame = NSMakeRect(actionX + 10.0, 64.0, kPanelWidth - actionX - 20.0, 20.0);
+    self.lockSwitch.toolTip = @"Evita mover o modificar el elemento";
+    [hero addSubview:self.lockSwitch];
+
+    /* ----------------------------- geometría ----------------------------- */
+    NSView *geometry = [self blockWithHeight:196.0];
+    [self addTitle:@"GEOMETRÍA" to:geometry at:0.0];
+    const CGFloat half = (kPanelWidth - kInset * 2.0 - 8.0 - 1.0) / 2.0;
+    NSArray<NSArray<NSString *> *> *pairs = @[
+        @[ @"X (cm)", @"x", @"Y (cm)", @"y" ],
+        @[ @"Ancho (cm)", @"w", @"Alto (cm)", @"h" ],
+    ];
+    CGFloat pairY = 20.0;
+    for (NSArray<NSString *> *pair in pairs) {
+        for (int column = 0; column < 2; column += 1) {
+            NSTextField *label = [NSTextField labelWithString:pair[column * 2]];
+            label.font = [NSFont systemFontOfSize:10.0];
+            label.textColor = panelMuted();
+            label.frame = NSMakeRect(kInset + (half + 8.0) * (CGFloat) column, pairY, half, 13.0);
+            [geometry addSubview:label];
+            NSTextField *field = [self fieldWithKey:pair[column * 2 + 1]];
+            field.frame = NSMakeRect(kInset + (half + 8.0) * (CGFloat) column, pairY + 14.0, half, 22.0);
+            [geometry addSubview:field];
+        }
+        pairY += 42.0;
+    }
+
+    /* Giro con sus dos botones de 90°, como la fila `rotation-row` web. */
+    NSTextField *rotationLabel = [NSTextField labelWithString:@"Rotación"];
+    rotationLabel.font = [NSFont systemFontOfSize:10.0];
+    rotationLabel.textColor = panelMuted();
+    rotationLabel.frame = NSMakeRect(kInset, pairY, half, 13.0);
+    [geometry addSubview:rotationLabel];
+    NSButton *left = [NSButton buttonWithTitle:@"−90°" target:self action:@selector(rotateBy:)];
+    left.frame = NSMakeRect(kInset, pairY + 14.0, 58.0, 24.0);
+    left.bezelStyle = NSBezelStyleRounded;
+    left.tag = -90;
+    [geometry addSubview:left];
+    NSTextField *rotationField = [self fieldWithKey:@"rotation"];
+    rotationField.frame = NSMakeRect(kInset + 62.0, pairY + 14.0, half * 2.0 + 8.0 - 124.0, 22.0);
+    [geometry addSubview:rotationField];
+    NSButton *right = [NSButton buttonWithTitle:@"+90°" target:self action:@selector(rotateBy:)];
+    right.frame = NSMakeRect(kInset + half * 2.0 + 8.0 - 58.0, pairY + 14.0, 58.0, 24.0);
+    right.bezelStyle = NSBezelStyleRounded;
+    right.tag = 90;
+    [geometry addSubview:right];
+    pairY += 44.0;
+
+    NSTextField *measure = [NSTextField labelWithString:@"Medida declarada (m)"];
+    measure.font = [NSFont systemFontOfSize:10.0];
+    measure.textColor = panelMuted();
+    measure.frame = NSMakeRect(kInset, pairY, kPanelWidth - kInset * 2.0 - 1.0, 13.0);
+    [geometry addSubview:measure];
+    NSTextField *measureField = [self fieldWithKey:@"measuredM"];
+    measureField.frame = NSMakeRect(kInset, pairY + 14.0, kPanelWidth - kInset * 2.0 - 1.0, 22.0);
+    measureField.toolTip = @"Medida tomada en sitio; el auditor la prefiere sobre el dibujo";
+    [geometry addSubview:measureField];
+
+    /* ---------------------------- apariencia ----------------------------- */
+    NSView *appearance = [self blockWithHeight:206.0];
+    [self addTitle:@"APARIENCIA" to:appearance at:0.0];
+
+    NSTextField *colourCaption = [NSTextField labelWithString:@"Color"];
+    colourCaption.font = [NSFont systemFontOfSize:10.0];
+    colourCaption.textColor = panelMuted();
+    colourCaption.frame = NSMakeRect(kInset, 18.0, kPanelWidth - kInset * 2.0 - 1.0, 13.0);
+    [appearance addSubview:colourCaption];
+
+    /* La paleta, en dos filas de diez. */
+    const CGFloat swatchSize = 20.0;
+    const CGFloat swatchGap = 4.0;
+    for (size_t index = 0; index < kColourCount; index += 1) {
+        const int column = (int) (index % 10);
+        const int row = (int) (index / 10);
+        NSButton *swatch = [[NSButton alloc] initWithFrame:NSMakeRect(kInset + (swatchSize + swatchGap) * (CGFloat) column,
+                                                                     32.0 + (swatchSize + swatchGap) * (CGFloat) row,
+                                                                     swatchSize, swatchSize)];
+        swatch.title = @"";
+        swatch.bordered = YES;
+        swatch.bezelStyle = NSBezelStyleRegularSquare;
+        swatch.wantsLayer = YES;
+        swatch.layer.cornerRadius = 3.0;
+        swatch.tag = (NSInteger) index;
+        swatch.target = self;
+        swatch.action = @selector(colourChosen:);
+        swatch.toolTip = kColours[index];
+        [appearance addSubview:swatch];
+        [self.swatches addObject:swatch];
+    }
+
+    CGFloat appearanceY = 82.0;
+    self.opacitySlider = [[NSSlider alloc] initWithFrame:NSMakeRect(kInset + 70.0, appearanceY, 140.0, 20.0)];
+    self.opacitySlider.minValue = 0.1;
+    self.opacitySlider.maxValue = 1.0;
+    self.opacitySlider.target = self;
+    self.opacitySlider.action = @selector(opacityChanged:);
+    self.opacitySlider.toolTip = @"Opacidad del elemento, como en la web";
+    [appearance addSubview:self.opacitySlider];
+    NSTextField *opacityCaption = [NSTextField labelWithString:@"Opacidad"];
+    opacityCaption.font = [NSFont systemFontOfSize:10.0];
+    opacityCaption.textColor = panelMuted();
+    opacityCaption.frame = NSMakeRect(kInset, appearanceY + 2.0, 66.0, 13.0);
+    [appearance addSubview:opacityCaption];
+
+    [self labelledRow:@"Grosor" key:@"stroke" y:108.0 enabled:YES in:appearance];
+    [self labelledRow:@"Rótulo" key:@"label" y:138.0 enabled:YES in:appearance];
+
+    /* Tamaño de letra: el mismo campo de la ficha web, solo para textos. */
+    self.fontRow = [[NSView alloc] initWithFrame:NSMakeRect(0.0, 168.0, kPanelWidth, 32.0)];
+    [appearance addSubview:self.fontRow];
+    NSTextField *fontCaption = [NSTextField labelWithString:@"Tamaño de letra"];
+    fontCaption.font = [NSFont systemFontOfSize:11.0];
+    fontCaption.textColor = panelMuted();
+    fontCaption.frame = NSMakeRect(kInset, 3.0, 74.0, 16.0);
+    [self.fontRow addSubview:fontCaption];
+    NSTextField *fontField = [self fieldWithKey:@"fontSize"];
+    fontField.frame = NSMakeRect(kInset + 78.0, 0.0, kPanelWidth - kInset * 2.0 - 78.0 - 1.0, 22.0);
+    fontField.toolTip = @"Alto de la letra en centímetros del plano";
+    [self.fontRow addSubview:fontField];
+
+    /* ------------------------------ puerta ------------------------------- */
+    NSView *door = [self blockWithHeight:110.0];
+    [self addTitle:@"PUERTA" to:door at:0.0];
+    self.flipXSwitch = [self switchRow:@"Cambiar bisagra"
+                                 detail:@"Voltea la puerta hacia el otro lado del vano."
+                                 action:@selector(doorToggled:)];
+    self.flipXSwitch.frame = NSMakeRect(kInset, 20.0, kPanelWidth - kInset * 2.0 - 1.0, 20.0);
+    [door addSubview:self.flipXSwitch];
+    self.flipYSwitch = [self switchRow:@"Abrir al otro lado"
+                                 detail:@"Invierte el sentido de abatimiento respecto al muro."
+                                 action:@selector(doorToggled:)];
+    self.flipYSwitch.frame = NSMakeRect(kInset, 44.0, kPanelWidth - kInset * 2.0 - 1.0, 20.0);
+    [door addSubview:self.flipYSwitch];
+    self.exitSwitch = [self switchRow:@"Salida de emergencia"
+                                detail:@"El auditor mide el recorrido desde esta puerta y la cuenta como salida."
+                                action:@selector(doorToggled:)];
+    self.exitSwitch.frame = NSMakeRect(kInset, 68.0, kPanelWidth - kInset * 2.0 - 1.0, 20.0);
+    [door addSubview:self.exitSwitch];
+
+    /* --------------------------- vía y entorno --------------------------- */
+    NSView *outdoor = [self blockWithHeight:78.0];
+    [self addTitle:@"VÍA Y ENTORNO" to:outdoor at:0.0];
+    NSTextField *outdoorLabel = [NSTextField labelWithString:@"Ancho declarado (m)"];
+    outdoorLabel.font = [NSFont systemFontOfSize:10.0];
+    outdoorLabel.textColor = panelMuted();
+    outdoorLabel.frame = NSMakeRect(kInset, 18.0, kPanelWidth - kInset * 2.0 - 1.0, 13.0);
+    [outdoor addSubview:outdoorLabel];
+    NSTextField *widthField = [self fieldWithKey:@"widthM"];
+    widthField.frame = NSMakeRect(kInset, 32.0, kPanelWidth - kInset * 2.0 - 1.0, 22.0);
+    widthField.toolTip = @"Ancho de la vía o del andén; cuenta como exterior en el auditor";
+    [outdoor addSubview:widthField];
+    NSTextField *outdoorHint = [NSTextField labelWithString:@"Nombre en el plano: el del rótulo."];
+    outdoorHint.font = [NSFont systemFontOfSize:10.0];
+    outdoorHint.textColor = panelMuted();
+    outdoorHint.frame = NSMakeRect(kInset, 58.0, kPanelWidth - kInset * 2.0 - 1.0, 14.0);
+    [outdoor addSubview:outdoorHint];
+
+    /* ------------------------------ extintor ----------------------------- */
+    NSView *extinguisher = [self blockWithHeight:198.0];
+    [self addTitle:@"EXTINTOR" to:extinguisher at:0.0];
+
+    NSTextField *agentCaption = [NSTextField labelWithString:@"Agente extintor"];
+    agentCaption.font = [NSFont systemFontOfSize:10.0];
+    agentCaption.textColor = panelMuted();
+    agentCaption.frame = NSMakeRect(kInset, 18.0, kPanelWidth - kInset * 2.0 - 1.0, 13.0);
+    [extinguisher addSubview:agentCaption];
+    self.extAgent = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(kInset, 32.0,
+                                                                    kPanelWidth - kInset * 2.0 - 1.0, 24.0)
+                                              pullsDown:NO];
+    self.extAgent.font = [NSFont systemFontOfSize:11.0];
+    self.extAgent.target = self;
+    self.extAgent.action = @selector(extinguisherChanged:);
+    [self.extAgent addItemsWithTitles:@[ @"Polvo químico seco ABC", @"Polvo químico seco BC",
+                                        @"Dióxido de carbono (CO₂)", @"Agua presurizada",
+                                        @"Espuma (AFFF/FFFP)", @"Químico húmedo (Clase K)" ]];
+    [extinguisher addSubview:self.extAgent];
+
+    [self labelledRow:@"Capacidad" key:@"extCapacityLb" y:62.0 enabled:YES in:extinguisher];
+    [self labelledRow:@"Clasificación" key:@"extRating" y:92.0 enabled:YES in:extinguisher];
+    [self labelledRow:@"Parte superior" key:@"extMountCm" y:122.0 enabled:YES in:extinguisher];
+
+    NSTextField *hazardCaption = [NSTextField labelWithString:@"Riesgo"];
+    hazardCaption.font = [NSFont systemFontOfSize:10.0];
+    hazardCaption.textColor = panelMuted();
+    hazardCaption.frame = NSMakeRect(kInset, 152.0, kPanelWidth - kInset * 2.0 - 1.0, 13.0);
+    [extinguisher addSubview:hazardCaption];
+    self.extHazard = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(kInset, 166.0,
+                                                                     kPanelWidth - kInset * 2.0 - 1.0, 24.0)
+                                                pullsDown:NO];
+    self.extHazard.font = [NSFont systemFontOfSize:11.0];
+    self.extHazard.target = self;
+    self.extHazard.action = @selector(extinguisherChanged:);
+    [self.extHazard addItemsWithTitles:@[ @"Leve", @"Ordinario", @"Extra" ]];
+    [extinguisher addSubview:self.extHazard];
+
+    /* ---------------------------- organización --------------------------- */
+    NSView *organization = [self blockWithHeight:110.0];
+    [self addTitle:@"ORGANIZACIÓN" to:organization at:0.0];
+    NSTextField *layerCaption = [NSTextField labelWithString:@"Capa del elemento"];
+    layerCaption.font = [NSFont systemFontOfSize:10.0];
+    layerCaption.textColor = panelMuted();
+    layerCaption.frame = NSMakeRect(kInset, 18.0, kPanelWidth - kInset * 2.0 - 1.0, 13.0);
+    [organization addSubview:layerCaption];
+    self.layerPopup = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(kInset, 32.0,
+                                                                      kPanelWidth - kInset * 2.0 - 1.0, 24.0)
+                                                 pullsDown:NO];
+    self.layerPopup.font = [NSFont systemFontOfSize:11.0];
+    self.layerPopup.target = self;
+    self.layerPopup.action = @selector(applyFields:);
+    [organization addSubview:self.layerPopup];
+
+    NSTextField *typeCaption = [NSTextField labelWithString:@"Tipo de elemento"];
+    typeCaption.font = [NSFont systemFontOfSize:10.0];
+    typeCaption.textColor = panelMuted();
+    typeCaption.frame = NSMakeRect(kInset, 62.0, kPanelWidth - kInset * 2.0 - 1.0, 13.0);
+    [organization addSubview:typeCaption];
+    self.typePopup = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(kInset, 76.0,
+                                                                     kPanelWidth - kInset * 2.0 - 1.0, 24.0)
+                                                pullsDown:NO];
+    self.typePopup.font = [NSFont systemFontOfSize:11.0];
+    self.typePopup.target = self;
+    self.typePopup.action = @selector(typeChosen:);
+    self.typePopup.toolTip = @"Convertir conserva posición, giro y capa";
+    [organization addSubview:self.typePopup];
+
+    /* ------------------------------ maqueta ------------------------------ */
+    NSView *guide = [self blockWithHeight:180.0];
+    [self addTitle:@"MAQUETA DE TRAZO" to:guide at:0.0];
+    NSTextField *guideHint = [NSTextField labelWithString:@"Imagen de fondo para calcar el plano. No se imprime."];
+    guideHint.font = [NSFont systemFontOfSize:10.0];
+    guideHint.textColor = panelMuted();
+    guideHint.frame = NSMakeRect(kInset, 18.0, kPanelWidth - kInset * 2.0 - 1.0, 26.0);
+    guideHint.maximumNumberOfLines = 2;
+    guideHint.lineBreakMode = NSLineBreakByWordWrapping;
+    [guide addSubview:guideHint];
+
+    NSButton *importGuide = [NSButton buttonWithTitle:@"Importar imagen…" target:self
+                                               action:@selector(requestImportGuide:)];
+    importGuide.frame = NSMakeRect(kInset, 48.0, kPanelWidth - kInset * 2.0 - 1.0, 26.0);
+    importGuide.bezelStyle = NSBezelStyleRounded;
+    [guide addSubview:importGuide];
+
+    self.guideOpacitySlider = [[NSSlider alloc] initWithFrame:NSMakeRect(kInset + 70.0, 82.0, 140.0, 20.0)];
+    self.guideOpacitySlider.minValue = 0.05;
+    self.guideOpacitySlider.maxValue = 1.0;
+    self.guideOpacitySlider.target = self;
+    self.guideOpacitySlider.action = @selector(guideOpacityChanged:);
+    [guide addSubview:self.guideOpacitySlider];
+    NSTextField *guideOpacity = [NSTextField labelWithString:@"Opacidad"];
+    guideOpacity.font = [NSFont systemFontOfSize:10.0];
+    guideOpacity.textColor = panelMuted();
+    guideOpacity.frame = NSMakeRect(kInset, 84.0, 66.0, 13.0);
+    [guide addSubview:guideOpacity];
+
+    self.guideVisibleSwitch = [self switchRow:@"Visible" detail:@"Oculta la maqueta sin perderla"
+                                        action:@selector(guideVisibilityToggled:)];
+    self.guideVisibleSwitch.frame = NSMakeRect(kInset, 110.0, kPanelWidth - kInset * 2.0 - 1.0, 20.0);
+    [guide addSubview:self.guideVisibleSwitch];
+    self.guideLockSwitch = [self switchRow:@"Bloqueada" detail:@"Evita que el lienzo la mueva al dibujar"
+                                     action:@selector(guideLockToggled:)];
+    self.guideLockSwitch.frame = NSMakeRect(kInset, 134.0, kPanelWidth - kInset * 2.0 - 1.0, 20.0);
+    [guide addSubview:self.guideLockSwitch];
+
+    NSButton *removeGuide = [NSButton buttonWithTitle:@"Quitar la maqueta" target:self
+                                               action:@selector(requestClearGuide:)];
+    removeGuide.frame = NSMakeRect(kInset, 158.0, kPanelWidth - kInset * 2.0 - 1.0, 20.0);
+    removeGuide.bezelStyle = NSBezelStyleRounded;
+    removeGuide.toolTip = @"Borra la imagen del archivo del plano";
+    [guide addSubview:removeGuide];
+
+    [self reload];
+}
+
+/* -------------------------------- lectura -------------------------------- */
+
 - (const norma_element *)selectedElement
 {
     if (self.document == NULL || self.elementIndex < 0 || (size_t) self.elementIndex >= self.document->count) {
@@ -282,26 +642,13 @@ static void element_bounds(const norma_element *element, double *x, double *y, d
     return &self.document->elements[(size_t) self.elementIndex];
 }
 
-/** Nombre legible del tipo: el del catálogo si lo hay, o el tipo tal cual. */
-static NSString *display_name(const norma_element *element)
+/** Capas del plano: la activa primero y luego las que ya existen. */
+- (NSArray<NSString *> *)layerNames
 {
-    if (element->label[0] != '\0' && strcmp(element->type, "text") == 0) {
-        return [NSString stringWithFormat:@"Texto · «%s»", element->label];
-    }
-    if (strcmp(element->type, "text") == 0) {
-        return @"Texto";
-    }
-    return [NSString stringWithUTF8String:element->type];
-}
-
-- (void)populateLayers
-{
-    [self.layerPopup removeAllItems];
-    if (self.document == NULL) {
-        return;
-    }
     NSMutableArray<NSString *> *names = [NSMutableArray array];
-    /* La capa activa primero: es la que se va a usar. */
+    if (self.document == NULL) {
+        return names;
+    }
     if (self.document->layer[0] != '\0') {
         [names addObject:[NSString stringWithUTF8String:self.document->layer]];
     }
@@ -316,76 +663,25 @@ static NSString *display_name(const norma_element *element)
         }
     }
     if (names.count == 0) {
-        [names addObject:@"General"];
+        [names addObject:@"capa_planta"];
     }
-    [self.layerPopup addItemsWithTitles:names];
-    self.layerPopup.toolTip = [NSString stringWithFormat:@"Capa activa: %@", names.firstObject];
+    return names;
 }
 
-- (void)reload
+- (void)populateLayers
 {
-    if (self.document == NULL) {
-        return;
+    NSArray<NSString *> *names = [self layerNames];
+    [self.currentLayerPopup removeAllItems];
+    [self.currentLayerPopup addItemsWithTitles:names];
+    [self.currentLayerPopup selectItemAtIndex:0];
+
+    NSString *current = self.selectedElement != NULL
+        ? [NSString stringWithUTF8String:self.selectedElement->layer] : nil;
+    [self.layerPopup removeAllItems];
+    [self.layerPopup addItemsWithTitles:names];
+    if (current != nil && [names containsObject:current]) {
+        [self.layerPopup selectItemWithTitle:current];
     }
-    [self populateLayers];
-    const norma_element *element = [self selectedElement];
-    if (element == NULL) {
-        self.summary.stringValue = [NSString stringWithFormat:@"Nada seleccionado · %zu elementos",
-                                                              self.document->count];
-        self.summary.textColor = panelText();
-        [(NSTextField *) self.fields[@"type"] setStringValue:@"—"];
-        for (NSString *key in self.fields) {
-            if ([key isEqualToString:@"type"]) {
-                continue;
-            }
-            [(NSTextField *) self.fields[key] setStringValue:@""];
-            ((NSTextField *) self.fields[key]).enabled = NO;
-        }
-        self.exitButton.enabled = NO;
-        self.exitButton.state = NSControlStateValueOff;
-        self.hint.stringValue = @"Selecciona un elemento en el plano para editar su ficha. Las capas se eligen arriba.";
-        return;
-    }
-
-    double x = 0.0;
-    double y = 0.0;
-    double w = 0.0;
-    double h = 0.0;
-    element_bounds(element, &x, &y, &w, &h);
-
-    self.summary.stringValue = [NSString stringWithFormat:@"%@ · %@", display_name(element),
-                                                          element->node_count >= 2 ? @"trazo" : @"caja"];
-    /* El nombre del elemento elegido, en el azul del realce. */
-    self.summary.textColor = panelAccent();
-    [(NSTextField *) self.fields[@"type"] setStringValue:display_name(element)];
-    const BOOL box = element->node_count < 2;
-    [self setField:kFieldX value:[NSString stringWithFormat:@"%.0f", x]];
-    [self setField:kFieldY value:[NSString stringWithFormat:@"%.0f", y]];
-    [self setField:kFieldW value:[NSString stringWithFormat:@"%.0f", w]];
-    [self setField:kFieldH value:[NSString stringWithFormat:@"%.0f", h]];
-    [self setField:kFieldRotation value:[NSString stringWithFormat:@"%.0f", element->rotation]];
-    [self setField:kFieldStroke value:[NSString stringWithFormat:@"%.1f", element->stroke]];
-    [self setField:kFieldColour value:element->colour[0] != '\0' ? [NSString stringWithUTF8String:element->colour] : @""];
-    [self setField:kFieldLabel value:[NSString stringWithUTF8String:element->label]];
-    [self setField:kFieldLayer value:[NSString stringWithUTF8String:element->layer]];
-
-    ((NSTextField *) self.fields[kFieldW]).enabled = box;
-    ((NSTextField *) self.fields[kFieldH]).enabled = box;
-    ((NSTextField *) self.fields[kFieldX]).enabled = YES;
-    ((NSTextField *) self.fields[kFieldY]).enabled = YES;
-    ((NSTextField *) self.fields[kFieldRotation]).enabled = box;
-    ((NSTextField *) self.fields[kFieldStroke]).enabled = YES;
-    ((NSTextField *) self.fields[kFieldColour]).enabled = YES;
-    ((NSTextField *) self.fields[kFieldLabel]).enabled = YES;
-    ((NSTextField *) self.fields[kFieldLayer]).enabled = YES;
-
-    const BOOL door = norma_object_is_door(element->type) != 0;
-    self.exitButton.enabled = door;
-    self.exitButton.state = element->is_exit ? NSControlStateValueOn : NSControlStateValueOff;
-    self.exitButton.title = element->is_exit ? @"Es salida" : @"Salida";
-    self.hint.stringValue = box
-        ? @"Ancho y alto en centímetros; el giro en grados. El color admite «#rrggbb» o vacío para el de su familia."
-        : @"En un trazo, X e Y desplazan el conjunto de nodos. El grosor es el que usa el auditor para bloquear el paso.";
 }
 
 - (void)setField:(NSString *)key value:(NSString *)value
@@ -396,22 +692,206 @@ static NSString *display_name(const norma_element *element)
     }
 }
 
+- (void)reload
+{
+    if (self.document == NULL) {
+        return;
+    }
+    [self populateLayers];
+    const norma_element *element = [self selectedElement];
+
+    /* Bloques que solo tienen sentido con una selección. */
+    NSMutableDictionary<NSString *, NSNumber *> *visible = [NSMutableDictionary dictionary];
+
+    if (element == NULL) {
+        self.kindLabel.stringValue = @"SELECCIÓN";
+        self.summary.stringValue = [NSString stringWithFormat:@"Nada seleccionado · %zu elementos",
+                                                              self.document->count];
+        self.summary.textColor = panelText();
+        self.metaLabel.stringValue = @"Haz clic en un elemento del plano para editar su ficha.";
+        self.lockSwitch.hidden = YES;
+        self.lockSwitch.state = NSControlStateValueOff;
+        for (NSString *key in self.fields) {
+            NSTextField *field = self.fields[key];
+            field.stringValue = @"";
+            field.enabled = NO;
+        }
+        self.opacitySlider.enabled = NO;
+        for (size_t index = 0; index < kColourCount; index += 1) {
+            self.swatches[index].hidden = YES;
+        }
+        self.fontRow.hidden = YES;
+        visible[@"geometry"] = @0;
+        visible[@"appearance"] = @0;
+        visible[@"door"] = @0;
+        visible[@"outdoor"] = @0;
+        visible[@"extinguisher"] = @0;
+        visible[@"organization"] = @0;
+    } else {
+        double x = 0.0;
+        double y = 0.0;
+        double w = 0.0;
+        double h = 0.0;
+        element_bounds(element, &x, &y, &w, &h);
+        const BOOL box = element->node_count < 2;
+        const BOOL door = norma_object_is_door(element->type) != 0;
+        const BOOL extinguisher = strstr(element->type, "extinguisher") != NULL;
+        const BOOL outdoor = strcmp(element->type, "road") == 0 || strcmp(element->type, "sidewalk") == 0
+                             || strcmp(element->type, "crosswalk") == 0
+                             || strcmp(element->type, "parking") == 0
+                             || strcmp(element->type, "property") == 0;
+        const BOOL pathType = strcmp(element->type, "wall") == 0 || strcmp(element->type, "line") == 0
+                              || strcmp(element->type, "route") == 0
+                              || strcmp(element->type, "dimension") == 0;
+
+        self.kindLabel.stringValue = [type_name(element->type) uppercaseString];
+        self.summary.stringValue = type_name(element->type);
+        self.summary.textColor = panelAccent();
+        self.metaLabel.stringValue = [NSString stringWithFormat:@"%@ · %@%@",
+                                                                box ? @"caja" : @"trazo",
+                                                                element->layer[0] != '\0'
+                                                                    ? [NSString stringWithUTF8String:element->layer]
+                                                                    : @"sin capa",
+                                                                element->locked ? @" · bloqueado" : @""];
+        [self setField:@"x" value:[NSString stringWithFormat:@"%.0f", x]];
+        [self setField:@"y" value:[NSString stringWithFormat:@"%.0f", y]];
+        [self setField:@"w" value:[NSString stringWithFormat:@"%.0f", w]];
+        [self setField:@"h" value:[NSString stringWithFormat:@"%.0f", h]];
+        [self setField:@"rotation" value:[NSString stringWithFormat:@"%.0f", element->rotation]];
+        [self setField:@"stroke" value:[NSString stringWithFormat:@"%.1f", element->stroke]];
+        [self setField:@"measuredM" value:element->measured_m > 0.0
+            ? [NSString stringWithFormat:@"%g", element->measured_m] : @""];
+        [self setField:@"label" value:[NSString stringWithUTF8String:element->label]];
+        [self setField:@"fontSize" value:element->font_size > 0.0
+            ? [NSString stringWithFormat:@"%g", element->font_size] : @""];
+        self.fontRow.hidden = strcmp(element->type, "text") != 0;
+        [self setField:@"widthM" value:[NSString stringWithFormat:@"%g", element->width_m]];
+        [self setField:@"extCapacityLb" value:element->ext_capacity_lb > 0.0
+            ? [NSString stringWithFormat:@"%.1f", element->ext_capacity_lb] : @""];
+        [self setField:@"extRating" value:[NSString stringWithUTF8String:element->ext_rating]];
+        [self setField:@"extMountCm" value:element->has_ext_mount
+            ? [NSString stringWithFormat:@"%.0f", element->ext_mount_cm] : @""];
+
+        for (NSString *key in self.fields) {
+            self.fields[key].enabled = !element->locked;
+        }
+        self.fields[@"w"].enabled = box && !element->locked;
+        self.fields[@"h"].enabled = box && !element->locked;
+        self.opacitySlider.enabled = !element->locked;
+        self.opacitySlider.doubleValue = element->opacity > 0.0 ? element->opacity : 1.0;
+
+        /* Paleta: el color de la familia y el propio. */
+        for (size_t index = 0; index < kColourCount; index += 1) {
+            NSButton *swatch = self.swatches[index];
+            swatch.hidden = NO;
+            swatch.enabled = !element->locked;
+            NSColor *colour = [NSColor colorWithSRGBRed:0.0 green:0.0 blue:0.0 alpha:1.0];
+            NSColor *parsed = nil;
+            unsigned int red = 0;
+            unsigned int green = 0;
+            unsigned int blue = 0;
+            if (sscanf(kColours[index].UTF8String + 1, "%2x%2x%2x", &red, &green, &blue) == 3) {
+                parsed = [NSColor colorWithSRGBRed:(CGFloat) red / 255.0 green:(CGFloat) green / 255.0
+                                              blue:(CGFloat) blue / 255.0 alpha:1.0];
+            }
+            colour = parsed != nil ? parsed : colour;
+            swatch.layer.backgroundColor = colour.CGColor;
+            const BOOL selected = element->colour[0] == '#'
+                                  && [kColours[index] caseInsensitiveCompare:[NSString stringWithUTF8String:element->colour]]
+                                         == NSOrderedSame;
+            swatch.layer.borderWidth = selected ? 2.5 : 1.0;
+            swatch.layer.borderColor = selected ? panelAccent().CGColor
+                                                : [NSColor colorWithCalibratedWhite:0.35 alpha:1.0].CGColor;
+        }
+
+        self.lockSwitch.hidden = NO;
+        self.lockSwitch.state = element->locked ? NSControlStateValueOn : NSControlStateValueOff;
+
+        self.flipXSwitch.state = element->flip_x ? NSControlStateValueOn : NSControlStateValueOff;
+        self.flipYSwitch.state = element->flip_y ? NSControlStateValueOn : NSControlStateValueOff;
+        self.exitSwitch.state = element->is_exit ? NSControlStateValueOn : NSControlStateValueOff;
+        self.exitSwitch.enabled = door && !element->locked;
+
+        [self.extAgent selectItemAtIndex:0];
+        if (strncmp(element->ext_agent, "co2", 3) == 0) { [self.extAgent selectItemAtIndex:2]; }
+        else if (strncmp(element->ext_agent, "water", 5) == 0) { [self.extAgent selectItemAtIndex:3]; }
+        else if (strncmp(element->ext_agent, "foam", 4) == 0) { [self.extAgent selectItemAtIndex:4]; }
+        else if (strncmp(element->ext_agent, "wet", 3) == 0) { [self.extAgent selectItemAtIndex:5]; }
+        else if (strncmp(element->ext_agent, "pqs_bc", 6) == 0) { [self.extAgent selectItemAtIndex:1]; }
+        [self.extHazard selectItemAtIndex:strncmp(element->ext_hazard, "light", 5) == 0
+                                              ? 0 : (strncmp(element->ext_hazard, "extra", 5) == 0 ? 2 : 1)];
+
+        /* Conversión de tipo: solo entre dibujos de la misma clase. */
+        [self.typePopup removeAllItems];
+        [self.typePopup addItemWithTitle:type_name(element->type)];
+        if (pathType || box) {
+            NSArray<NSString *> *choices = pathType
+                ? @[ @"wall", @"line", @"route", @"dimension" ]
+                : @[ @"rect", @"ellipse", @"text" ];
+            for (NSString *choice in choices) {
+                if (strcmp(element->type, choice.UTF8String) != 0) {
+                    [self.typePopup addItemWithTitle:type_name(choice.UTF8String)];
+                }
+            }
+        }
+        self.typePopup.enabled = (pathType || box) && !element->locked;
+
+        visible[@"geometry"] = @1;
+        visible[@"appearance"] = @1;
+        self.fontRow.hidden = strcmp(element->type, "text") != 0;
+        visible[@"door"] = @(door);
+        visible[@"outdoor"] = @(outdoor);
+        visible[@"extinguisher"] = @(extinguisher);
+        visible[@"organization"] = @1;
+    }
+
+    /* Maqueta: siempre visible; sus controles, solo con imagen. */
+    const BOOL hasGuide = self.document->guide.present != 0;
+    self.guideOpacitySlider.enabled = hasGuide;
+    self.guideVisibleSwitch.enabled = hasGuide;
+    self.guideLockSwitch.enabled = hasGuide;
+    if (hasGuide) {
+        self.guideOpacitySlider.doubleValue = self.document->guide.opacity;
+        self.guideVisibleSwitch.state = self.document->guide.visible ? NSControlStateValueOn
+                                                                     : NSControlStateValueOff;
+        self.guideLockSwitch.state = self.document->guide.locked ? NSControlStateValueOn
+                                                                 : NSControlStateValueOff;
+    }
+
+    /* La geometría y la apariencia se ocultan sin selección; las capas y la
+       maqueta siempre están. */
+    const NSArray<NSString *> *order = @[ @"layers", @"hero", @"geometry", @"appearance", @"door",
+                                          @"outdoor", @"extinguisher", @"organization", @"guide" ];
+    for (NSUInteger index = 0; index < self.blocks.count && index < order.count; index += 1) {
+        NSNumber *flag = visible[order[index]];
+        self.blocks[index].hidden = flag != nil && flag.boolValue == NO;
+    }
+    [self layoutBlocks];
+}
+
+/** Coloca los bloques visibles uno tras otro y ajusta el alto del contenido. */
+- (void)layoutBlocks
+{
+    CGFloat y = 10.0;
+    for (NSView *block in self.blocks) {
+        if (block.hidden) {
+            continue;
+        }
+        block.frame = NSMakeRect(0.0, y, kPanelWidth, NSHeight(block.frame));
+        y += NSHeight(block.frame) + 12.0;
+    }
+    self.content.frame = NSMakeRect(0.0, 0.0, kPanelWidth, MAX(y + 8.0, NSHeight(self.scroll.bounds)));
+}
+
 - (void)focusLabelField
 {
-    NSTextField *field = self.fields[kFieldLabel];
+    NSTextField *field = self.fields[@"label"];
     if (field != nil && field.enabled) {
         [self.window makeFirstResponder:field];
     }
 }
 
 /* -------------------------------- edición -------------------------------- */
-
-/** Número escrito a la española o a la inglesa: «12,5» y «12.5» valen igual. */
-static double parse_number(NSString *text)
-{
-    NSString *clean = [text stringByReplacingOccurrencesOfString:@"," withString:@"."];
-    return [clean doubleValue];
-}
 
 - (void)applyFields:(id)sender
 {
@@ -425,33 +905,40 @@ static double parse_number(NSString *text)
         return;
     }
     const size_t index = (size_t) self.elementIndex;
+    if (element->locked) {
+        [self.delegate inspector:self status:@"El elemento está bloqueado: desbloquéalo para editarlo."];
+        return;
+    }
     /* Datos que no cambian durante la edición: el puntero al elemento puede
        dejar de valer si el documento reasigna su lista, así que se copian. */
     const size_t nodeCount = element->node_count;
-    NSString *name = display_name(element);
-    norma_document_begin_edit(self.document);
-
-    double x = parse_number([(NSTextField *) self.fields[kFieldX] stringValue]);
-    double y = parse_number([(NSTextField *) self.fields[kFieldY] stringValue]);
-    double w = parse_number([(NSTextField *) self.fields[kFieldW] stringValue]);
-    double h = parse_number([(NSTextField *) self.fields[kFieldH] stringValue]);
-    const double rotation = parse_number([(NSTextField *) self.fields[kFieldRotation] stringValue]);
-    const double stroke = parse_number([(NSTextField *) self.fields[kFieldStroke] stringValue]);
-    NSString *colour = [(NSTextField *) self.fields[kFieldColour] stringValue];
-    NSString *label = [(NSTextField *) self.fields[kFieldLabel] stringValue];
-    NSString *layer = [(NSTextField *) self.fields[kFieldLayer] stringValue];
-
-    int changed = 0;
-    NSMutableArray<NSString *> *refused = [NSMutableArray array];
-
+    NSString *name = type_name(element->type);
+    /* Los límites se leen antes de abrir la edición: el documento puede mover su
+       lista de elementos y dejar viejo el puntero. */
     double currentX = 0.0;
     double currentY = 0.0;
     double currentW = 0.0;
     double currentH = 0.0;
     element_bounds(element, &currentX, &currentY, &currentW, &currentH);
+    (void) currentW;
+    (void) currentH;
+    norma_document_begin_edit(self.document);
+
+    double x = parse_number([(NSTextField *) self.fields[@"x"] stringValue]);
+    double y = parse_number([(NSTextField *) self.fields[@"y"] stringValue]);
+    double w = parse_number([(NSTextField *) self.fields[@"w"] stringValue]);
+    double h = parse_number([(NSTextField *) self.fields[@"h"] stringValue]);
+    const double rotation = parse_number([(NSTextField *) self.fields[@"rotation"] stringValue]);
+    const double stroke = parse_number([(NSTextField *) self.fields[@"stroke"] stringValue]);
+    const double measured = parse_number([(NSTextField *) self.fields[@"measuredM"] stringValue]);
+    NSString *label = [(NSTextField *) self.fields[@"label"] stringValue];
+    NSString *layer = self.layerPopup.titleOfSelectedItem;
+    const double widthM = parse_number([(NSTextField *) self.fields[@"widthM"] stringValue]);
+
+    int changed = 0;
+    NSMutableArray<NSString *> *refused = [NSMutableArray array];
 
     if (nodeCount >= 2) {
-        /* Trazo: X e Y desplazan el conjunto, la caja no se fuerza. */
         const double dx = round(x) - round(currentX);
         const double dy = round(y) - round(currentY);
         if (dx != 0.0 || dy != 0.0) {
@@ -469,21 +956,28 @@ static double parse_number(NSString *text)
         [refused addObject:@"el ancho y el alto tienen que ser mayores que cero"];
     }
 
-    if (nodeCount < 2 && norma_document_set_rotation(self.document, index, rotation)) {
+    if (norma_document_set_rotation(self.document, index, rotation)) {
         changed = 1;
     }
     if (norma_document_set_stroke(self.document, index, stroke)) {
         changed = 1;
     }
-    if (norma_document_set_colour(self.document, index, colour.UTF8String)) {
-        changed = 1;
-    } else if (colour.length > 0 && ![colour hasPrefix:@"#"]) {
-        [refused addObject:@"el color va en «#rrggbb»"];
-    }
     if (norma_document_set_label(self.document, index, label.UTF8String)) {
         changed = 1;
     }
-    if (norma_document_set_layer(self.document, index, layer.UTF8String)) {
+    if (layer != nil && norma_document_set_layer(self.document, index, layer.UTF8String)) {
+        changed = 1;
+    }
+    if (widthM > 0.0 && norma_document_set_width_m(self.document, index, widthM)) {
+        changed = 1;
+    }
+    const double fontSize = parse_number([(NSTextField *) self.fields[@"fontSize"] stringValue]);
+    if (strcmp(name_of_type(self.document, index), "text") == 0 && fontSize > 0.0
+        && norma_document_set_font_size(self.document, index, fontSize)) {
+        changed = 1;
+    }
+    if (measured > 0.0) {
+        self.document->elements[index].measured_m = measured;
         changed = 1;
     }
 
@@ -492,9 +986,150 @@ static double parse_number(NSString *text)
         [self.delegate inspector:self
             didEditDocumentWithMessage:[NSString stringWithFormat:@"Ficha aplicada a %@", name]];
     } else if (refused.count > 0) {
-        [self.delegate inspector:self status:[NSString stringWithFormat:@"No se aplicó: %@.", [refused componentsJoinedByString:@"; "]]];
+        [self.delegate inspector:self
+                            status:[NSString stringWithFormat:@"No se aplicó: %@.",
+                                                              [refused componentsJoinedByString:@"; "]]];
     } else {
         [self.delegate inspector:self status:@"La ficha ya estaba así."];
+    }
+}
+
+- (void)rotateBy:(NSButton *)sender
+{
+    const norma_element *element = [self selectedElement];
+    if (self.document == NULL || element == NULL || element->locked) {
+        return;
+    }
+    norma_document_begin_edit(self.document);
+    if (norma_document_set_rotation(self.document, (size_t) self.elementIndex,
+                                    element->rotation + (double) sender.tag)) {
+        [self reload];
+        [self.delegate inspector:self
+            didEditDocumentWithMessage:[NSString stringWithFormat:@"Girado %ld°", (long) sender.tag]];
+    }
+}
+
+- (void)colourChosen:(NSButton *)sender
+{
+    const norma_element *element = [self selectedElement];
+    if (self.document == NULL || element == NULL || sender.tag < 0
+        || (size_t) sender.tag >= kColourCount || element->locked) {
+        return;
+    }
+    norma_document_begin_edit(self.document);
+    if (norma_document_set_colour(self.document, (size_t) self.elementIndex,
+                                  kColours[sender.tag].UTF8String)) {
+        [self reload];
+        [self.delegate inspector:self
+            didEditDocumentWithMessage:[NSString stringWithFormat:@"Color %@", kColours[sender.tag]]];
+    }
+}
+
+- (void)opacityChanged:(NSSlider *)sender
+{
+    if (self.document == NULL || self.elementIndex < 0) {
+        return;
+    }
+    /* La opacidad se mueve como en la web: sin apilar un deshacer por paso. */
+    if (norma_document_set_opacity(self.document, (size_t) self.elementIndex, sender.doubleValue)) {
+        [self.delegate inspector:self
+            didEditDocumentWithMessage:[NSString stringWithFormat:@"Opacidad %ld %%",
+                                                                  (long) lround(sender.doubleValue * 100.0)]];
+    }
+}
+
+- (void)typeChosen:(id)sender
+{
+    (void) sender;
+    const norma_element *element = [self selectedElement];
+    if (self.document == NULL || element == NULL || element->locked) {
+        return;
+    }
+    NSString *title = self.typePopup.titleOfSelectedItem;
+    if (title == nil || [title isEqualToString:type_name(element->type)]) {
+        return;
+    }
+    /* El título visible se traduce al tipo del modelo. */
+    NSDictionary<NSString *, NSString *> *types = @{
+        @"Muro": @"wall", @"Línea": @"line", @"Ruta de evacuación": @"route", @"Medida": @"dimension",
+        @"Rectángulo": @"rect", @"Elipse": @"ellipse", @"Texto": @"text",
+    };
+    NSString *type = types[title];
+    if (type == nil) {
+        return;
+    }
+    norma_document_begin_edit(self.document);
+    if (norma_document_set_type(self.document, (size_t) self.elementIndex, type.UTF8String)) {
+        [self reload];
+        [self.delegate inspector:self
+            didEditDocumentWithMessage:[NSString stringWithFormat:@"Ahora es %@", title]];
+        return;
+    }
+    [self reload];
+    [self.delegate inspector:self
+                        status:@"Un trazo no se convierte en caja (ni al revés) sin perder sus nodos."];
+}
+
+- (void)lockToggled:(id)sender
+{
+    (void) sender;
+    if (self.document == NULL || self.elementIndex < 0) {
+        return;
+    }
+    const int wanted = self.lockSwitch.state == NSControlStateValueOn ? 1 : 0;
+    norma_document_begin_edit(self.document);
+    if (norma_document_set_locked(self.document, (size_t) self.elementIndex, wanted)) {
+        [self reload];
+        [self.delegate inspector:self
+            didEditDocumentWithMessage:wanted ? @"Elemento bloqueado" : @"Elemento desbloqueado"];
+    }
+}
+
+- (void)doorToggled:(id)sender
+{
+    (void) sender;
+    if (self.document == NULL || self.elementIndex < 0) {
+        return;
+    }
+    const size_t index = (size_t) self.elementIndex;
+    norma_document_begin_edit(self.document);
+    int changed = 0;
+    if (norma_document_set_door_flips(self.document, index,
+                                      self.flipXSwitch.state == NSControlStateValueOn,
+                                      self.flipYSwitch.state == NSControlStateValueOn)) {
+        changed = 1;
+    }
+    const int exit = self.exitSwitch.state == NSControlStateValueOn ? 1 : 0;
+    if (norma_document_set_exit(self.document, index, exit)) {
+        changed = 1;
+    }
+    if (changed) {
+        [self reload];
+        [self.delegate inspector:self didEditDocumentWithMessage:@"Puerta actualizada"];
+    }
+}
+
+- (void)extinguisherChanged:(id)sender
+{
+    (void) sender;
+    if (self.document == NULL || self.elementIndex < 0) {
+        return;
+    }
+    NSArray<NSString *> *agents = @[ @"pqs_abc", @"pqs_bc", @"co2", @"water", @"foam", @"wet_k" ];
+    NSArray<NSString *> *hazards = @[ @"light", @"ordinary", @"extra" ];
+    const NSInteger agentIndex = self.extAgent.indexOfSelectedItem;
+    const NSInteger hazardIndex = self.extHazard.indexOfSelectedItem;
+    norma_document_begin_edit(self.document);
+    NSString *rating = [(NSTextField *) self.fields[@"extRating"] stringValue];
+    const double capacity = parse_number([(NSTextField *) self.fields[@"extCapacityLb"] stringValue]);
+    const double mount = parse_number([(NSTextField *) self.fields[@"extMountCm"] stringValue]);
+    if (norma_document_set_extinguisher(self.document, (size_t) self.elementIndex,
+                                        agentIndex >= 0 ? agents[agentIndex].UTF8String : NULL,
+                                        rating.UTF8String,
+                                        hazardIndex >= 0 ? hazards[hazardIndex].UTF8String : NULL,
+                                        capacity, mount)) {
+        [self reload];
+        [self.delegate inspector:self didEditDocumentWithMessage:@"Ficha del extintor actualizada"];
     }
 }
 
@@ -504,14 +1139,14 @@ static double parse_number(NSString *text)
     if (self.document == NULL) {
         return;
     }
-    NSString *title = self.layerPopup.titleOfSelectedItem;
-    if (norma_document_set_current_layer(self.document, title.UTF8String) != 0) {
+    NSString *title = self.currentLayerPopup.titleOfSelectedItem;
+    if (title != nil && norma_document_set_current_layer(self.document, title.UTF8String) != 0) {
         [self.delegate inspector:self
             didEditDocumentWithMessage:[NSString stringWithFormat:@"Capa activa: %@", title]];
     }
 }
 
-- (void)setCurrentLayerFromField:(id)sender
+- (void)createLayer:(id)sender
 {
     (void) sender;
     if (self.document == NULL) {
@@ -533,22 +1168,86 @@ static double parse_number(NSString *text)
     [self.delegate inspector:self status:@"Ese nombre de capa no cabe (32 caracteres como máximo)."];
 }
 
-- (void)requestDuplicate:(id)sender
+/* -------------------------------- maqueta -------------------------------- */
+
+- (void)guideOpacityChanged:(NSSlider *)sender
+{
+    if (self.document == NULL) {
+        return;
+    }
+    if (norma_document_set_guide_opacity(self.document, sender.doubleValue)) {
+        [self.delegate inspector:self
+            didEditDocumentWithMessage:[NSString stringWithFormat:@"Maqueta al %ld %%",
+                                                                  (long) lround(sender.doubleValue * 100.0)]];
+    }
+}
+
+- (void)guideVisibilityToggled:(id)sender
+{
+    (void) sender;
+    if (self.document == NULL) {
+        return;
+    }
+    if (norma_document_set_guide_visible(self.document, self.guideVisibleSwitch.state == NSControlStateValueOn)) {
+        [self reload];
+        [self.delegate inspector:self didEditDocumentWithMessage:@"Maqueta actualizada"];
+    }
+}
+
+- (void)guideLockToggled:(id)sender
+{
+    (void) sender;
+    if (self.document == NULL) {
+        return;
+    }
+    if (norma_document_set_guide_locked(self.document, self.guideLockSwitch.state == NSControlStateValueOn)) {
+        [self reload];
+        [self.delegate inspector:self didEditDocumentWithMessage:@"Maqueta actualizada"];
+    }
+}
+
+- (void)requestClearGuide:(id)sender
+{
+    (void) sender;
+    [self.delegate inspectorDidRequestClearGuide:self];
+}
+
+- (void)requestImportGuide:(id)sender
+{
+    (void) sender;
+    [self.delegate inspectorDidRequestImportGuide:self];
+}
+
+/* ------------------------- acciones de la cabecera ----------------------- */
+
+- (void)toggleLockHero:(id)sender
+{
+    if (self.document == NULL || self.elementIndex < 0) {
+        return;
+    }
+    const norma_element *element = [self selectedElement];
+    if (element == NULL) {
+        return;
+    }
+    norma_document_begin_edit(self.document);
+    const int wanted = element->locked ? 0 : 1;
+    if (norma_document_set_locked(self.document, (size_t) self.elementIndex, wanted)) {
+        [self reload];
+        [self.delegate inspector:self
+            didEditDocumentWithMessage:wanted ? @"Elemento bloqueado" : @"Elemento desbloqueado"];
+    }
+}
+
+- (void)duplicateHero:(id)sender
 {
     (void) sender;
     [self.delegate inspectorDidRequestDuplicate:self];
 }
 
-- (void)requestDelete:(id)sender
+- (void)deleteHero:(id)sender
 {
     (void) sender;
     [self.delegate inspectorDidRequestDelete:self];
-}
-
-- (void)requestExit:(id)sender
-{
-    (void) sender;
-    [self.delegate inspectorDidRequestExit:self];
 }
 
 @end

@@ -79,6 +79,10 @@ static const char *kAppName = "Normia Estudio";
 - (void)invalidateInspection;
 - (void)loadObjectCatalog;
 - (void)insertFromPicker:(id)sender;
+- (void)insertFromLibrary:(NormiaCatalogScope)scope;
+- (void)insertSignFromMenu:(id)sender;
+- (void)insertEquipmentFromMenu:(id)sender;
+- (void)importGuideFromMenu:(id)sender;
 - (void)buildTopBar:(NSView *)content;
 - (void)buildRail:(NSView *)content;
 - (void)buildInspector:(NSView *)content;
@@ -538,7 +542,27 @@ static NSColor *chromeBackground(void) { return [NSColor colorWithCalibratedRed:
         [self zoomToFit:nil];
     } else if ([action isEqualToString:@"catalog"]) {
         [self insertFromPicker:nil];
+    } else if ([action isEqualToString:@"librarySign"]) {
+        [self insertFromLibrary:NormiaCatalogScopeSigns];
+    } else if ([action isEqualToString:@"libraryCad"]) {
+        [self insertFromLibrary:NormiaCatalogScopeCad];
     }
+}
+
+/** Las dos bibliotecas del rail web: señalización y equipos, en su buscador. */
+- (void)insertFromLibrary:(NormiaCatalogScope)scope
+{
+    NSString *type = [NormiaCatalogPicker pickFromCatalog:&_catalog
+                                                forWindow:self.window
+                                                   prompt:nil
+                                                    scope:scope];
+    if (type == nil) {
+        return;
+    }
+    [self.window makeFirstResponder:self.canvas];
+    [self.canvas beginInsert:type];
+    [self canvasStatus:self.canvas
+               message:[NSString stringWithFormat:@"Haz clic en el plano para colocar %@.", type]];
 }
 
 /* ------------------------------- inspector ------------------------------- */
@@ -578,6 +602,108 @@ static NSColor *chromeBackground(void) { return [NSColor colorWithCalibratedRed:
     (void) panel;
     [self toggleExit:nil];
     [self.inspector reload];
+}
+
+/* ----------------------------- maqueta de trazo -------------------------- */
+
+/**
+ * Importar la imagen de guía.
+ *
+ * Se elige un PNG o un JPEG con el panel de archivo; se convierte a PNG (así el
+ * archivo del plano guarda un formato que todas las versiones leen), se pasa a
+ * base64 y se le da al documento con `norma_document_set_guide`, que pone la
+ * imagen al 45 % de opacidad y la cuadra en la hoja. Todo queda dentro del
+ * `.norma`, que es un solo archivo: no hay rutas que se rompan al moverlo.
+ */
+- (void)inspectorDidRequestImportGuide:(InspectorPanel *)panel
+{
+    (void) panel;
+    NSOpenPanel *open = [NSOpenPanel openPanel];
+    open.title = @"Importar maqueta de trazo";
+    open.message = @"Elige la imagen del plano original para calcarla debajo del dibujo.";
+    open.prompt = @"Usar como maqueta";
+    open.canChooseFiles = YES;
+    open.canChooseDirectories = NO;
+    open.allowsMultipleSelection = NO;
+    /* El filtro de tipos se deja abierto a propósito: el panel de archivo sin
+       filtro no depende de UniformTypeIdentifiers (macOS 11) y la imagen se
+       valida igual al decodificarla. */
+    open.allowedFileTypes = nil;
+    NSModalResponse response = [open runModal];
+    if (response != NSModalResponseOK || open.URL == nil) {
+        [self canvasStatus:self.canvas message:@"No se importó ninguna maqueta."];
+        return;
+    }
+    NSString *path = open.URL.path;
+    NSData *data = [NSData dataWithContentsOfFile:path];
+    if (data == nil) {
+        [self canvasStatus:self.canvas message:@"La imagen no se pudo leer del disco."];
+        return;
+    }
+    /* A PNG: el plano guarda base64 de PNG o JPEG y la ventana solo sabe
+       decodificar esos dos. */
+    NSBitmapImageRep *rep = [NSBitmapImageRep imageRepWithData:data];
+    if (rep != nil) {
+        NSData *png = [rep representationUsingType:NSBitmapImageFileTypePNG properties:@{}];
+        if (png != nil) {
+            data = png;
+        }
+    }
+    NSString *encoded = [data base64EncodedStringWithOptions:0];
+    if (encoded == nil) {
+        [self canvasStatus:self.canvas message:@"La imagen no se pudo convertir a PNG."];
+        return;
+    }
+    const char *name = open.URL.lastPathComponent.UTF8String;
+    norma_document_begin_edit(self.canvas.document);
+    if (!norma_document_set_guide(self.canvas.document, name, encoded.UTF8String, 0.0, 0.0, w, h)) {
+        [self canvasStatus:self.canvas message:@"La imagen es demasiado grande para el plano."];
+        return;
+    }
+    /* Caja inicial: la imagen cuadrada dentro de la hoja, con sus proporciones. */
+    const double w = self.canvas.document->width;
+    const double h = self.canvas.document->height;
+    const CGFloat pixelW = rep != nil && rep.pixelsWide > 0 ? (CGFloat) rep.pixelsWide : 1000.0;
+    const CGFloat pixelH = rep != nil && rep.pixelsHigh > 0 ? (CGFloat) rep.pixelsHigh : 700.0;
+    double boxW = w * 0.92;
+    double boxH = boxW * (double) (pixelH / pixelW);
+    if (boxH > h * 0.92) {
+        boxH = h * 0.92;
+        boxW = boxH * (double) (pixelW / pixelH);
+    }
+    norma_document_set_guide_box(self.canvas.document, round((w - boxW) / 2.0), round((h - boxH) / 2.0),
+                                 round(boxW), round(boxH));
+    [self.canvas documentDidChangeExternally];
+    [self.inspector reload];
+    [self refreshTitle];
+    [self invalidateInspection];
+    [self canvasStatus:self.canvas
+               message:[NSString stringWithFormat:@"Maqueta importada: %@. Ajusta su opacidad en el inspector.",
+                                                  open.URL.lastPathComponent]];
+}
+
+- (void)inspectorDidRequestClearGuide:(InspectorPanel *)panel
+{
+    (void) panel;
+    if (self.canvas.document == NULL || !self.canvas.document->guide.present) {
+        [self canvasStatus:self.canvas message:@"El plano no tiene maqueta."];
+        return;
+    }
+    NSAlert *alert = [[NSAlert alloc] init];
+    alert.messageText = @"¿Quitar la maqueta de trazo?";
+    alert.informativeText = @"Se borra la imagen del archivo del plano. Lo dibujado no se toca.";
+    [alert addButtonWithTitle:@"Quitar"];
+    [alert addButtonWithTitle:@"Cancelar"];
+    if ([alert runModal] != NSAlertFirstButtonReturn) {
+        return;
+    }
+    norma_document_begin_edit(self.canvas.document);
+    norma_document_clear_guide(self.canvas.document);
+    [self.canvas documentDidChangeExternally];
+    [self.inspector reload];
+    [self refreshTitle];
+    [self invalidateInspection];
+    [self canvasStatus:self.canvas message:@"Maqueta quitada del plano."];
 }
 
 - (void)canvas:(CanvasView *)view didChooseTool:(NormiaTool)tool
@@ -1067,6 +1193,24 @@ static NSString *command_word(NSString *word)
                                                    action:@selector(insertFromPicker:)
                                             keyEquivalent:@"i"];
     searchItem.keyEquivalentModifierMask = NSEventModifierFlagCommand | NSEventModifierFlagShift;
+
+    /* Las dos bibliotecas del rail web, también en el menú. Los atajos van con
+       Control porque ⌘⇧S ya es «Guardar como», ⌘⇧E exporta el SVG y ⌘⇧G es la
+       rejilla: dos entradas con la misma tecla dejan una muerta. */
+    NSMenuItem *signItem = [insertMenu addItemWithTitle:@"Señalización (ISO 7010 y servicio)…"
+                                                 action:@selector(insertSignFromMenu:)
+                                          keyEquivalent:@"s"];
+    signItem.keyEquivalentModifierMask = NSEventModifierFlagControl | NSEventModifierFlagShift;
+    NSMenuItem *equipmentItem = [insertMenu addItemWithTitle:@"Equipos y mobiliario…"
+                                                     action:@selector(insertEquipmentFromMenu:)
+                                              keyEquivalent:@"e"];
+    equipmentItem.keyEquivalentModifierMask = NSEventModifierFlagControl | NSEventModifierFlagShift;
+
+    /* La maqueta de trazo, junto a lo que se inserta: es una imagen de fondo. */
+    NSMenuItem *guideItem = [insertMenu addItemWithTitle:@"Maqueta de trazo (imagen de fondo)…"
+                                                  action:@selector(importGuideFromMenu:)
+                                           keyEquivalent:@"g"];
+    guideItem.keyEquivalentModifierMask = NSEventModifierFlagControl | NSEventModifierFlagShift;
     [insertMenu addItem:[NSMenuItem separatorItem]];
 
     /*
@@ -1119,9 +1263,10 @@ static NSString *command_word(NSString *word)
         note.enabled = NO;
     }
     [insertMenu addItem:[NSMenuItem separatorItem]];
+    /* ⌘⇧O y no ⌘⇧E: ⌘⇧E ya es «Exportar SVG» en el menú Archivo. */
     NSMenuItem *exitItem = [insertMenu addItemWithTitle:@"Marcar o desmarcar salida de emergencia"
                                                  action:@selector(toggleExit:)
-                                          keyEquivalent:@"E"];
+                                          keyEquivalent:@"O"];
     exitItem.keyEquivalentModifierMask = NSEventModifierFlagCommand | NSEventModifierFlagShift;
     insertItem.submenu = insertMenu;
     [menubar addItem:insertItem];
@@ -1628,6 +1773,24 @@ static NSString *command_word(NSString *word)
 }
 
 /** Buscar en las 820 piezas y colocar la elegida. */
+- (void)insertSignFromMenu:(id)sender
+{
+    (void) sender;
+    [self insertFromLibrary:NormiaCatalogScopeSigns];
+}
+
+- (void)insertEquipmentFromMenu:(id)sender
+{
+    (void) sender;
+    [self insertFromLibrary:NormiaCatalogScopeCad];
+}
+
+- (void)importGuideFromMenu:(id)sender
+{
+    (void) sender;
+    [self inspectorDidRequestImportGuide:self.inspector];
+}
+
 - (void)insertFromPicker:(id)sender
 {
     (void) sender;
@@ -1661,15 +1824,23 @@ static NSString *command_word(NSString *word)
                             @"V · seleccionar: el clic elige el elemento; arrastrar mueve un nodo, el trazo completo "
                             @"o una esquina de la caja seleccionada, que la escala.\n"
                             @"H · mano: arrastra el lienzo sin tocar el plano.\n"
-                            @"M · muro por tramos de dos clics. L · línea, B · rectángulo y O · elipse: dos clics.\n"
+                            @"M · muro con pincel de nodos: un clic por vértice y el clic en el primer nodo cierra el "
+                            @"recinto; Enter o doble clic termina el trazo. L · línea, B · rectángulo y O · elipse: "
+                            @"dos clics.\n"
                             @"P · pluma de nodos y R · ruta de evacuación: un clic por nodo, Enter o doble clic cierra.\n"
                             @"A · arco de tres puntos. D · cota. T · texto: un clic y se escribe en el inspector.\n"
                             @"I · insertar del catálogo (820 piezas), también con ⌘⇧I y el buscador.\n"
                             @"E · vía, N · andén, C · paso peatonal, K · parqueadero, J · lindero, "
                             @"Q · tubería y W · canaleta: el entorno del editor web, dos clics cada uno.\n\n"
-                            @"El inspector: capas arriba —la activa recibe lo nuevo— y la ficha debajo: X, Y, ancho, "
-                            @"alto, giro, grosor, color, rótulo y capa. Intro o «Aplicar cambios» lo llevan al plano; "
-                            @"Duplicar, Borrar y Salida quedan a un clic. ⌘D duplica y ⌘⌥R gira 90°.\n\n"
+                            @"El inspector: capas arriba —la activa recibe lo nuevo— y la ficha debajo, como la del "
+                            @"editor web: X, Y, ancho, alto, rotación ±90°, medida, color, opacidad, grosor, rótulo, "
+                            @"tamaño de letra, puerta (bisagra, abatimiento, salida), vía, extintor, capa, tipo y bloqueo. "
+                            @"Intro aplica los campos; ⌘D duplica, ⌘⌥R gira 90° y el interruptor «Bloqueado» protege.\n\n"
+                            @"Señalización: ⌃⇧S abre solo las señales ISO 7010 y de servicio; ⌃⇧E, los equipos; ⌘⇧I, el "
+                            @"catálogo completo.\n"
+                            @"Maqueta de trazo: Insertar → «Maqueta de trazo…» (⌃⇧G) pone la imagen del plano original "
+                            @"debajo del dibujo para calcar; en el inspector se le ajusta la opacidad, se oculta o se "
+                            @"bloquea, y no se imprime.\n\n"
                             @"La línea de comando de abajo entiende «muro», «linea», «rect», «elipse», «texto», "
                             @"«cota», «ruta», «capa <nombre>», «zoom <n>», «duplicar», «girar», «borrar», "
                             @"«rejilla», «revisar», «ajustar», «exportar», «guardar» y «ayuda». Intro en vacío "

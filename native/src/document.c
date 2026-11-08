@@ -18,6 +18,9 @@
 
 #define NORMA_DEFAULT_LAYER "capa_planta"
 
+/* Se define más abajo; `norma_document_move_object` la usa antes. */
+static norma_element *editable(norma_document *document, size_t element);
+
 /* ------------------------------- utilidades -------------------------------- */
 
 static void snapshot_free(norma_snapshot *snapshot)
@@ -125,11 +128,25 @@ void norma_document_init(norma_document *document)
     norma_document_init_with(document, 1123.0, 794.0, NORMA_UNIT_CM, "1:100");
 }
 
+/** Suelta la imagen de la guía (el resto de sus datos es plano, sin punteros). */
+static void guide_free(norma_guide *guide)
+{
+    if (guide == NULL) {
+        return;
+    }
+    free(guide->data);
+    guide->data = NULL;
+    guide->data_size = 0;
+    guide->present = 0;
+    guide->name[0] = '\0';
+}
+
 void norma_document_free(norma_document *document)
 {
     if (document == NULL) {
         return;
     }
+    guide_free(&document->guide);
     free(document->elements);
     document->elements = NULL;
     document->count = 0;
@@ -147,6 +164,7 @@ void norma_document_clear(norma_document *document)
     document->count = 0;
     document->capacity = 0;
     history_clear(document);
+    guide_free(&document->guide);
     document->dirty = 0;
 }
 
@@ -299,10 +317,10 @@ int norma_document_set_exit(norma_document *document, size_t element, int is_exi
 
 int norma_document_move_object(norma_document *document, size_t element, double x, double y)
 {
-    if (document == NULL || element >= document->count) {
+    norma_element *item = editable(document, element);
+    if (item == NULL) {
         return 0;
     }
-    norma_element *item = &document->elements[element];
     /* Los trazos se mueven nodo a nodo: aquí solo cajas. */
     if (item->node_count >= 2) {
         return 0;
@@ -334,9 +352,16 @@ static int valid_colour(const char *colour)
 }
 
 /** Elemento listo para editar: comprueba el documento y el índice una sola vez. */
+/**
+ * Elemento que se puede editar: existe y no está bloqueado.
+ *
+ * El bloqueo del inspector web («Evita mover o modificar el elemento») se
+ * respeta aquí y no en la ventana: así ningún camino —el lienzo, el inspector,
+ * la línea de comando o un importador— se salta la regla.
+ */
 static norma_element *editable(norma_document *document, size_t element)
 {
-    if (document == NULL || element >= document->count) {
+    if (document == NULL || element >= document->count || document->elements[element].locked) {
         return NULL;
     }
     return &document->elements[element];
@@ -617,12 +642,162 @@ long norma_document_duplicate(norma_document *document, size_t element)
     return (long) (document->count - 1);
 }
 
-int norma_document_move_node(norma_document *document, size_t element, size_t node, double x, double y)
+int norma_document_set_opacity(norma_document *document, size_t element, double opacity)
+{
+    norma_element *item = editable(document, element);
+    if (item == NULL) {
+        return 0;
+    }
+    /* El inspector web mueve la opacidad entre 10 % y 100 %. */
+    const double wanted = opacity < 0.1 ? 0.1 : (opacity > 1.0 ? 1.0 : opacity);
+    if (item->opacity > 0.0 && fabs(item->opacity - wanted) < 1e-6) {
+        return 0;
+    }
+    item->opacity = wanted;
+    document->dirty = 1;
+    return 1;
+}
+
+int norma_document_set_font_size(norma_document *document, size_t element, double size)
+{
+    norma_element *item = editable(document, element);
+    if (item == NULL || size < 2.0 || size > 400.0) {
+        return 0;
+    }
+    const double current = item->font_size > 0.0 ? item->font_size : 14.0;
+    if (fabs(current - size) < 1e-6) {
+        return 0;
+    }
+    item->font_size = size;
+    document->dirty = 1;
+    return 1;
+}
+
+int norma_document_set_door_flips(norma_document *document, size_t element, int flip_x, int flip_y)
+{
+    norma_element *item = editable(document, element);
+    if (item == NULL || !norma_object_is_door(item->type)) {
+        return 0;
+    }
+    const int x = flip_x ? 1 : 0;
+    const int y = flip_y ? 1 : 0;
+    if (item->flip_x == x && item->flip_y == y) {
+        return 0;
+    }
+    item->flip_x = x;
+    item->flip_y = y;
+    document->dirty = 1;
+    return 1;
+}
+
+int norma_document_set_locked(norma_document *document, size_t element, int locked)
 {
     if (document == NULL || element >= document->count) {
         return 0;
     }
     norma_element *item = &document->elements[element];
+    const int wanted = locked ? 1 : 0;
+    if (item->locked == wanted) {
+        return 0;
+    }
+    item->locked = wanted;
+    document->dirty = 1;
+    return 1;
+}
+
+/** Tipos a los que se puede convertir un elemento sin perder su dibujo. */
+static int convertible(const char *type)
+{
+    static const char *const kTypes[] = {"wall", "line", "rect", "ellipse", "text", "route", "dimension"};
+    if (type == NULL) {
+        return 0;
+    }
+    for (size_t index = 0; index < sizeof(kTypes) / sizeof(kTypes[0]); index += 1) {
+        if (strcmp(kTypes[index], type) == 0) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+int norma_document_set_type(norma_document *document, size_t element, const char *type)
+{
+    norma_element *item = editable(document, element);
+    if (item == NULL || !convertible(type) || !convertible(item->type)) {
+        return 0;
+    }
+    if (strcmp(item->type, type) == 0) {
+        return 0;
+    }
+    /* Un trazo no se convierte en caja ni al revés: se perderían sus nodos o su
+       área. El inspector web hace la misma comprobación. */
+    const int from_path = item->node_count >= 2;
+    const int to_path = strcmp(type, "wall") == 0 || strcmp(type, "line") == 0
+                        || strcmp(type, "route") == 0 || strcmp(type, "dimension") == 0;
+    if (from_path != to_path) {
+        return 0;
+    }
+    set_text(item->type, sizeof(item->type), type, "wall");
+    document->dirty = 1;
+    return 1;
+}
+
+int norma_document_set_width_m(norma_document *document, size_t element, double width_m)
+{
+    norma_element *item = editable(document, element);
+    if (item == NULL || width_m < 0.0) {
+        return 0;
+    }
+    if (fabs(item->width_m - width_m) < 1e-6) {
+        return 0;
+    }
+    item->width_m = width_m;
+    document->dirty = 1;
+    return 1;
+}
+
+int norma_document_set_extinguisher(norma_document *document, size_t element, const char *agent,
+                                    const char *rating, const char *hazard, double capacity_lb,
+                                    double mount_cm)
+{
+    norma_element *item = editable(document, element);
+    if (item == NULL || strstr(item->type, "extinguisher") == NULL) {
+        return 0;
+    }
+    int changed = 0;
+    if (agent != NULL && agent[0] != '\0' && strcmp(item->ext_agent, agent) != 0) {
+        set_text(item->ext_agent, sizeof(item->ext_agent), agent, "");
+        changed = 1;
+    }
+    if (rating != NULL && rating[0] != '\0' && strcmp(item->ext_rating, rating) != 0) {
+        set_text(item->ext_rating, sizeof(item->ext_rating), rating, "");
+        changed = 1;
+    }
+    if (hazard != NULL && hazard[0] != '\0' && strcmp(item->ext_hazard, hazard) != 0) {
+        set_text(item->ext_hazard, sizeof(item->ext_hazard), hazard, "");
+        changed = 1;
+    }
+    if (capacity_lb > 0.0 && fabs(item->ext_capacity_lb - capacity_lb) > 1e-6) {
+        item->ext_capacity_lb = capacity_lb;
+        changed = 1;
+    }
+    if (mount_cm >= 0.0 && (!item->has_ext_mount || fabs(item->ext_mount_cm - mount_cm) > 1e-6)) {
+        item->ext_mount_cm = mount_cm;
+        item->has_ext_mount = 1;
+        changed = 1;
+    }
+    if (changed) {
+        document->dirty = 1;
+    }
+    return changed;
+}
+
+int norma_document_move_node(norma_document *document, size_t element, size_t node, double x, double y)
+{
+    norma_element *item = editable(document, element);
+    if (item == NULL) {
+        return 0;
+    }
     if (node >= item->node_count) {
         return 0;
     }
@@ -831,6 +1006,25 @@ static void write_box(norma_buffer *buffer, const norma_element *element)
         norma_buffer_raw(buffer, ",\"label\":");
         norma_buffer_string(buffer, element->label);
     }
+    if (element->flip_x) {
+        norma_buffer_raw(buffer, ",\"flipX\":true");
+    }
+    if (element->flip_y) {
+        norma_buffer_raw(buffer, ",\"flipY\":true");
+    }
+    /* La opacidad solo viaja si se apartó del todo: el plano no se llena de
+       cifras que no dicen nada. */
+    if (element->opacity > 0.0 && element->opacity < 0.999) {
+        norma_buffer_raw(buffer, ",\"opacity\":");
+        norma_buffer_number(buffer, element->opacity);
+    }
+    if (element->font_size > 0.0) {
+        norma_buffer_raw(buffer, ",\"fontSize\":");
+        norma_buffer_number(buffer, element->font_size);
+    }
+    if (element->locked) {
+        norma_buffer_raw(buffer, ",\"locked\":true");
+    }
     if (element->ext_agent[0] != '\0') {
         norma_buffer_raw(buffer, ",\"extAgent\":");
         norma_buffer_string(buffer, element->ext_agent);
@@ -896,6 +1090,110 @@ static void write_element(norma_buffer *buffer, const norma_element *element)
     norma_buffer_raw(buffer, "}");
 }
 
+/* ----------------------------- imagen de guía ---------------------------- */
+
+int norma_document_set_guide(norma_document *document, const char *name, const char *data,
+                             double x, double y, double w, double h)
+{
+    if (document == NULL || data == NULL || data[0] == '\0') {
+        return 0;
+    }
+    const size_t length = strlen(data);
+    /* Tope de la imagen: un PNG de 32 MB ocupa 43 MB en base64 y ya es un plano
+       enorme; más que eso es un archivo que conviene reducir antes de calcar. */
+    if (length > NORMA_GUIDE_MAX_DATA) {
+        return 0;
+    }
+    char *copy = (char *) malloc(length + 1);
+    if (copy == NULL) {
+        return 0;
+    }
+    memcpy(copy, data, length + 1);
+    guide_free(&document->guide);
+    document->guide.data = copy;
+    document->guide.data_size = length;
+    set_text(document->guide.name, sizeof(document->guide.name), name, "maqueta");
+    document->guide.opacity = 0.45;
+    document->guide.x = x;
+    document->guide.y = y;
+    document->guide.w = w > 0.0 ? w : document->width;
+    document->guide.h = h > 0.0 ? h : document->height;
+    document->guide.visible = 1;
+    document->guide.locked = 0;
+    document->guide.present = 1;
+    document->dirty = 1;
+    return 1;
+}
+
+int norma_document_set_guide_opacity(norma_document *document, double opacity)
+{
+    if (document == NULL || !document->guide.present) {
+        return 0;
+    }
+    const double wanted = opacity < 0.05 ? 0.05 : (opacity > 1.0 ? 1.0 : opacity);
+    if (fabs(document->guide.opacity - wanted) < 1e-6) {
+        return 0;
+    }
+    document->guide.opacity = wanted;
+    document->dirty = 1;
+    return 1;
+}
+
+int norma_document_set_guide_box(norma_document *document, double x, double y, double w, double h)
+{
+    if (document == NULL || !document->guide.present || w <= 0.0 || h <= 0.0) {
+        return 0;
+    }
+    if (fabs(document->guide.x - x) < 1e-6 && fabs(document->guide.y - y) < 1e-6
+        && fabs(document->guide.w - w) < 1e-6 && fabs(document->guide.h - h) < 1e-6) {
+        return 0;
+    }
+    document->guide.x = x;
+    document->guide.y = y;
+    document->guide.w = w;
+    document->guide.h = h;
+    document->dirty = 1;
+    return 1;
+}
+
+int norma_document_set_guide_visible(norma_document *document, int visible)
+{
+    if (document == NULL || !document->guide.present) {
+        return 0;
+    }
+    const int wanted = visible ? 1 : 0;
+    if (document->guide.visible == wanted) {
+        return 0;
+    }
+    document->guide.visible = wanted;
+    document->dirty = 1;
+    return 1;
+}
+
+int norma_document_set_guide_locked(norma_document *document, int locked)
+{
+    if (document == NULL || !document->guide.present) {
+        return 0;
+    }
+    const int wanted = locked ? 1 : 0;
+    if (document->guide.locked == wanted) {
+        return 0;
+    }
+    document->guide.locked = wanted;
+    document->dirty = 1;
+    return 1;
+}
+
+int norma_document_clear_guide(norma_document *document)
+{
+    if (document == NULL || !document->guide.present) {
+        return 0;
+    }
+    guide_free(&document->guide);
+    document->dirty = 1;
+    return 1;
+}
+
 char *norma_document_to_json(const norma_document *document, const char *name)
 {
     if (document == NULL) {
@@ -957,7 +1255,31 @@ char *norma_document_to_json(const norma_document *document, const char *name)
         }
         write_element(&buffer, &document->elements[index]);
     }
-    norma_buffer_raw(&buffer, "],\"groups\":[]},\"attribution\":");
+    norma_buffer_raw(&buffer, "],\"groups\":[]},");
+    /* La maqueta de trazo va en la raíz del sobre, fuera de `design`: el editor
+       web ignora lo que no conoce y el plano sigue siendo válido allí. */
+    if (document->guide.present && document->guide.data != NULL) {
+        norma_buffer_raw(&buffer, "\"guide\":{\"name\":");
+        norma_buffer_string(&buffer, document->guide.name);
+        norma_buffer_raw(&buffer, ",\"opacity\":");
+        norma_buffer_number(&buffer, document->guide.opacity);
+        norma_buffer_raw(&buffer, ",\"x\":");
+        norma_buffer_number(&buffer, document->guide.x);
+        norma_buffer_raw(&buffer, ",\"y\":");
+        norma_buffer_number(&buffer, document->guide.y);
+        norma_buffer_raw(&buffer, ",\"w\":");
+        norma_buffer_number(&buffer, document->guide.w);
+        norma_buffer_raw(&buffer, ",\"h\":");
+        norma_buffer_number(&buffer, document->guide.h);
+        norma_buffer_raw(&buffer, ",\"visible\":");
+        norma_buffer_raw(&buffer, document->guide.visible ? "true" : "false");
+        norma_buffer_raw(&buffer, ",\"locked\":");
+        norma_buffer_raw(&buffer, document->guide.locked ? "true" : "false");
+        norma_buffer_raw(&buffer, ",\"data\":");
+        norma_buffer_string(&buffer, document->guide.data);
+        norma_buffer_raw(&buffer, "},");
+    }
+    norma_buffer_raw(&buffer, "\"attribution\":");
     norma_buffer_string(&buffer, "Normia nativo 0.1.0. Pictogramas ISO 7010 (MIT).");
     norma_buffer_raw(&buffer, "}\n");
     if (buffer.failed) {
@@ -1073,6 +1395,21 @@ int norma_document_from_json(norma_document *document, const char *text, size_t 
     }
     set_text(document->scale, sizeof(document->scale), norma_json_string(norma_json_get(canvas, "scale")), "1:100");
 
+    /* Maqueta de trazo: imagen en base64 y su caja. */
+    const norma_json *guide = norma_json_get(root, "guide");
+    const char *guide_data = norma_json_string(norma_json_get(guide, "data"));
+    if (guide_data != NULL && guide_data[0] != '\0') {
+        if (norma_document_set_guide(document, norma_json_string(norma_json_get(guide, "name")), guide_data,
+                                     norma_json_number(norma_json_get(guide, "x"), 0.0),
+                                     norma_json_number(norma_json_get(guide, "y"), 0.0),
+                                     norma_json_number(norma_json_get(guide, "w"), document->width),
+                                     norma_json_number(norma_json_get(guide, "h"), document->height))) {
+            document->guide.opacity = norma_json_number(norma_json_get(guide, "opacity"), 0.45);
+            document->guide.visible = norma_json_bool_at(guide, "visible", 1);
+            document->guide.locked = norma_json_bool_at(guide, "locked", 0);
+        }
+    }
+
     const norma_json *extinguishers = norma_json_get(design, "extinguishers");
     set_text(document->ext_profile, sizeof(document->ext_profile),
              norma_json_string(norma_json_get(extinguishers, "profile")), "");
@@ -1117,6 +1454,11 @@ int norma_document_from_json(norma_document *document, const char *text, size_t 
         element.width_m = norma_json_number(norma_json_get(source, "widthM"), 2.0);
         element.measured_m = norma_json_number(norma_json_get(source, "measuredM"), 0.0);
         element.is_exit = norma_json_bool_at(source, "isExit", 0);
+        element.flip_x = norma_json_bool_at(source, "flipX", 0);
+        element.flip_y = norma_json_bool_at(source, "flipY", 0);
+        element.opacity = norma_json_number(norma_json_get(source, "opacity"), 1.0);
+        element.font_size = norma_json_number(norma_json_get(source, "fontSize"), 0.0);
+        element.locked = norma_json_bool_at(source, "locked", 0);
         set_text(element.ext_agent, sizeof(element.ext_agent),
                  norma_json_string(norma_json_get(source, "extAgent")), "");
         set_text(element.ext_rating, sizeof(element.ext_rating),

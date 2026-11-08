@@ -87,6 +87,18 @@ static const double kHalfPi = 1.57079632679489661923;
     NSPoint _panStart;
     double _panStartX;
     double _panStartY;
+    /* El clic sobre el primer nodo del muro cierra el recinto. */
+    BOOL _closingDraft;
+    /* Maqueta de trazo: la imagen ya decodificada y su firma. */
+    NSImage *_guideImage;
+    unsigned long _guideSignature;
+    /* Arrastre de la maqueta: -1 no, 0..3 una esquina, 4 el cuerpo entero. */
+    NSInteger _guideDrag;
+    norma_point _guideAnchor;
+    double _guideStartX;
+    double _guideStartY;
+    double _guideStartW;
+    double _guideStartH;
     /* Escalado por esquinas: -1 ninguna, 0..3 noroeste, noreste, suroeste, sureste. */
     NSInteger _resizeCorner;
     norma_point _resizeAnchor;
@@ -105,6 +117,7 @@ static const double kHalfPi = 1.57079632679489661923;
         _tool = NormiaToolSelect;
         _showsGrid = YES;
         _resizeCorner = -1;
+        _guideDrag = -1;
         self.wantsLayer = YES;
         // `acceptsFirstResponder` es de solo lectura: se responde YES en su
         // método (abajo), que es como AppKit pregunta si el lienzo toma el teclado.
@@ -619,6 +632,95 @@ static const double kHalfPi = 1.57079632679489661923;
     CGContextStrokeRect(context, CGRectMake(element->x + w * 0.18, element->y + h * 0.18, w * 0.64, h * 0.64));
 }
 
+/* ------------------------------ maqueta de trazo ------------------------- */
+
+/**
+ * Pinta la maqueta dentro de la transformación del plano.
+ *
+ * La imagen viene en base64 dentro del documento (así el plano es un solo
+ * archivo), se decodifica una vez y se guarda mientras no cambie. Va debajo de
+ * la hoja y con la opacidad del inspector: es una guía para calcar, no un
+ * elemento que se imprima.
+ */
+- (void)drawGuideInContext:(CGContextRef)context
+{
+    if (self.document == NULL || !self.document->guide.present || !self.document->guide.visible
+        || self.document->guide.data == NULL) {
+        return;
+    }
+    const norma_guide *guide = &self.document->guide;
+    /* Firma barata: tamaño y primeros bytes. Cambiar la imagen cambia la firma. */
+    unsigned long signature = (unsigned long) guide->data_size;
+    for (size_t index = 0; index < 32 && index < guide->data_size; index += 1) {
+        signature = signature * 131 + (unsigned long) (unsigned char) guide->data[index];
+    }
+    if (_guideImage == nil || _guideSignature != signature) {
+        NSString *encoded = [NSString stringWithUTF8String:guide->data];
+        NSData *bytes = encoded != nil
+            ? [[NSData alloc] initWithBase64EncodedString:encoded
+                                                  options:NSDataBase64DecodingIgnoreUnknownCharacters]
+            : nil;
+        _guideImage = bytes != nil ? [[NSImage alloc] initWithData:bytes] : nil;
+        _guideSignature = signature;
+    }
+    if (_guideImage == nil) {
+        return;
+    }
+    const CGRect box = CGRectMake((CGFloat) guide->x, (CGFloat) guide->y,
+                                  (CGFloat) guide->w, (CGFloat) guide->h);
+    CGContextSaveGState(context);
+    CGContextSetAlpha(context, (CGFloat) guide->opacity);
+    /* `NSImage` en un contexto con el eje Y hacia abajo: se voltea el dibujo
+       para que la maqueta no salga cabeza abajo. */
+    CGContextTranslateCTM(context, 0.0, box.origin.y + box.size.height);
+    CGContextScaleCTM(context, 1.0, -1.0);
+    CGContextTranslateCTM(context, 0.0, -box.origin.y);
+    NSGraphicsContext *graphics = [NSGraphicsContext graphicsContextWithCGContext:context flipped:YES];
+    [NSGraphicsContext saveGraphicsState];
+    [NSGraphicsContext setCurrentContext:graphics];
+    [_guideImage drawInRect:box fromRect:NSZeroRect operation:NSCompositingOperationSourceOver
+                   fraction:1.0 respectFlipped:YES hints:nil];
+    [NSGraphicsContext restoreGraphicsState];
+    CGContextRestoreGState(context);
+
+    /* El marco de la guía: se ve dónde está y se puede agarrar. */
+    CGContextSetRGBStrokeColor(context, 0.35, 0.65, 0.95, 0.8);
+    CGContextSetLineWidth(context, 1.0 / _zoom);
+    const CGFloat dash[2] = {7.0 / (CGFloat) _zoom, 5.0 / (CGFloat) _zoom};
+    CGContextSetLineDash(context, 0.0, dash, 2);
+    CGContextStrokeRect(context, box);
+    CGContextSetLineDash(context, 0.0, NULL, 0);
+}
+
+/** Esquina de la maqueta bajo el puntero, o -1. Mismo orden que las cajas. */
+- (NSInteger)guideCornerAtPlanPoint:(norma_point)point tolerance:(double)tolerance
+{
+    if (self.document == NULL || !self.document->guide.present || !self.document->guide.visible
+        || self.document->guide.locked) {
+        return -1;
+    }
+    const norma_guide *guide = &self.document->guide;
+    const norma_point corners[4] = {
+        {guide->x, guide->y},
+        {guide->x + guide->w, guide->y},
+        {guide->x, guide->y + guide->h},
+        {guide->x + guide->w, guide->y + guide->h},
+    };
+    for (int corner = 0; corner < 4; corner += 1) {
+        if (norma_distance(point, corners[corner]) <= tolerance) {
+            return corner;
+        }
+    }
+    return -1;
+}
+
+/** 1 si el punto cae dentro de la maqueta (para arrastrarla). */
+static int guide_contains(const norma_guide *guide, norma_point point)
+{
+    return point.x >= guide->x && point.x <= guide->x + guide->w
+           && point.y >= guide->y && point.y <= guide->y + guide->h;
+}
+
 /** Color `#rrggbb` del elemento, o el oscuro de dibujo si no tiene uno. */
 static NSColor *colour_from_hex(const char *hex)
 {
@@ -858,6 +960,12 @@ static NSColor *colour_from_hex(const char *hex)
     CGContextSaveGState(context);
     CGContextConcatCTM(context, [self planTransform]);
 
+    /* La maqueta de trazo va debajo de todo: es una imagen para calcar, no un
+       elemento del plano; no se imprime ni sale en el SVG. */
+    if (!self.printing) {
+        [self drawGuideInContext:context];
+    }
+
     // La hoja de papel: la referencia de impresión, no el límite del dibujo.
     CGContextSetRGBFillColor(context, 1.0, 1.0, 1.0, 1.0);
     CGContextFillRect(context, CGRectMake(0, 0, self.document->width, self.document->height));
@@ -989,10 +1097,30 @@ static NSColor *colour_from_hex(const char *hex)
     }
 
     // Borrador de la herramienta en curso.
+    /* Muro y pluma: el trazo ya dibujado se ve entero, con el tramo elástico
+       hasta el cursor, como el pincel del editor web. */
+    if (_draftCount >= 2) {
+        CGContextSetRGBStrokeColor(context, 0.95, 0.45, 0.10, 0.95);
+        CGContextSetLineWidth(context, 1.6 / zoom);
+        CGContextBeginPath(context);
+        CGContextMoveToPoint(context, _draft[0].x, _draft[0].y);
+        for (int index = 1; index < _draftCount; index += 1) {
+            CGContextAddLineToPoint(context, _draft[index].x, _draft[index].y);
+        }
+        CGContextStrokePath(context);
+    }
     CGContextSetRGBFillColor(context, 0.95, 0.45, 0.10, 1.0);
     for (int index = 0; index < _draftCount; index += 1) {
         CGContextFillRect(context, CGRectMake(_draft[index].x - handle, _draft[index].y - handle,
                                               handle * 2.0, handle * 2.0));
+    }
+    if (_draftCount >= 3 && _tool == NormiaToolWall) {
+        /* Primer nodo: el clic aquí cierra el recinto. */
+        const CGFloat ring = 9.0 / zoom;
+        CGContextSetRGBStrokeColor(context, 0.14, 0.62, 0.36, 0.95);
+        CGContextSetLineWidth(context, 1.8 / zoom);
+        CGContextStrokeEllipseInRect(context, CGRectMake(_draft[0].x - ring, _draft[0].y - ring,
+                                                         ring * 2.0, ring * 2.0));
     }
     if (_draftCount > 0 && _hasCursor) {
         CGContextSetRGBStrokeColor(context, 0.95, 0.45, 0.10, 0.9);
@@ -1200,9 +1328,18 @@ static const char *environment_type(NormiaTool tool)
         index = norma_document_add_shape(self.document, "ellipse", _draft[0], _draft[1], NULL);
     } else if (environment_type(_tool) != NULL) {
         index = norma_document_add_environment(self.document, environment_type(_tool), _draft[0], _draft[1], NULL);
+    } else if (_tool == NormiaToolWall) {
+        /* Cierre por el primer nodo: el recinto es un polígono cerrado, como
+           cuando se vuelve a hacer clic sobre el nodo inicial en la web. */
+        if (_closingDraft && _draftCount + 1 <= kMaxDraftNodes) {
+            _draft[_draftCount] = _draft[0];
+            _draftCount += 1;
+        }
+        index = norma_document_add_wall(self.document, _draft, (size_t) _draftCount, NULL, NULL);
     } else {
         index = norma_document_add_wall(self.document, _draft, (size_t) _draftCount, NULL, NULL);
     }
+    _closingDraft = NO;
     if (index >= 0) {
         _selectedElement = index;
         _selectedNode = -1;
@@ -1244,7 +1381,32 @@ static const char *environment_type(NormiaTool tool)
         return;
     }
 
-    if (_tool == NormiaToolDimension || _tool == NormiaToolArc || _tool == NormiaToolWall
+    /* El muro es un pincel de nodos, como en el editor web: cada clic añade un
+       vértice y el tramo sigue al cursor; el clic sobre el primer nodo cierra el
+       recinto y Enter, el doble clic o Esc terminan el trazo. */
+    if (_tool == NormiaToolWall) {
+        const double clickTolerance = (double) kToleranceScreen / (double) [self scale];
+        if (_draftCount >= 3 && norma_distance(point, _draft[0]) <= clickTolerance) {
+            _closingDraft = YES;
+            [self commitDraft];
+            [self.delegate canvasStatus:self message:@"Recinto cerrado."];
+            return;
+        }
+        if (_draftCount < kMaxDraftNodes) {
+            _draft[_draftCount] = point;
+            _draftCount += 1;
+        }
+        if (event.clickCount >= 2 && _draftCount > 2) {
+            _draftCount -= 1; /* el doble clic no añade un nodo de más */
+            [self commitDraft];
+        } else {
+            [self.delegate canvasStatus:self message:[self hintForTool]];
+        }
+        [self setNeedsDisplay:YES];
+        return;
+    }
+
+    if (_tool == NormiaToolDimension || _tool == NormiaToolArc
         || _tool == NormiaToolLine || _tool == NormiaToolRect || _tool == NormiaToolEllipse
         || environment_type(_tool) != NULL) {
         if (_draftCount < kMaxDraftNodes) {
@@ -1253,7 +1415,6 @@ static const char *environment_type(NormiaTool tool)
         }
         if ((_tool == NormiaToolDimension && _draftCount == 2)
             || (_tool == NormiaToolArc && _draftCount == 3)
-            || (_tool == NormiaToolWall && _draftCount == 2)
             || ((_tool == NormiaToolLine || _tool == NormiaToolRect || _tool == NormiaToolEllipse
                  || environment_type(_tool) != NULL)
                 && _draftCount == 2)) {
@@ -1281,6 +1442,38 @@ static const char *environment_type(NormiaTool tool)
     }
 
     const double planTolerance = (double) kToleranceScreen / (double) [self scale];
+
+    /* La maqueta se agarra por sus esquinas o por su cuerpo, pero solo cuando el
+       clic no cae sobre un elemento del plano: lo dibujado siempre manda. */
+    if (_tool == NormiaToolSelect && self.document != NULL && self.document->guide.present
+        && self.document->guide.visible && !self.document->guide.locked
+        && norma_document_hit_test(self.document, point, planTolerance) < 0) {
+        const NSInteger guideCorner = [self guideCornerAtPlanPoint:point tolerance:planTolerance];
+        const int inside = guide_contains(&self.document->guide, point);
+        if (guideCorner >= 0 || inside) {
+            const norma_guide *guide = &self.document->guide;
+            _guideDrag = guideCorner >= 0 ? guideCorner : 4;
+            const norma_point corners[4] = {
+                {guide->x, guide->y},
+                {guide->x + guide->w, guide->y},
+                {guide->x, guide->y + guide->h},
+                {guide->x + guide->w, guide->y + guide->h},
+            };
+            _guideAnchor = guideCorner >= 0 ? corners[3 - guideCorner] : point;
+            _guideStartX = guide->x;
+            _guideStartY = guide->y;
+            _guideStartW = guide->w;
+            _guideStartH = guide->h;
+            _selectedElement = -1;
+            _selectedNode = -1;
+            _editBegun = NO;
+            [self announceSelection];
+            [self.delegate canvasStatus:self
+                                message:@"Maqueta: arrastra para moverla; las esquinas la escalan. Bloquéala en el inspector para no moverla sin querer."];
+            [self setNeedsDisplay:YES];
+            return;
+        }
+    }
 
     /* Antes de elegir otra cosa: ¿se agarró una esquina de la caja? */
     const NSInteger corner = [self resizeCornerAtPlanPoint:point tolerance:planTolerance];
@@ -1394,7 +1587,8 @@ static const char *environment_type(NormiaTool tool)
 {
     switch (_tool) {
     case NormiaToolWall:
-        return @"Muro: segundo clic para cerrar el tramo. Esc termina.";
+        return @"Muro: un clic por vértice; el tramo sigue al cursor. Clic en el primer nodo cierra el recinto; "
+                "Enter o doble clic termina, Esc vuelve a seleccionar.";
     case NormiaToolPen:
         return @"Pluma: un clic por nodo. Enter o doble clic cierra el trazo; Retroceso quita el último nodo.";
     case NormiaToolArc:
@@ -1445,6 +1639,29 @@ static const char *environment_type(NormiaTool tool)
     const norma_point point = [self planPointForEvent:event];
     if ([self.delegate respondsToSelector:@selector(canvas:didTrackPlanPoint:)]) {
         [self.delegate canvas:self didTrackPlanPoint:point];
+    }
+
+    if (_guideDrag >= 0 && self.document->guide.present) {
+        if (!_editBegun) {
+            norma_document_begin_edit(self.document);
+            _editBegun = YES;
+        }
+        if (_guideDrag == 4) {
+            norma_document_set_guide_box(self.document,
+                                         round(_guideStartX + (point.x - _guideAnchor.x)),
+                                         round(_guideStartY + (point.y - _guideAnchor.y)),
+                                         _guideStartW, _guideStartH);
+        } else {
+            double width = fabs(point.x - _guideAnchor.x);
+            double height = fabs(point.y - _guideAnchor.y);
+            if (width < 20.0) { width = 20.0; }
+            if (height < 20.0) { height = 20.0; }
+            norma_document_set_guide_box(self.document, round(fmin(_guideAnchor.x, point.x)),
+                                         round(fmin(_guideAnchor.y, point.y)), round(width), round(height));
+        }
+        [self.delegate canvasDidChange:self];
+        [self setNeedsDisplay:YES];
+        return;
     }
 
     if (_panning) {
@@ -1513,6 +1730,7 @@ static const char *environment_type(NormiaTool tool)
     _editBegun = NO;
     _panning = NO;
     _resizeCorner = -1;
+    _guideDrag = -1;
     [self announceSelection];
     [self setNeedsDisplay:YES];
 }
@@ -1563,7 +1781,8 @@ static const char *environment_type(NormiaTool tool)
             [self setNeedsDisplay:YES];
             return;
         } else if (event.keyCode == 36 || event.keyCode == 76) { // Return y Enter
-            if ((_tool == NormiaToolPen || _tool == NormiaToolRoute) && _draftCount >= 2) {
+            if ((_tool == NormiaToolPen || _tool == NormiaToolRoute || _tool == NormiaToolWall)
+                && _draftCount >= 2) {
                 [self commitDraft];
             }
             return;
@@ -1578,7 +1797,8 @@ static const char *environment_type(NormiaTool tool)
             [self nudgeSelectionByX:dx y:dy];
             return;
         } else if (event.keyCode == 51 || event.keyCode == 117) { // Retroceso y Suprimir
-            if ((_tool == NormiaToolPen || _tool == NormiaToolRoute) && _draftCount > 0) {
+            if ((_tool == NormiaToolPen || _tool == NormiaToolRoute || _tool == NormiaToolWall)
+                && _draftCount > 0) {
                 _draftCount -= 1;
                 [self setNeedsDisplay:YES];
                 return;

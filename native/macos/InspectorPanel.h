@@ -22,9 +22,16 @@
 - (void)inspector:(InspectorPanel *)panel didEditDocumentWithMessage:(NSString *)message;
 /** Aviso breve para la barra de estado. */
 - (void)inspector:(InspectorPanel *)panel status:(NSString *)message;
+/** Duplicar la selección (⌘D), como el botón del inspector web. */
 - (void)inspectorDidRequestDuplicate:(InspectorPanel *)panel;
+/** Borrar la selección, como el botón del inspector web. */
 - (void)inspectorDidRequestDelete:(InspectorPanel *)panel;
+/** Marcar o desmarcar la salida de emergencia. */
 - (void)inspectorDidRequestExit:(InspectorPanel *)panel;
+/** Abrir el panel de archivo para elegir la imagen de la maqueta de trazo. */
+- (void)inspectorDidRequestImportGuide:(InspectorPanel *)panel;
+/** Quitar la maqueta del plano, con confirmación de la ventana. */
+- (void)inspectorDidRequestClearGuide:(InspectorPanel *)panel;
 @end
 
 @interface InspectorPanel : NSView

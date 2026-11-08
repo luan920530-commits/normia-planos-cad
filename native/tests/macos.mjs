@@ -165,9 +165,9 @@ report.check('R elige la herramienta de ruta y la pista dice cómo se cierra',
   && /selectToolWithKey:/.test(canvas) && /selectToolWithKey:/.test(canvasHeader),
   'R · Enter · doble clic');
 
-report.check('La ruta usa el mismo borrador de polilínea que la pluma',
-  /_tool == NormiaToolPen \|\| _tool == NormiaToolRoute/.test(canvas)
-  && /_tool == NormiaToolRoute\) && _draftCount >= 2/.test(canvas),
+report.check('La ruta usa el mismo borrador de polilínea que la pluma y el muro',
+  /_tool == NormiaToolPen \|\| _tool == NormiaToolRoute \|\| _tool == NormiaToolWall/.test(canvas)
+  && /_tool == NormiaToolRoute \|\| _tool == NormiaToolWall\)\s*\n?\s*&& _draftCount >= 2/.test(canvas),
   'borrador compartido');
 
 report.check('La ruta se guarda con el núcleo como tipo ruta, no como un muro',
@@ -344,8 +344,9 @@ report.check('Marcar o desmarcar una salida está en el menú Insertar y no en e
   /Marcar o desmarcar salida de emergencia/.test(delegate)
   && /action:@selector\(toggleExit:\)/.test(delegate)
   && /exitItem\.keyEquivalentModifierMask = NSEventModifierFlagCommand \| NSEventModifierFlagShift;/.test(delegate)
-  && /- \(void\)toggleExit:/.test(delegate),
-  '⌘⇧E');
+  && /- \(void\)toggleExit:/.test(delegate)
+  && /action:@selector\(toggleExit:\)[\s\S]{0,160}keyEquivalent:@"O"/.test(delegate),
+  '⌘⇧O');
 
 report.check('La herramienta de inserción coloca el objeto con un clic y Esc la termina',
   /NormiaToolInsert/.test(canvas) && /- \(void\)beginInsert:\(NSString \*\)type/.test(canvasHeader)
@@ -513,12 +514,101 @@ report.check('El inspector edita la ficha completa con el núcleo, no por su cue
   'X · Y · ancho · alto · giro · grosor · color · rótulo · capa');
 
 report.check('El inspector tiene capas y los campos que se ven en la captura',
-  /CAPAS/.test(inspector) && /ELEMENTO SELECCIONADO/.test(inspector)
+  /CAPAS/.test(inspector) && /@"SELECCIÓN"/.test(inspector) && /@"GEOMETRÍA"/.test(inspector)
   && /@"X \(cm\)"/.test(inspector) && /@"Y \(cm\)"/.test(inspector)
   && /@"Ancho \(cm\)"/.test(inspector) && /@"Alto \(cm\)"/.test(inspector)
-  && /@"Giro \(°\)"/.test(inspector) && /@"Grosor \(cm\)"/.test(inspector)
-  && /@"Color"/.test(inspector) && /@"Rótulo"/.test(inspector) && /@"Capa"/.test(inspector),
+  && /@"Rotación"/.test(inspector) && /@"Grosor"/.test(inspector)
+  && /@"Color"/.test(inspector) && /@"Rótulo"/.test(inspector)
+  && /@"Capa del elemento"/.test(inspector) && /@"Capa activa/.test(inspector),
   'capas · X · Y · ancho · alto · giro · grosor · color · rótulo');
+
+/* ------------------------- 5 · la ficha del editor web ------------------------- */
+
+report.check('El inspector ofrece las mismas secciones que el editor web',
+  /@"APARIENCIA"/.test(inspector) && /@"PUERTA"/.test(inspector)
+  && /@"VÍA Y ENTORNO"/.test(inspector) && /@"EXTINTOR"/.test(inspector)
+  && /@"ORGANIZACIÓN"/.test(inspector) && /@"MAQUETA DE TRAZO"/.test(inspector)
+  && /@"Cambiar bisagra"/.test(inspector) && /@"Abrir al otro lado"/.test(inspector)
+  && /@"Salida de emergencia"/.test(inspector),
+  'apariencia · puerta · vía · extintor · organización');
+
+report.check('La ficha nueva llama al núcleo: opacidad, letra, bisagra, tipo, ancho y extintor',
+  /norma_document_set_opacity/.test(inspector) && /norma_document_set_door_flips/.test(inspector)
+  && /norma_document_set_locked/.test(inspector) && /norma_document_set_type/.test(inspector)
+  && /norma_document_set_width_m/.test(inspector) && /norma_document_set_extinguisher/.test(inspector)
+  && /norma_document_set_font_size/.test(inspector),
+  'opacity · flipX · flipY · locked · type · widthM · extintor');
+
+report.check('El inspector usa la paleta de colores del editor web',
+  /kColours/.test(inspector) && /#2563eb/.test(inspector) && /#b71f2e/.test(inspector)
+  && /kColourCount/.test(inspector),
+  'COLORS de assets/js/lib/model.js');
+
+/* --------------------- 5b · la señalización en la paleta --------------------- */
+
+report.check('La paleta tiene las dos bibliotecas de la web: señalización y equipos',
+  /Señalización ISO 7010/.test(rail) && /action": @"librarySign"/.test(rail)
+  && /Equipos y mobiliario/.test(rail) && /action": @"libraryCad"/.test(rail)
+  && /NormiaCatalogScopeSigns/.test(delegate) && /NormiaCatalogScopeCad/.test(delegate),
+  'sign · cad');
+
+report.check('El buscador del catálogo acepta acotarse a una biblioteca',
+  /NormiaCatalogScopeAll/.test(pickerHeader) && /NormiaCatalogScopeSigns/.test(pickerHeader)
+  && /belongsToScope:/.test(picker) && /strncmp\(family, "sign", 4\)/.test(picker)
+  && /norma_object_is_door/.test(picker),
+  'scope · sign: · cad:');
+
+report.check('Las bibliotecas se abren desde la paleta y desde el menú Insertar',
+  /insertFromLibrary:NormiaCatalogScopeSigns/.test(delegate)
+  && /insertFromLibrary:NormiaCatalogScopeCad/.test(delegate)
+  && /insertSignFromMenu:/.test(delegate) && /insertEquipmentFromMenu:/.test(delegate)
+  && /@"Señalización \(ISO 7010 y servicio\)…"/.test(delegate),
+  'rail · menú');
+
+/* ----------------------- 5c · el muro con pincel de nodos --------------------- */
+
+report.check('El muro se traza con un clic por nodo, como el pincel de la web',
+  /if \(_tool == NormiaToolWall\)/.test(canvas)
+  && /_draft\[_draftCount\] = point;/.test(canvas)
+  && /clickCount >= 2/.test(canvas),
+  'nodo por clic · doble clic cierra');
+
+report.check('El clic sobre el primer nodo cierra el recinto',
+  /_closingDraft/.test(canvas)
+  && /_draftCount >= 3 && norma_distance\(point, _draft\[0\]\) <= clickTolerance/.test(canvas)
+  && /_draft\[_draftCount\] = _draft\[0\];/.test(canvas),
+  'primer nodo · polígono cerrado');
+
+report.check('El trazo en curso se ve entero, con su tramo elástico y el nodo de cierre',
+  /for \(int index = 1; index < _draftCount; index \+= 1\)/.test(canvas)
+  && /el clic aquí cierra el recinto/.test(canvas)
+  && /_cursorPoint\.x, _cursorPoint\.y/.test(canvas),
+  'polilínea · tramo elástico · anillo');
+
+/* ------------------------ 5d · la maqueta de trazo --------------------------- */
+
+report.check('La maqueta se importa con el panel de archivo y se guarda en el plano',
+  /NSOpenPanel openPanel/.test(delegate) && /NSBitmapImageFileTypePNG/.test(delegate)
+  && /base64EncodedStringWithOptions:0/.test(delegate)
+  && /norma_document_set_guide\(/.test(delegate) && /norma_document_set_guide_box\(/.test(delegate),
+  'NSOpenPanel · PNG base64 · guía');
+
+report.check('La maqueta se dibuja debajo de lo dibujado y no se imprime',
+  /drawGuideInContext:/.test(canvas) && /if \(!self\.printing\) \{\s*\n\s*\[self drawGuideInContext:context\];/.test(canvas)
+  && /CGContextSetAlpha\(context, \(CGFloat\) guide->opacity\)/.test(canvas),
+  'debajo de la hoja · opacidad · sin imprimir');
+
+report.check('La maqueta se puede agarrar, mover y escalar en el lienzo, salvo bloqueada',
+  /guideCornerAtPlanPoint:/.test(canvas) && /guide_contains\(/.test(canvas)
+  && /self\.document->guide\.locked/.test(canvas)
+  && /norma_document_set_guide_box\(self\.document/.test(canvas),
+  'arrastrar · esquinas · bloqueo');
+
+report.check('El inspector maneja la maqueta: opacidad, visible, bloqueada y quitarla',
+  /norma_document_set_guide_opacity/.test(inspector) && /norma_document_set_guide_visible/.test(inspector)
+  && /norma_document_set_guide_locked/.test(inspector) && /norma_document_clear_guide/.test(delegate)
+  && /inspectorDidRequestImportGuide/.test(inspectorHeader),
+  'opacidad · visible · bloqueada · quitar');
 
 report.check('La línea de comando entiende los verbos del editor y repite con Intro vacío',
   /- \(void\)runCommand:/.test(delegate)

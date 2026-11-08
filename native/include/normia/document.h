@@ -54,6 +54,15 @@ typedef struct {
     double measured_m;
     /** Puerta marcada como salida de emergencia. */
     int is_exit;
+    /** Bisagra al otro lado del vano y abatimiento invertido (inspector web). */
+    int flip_x;
+    int flip_y;
+    /** 0–1. 1 es opaco: el mismo valor que el inspector del editor web. */
+    double opacity;
+    /** Tamaño de letra del texto en centímetros (`fontSize` en la web). */
+    double font_size;
+    /** Bloqueado: se puede elegir para desbloquearlo, pero no moverlo ni editarlo. */
+    int locked;
     /**
      * Color propio del elemento (`#rrggbb`), el que elige la persona en el
      * inspector. Vacío = el de su familia en el catálogo, que es como se han
@@ -90,6 +99,33 @@ typedef struct {
     long persons;
 } norma_scenario;
 
+/* --------------------------- imagen de guía ------------------------------ */
+
+/** Tope del base64 de la maqueta: 48 MB, o sea unos 36 MB de imagen. */
+#define NORMA_GUIDE_MAX_DATA (48u * 1024u * 1024u)
+
+/**
+ * La maqueta de trazo: una imagen de fondo para calcar el plano.
+ *
+ * Se guarda **dentro** del archivo del plano en base64 (`data`), así que el
+ * plano sigue siendo un solo archivo y quien lo abra ve la misma guía. La caja
+ * va en centímetros del plano y la opacidad de 0 a 1. No se imprime ni sale en
+ * el SVG: es una ayuda de dibujo.
+ */
+typedef struct {
+    char name[128];
+    char *data;      /* base64 del PNG o JPEG; NULL si no hay guía */
+    size_t data_size;
+    double opacity;
+    double x;
+    double y;
+    double w;
+    double h;
+    int visible;
+    int locked;
+    int present;
+} norma_guide;
+
 typedef struct {
     double width;
     double height;
@@ -120,6 +156,8 @@ typedef struct {
     norma_snapshot redo[NORMA_MAX_UNDO];
     size_t redo_count;
     int dirty;
+    /** Maqueta de trazo que se ve detrás del plano (ver `norma_document_set_guide`). */
+    norma_guide guide;
 } norma_document;
 
 /** Documento nuevo: A4 horizontal a 1:100 en centímetros, como el estudio. */
@@ -246,6 +284,63 @@ long norma_document_add_text(norma_document *document, norma_point origin, doubl
 
 /** Copia un elemento desplazado 20 cm y lo deja encima. Devuelve su índice o -1. */
 long norma_document_duplicate(norma_document *document, size_t element);
+
+/** Opacidad del elemento, de 0.1 a 1 (el rango del inspector web). Devuelve 1 si cambió. */
+int norma_document_set_opacity(norma_document *document, size_t element, double opacity);
+
+/** Tamaño de letra de un texto, en centímetros. Devuelve 1 si cambió. */
+int norma_document_set_font_size(norma_document *document, size_t element, double size);
+
+/**
+ * Bisagra y abatimiento de una puerta: `flip_x` voltea el lado del vano y
+ * `flip_y` invierte el sentido respecto al muro. Devuelve 1 si cambió algo.
+ */
+int norma_document_set_door_flips(norma_document *document, size_t element, int flip_x, int flip_y);
+
+/**
+ * Bloquea o desbloquea el elemento. Mientras está bloqueado, los demás
+ * setters y los movimientos no lo tocan; este sí, para poder liberarlo.
+ */
+int norma_document_set_locked(norma_document *document, size_t element, int locked);
+
+/**
+ * Convierte el elemento a otro tipo de la misma familia de dibujo
+ * (`wall`, `line`, `rect`, `ellipse`, `text`, `route`, `dimension`), como el
+ * «Tipo de elemento» del inspector web: conserva posición, giro y capa.
+ * Devuelve 1 si cambió.
+ */
+int norma_document_set_type(norma_document *document, size_t element, const char *type);
+
+/** Ancho declarado del elemento del entorno, en metros (vía y andén). */
+int norma_document_set_width_m(norma_document *document, size_t element, double width_m);
+
+/**
+ * Ficha de extintor: agente, clasificación, riesgo, capacidad y altura de
+ * montaje. Los valores vacíos o en cero dejan el campo como estaba.
+ * Devuelve 1 si cambió algo.
+ */
+int norma_document_set_extinguisher(norma_document *document, size_t element, const char *agent,
+                                    const char *rating, const char *hazard, double capacity_lb,
+                                    double mount_cm);
+
+/** Pone la guía con su imagen ya codificada en base64 y la caja en centímetros. */
+int norma_document_set_guide(norma_document *document, const char *name, const char *data,
+                             double x, double y, double w, double h);
+
+/** Opacidad de la guía (0.05–1). Devuelve 1 si cambió. */
+int norma_document_set_guide_opacity(norma_document *document, double opacity);
+
+/** Caja de la guía en centímetros. Devuelve 1 si cambió. */
+int norma_document_set_guide_box(norma_document *document, double x, double y, double w, double h);
+
+/** Muestra u oculta la guía sin perderla. Devuelve 1 si cambió. */
+int norma_document_set_guide_visible(norma_document *document, int visible);
+
+/** Bloquea la guía: se dibuja, pero el lienzo no la mueve. Devuelve 1 si cambió. */
+int norma_document_set_guide_locked(norma_document *document, int locked);
+
+/** Quita la guía y libera su imagen. Devuelve 1 si había alguna. */
+int norma_document_clear_guide(norma_document *document);
 
 /** Mueve un nodo de un trazo. Devuelve 1 si se movió. */
 int norma_document_move_node(norma_document *document, size_t element, size_t node, double x, double y);

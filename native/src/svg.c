@@ -291,6 +291,24 @@ static const char *object_colour(const norma_element *element)
 }
 
 /**
+ * Opacidad del elemento, como atributo del grupo impreso.
+ *
+ * La web la guarda por elemento y el inspector la mueve de 10 % a 100 %; el
+ * plano impreso tiene que verse como se ve en pantalla.
+ */
+static void write_opacity(norma_buffer *buffer, const norma_element *element)
+{
+    if (element->opacity <= 0.0 || element->opacity >= 0.999) {
+        return;
+    }
+    char value[32];
+    norma_buffer_raw(buffer, " opacity=\"");
+    norma_svg_number(element->opacity, value, sizeof(value));
+    norma_buffer_raw(buffer, value);
+    norma_buffer_raw(buffer, "\"");
+}
+
+/**
  * Puerta en planta: el mismo dibujo que `SvgExporter::doorMarkup()` de la web
  * —jambas, umbral discontinuo, hoja y arco de apertura—, para que lo que se
  * imprime desde la ventana nativa no salga con un símbolo distinto. Una puerta
@@ -402,11 +420,15 @@ static void write_door(norma_buffer *buffer, const norma_element *element)
         norma_buffer_raw(buffer, " ");
         poner(buffer, leaf);
         norma_buffer_raw(buffer, " 0 0 ");
-        norma_buffer_raw(buffer, reach >= hinge ? "1" : "0");
+        /* Sentido de giro del arco. Con «Abrir al otro lado» del inspector, el
+           abatimiento cae hacia el lado contrario del muro. */
+        const int sweep = reach >= hinge ? 1 : 0;
+        norma_buffer_raw(buffer, element->flip_y ? (sweep ? "0" : "1") : (sweep ? "1" : "0"));
         norma_buffer_raw(buffer, " ");
         poner(buffer, reach);
         norma_buffer_raw(buffer, " ");
-        poner(buffer, edge);
+        /* La punta describe el semicírculo por el lado contrario. */
+        poner(buffer, element->flip_y ? edge - leaf * 2.0 : edge);
         norma_buffer_raw(buffer, "\" stroke-width=\"");
         poner(buffer, fmax(1.0, stroke * 0.6));
         norma_buffer_raw(buffer, "\" opacity=\".55\"/>\n");
@@ -613,7 +635,11 @@ static void write_box_object(norma_buffer *buffer, const norma_element *element,
         if (element->label[0] == '\0') {
             return;
         }
-        const double size = element->h > 0.0 ? fmax(4.0, element->h * 0.55) : 14.0;
+        /* Tamaño de letra del inspector: si la persona lo fijó, manda; si no, el
+           alto de la caja como siempre. */
+        const double size = element->font_size > 0.0
+                                ? element->font_size
+                                : (element->h > 0.0 ? fmax(4.0, element->h * 0.55) : 14.0);
         norma_buffer_raw(buffer, "    <text x=\"");
         poner(buffer, element->x);
         norma_buffer_raw(buffer, "\" y=\"");
@@ -715,6 +741,7 @@ static void write_box_object(norma_buffer *buffer, const norma_element *element,
         norma_buffer_raw(buffer, colour);
         norma_buffer_raw(buffer, "\" stroke-width=\"");
         poner(buffer, element->stroke > 0.0 ? element->stroke : 2.0);
+        write_opacity(buffer, element);
         norma_buffer_raw(buffer, "\">\n");
         if (strcmp(element->type, "line") == 0 && element->node_count >= 2) {
             norma_buffer_raw(buffer, "      <path d=\"M ");
@@ -753,11 +780,25 @@ static void write_box_object(norma_buffer *buffer, const norma_element *element,
         return;
     }
     /* El catálogo completo trae el pictograma de las 817 piezas (422 objetos CAD
-       y 395 señales): se inserta tal cual, escalado a la caja. */
+       y 395 señales): se inserta tal cual, escalado a la caja. Con opacidad
+       propia se envuelve en un grupo, porque el pictograma es un SVG ajeno. */
     const norma_object_spec *spec = norma_object_find(element->type);
-    if (spec != NULL && spec->svg != NULL
-        && norma_library_nested_svg_text(spec->svg, element->x, element->y, w, h, colour, buffer)) {
-        return;
+    const int faded = element->opacity > 0.0 && element->opacity < 0.999;
+    if (spec != NULL && spec->svg != NULL) {
+        if (faded) {
+            norma_buffer_raw(buffer, "    <g");
+            write_opacity(buffer, element);
+            norma_buffer_raw(buffer, ">\n");
+        }
+        if (norma_library_nested_svg_text(spec->svg, element->x, element->y, w, h, colour, buffer)) {
+            if (faded) {
+                norma_buffer_raw(buffer, "    </g>\n");
+            }
+            return;
+        }
+        if (faded) {
+            norma_buffer_raw(buffer, "    </g>\n");
+        }
     }
     if (library != NULL) {
         char code[64];
@@ -771,7 +812,9 @@ static void write_box_object(norma_buffer *buffer, const norma_element *element,
     norma_buffer_raw(buffer, colour);
     norma_buffer_raw(buffer, "\" fill-opacity=\".12\" stroke=\"");
     norma_buffer_raw(buffer, colour);
-    norma_buffer_raw(buffer, "\" stroke-width=\"1.2\">\n      <rect x=\"");
+    norma_buffer_raw(buffer, "\" stroke-width=\"1.2\"");
+    write_opacity(buffer, element);
+    norma_buffer_raw(buffer, ">\n      <rect x=\"");
     poner(buffer, element->x);
     norma_buffer_raw(buffer, "\" y=\"");
     poner(buffer, element->y);

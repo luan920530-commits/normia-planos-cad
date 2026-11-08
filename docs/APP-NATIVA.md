@@ -379,7 +379,7 @@ en la web.
 | Programa | `native/src/cli.c` | `norma-core --audit plano.json` incluye salidas, recorrido, señalización, primeros auxilios, simulacro y hallazgos; `--sign-board hoja.svg` dibuja el catálogo completo |
 | Objetos | `native/include/normia/object.h`, `native/src/object.c` | Los once objetos insertables —tres puertas, extintor, botiquín, camilla, DEA, punto de encuentro, E001, E007 y «usted está aquí»— con su tamaño al nacer, si apoyan sobre el muro y si son puertas |
 | Puertas y equipos en el SVG | `native/src/svg.c` | `write_door()` dibuja jambas, umbral discontinuo, hoja y arco (y el portón, su panel); `write_box_object()` pone el pictograma del catálogo o, si no lo encuentra, una caja con su rótulo |
-| Insertar en la ventana | `native/macos/AppDelegate.m` · `CanvasView.m` | Menú **Insertar** con `⌃`, un clic para colocar, arrastre del objeto entero y `⌘⇧E` para marcar o desmarcar una salida |
+| Insertar en la ventana | `native/macos/AppDelegate.m` · `CanvasView.m` | Menú **Insertar** con `⌃`, un clic para colocar, arrastre del objeto entero y `⌘⇧O` para marcar o desmarcar una salida |
 | Pruebas | `native/tests/test_audit.c` · `test_signs.c` · `test_extinguishers.c` | **67/67**, **30/30** y **32/32** (documento **33/33**, ventana **80/80**) |
 | Paridad | `native/tests/parity.mjs` | **64/64** |
 
@@ -863,6 +863,8 @@ las herramientas del editor web. Eso es lo que hay ahora en `native/macos/`.
 │ Rutas      │                                     │  capa             │
 │ Entorno    │                                     │  Duplicar Borrar  │
 │ Biblioteca │                                     │  Salida           │
+│  Señales   │                                     │ MAQUETA DE TRAZO  │
+│  Equipos   │                                     │  opacidad · quitar │
 ├────────────┴─────────────────────────────────────┴───────────────────┤
 │ Comando: muro · linea · capa <nombre> · zoom <n> · ayuda            │
 ├──────────────────────────────────────────────────────────────────────┤
@@ -886,7 +888,7 @@ Las mismas del editor web (`app/Views/editor/index.php`, `data-tool`):
 | --- | --- | --- |
 | `select` | Seleccionar | `V`; arrastrar mueve nodo, trazo o caja; las esquinas escalan |
 | `hand` | Mano | `H`; arrastra el lienzo |
-| `wall` | Muro | `M`; dos clics por tramo |
+| `wall` | Muro | `M`; **pincel de nodos**: un clic por vértice, el primer nodo cierra el recinto (N5) |
 | `line` | Línea | `L`; dos clics |
 | `rect` | Rectángulo | `B`; dos esquinas |
 | `ellipse` | Elipse | `O`; dos esquinas |
@@ -930,13 +932,14 @@ comando**, como en AutoCAD.
 
 ### Lo que se comprueba
 
-`native/tests/macos.mjs` pasa de 80 a **98 comprobaciones**: la paleta con sus
+`native/tests/macos.mjs` pasa de 80 a **111 comprobaciones** (98 en la N4, 13
+más en la N5 — véase el § 17): la paleta con sus
 ocho grupos, las 19 herramientas, la tira de iconos, el reparto de paneles, las
 pestañas Modelo/Hoja A4 y las coordenadas, los campos del inspector y que cada
 uno use su función del núcleo, los verbos de la línea de comando y su repetición,
 la mano, las figuras, el texto, los tiradores, las flechas, duplicar/girar y el
 entorno. `make -C native test` suma **27 comprobaciones** de entorno y figuras en
-`test_document.c` (60 en total).
+`test_document.c` (80 en total tras la N5).
 
 Lo que sigue sin poder probarse desde este entorno: **la ventana en pantalla**. El
 `.app` se compila y se arranca con `--check` en el flujo de macOS, pero el
@@ -949,3 +952,138 @@ aspecto, el ratón y el teclado los ve una persona en su Mac.
 - **El lienzo dibuja el nombre, no el pictograma** de los 820: el `<svg>` completo
   va al SVG y al PDF, pero un renderizador de SVG en Core Graphics es otra etapa.
 - **Selección múltiple**: hoy se edita un elemento a la vez.
+
+## 17. Etapa N5, hecha: las cinco cosas del feedback (2026-11-08)
+
+La ventana estaba bien de diseño, pero le faltaban cosas del editor web. Este es
+el repaso de las cinco, con lo que hay que saber para usarlas.
+
+### 1. La señalización, en la paleta
+
+El grupo **BIBLIOTECA** de la izquierda tiene ahora las dos bibliotecas del rail
+web (`data-open-library="sign"` y `"cad"`), además del buscador de siempre:
+
+| Botón | Atajo | Qué abre |
+| --- | --- | --- |
+| Señalización ISO 7010… | `⌃⇧S` | Solo las familias `sign:…`: ISO 7010 y señales de servicio |
+| Equipos y mobiliario… | `⌃⇧E` | Solo las familias `cad:…`: equipos, mobiliario, instalaciones |
+| Buscar e insertar… | `⌘⇧I` | Las 820 piezas, sin acotar |
+
+Los atajos van con `⌃` a propósito: `⌘⇧S` ya es «Guardar como», `⌘⇧E` exporta el
+SVG y `⌘⇧G` es la rejilla, y dos entradas con la misma tecla dejan una muerta.
+
+El acotado no es una lista copiada: `NormiaCatalogPicker` recibe un
+`NormiaCatalogScope` y filtra por la familia del catálogo del núcleo
+(`strncmp(family, "sign", 4)` y `norma_object_is_door`), así que una señal nueva
+del catálogo aparece sola. El buscador dice «12 de 395 señales» y acepta
+nombres sin tildes. Lo mismo está en el menú **Insertar**, por si se prefiere el
+menú a la paleta.
+
+### 2. El inspector, como el de la web
+
+El panel derecho sigue el orden de `assets/js/editor/inspector.js`, sección por
+sección, y cada sección aparece solo cuando tiene sentido:
+
+| Sección | Campos | Núcleo |
+| --- | --- | --- |
+| Capas | capa activa (desplegable) y crear capa | `set_current_layer` |
+| Selección | nombre, tipo, «caja» o «trazo», capa, bloqueado | — |
+| Geometría | X · Y · ancho · alto · rotación ±90° · medida declarada | `set_box`, `move_node`, `set_rotation` |
+| Apariencia | paleta de 20 colores, opacidad 10–100 %, grosor, rótulo, tamaño de letra | `set_colour`, `set_opacity`, `set_stroke`, `set_label`, `set_font_size` |
+| Puerta | cambiar bisagra, abrir al otro lado, salida de emergencia | `set_door_flips`, `set_exit` |
+| Vía y entorno | ancho declarado en metros | `set_width_m` |
+| Extintor | agente, capacidad, clasificación, altura de montaje, riesgo | `set_extinguisher` |
+| Organización | capa del elemento y tipo de elemento (muro ↔ línea ↔ ruta ↔ cota; caja ↔ rectángulo ↔ elipse ↔ texto) | `set_layer`, `set_type` |
+| Maqueta de trazo | importar, opacidad, visible, bloqueada, quitar | `set_guide*`, `clear_guide` |
+
+Arriba, la cabecera tiene las tres acciones del héroe web: **bloquear**,
+**duplicar** y **eliminar**. Un elemento bloqueado no se puede mover, escalar ni
+editar: el núcleo devuelve 0 en `editable()` y la ventana lo explica en la barra
+de estado en vez de fallar en silencio.
+
+La paleta de colores es la del modelo web (`COLORS` en `assets/js/lib/model.js`),
+no una inventada: el plano abierto en la web y en la ventana se ve igual.
+
+### 3. El muro, con el pincel de la web
+
+Antes el muro eran dos clics y una línea. Ahora es el pincel multipunto de
+`PEN_TOOLS`: **un clic por vértice**, el tramo sigue al cursor y el trazo
+completo se ve mientras se dibuja. Para terminar:
+
+- **clic en el primer nodo** (se marca con un anillo verde cuando ya hay tres)
+  → cierra el recinto y lo deja como polígono;
+- **doble clic** o **Enter** → cierra el trazo con el último vértice;
+- **Esc** → descarta el trazo en curso.
+
+Los vértices se descartan si caen a menos de la tolerancia de pantalla del clic
+anterior, para que un temblor de la mano no llene el muro de nodos de un
+milímetro.
+
+### 4. La maqueta de trazo (la imagen de fondo)
+
+Instrucciones para quien la use:
+
+1. **Insertar → Maqueta de trazo…** (`⌃⇧G`) o el botón *Importar imagen…* del
+   inspector. Se elige el PNG, JPG, TIFF o HEIC de la planta escaneada.
+2. La ventana la convierte a PNG, la guarda **dentro** del `.norma` en base64 y
+   la cuadra en la hoja al **45 %** de opacidad.
+3. Se calca encima: el muro, la pluma y el resto de herramientas funcionan
+   igual. Con la maqueta seleccionada se arrastra para moverla y se agarra por
+   las esquinas para escalarla; su marco punteado dice dónde está.
+4. En el inspector se ajusta la **opacidad** (5–100 %), se **oculta** sin
+   perderla o se **bloquea** para no moverla sin querer. *Quitar la maqueta* la
+   borra del archivo, con confirmación.
+5. La maqueta **no se imprime ni sale en el SVG**: es una ayuda de dibujo. Sí
+   viaja en el archivo del plano, así que quien lo abra ve la misma guía debajo.
+
+El tope de la imagen es 48 MB en base64 (unos 36 MB de imagen): más que eso es
+una maqueta que conviene reducir antes de calcar.
+
+### 5. Lo que aprendió el núcleo
+
+```
+norma_document_set_opacity      0,10 – 1,00
+norma_document_set_font_size    2 – 400 cm
+norma_document_set_door_flips   flipX (bisagra) · flipY (abatimiento)
+norma_document_set_locked       y `editable()` devuelve NULL si está bloqueado
+norma_document_set_type         muro/línea/ruta/cota y caja/rectángulo/elipse/texto, nunca trazo ↔ caja
+norma_document_set_width_m      ancho declarado de vía, andén, paso, parqueadero y lindero
+norma_document_set_extinguisher agente · clasificación · riesgo · capacidad · montaje
+norma_document_set_guide        nombre · base64 · caja (opacidad inicial 45 %)
+norma_document_set_guide_opacity  0,05 – 1,00
+norma_document_set_guide_box      mover y escalar desde el lienzo o el inspector
+norma_document_set_guide_visible  ocultar sin perder
+norma_document_set_guide_locked   no moverla al dibujar
+norma_document_clear_guide        borrarla del plano
+```
+
+En el sobre del plano, la maqueta va en la **raíz**, fuera de `design`:
+
+```json
+{"guide": {"name": "planta.png", "opacity": 0.45, "x": 0, "y": 0, "w": 21000, "h": 14850,
+           "visible": true, "locked": false, "data": "<base64 del PNG>"},
+ "design": { … }}
+```
+
+La web ignora las claves que no conoce, así que el mismo archivo abre en las dos
+sin cambios. Los campos nuevos del elemento (`flipX`, `flipY`, `opacity`,
+`fontSize`, `locked`, `widthM`) se escriben solo cuando valen algo distinto de lo
+habitual, para no engordar el JSON.
+
+### Lo que se comprueba
+
+`native/tests/macos.mjs` pasa de 98 a **111 comprobaciones**: las dos
+bibliotecas en la paleta y en el menú, el buscador acotado por familia, las
+secciones nuevas del inspector y su llamada al núcleo, la paleta de colores del
+modelo web, el muro de nodo por nodo con cierre por el primer nodo y su trazo
+elástico, y la maqueta (menú, panel de archivo, base64, opacidad, dibujo debajo
+de la hoja, arrastre y bloqueo).
+
+`make -C native test` suma **20 comprobaciones** nuevas en `test_document.c`
+(`test_inspector_web` y `test_guide`): bloqueo, opacidad, tamaño de letra,
+bisagra y abatimiento, conversión de tipo, ancho de vía, ficha del extintor y la
+maqueta con ida y vuelta dentro del sobre. En total, **80** en ese archivo.
+
+Sigue sin poder verse **la ventana en pantalla** desde aquí: el `.app` se compila
+y se arranca con `--check` en el flujo de macOS, pero el ratón, la importación
+real de una imagen y el aspecto los ve una persona en su Mac.

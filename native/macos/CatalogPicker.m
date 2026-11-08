@@ -24,6 +24,8 @@ static NSString *const kColumn = @"objeto";
 @property(nonatomic, strong) NSTextField *summary;
 @property(nonatomic, strong) NSButton *insertButton;
 @property(nonatomic) const norma_object_catalog *catalog;
+/** Biblioteca que se ofrece: todo, señales o equipos. */
+@property(nonatomic) NormiaCatalogScope scope;
 /** Índices del catálogo que pasan el filtro, en el orden del menú. */
 @property(nonatomic) size_t *matches;
 @property(nonatomic) size_t matchCount;
@@ -31,6 +33,7 @@ static NSString *const kColumn = @"objeto";
 
 - (NSString *)runForWindow:(nullable NSWindow *)parent prompt:(nullable NSString *)prompt;
 - (void)filterChanged:(nullable id)sender;
+- (BOOL)spec:(const norma_object_spec *)spec belongsToScope:(NormiaCatalogScope)scope;
 - (void)insertChosen:(nullable id)sender;
 - (void)cancel:(nullable id)sender;
 @end
@@ -41,12 +44,41 @@ static NSString *const kColumn = @"objeto";
                     forWindow:(NSWindow *)window
                        prompt:(NSString *)prompt
 {
+    return [self pickFromCatalog:catalog forWindow:window prompt:prompt scope:NormiaCatalogScopeAll];
+}
+
++ (NSString *)pickFromCatalog:(const norma_object_catalog *)catalog
+                    forWindow:(NSWindow *)window
+                       prompt:(NSString *)prompt
+                        scope:(NormiaCatalogScope)scope
+{
     if (catalog == NULL || catalog->count == 0) {
         return nil;
     }
     NormiaCatalogPicker *picker = [[NormiaCatalogPicker alloc] init];
     picker.catalog = catalog;
+    picker.scope = scope;
+    if (prompt == nil) {
+        prompt = scope == NormiaCatalogScopeSigns ? @"Insertar una señal"
+               : scope == NormiaCatalogScopeCad ? @"Insertar un equipo"
+                                                : @"Insertar del catálogo";
+    }
     return [picker runForWindow:window prompt:prompt];
+}
+
+/** 1 si la pieza es de la biblioteca pedida, según su familia del catálogo. */
+- (BOOL)spec:(const norma_object_spec *)spec belongsToScope:(NormiaCatalogScope)scope
+{
+    if (scope == NormiaCatalogScopeAll) {
+        return YES;
+    }
+    const char *family = spec->family;
+    const BOOL sign = strncmp(family, "sign", 4) == 0;
+    if (scope == NormiaCatalogScopeSigns) {
+        return sign;
+    }
+    /* Equipos: todo lo que no es señal, con las puertas aparte. */
+    return !sign && !norma_object_is_door(spec->type);
 }
 
 - (void)dealloc
@@ -70,7 +102,11 @@ static NSString *const kColumn = @"objeto";
     const CGFloat margin = 16.0;
     self.search = [[NSSearchField alloc] initWithFrame:NSMakeRect(margin, height - 44.0,
                                                                  width - margin * 2.0, 26.0)];
-    self.search.placeholderString = @"Buscar por nombre o por tipo: extintor, camilla, E002…";
+    self.search.placeholderString = self.scope == NormiaCatalogScopeSigns
+        ? @"Buscar señal por nombre, código o familia: salida, extintor, E002…"
+        : self.scope == NormiaCatalogScopeCad
+            ? @"Buscar equipo por nombre o familia: camilla, botiquín, ascensor…"
+            : @"Buscar por nombre o por tipo: extintor, camilla, E002…";
     self.search.delegate = self;
     self.search.autoresizingMask = NSViewWidthSizable | NSViewMinYMargin;
     self.search.target = self;
@@ -188,6 +224,9 @@ static BOOL contains_text(const char *haystack, const char *needle)
     }
     for (size_t index = 0; index < self.catalog->count; index += 1) {
         const norma_object_spec *spec = &self.catalog->items[index];
+        if (![self spec:spec belongsToScope:self.scope]) {
+            continue;
+        }
         NSString *name = [NSString stringWithUTF8String:spec->name];
         NSString *family = [NSString stringWithUTF8String:spec->family_label];
         NSString *folded = [[NSString stringWithFormat:@"%@ %@ %@", name != nil ? name : @"",
@@ -204,9 +243,13 @@ static BOOL contains_text(const char *haystack, const char *needle)
         [self.table selectRowIndexes:[NSIndexSet indexSetWithIndex:0] byExtendingSelection:NO];
         [self.table scrollRowToVisible:0];
     }
-    self.summary.stringValue = [NSString stringWithFormat:@"%lu de %lu objetos · %@",
+    NSString *library = self.scope == NormiaCatalogScopeSigns ? @"señales"
+                        : self.scope == NormiaCatalogScopeCad ? @"equipos"
+                                                             : @"objetos";
+    self.summary.stringValue = [NSString stringWithFormat:@"%lu de %lu %@ · %@",
                                                           (unsigned long) _matchCount,
                                                           (unsigned long) self.catalog->count,
+                                                          library,
                                                           @"doble clic o Intro para insertar"];
     self.insertButton.enabled = _matchCount > 0;
 }

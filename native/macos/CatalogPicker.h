@@ -25,6 +25,26 @@ NS_ASSUME_NONNULL_BEGIN
                               forWindow:(nullable NSWindow *)window
                               prompt:(nullable NSString *)prompt;
 
+/** Qué parte del catálogo se ofrece, como las dos bibliotecas del rail web. */
+typedef NS_ENUM(NSInteger, NormiaCatalogScope) {
+    /** Todo: puertas, equipos y señales. */
+    NormiaCatalogScopeAll = 0,
+    /** Solo la señalización (ISO 7010 y señales de servicio): `sign:…`. */
+    NormiaCatalogScopeSigns,
+    /** Solo el equipamiento CAD: `cad:…`. */
+    NormiaCatalogScopeCad,
+};
+
+/**
+ * Igual que `pickFromCatalog:forWindow:prompt:`, pero acotado a una biblioteca:
+ * «Señales» o «Equipos», como los dos botones de biblioteca del editor web.
+ * El filtro se aplica sobre la familia del catálogo, no sobre una lista copiada.
+ */
++ (nullable NSString *)pickFromCatalog:(const norma_object_catalog *)catalog
+                              forWindow:(nullable NSWindow *)window
+                                 prompt:(nullable NSString *)prompt
+                                  scope:(NormiaCatalogScope)scope;
+
 @end
 
 NS_ASSUME_NONNULL_END
