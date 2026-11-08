@@ -1196,6 +1196,17 @@ selector y al inspector.
   disparaba fuera de la caja) y una figura sin relleno ni trazo se pegaba a la
   siguiente. Con eso, los pictogramas con más de un 10 % de píxeles distintos
   frente a una referencia bajan de **420 a 151**.
+- **Publicada**: la release [v1.31.0](https://github.com/luan920530-commits/normia-planos-cad/releases/tag/v1.31.0)
+  lleva el `NormiaEstudio-nativo-macos12-universal-1.31.0.zip` con su `.sha256`,
+  las ediciones Electron para macOS (`.dmg`, `.pkg`, `.zip`), Linux y Windows
+  (`.zip` e instalador), el APK y los `SHA256SUMS.txt`. Sus notas se escriben a
+  mano en `docs/NOTAS-v1.31.0.md` con `gh release edit`: los flujos de
+  distribución solo adjuntan archivos y no llevan `body:` ni `body_path:`, porque
+  con ellos el último trabajo en terminar reemplazaba las notas por las suyas.
+- **El paso `spc craft` reintenta** tres veces con espera creciente: era el que
+  moría a los ~20 s en el trabajo macOS arm64 de la 1.29.0 y de la 1.31.0 y
+  dejaba la release sin sus `.pkg` y `.exe`; en esta entrega, tras el reintento,
+  el trabajo salió verde y los paquetes quedaron adjuntos.
 
 ## Cambios de la versión 1.30.0
 
