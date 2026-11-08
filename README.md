@@ -43,44 +43,45 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 24. [Guía de primeros pasos](#guía-de-primeros-pasos)
 25. [Complementos](#complementos)
 26. [Unidades y medidas](#unidades-y-medidas)
-27. [Cambios de la versión 1.30.0](#cambios-de-la-versión-1300)
-28. [Cambios de la versión 1.29.0](#cambios-de-la-versión-1290)
-29. [Cambios de la versión 1.28.0](#cambios-de-la-versión-1280)
-30. [Cambios de la versión 1.27.0](#cambios-de-la-versión-1270)
-31. [Cambios de la versión 1.26.0](#cambios-de-la-versión-1260)
-32. [Cambios de la versión 1.25.0](#cambios-de-la-versión-1250)
-33. [Cambios de la versión 1.24.0](#cambios-de-la-versión-1240)
-34. [Cambios de la versión 1.23.0](#cambios-de-la-versión-1230)
-35. [Cambios de la versión 1.22.0](#cambios-de-la-versión-1220)
-36. [Cambios de la versión 1.21.0](#cambios-de-la-versión-1210)
-37. [Cambios de la versión 1.20.0](#cambios-de-la-versión-1200)
-38. [Cambios de la versión 1.19.0](#cambios-de-la-versión-1190)
-39. [Cambios de la versión 1.18.0](#cambios-de-la-versión-1180)
-40. [Cambios de la versión 1.17.0](#cambios-de-la-versión-1170)
-41. [Cambios de la versión 1.16.0](#cambios-de-la-versión-1160)
-42. [Cambios de la versión 1.15.9](#cambios-de-la-versión-1159)
-43. [Cambios de la versión 1.15.8](#cambios-de-la-versión-1158)
-44. [Cambios de la versión 1.15.7](#cambios-de-la-versión-1157)
-45. [Cambios de la versión 1.15.6](#cambios-de-la-versión-1156)
-46. [Cambios de la versión 1.15.5](#cambios-de-la-versión-1155)
-47. [Cambios de la versión 1.15.4](#cambios-de-la-versión-1154)
-48. [Cambios de la versión 1.15.3](#cambios-de-la-versión-1153)
-49. [Cambios de la versión 1.15.2](#cambios-de-la-versión-1152)
-50. [Cambios de la versión 1.15.1](#cambios-de-la-versión-1151)
-51. [Cambios de la versión 1.15.0](#cambios-de-la-versión-1150)
-52. [Cambios de la versión 1.14.2](#cambios-de-la-versión-1142)
-53. [Cambios de la versión 1.14.1](#cambios-de-la-versión-1141)
-54. [Cambios de la versión 1.14.0](#cambios-de-la-versión-1140)
-55. [Cambios de la versión 1.13.0](#cambios-de-la-versión-1130)
-56. [Cambios de la versión 1.12.0](#cambios-de-la-versión-1120)
-57. [Cambios de la versión 1.11.1](#cambios-de-la-versión-1111)
-58. [Cambios de la versión 1.11.0](#cambios-de-la-versión-1110)
-59. [Cambios de la versión 1.10.0](#cambios-de-la-versión-1100)
-60. [Cambios de la versión 1.9.0](#cambios-de-la-versión-190)
-61. [Cambios de la versión 1.8.0](#cambios-de-la-versión-180)
-61. [Paquetes y verificación](#paquetes-y-verificación)
-62. [Limitaciones](#limitaciones)
-63. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
+27. [Cambios de la versión 1.31.0](#cambios-de-la-versión-1310)
+28. [Cambios de la versión 1.30.0](#cambios-de-la-versión-1300)
+29. [Cambios de la versión 1.29.0](#cambios-de-la-versión-1290)
+30. [Cambios de la versión 1.28.0](#cambios-de-la-versión-1280)
+31. [Cambios de la versión 1.27.0](#cambios-de-la-versión-1270)
+32. [Cambios de la versión 1.26.0](#cambios-de-la-versión-1260)
+33. [Cambios de la versión 1.25.0](#cambios-de-la-versión-1250)
+34. [Cambios de la versión 1.24.0](#cambios-de-la-versión-1240)
+35. [Cambios de la versión 1.23.0](#cambios-de-la-versión-1230)
+36. [Cambios de la versión 1.22.0](#cambios-de-la-versión-1220)
+37. [Cambios de la versión 1.21.0](#cambios-de-la-versión-1210)
+38. [Cambios de la versión 1.20.0](#cambios-de-la-versión-1200)
+39. [Cambios de la versión 1.19.0](#cambios-de-la-versión-1190)
+40. [Cambios de la versión 1.18.0](#cambios-de-la-versión-1180)
+41. [Cambios de la versión 1.17.0](#cambios-de-la-versión-1170)
+42. [Cambios de la versión 1.16.0](#cambios-de-la-versión-1160)
+43. [Cambios de la versión 1.15.9](#cambios-de-la-versión-1159)
+44. [Cambios de la versión 1.15.8](#cambios-de-la-versión-1158)
+45. [Cambios de la versión 1.15.7](#cambios-de-la-versión-1157)
+46. [Cambios de la versión 1.15.6](#cambios-de-la-versión-1156)
+47. [Cambios de la versión 1.15.5](#cambios-de-la-versión-1155)
+48. [Cambios de la versión 1.15.4](#cambios-de-la-versión-1154)
+49. [Cambios de la versión 1.15.3](#cambios-de-la-versión-1153)
+50. [Cambios de la versión 1.15.2](#cambios-de-la-versión-1152)
+51. [Cambios de la versión 1.15.1](#cambios-de-la-versión-1151)
+52. [Cambios de la versión 1.15.0](#cambios-de-la-versión-1150)
+53. [Cambios de la versión 1.14.2](#cambios-de-la-versión-1142)
+54. [Cambios de la versión 1.14.1](#cambios-de-la-versión-1141)
+55. [Cambios de la versión 1.14.0](#cambios-de-la-versión-1140)
+56. [Cambios de la versión 1.13.0](#cambios-de-la-versión-1130)
+57. [Cambios de la versión 1.12.0](#cambios-de-la-versión-1120)
+58. [Cambios de la versión 1.11.1](#cambios-de-la-versión-1111)
+59. [Cambios de la versión 1.11.0](#cambios-de-la-versión-1110)
+60. [Cambios de la versión 1.10.0](#cambios-de-la-versión-1100)
+61. [Cambios de la versión 1.9.0](#cambios-de-la-versión-190)
+62. [Cambios de la versión 1.8.0](#cambios-de-la-versión-180)
+63. [Paquetes y verificación](#paquetes-y-verificación)
+64. [Limitaciones](#limitaciones)
+65. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
 
 ---
 
@@ -1151,6 +1152,50 @@ siguen **pendientes** DEC-7 y DEC-9 a DEC-12. Están implementadas las etapas 1 
 4 (geometría en centímetros, medida por objeto, aforo calculado, ajuste por
 mediana y escala física al exportar); las etapas 5 a 10 no han empezado. Ni una
 tabla nueva: `user_version` sigue en 7.
+
+## Cambios de la versión 1.31.0
+
+**Los diseños del catálogo se dibujan en la ventana nativa, no una caja con su
+nombre.**
+
+Un equipo o una señal se pintaba como una caja redondeada con su nombre dentro.
+El nombre era el del catálogo, pero el diseño no se veía, y en la web cada pieza
+es un `<svg>`. Esta versión trae el intérprete y lo conecta a la pantalla, al
+selector y al inspector.
+
+- **Intérprete en el núcleo** (`native/src/svgdraw.c`, API en
+  `native/include/normia/svgdraw.h`): lee el mismo `<svg>` de
+  `resources/cad-objects.json` y `resources/iso7010-catalog.json` y lo traduce a
+  un **destino de dibujo** abstracto —mover, línea, curva, cerrar, pintar,
+  recortar y rótulo—, así que la misma ruta sirve para Core Graphics, para las
+  miniaturas y para las pruebas. Atiende `path` (M L H V C S Q T A Z, absoluto y
+  relativo), `rect`, `circle`, `ellipse`, `line`, `polygon`, `polyline`, `g` y
+  `svg` anidados, `defs`, `use` con `xlink:href` y `href`, `clipPath`,
+  `transform` (`matrix`, `translate`, `scale`, `rotate`, `skewX`, `skewY`),
+  `style`, `fill-opacity`, `fill-rule`, `currentColor`, `stroke-dasharray` y el
+  `<text>` de nueve piezas (P, E, 30, PARE, SALIDA y 50). Las coordenadas de
+  salida son centímetros del plano y el presupuesto de 40 000 operaciones evita
+  que un SVG mal formado cuelgue la ventana.
+- **La ventana** (`native/macos/SvgPicture.m`): acumula un `CGMutablePathRef` y
+  pinta con Core Graphics; `CanvasView` dibuja el pictograma con el giro, la
+  opacidad y el color del elemento. Solo las piezas sin SVG —las tres puertas,
+  cuyo dibujo depende de la bisagra y el abatimiento— conservan la caja. El
+  nombre deja de escribirse encima de la pieza: sigue en el globo y en el
+  inspector, como en la web.
+- **Selector e inspector**: las filas del catálogo (`⌘⇧I`, `⌃⇧S`, `⌃⇧E`) llevan
+  miniatura de 20 × 20 y pasan a 24 px de alto; la ficha del inspector, una de
+  32 × 32. Las miniaturas se rasterizan a 2× una sola vez y quedan en caché.
+- **Pruebas**: `native/tests/test_svgdraw.c` es nuevo, con **29
+  comprobaciones** y dos destinos de prueba —uno que cuenta operaciones y otro
+  que rasteriza para medir cobertura—. Fija que los 820 pictogramas producen
+  tinta: 817 con SVG y las 3 puertas a mano, **4 794 rellenos**, **26 366
+  curvas** y **9 rótulos**, y que la señal de salida llena su caja mientras una
+  de prohibición tiene el aro con hueco. `macos.mjs` pasa a **121**.
+- **Dos fallos del intérprete, corregidos al comparar**: la repetición de un
+  comando de `path` perdía si era relativo (el arco de la señal de prohibición se
+  disparaba fuera de la caja) y una figura sin relleno ni trazo se pegaba a la
+  siguiente. Con eso, los pictogramas con más de un 10 % de píxeles distintos
+  frente a una referencia bajan de **420 a 151**.
 
 ## Cambios de la versión 1.30.0
 

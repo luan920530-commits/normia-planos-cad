@@ -1106,7 +1106,7 @@ flecha de un tramo curvo) y el **veredicto del extintor**: el núcleo guarda los
 arcos y calcula la cobertura en la revisión, pero no expone todavía un campo
 para cambiar el radio de un tramo ni una ficha resuelta por extintor.
 
-## 18. Etapa N7, hecha: los diseños se dibujan con su pictograma (2026-11-08)
+## 18. Etapa N7, hecha: los diseños se dibujan con su pictograma (1.31.0)
 
 Hasta aquí, un equipo o una señal del catálogo se pintaba en la ventana como una
 caja redondeada con su nombre dentro. El nombre estaba bien —son los 820 del
