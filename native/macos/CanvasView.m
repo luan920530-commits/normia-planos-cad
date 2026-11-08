@@ -23,6 +23,7 @@
  * aquí solo se pintan y se editan.
  */
 #import "CanvasView.h"
+#import "SvgPicture.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -534,6 +535,41 @@ static const double kHalfPi = 1.57079632679489661923;
 {
     const double w = element->w;
     const double h = element->h > 0.0 ? element->h : element->w;
+    const CGSize box_size = CGSizeMake((CGFloat) w, (CGFloat) h);
+
+    /* El pictograma del catálogo, dibujado de verdad: es el `<svg>` que la web
+       incrusta y el mismo que exporta el plano. Antes aquí solo había una caja
+       con el nombre, así que los diseños no se veían. */
+    const norma_object_spec *spec = norma_object_find(element->type);
+    if (spec != NULL && spec->svg != NULL) {
+        char colour[16];
+        snprintf(colour, sizeof(colour), "%s", element->colour[0] == '#' ? element->colour
+                                                 : (spec->colour[0] == '#' ? spec->colour : "#334155"));
+        CGContextSaveGState(context);
+        if (element->rotation != 0.0) {
+            const CGFloat cx = (CGFloat) (element->x + w / 2.0);
+            const CGFloat cy = (CGFloat) (element->y + h / 2.0);
+            CGContextTranslateCTM(context, cx, cy);
+            /* El eje Y del lienzo va hacia abajo: el giro se aplica al revés. */
+            CGContextRotateCTM(context, (CGFloat) (-element->rotation * kPi / 180.0));
+            CGContextTranslateCTM(context, -cx, -cy);
+        }
+        CGContextSetAlpha(context, (CGFloat) (element->opacity > 0.0 ? element->opacity : 1.0));
+        NormiaDrawSvgInContext(context, spec->svg,
+                               CGRectMake((CGFloat) element->x, (CGFloat) element->y,
+                                          box_size.width, box_size.height),
+                               colour);
+        CGContextSetAlpha(context, 1.0);
+        CGContextRestoreGState(context);
+        if (selected) {
+            CGContextSetRGBStrokeColor(context, 0.22, 0.52, 1.0, 0.9);
+            CGContextSetLineWidth(context, 1.0 / zoom);
+            CGContextStrokeRect(context, CGRectMake(element->x - 3.0 / zoom, element->y - 3.0 / zoom,
+                                                    w + 6.0 / zoom, h + 6.0 / zoom));
+        }
+        return;
+    }
+
     NSColor *colour = [self colourForObject:element];
     CGColorRef cg = colour.CGColor;
     CGContextSetStrokeColorWithColor(context, cg);
@@ -1255,11 +1291,12 @@ static NSColor *colour_from_hex(const char *hex)
     if (strcmp(type, "parking") == 0) {
         return @"P";
     }
-    /* Cualquier otra pieza del catálogo se rotula con el nombre que tiene en el
-       catálogo —«Ascensor accesible», «Estantería 4 niveles»—, que es lo que
-       hace legible un plano con 820 objetos disponibles. */
+    /* Una pieza del catálogo ya se reconoce por su pictograma: no se le escribe
+       el nombre encima, igual que en la web (el nombre va en el globo y en el
+       inspector). Solo se rotula lo que la persona escribió, que es lo que se
+       resuelve más arriba, o la pieza de respaldo que no tiene SVG. */
     const norma_object_spec *spec = norma_object_find(type);
-    if (spec != NULL) {
+    if (spec != NULL && spec->svg == NULL && spec->name[0] != '\0') {
         return [NSString stringWithUTF8String:spec->name];
     }
     return nil;

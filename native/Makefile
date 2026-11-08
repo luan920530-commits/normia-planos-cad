@@ -14,7 +14,7 @@ CPPFLAGS += -Iinclude
 LDLIBS += -lm
 
 BUILD := build
-SOURCES := src/units.c src/geometry.c src/json.c src/jsonw.c src/format.c src/plan.c src/document.c src/svg.c src/grid.c src/audit.c src/travel.c src/findings.c src/library.c src/signage.c src/firstaid.c src/extinguisher.c src/scenarios.c src/routes.c src/object.c src/inspect.c src/drill.c
+SOURCES := src/units.c src/geometry.c src/json.c src/jsonw.c src/format.c src/plan.c src/document.c src/svg.c src/grid.c src/audit.c src/travel.c src/findings.c src/library.c src/signage.c src/firstaid.c src/extinguisher.c src/scenarios.c src/routes.c src/object.c src/inspect.c src/drill.c src/svgdraw.c
 OBJECTS := $(SOURCES:src/%.c=$(BUILD)/%.o)
 HEADERS := $(wildcard include/normia/*.h)
 
@@ -50,7 +50,10 @@ $(BUILD)/tests-ext: tests/test_extinguishers.c $(OBJECTS) $(HEADERS) | $(BUILD)
 $(BUILD)/tests-catalog: tests/test_catalog.c $(OBJECTS) $(HEADERS) | $(BUILD)
 	$(CC) $(CPPFLAGS) $(CFLAGS) tests/test_catalog.c $(OBJECTS) -o $@ $(LDLIBS)
 
-test: $(BUILD)/tests $(BUILD)/tests-document $(BUILD)/tests-svg $(BUILD)/tests-audit $(BUILD)/tests-signs $(BUILD)/tests-ext $(BUILD)/tests-catalog $(BUILD)/norma-core
+$(BUILD)/tests-svgdraw: tests/test_svgdraw.c $(OBJECTS) $(HEADERS) | $(BUILD)
+	$(CC) $(CPPFLAGS) $(CFLAGS) tests/test_svgdraw.c $(OBJECTS) -o $@ $(LDLIBS)
+
+test: $(BUILD)/tests $(BUILD)/tests-document $(BUILD)/tests-svg $(BUILD)/tests-audit $(BUILD)/tests-signs $(BUILD)/tests-ext $(BUILD)/tests-catalog $(BUILD)/tests-svgdraw $(BUILD)/norma-core
 	@echo "· Pruebas del núcleo"
 	@$(BUILD)/tests
 	@echo "· Pruebas del documento"
@@ -65,6 +68,8 @@ test: $(BUILD)/tests $(BUILD)/tests-document $(BUILD)/tests-svg $(BUILD)/tests-a
 	@$(BUILD)/tests-ext
 	@echo "· Pruebas del catálogo completo"
 	@$(BUILD)/tests-catalog
+	@echo "· Pruebas de los pictogramas SVG"
+	@$(BUILD)/tests-svgdraw
 	@echo "· El programa responde a --check"
 	@$(BUILD)/norma-core --check
 

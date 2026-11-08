@@ -11,6 +11,7 @@
  * vuelve a lo que el documento dice.
  */
 #import "InspectorPanel.h"
+#import "SvgPicture.h"
 
 #import <QuartzCore/QuartzCore.h>
 
@@ -120,6 +121,8 @@ static double parse_number(NSString *text)
 @property(nonatomic, strong) NSTextField *summary;
 @property(nonatomic, strong) NSTextField *kindLabel;
 @property(nonatomic, strong) NSTextField *metaLabel;
+/** Miniatura del pictograma seleccionado, como el héroe del inspector web. */
+@property(nonatomic, strong) NSImageView *heroPreview;
 @property(nonatomic, strong) NSPopUpButton *layerPopup;
 @property(nonatomic, strong) NSTextField *layerField;
 @property(nonatomic, strong) NSPopUpButton *currentLayerPopup;
@@ -384,25 +387,33 @@ static double parse_number(NSString *text)
     [layers addSubview:hint];
 
     /* ------------------------------ selección ---------------------------- */
-    NSView *hero = [self blockWithHeight:96.0];
+    NSView *hero = [self blockWithHeight:118.0];
     self.kindLabel = [NSTextField labelWithString:@"SELECCIÓN"];
     self.kindLabel.font = [NSFont systemFontOfSize:9.5 weight:NSFontWeightBold];
     self.kindLabel.textColor = panelMuted();
     self.kindLabel.frame = NSMakeRect(kInset, 2.0, kPanelWidth - kInset * 2.0 - 1.0, 12.0);
     [hero addSubview:self.kindLabel];
 
+    /* La miniatura del pictograma, como el héroe del inspector web. */
+    self.heroPreview = [[NSImageView alloc] initWithFrame:NSMakeRect(kInset, 18.0, 34.0, 34.0)];
+    self.heroPreview.imageScaling = NSImageScaleProportionallyUpOrDown;
+    self.heroPreview.wantsLayer = YES;
+    self.heroPreview.layer.cornerRadius = 5.0;
+    self.heroPreview.layer.backgroundColor = [NSColor colorWithCalibratedWhite:0.96 alpha:1.0].CGColor;
+    [hero addSubview:self.heroPreview];
+
     self.summary = [NSTextField labelWithString:@"Nada seleccionado"];
     self.summary.font = [NSFont systemFontOfSize:14.0 weight:NSFontWeightSemibold];
     self.summary.textColor = panelText();
     self.summary.lineBreakMode = NSLineBreakByTruncatingTail;
-    self.summary.frame = NSMakeRect(kInset, 16.0, kPanelWidth - kInset * 2.0 - 1.0, 20.0);
+    self.summary.frame = NSMakeRect(kInset + 42.0, 20.0, kPanelWidth - kInset * 2.0 - 43.0, 20.0);
     [hero addSubview:self.summary];
 
     self.metaLabel = [NSTextField labelWithString:@""];
     self.metaLabel.font = [NSFont systemFontOfSize:10.5];
     self.metaLabel.textColor = panelMuted();
     self.metaLabel.lineBreakMode = NSLineBreakByTruncatingTail;
-    self.metaLabel.frame = NSMakeRect(kInset, 38.0, kPanelWidth - kInset * 2.0 - 1.0, 16.0);
+    self.metaLabel.frame = NSMakeRect(kInset + 42.0, 40.0, kPanelWidth - kInset * 2.0 - 43.0, 16.0);
     [hero addSubview:self.metaLabel];
 
     /* Las tres acciones de la cabecera: bloquear, duplicar y borrar. */
@@ -412,10 +423,11 @@ static double parse_number(NSString *text)
         @[ @"trash", @"Eliminar · Supr", @"deleteHero:" ],
     ];
     CGFloat actionX = kInset;
+    const CGFloat actionY = 62.0;
     for (NSArray<NSString *> *action in heroActions) {
         NSImage *image = [NSImage imageWithSystemSymbolName:action[0] accessibilityDescription:action[1]];
         image.template = YES;
-        NSButton *button = [[NSButton alloc] initWithFrame:NSMakeRect(actionX, 60.0, 34.0, 28.0)];
+        NSButton *button = [[NSButton alloc] initWithFrame:NSMakeRect(actionX, actionY, 34.0, 28.0)];
         button.image = image;
         button.imagePosition = NSImageOnly;
         button.bezelStyle = NSBezelStyleTexturedRounded;
@@ -428,7 +440,7 @@ static double parse_number(NSString *text)
     }
     self.lockSwitch = [NSButton checkboxWithTitle:@"Bloqueado" target:self action:@selector(lockToggled:)];
     self.lockSwitch.font = [NSFont systemFontOfSize:11.0];
-    self.lockSwitch.frame = NSMakeRect(actionX + 10.0, 64.0, kPanelWidth - actionX - 20.0, 20.0);
+    self.lockSwitch.frame = NSMakeRect(actionX + 10.0, actionY + 4.0, kPanelWidth - actionX - 20.0, 20.0);
     self.lockSwitch.toolTip = @"Evita mover o modificar el elemento";
     [hero addSubview:self.lockSwitch];
 
@@ -930,6 +942,8 @@ static double parse_number(NSString *text)
 
     if (element == NULL) {
         self.kindLabel.stringValue = @"SELECCIÓN";
+        self.heroPreview.image = nil;
+        self.heroPreview.hidden = YES;
         self.summary.stringValue = [NSString stringWithFormat:@"Nada seleccionado · %zu elementos",
                                                               self.document->count];
         self.summary.textColor = panelText();
@@ -972,6 +986,10 @@ static double parse_number(NSString *text)
                               || strcmp(element->type, "dimension") == 0;
 
         self.kindLabel.stringValue = [type_name(element->type) uppercaseString];
+        /* La miniatura del catálogo; si la pieza no tiene pictograma (un muro,
+           una cota) se deja el hueco en blanco en vez de una imagen falsa. */
+        self.heroPreview.image = NormiaThumbnailForType(element->type, 32.0);
+        self.heroPreview.hidden = self.heroPreview.image == nil;
         self.summary.stringValue = type_name(element->type);
         self.summary.textColor = panelAccent();
         self.metaLabel.stringValue = [NSString stringWithFormat:@"%@ · %@%@",

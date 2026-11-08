@@ -9,6 +9,7 @@
 #import "CanvasView.h"
 #import "CatalogPicker.h"
 #import "InspectorPanel.h"
+#import "SvgPicture.h"
 #import "ToolRail.h"
 
 #import <QuartzCore/QuartzCore.h>
@@ -1347,6 +1348,9 @@ static NSString *command_word(NSString *word)
     if (norma_object_catalog_load(&_catalog, resources.fileSystemRepresentation, error, sizeof(error))
         && norma_object_use(&_catalog)) {
         self.hasCatalog = YES;
+        /* Las miniaturas se rasterizan del catálogo que esté en uso: si cambia,
+           las que había ya no valen. */
+        NormiaClearThumbnailCache();
         return;
     }
     self.hasCatalog = NO;

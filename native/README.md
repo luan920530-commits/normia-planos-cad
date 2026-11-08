@@ -58,17 +58,18 @@ es lo que comprueba `tests/parity.mjs`.
 | Camino | `include/normia/grid.h` (`norma_grid_path`), `src/grid.c` | Dijkstra de 8 vecinos sobre la rejilla, sin cortar esquinas, con los puntos simplificados por línea de vista y la longitud en metros |
 | Objetos | `include/normia/object.h`, `src/object.c` | **El catálogo completo: 820 piezas** (3 puertas + 422 objetos CAD + 395 señales) en 41 familias, con nombre, familia, color y pictograma; se leen de `resources/` en tiempo de ejecución y hay once de respaldo por si faltan. `norma_document_add_object/set_exit/move_object` los guardan en el plano |
 | Extintores | `include/normia/extinguisher.h`, `src/extinguisher.c` | NTC 2885 + Resolución 2400 y NFPA 10: recorrido por clase y riesgo, área por número de A, zonas descubiertas con su motivo y acciones cuantificadas (añadir, reubicar, subir rótulo) |
+| Pictogramas | `include/normia/svgdraw.h`, `src/svgdraw.c` | **El intérprete de los `<svg>` del catálogo**: `path` con curvas y arcos, `rect`, `circle`, `ellipse`, `line`, `polygon`, `polyline`, `g` con `transform` (`matrix`, `translate`, `scale`, `rotate`), `use`, `clipPath`, `style`, `fill-opacity`, `currentColor`, `stroke-dasharray` y el `<text>` de las nueve piezas que lo llevan. Traduce a un destino de dibujo propio, así que sirve igual para Core Graphics y para las pruebas. Los 820 pictogramas se dibujan de verdad: 4 794 rellenos, 26 366 curvas y 9 rótulos. La ventana lo enlaza por `macos/SvgPicture.m` |
 | Ventana de macOS | `macos/` | AppKit puro, con la maqueta de un CAD: **paleta de conjuntos de herramientas** a la izquierda (`ToolRail.m`), **tira de iconos** arriba, **inspector de capas y propiedades** a la derecha (`InspectorPanel.m`), **línea de comando** y **barra de estado con coordenadas** abajo. Las herramientas del editor web: seleccionar, mano, muro, línea, rectángulo, elipse, pluma, arco, texto, cota, ruta, insertar del catálogo (820 piezas, buscador en `⌘⇧I`), y el entorno —vía, andén, paso peatonal, parqueadero, lindero, tubería y canaleta—. Duplicar, girar, escalar por esquinas, rótulo, capa, color y salida de emergencia. macOS 12 |
 
 ## Compilar y probar
 
 ```sh
 make -C native            # construye native/build/norma-core
-make -C native test       # núcleo (23), documento (60), SVG (31), auditor (67), señalización (30),
-                          # extintores (32) y catálogo completo (26)
+make -C native test       # núcleo (23), documento (83), SVG (31), auditor (67), señalización (30),
+                          # extintores (32), catálogo completo (26) y pictogramas (29)
 node native/tests/core.mjs         # compila en estricto y corre los cuatro (8)
 node native/tests/parity.mjs 8.3   # paridad contra el motor PHP (64)
-node native/tests/macos.mjs        # contrato de la ventana nativa (113)
+node native/tests/macos.mjs        # contrato de la ventana nativa (121)
 ```
 
 Y en macOS, con las herramientas de Xcode:

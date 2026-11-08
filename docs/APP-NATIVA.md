@@ -1105,3 +1105,148 @@ Lo único que el inspector todavía no edita son **las curvas del trazo** (radio
 flecha de un tramo curvo) y el **veredicto del extintor**: el núcleo guarda los
 arcos y calcula la cobertura en la revisión, pero no expone todavía un campo
 para cambiar el radio de un tramo ni una ficha resuelta por extintor.
+
+## 18. Etapa N7, hecha: los diseños se dibujan con su pictograma (2026-11-08)
+
+Hasta aquí, un equipo o una señal del catálogo se pintaba en la ventana como una
+caja redondeada con su nombre dentro. El nombre estaba bien —son los 820 del
+catálogo, no una lista inventada— pero el **diseño no se veía**: en la web cada
+pieza es un `<svg>` y aquí no había nada que lo interpretara. Esta etapa trae el
+intérprete y lo conecta a la pantalla, al selector y al inspector.
+
+### 1. El intérprete, en el núcleo
+
+`native/src/svgdraw.c` (API en `include/normia/svgdraw.h`) lee el `<svg>` tal
+como viene en `resources/cad-objects.json` y `resources/iso7010-catalog.json` y
+lo traduce a un **destino de dibujo** abstracto:
+
+```c
+typedef struct {
+    void *user;
+    void (*move_to)(void *user, double x, double y);
+    void (*line_to)(void *user, double x, double y);
+    void (*curve_to)(void *user, double x1, double y1, double x2, double y2, double x, double y);
+    void (*close)(void *user);
+    void (*paint)(void *user, const norma_svg_paint *paint); /* relleno, trazo, opacidad, raya */
+    void (*push_clip)(void *user);
+    void (*pop_clip)(void *user);
+} norma_svg_sink;
+
+int norma_svg_draw(const char *svg, double x, double y, double w, double h,
+                   const char *colour, const norma_svg_sink *sink);
+int norma_svg_drawable(const char *svg);
+```
+
+Ese corte es lo que permite dibujar en Core Graphics en la ventana y, en Linux,
+**medir** el dibujo con un destino de prueba sin tener pantalla. Las
+coordenadas de salida son centímetros del plano: el `viewBox` se escala a la
+caja y el `stroke-width` sale ya multiplicado por esa escala.
+
+Lo que se interpreta, que es exactamente lo que traen los catálogos:
+
+| Grupo | Qué se atiende |
+| --- | --- |
+| Formas | `path` (M L H V C S Q T A Z, absoluto y relativo), `rect`, `circle`, `ellipse`, `line`, `polygon`, `polyline` |
+| Estructura | `g`, `svg` anidados, `defs`, `use` con `xlink:href` y `href`, `clipPath` y `clip-path` |
+| Transformaciones | `transform` con `matrix`, `translate`, `scale`, `rotate` (en el grupo o en la forma) |
+| Presentación | `fill`, `stroke`, `fill-opacity`, `stroke-opacity`, `opacity`, `fill-rule`, `stroke-width`, `stroke-dasharray` y `stroke-dashoffset`, y lo mismo dentro de `style="…"` |
+| Rótulo | `text` con su `x`, `y`, `font-size` y `text-anchor`, dibujado por el destino (lo usan 9 piezas: P, E, 30, PARE, SALIDA y 50) |
+| Color | `#rgb`, `#rrggbb`, `none`, y `currentColor` (el color del elemento en el plano, que es lo que hace la web) |
+
+`title`/`desc` se ignoran. De la presentación quedan fuera
+`stroke-linejoin`, `stroke-linecap` y `display`, que tampoco cambian el dibujo
+aquí: los catálogos no traen ningún `display:none` (solo `inline`) y las uniones
+y remates redondeados o en punta de un pictograma de 20 px no se distinguen. Un
+SVG enorme se corta por presupuesto (40 000 operaciones y profundidad 12) para
+que un archivo mal formado no cuelgue la ventana.
+
+### 2. La ventana
+
+`native/macos/SvgPicture.m` es el puente, y no tiene lógica de dibujo propia:
+
+```objc
+void NormiaDrawSvgInContext(CGContextRef context, const char *svg, CGRect box, const char *colour);
+NSImage *NormiaThumbnailForType(const char *type, CGFloat size);  /* 2×, caché por tipo@lado */
+void NormiaClearThumbnailCache(void);
+```
+
+El destino acumula en un `CGMutablePathRef` y pinta con `CGContextAddPath` +
+`CGContextFillPath`/`CGContextStrokePath`; `push_clip`/`pop_clip` guardan y
+restauran el estado gráfico y `stroke-dasharray` va a `CGContextSetLineDash`.
+
+En `CanvasView.m`, `drawObject:` busca la pieza con `norma_object_find`, y si
+tiene `svg` la dibuja con el giro del elemento por la matriz de transformación
+(el eje Y del lienzo va al revés que el del SVG, así que el ángulo se aplica
+negado), su `opacity` y su color, y le pone el marco azul si está seleccionada.
+La caja redondeada queda **solo** como respaldo de las piezas sin SVG, que son
+las tres puertas porque su dibujo depende de la bisagra y del abatimiento.
+`captionForObject:` deja de escribir el nombre sobre la pieza: el nombre sigue
+en el globo al pasar el ratón y en el inspector, como en la web.
+
+### 3. El selector y el inspector
+
+El selector del catálogo (`⌘⇧I`, `⌃⇧S`, `⌃⇧E`) pinta cada fila con un
+`NSTableCellView`: miniatura de 20 × 20 y, al lado, el nombre y la familia. Las
+filas pasan de 22 a **24 px**. El inspector pone una miniatura de 32 × 32 en la
+ficha de la pieza (`heroPreview`, esquinas de 5 px), a la izquierda del nombre,
+y la oculta cuando no hay selección. Las miniaturas se rasterizan a 2× en un
+`CGBitmapContext` con fondo blanco y se guardan en un diccionario, así que
+recorrer la lista de 820 no vuelve a dibujarlas.
+
+### 4. Lo que se comprueba
+
+`native/tests/test_svgdraw.c` es nuevo y trae **29 comprobaciones** con dos
+destinos: uno que cuenta operaciones y otro que rasteriza a 64 × 64 con la regla
+par-impar para medir **cuánta superficie queda cubierta**. Con la cobertura se
+distingue un pictograma bien dibujado de uno vacío o de un cuadrado negro.
+
+| Grupo | Qué fija |
+| --- | --- |
+| Formas | el relleno es el color del SVG; el `viewBox` desplazado se centra; un círculo son cuatro curvas que llenan su caja |
+| Transformaciones | `translate` + `scale` del grupo mueven y encogen; `style` trae relleno, trazo, regla y opacidad; `fill-opacity`; `currentColor`; `#fff` → `#ffffff`; el trazo sin relleno con su grosor escalado y su raya |
+| Referencias | `use` con `xlink:href` y con `href`; el comando `A` describe el arco en curvas; la curva suave `T` se apoya en la anterior |
+| Robustez | un texto que no es SVG no dibuja nada; un SVG sin formas tampoco; una caja de 0 × 10 se rechaza; un camino enorme se corta por presupuesto |
+| Rótulo | el `<text>` llega al destino con su texto, su alineación y su cuerpo de letra ya escalado; sin `text-anchor` va a la izquierda y no pinta formas; dentro de un grupo con `transform` también llega |
+| Catálogo | los **820 pictogramas producen tinta**: 817 con SVG y las 3 puertas a mano, **4 794 rellenos**, **26 366 curvas** y **9 rótulos**; la señal de salida llena su caja (cobertura > 0,85) y una de prohibición tiene el aro con hueco (0,15–0,9) |
+
+`native/tests/macos.mjs` pasa de 113 a **121 comprobaciones**, con ocho nuevas:
+el intérprete en `SOURCES` y sus formas, la ventana dibujando el pictograma con
+giro y opacidad, el nombre solo en las piezas sin SVG, la miniatura en el
+selector y en el inspector, las pruebas del intérprete y el rótulo de dentro del
+SVG. `make -C native test` pasa a **23 · 83 · 31 · 67 · 30 · 32 · 26 · 29**.
+
+### 5. Dos fallos que solo se ven comparando
+
+Al terminar, cada pictograma se dibujó también en Linux con un destino que
+vuelca a un mapa de bits y se comparó, uno a uno, con la referencia del mismo
+SVG. De los 754 pictogramas que se pudieron comparar salieron dos fallos del
+intérprete que no se veían de otra forma:
+
+1. **La repetición de un comando de `path` perdía si era relativo.** En
+   `c 0-58 47-105 105-105 0-58 …` el segundo juego de números se leía como
+   absoluto, así que el arco se disparaba fuera de la caja. El caso de la señal
+   de prohibición lo dejaba en un cuadrado rojo. Se guarda la letra tal como
+   viene, no su mayúscula.
+2. **Una figura sin relleno ni trazo se pegaba a la siguiente.** SVG pide que un
+   `fill:none` con `stroke:none` no pinte nada, y el intérprete se lo callaba al
+   destino; el camino quedaba acumulado y la figura siguiente salía manchada de
+   más (era el caso de la señal de salida, con un fondo que no es suyo). Ahora
+   `paint` llega siempre y el destino vacía el camino.
+
+Tras las dos correcciones, la comparación bajó de 420 a 151 pictogramas con más
+de un 10 % de píxeles distintos, y la diferencia media de un 17,7 % a un 6,6 %.
+Lo que queda es antialiasing, grosores de trazo de menos de un píxel y las
+uniones redondeadas, que el volcado de prueba aproxima y Core Graphics no.
+
+### 6. Lo que sigue sin poder verse desde aquí
+
+La comparación de arriba se hizo en Linux con dos piezas fuera del repositorio:
+un destino que vuelca el dibujo a un PPM y `@resvg/resvg-js` (Rust) como
+referencia, instalado aparte y sin entrar en el paquete. No hay `rsvg-convert`
+ni `cairosvg` en la imagen, y ImageMagick sin ellos no rasteriza SVG, así que
+esa comparación **no está en las pruebas del repositorio**: la que sí queda es
+la cobertura del destino de prueba, que no necesita nada instalado.
+
+El aspecto final —que el pictograma no salga girado, que el rótulo quede dentro
+del aro, que la miniatura se lea a 20 px— lo mira una persona en su Mac, donde
+el flujo compila y arranca el `.app`.

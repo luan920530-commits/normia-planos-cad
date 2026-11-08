@@ -9,6 +9,7 @@
  * ninguna lista copiada.
  */
 #import "CatalogPicker.h"
+#import "SvgPicture.h"
 
 #include <ctype.h>
 #include <stdlib.h>
@@ -134,7 +135,7 @@ static NSString *const kColumn = @"objeto";
     column.resizingMask = NSTableColumnAutoresizingMask;
     [self.table addTableColumn:column];
     self.table.headerView = nil;
-    self.table.rowHeight = 22.0;
+    self.table.rowHeight = 24.0;
     self.table.dataSource = self;
     self.table.delegate = self;
     self.table.target = self;
@@ -268,13 +269,26 @@ static BOOL contains_text(const char *haystack, const char *needle)
         return nil;
     }
     const norma_object_spec *spec = &self.catalog->items[_matches[row]];
+    /* La fila lleva el pictograma, no solo el nombre: la biblioteca se elige
+       mirando la señal, que es como se busca una imagen en la web. */
+    NSTableCellView *cell = [[NSTableCellView alloc] initWithFrame:NSMakeRect(0.0, 0.0, 480.0, 24.0)];
+    NSImageView *icon = [[NSImageView alloc] initWithFrame:NSMakeRect(2.0, 1.0, 22.0, 22.0)];
+    icon.imageScaling = NSImageScaleProportionallyUpOrDown;
+    icon.image = NormiaThumbnailForType(spec->type, 20.0);
+    [cell addSubview:icon];
+    cell.imageView = icon;
+
     NSTextField *label = [NSTextField labelWithString:@""];
     label.font = [NSFont systemFontOfSize:12.0];
     label.lineBreakMode = NSLineBreakByTruncatingTail;
     NSString *detail = [NSString stringWithFormat:@"%s · %s", spec->name, spec->family_label];
     label.stringValue = detail;
     label.textColor = [NSColor labelColor];
-    return label;
+    label.frame = NSMakeRect(30.0, 3.0, NSWidth(cell.bounds) - 34.0, 18.0);
+    label.autoresizingMask = NSViewWidthSizable;
+    [cell addSubview:label];
+    cell.textField = label;
+    return cell;
 }
 
 /** Filtrar mientras se escribe, sin esperar a Intro. */

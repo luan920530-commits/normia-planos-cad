@@ -37,6 +37,12 @@ const objectH = fs.readFileSync(path.join(repoRoot, 'native', 'include', 'normia
 const documentH = fs.readFileSync(path.join(repoRoot, 'native', 'include', 'normia', 'document.h'), 'utf8');
 const signsTest = fs.readFileSync(path.join(repoRoot, 'native', 'tests', 'test_signs.c'), 'utf8');
 const makefile = read('Makefile');
+const picture = read('SvgPicture.m');
+const pictureHeader = read('SvgPicture.h');
+const svgdrawC = fs.readFileSync(path.join(repoRoot, 'native', 'src', 'svgdraw.c'), 'utf8');
+const svgdrawH = fs.readFileSync(path.join(repoRoot, 'native', 'include', 'normia', 'svgdraw.h'), 'utf8');
+const nativeMakefile = fs.readFileSync(path.join(repoRoot, 'native', 'Makefile'), 'utf8');
+const svgdrawTest = fs.readFileSync(path.join(repoRoot, 'native', 'tests', 'test_svgdraw.c'), 'utf8');
 const leerFlujo = (name) => fs.readFileSync(path.join(repoRoot, '.github', 'workflows', name), 'utf8');
 const nativeWorkflow = leerFlujo('dist-nativo.yml');
 const verifyWorkflow = leerFlujo('verify.yml');
@@ -683,7 +689,63 @@ report.check('La paleta y el inspector se compilan y se marcan solos al cambiar 
   && /canvasSelectionDidChange:/.test(delegate) && /canvasSelectionDidChange:/.test(canvasHeader),
   'ToolRail · InspectorPanel · selección');
 
-/* -------------------------------- 7 · coherencia ------------------------------- */
+/* ------------------------------ 7 · pictogramas -------------------------------- */
+
+report.check('El intérprete de pictogramas está en el núcleo y se compila con él',
+  /src\/svgdraw\.c/.test(nativeMakefile) && /tests-svgdraw/.test(nativeMakefile)
+  && /norma_svg_draw/.test(svgdrawH) && /norma_svg_drawable/.test(svgdrawH)
+  && /same_name\(name, name_length, "use"\)/.test(svgdrawC)
+  && /clipPath/.test(svgdrawC) && /even_odd/.test(svgdrawC),
+  'svgdraw.c · use · clipPath · evenodd');
+
+report.check('El intérprete cubre las formas y los atributos que trae el catálogo',
+  /"path"/.test(svgdrawC) && /"rect"/.test(svgdrawC) && /"circle"/.test(svgdrawC)
+  && /"ellipse"/.test(svgdrawC) && /"polygon"/.test(svgdrawC) && /"polyline"/.test(svgdrawC)
+  && /"line"/.test(svgdrawC) && /viewBox/.test(svgdrawC) && /fill-opacity/.test(svgdrawC)
+  && /stroke-dasharray/.test(svgdrawC) && /currentColor/.test(svgdrawC),
+  'path · rect · circle · ellipse · polígonos · línea · viewBox · opacidad · raya · currentColor');
+
+report.check('El puente dibuja el SVG en Core Graphics, rotula y rasteriza las miniaturas',
+  /#import "SvgPicture\.h"/.test(picture) && /CGContextAddPath/.test(picture)
+  && /sink\.text = picture_text/.test(picture) && /drawAtPoint:NSMakePoint/.test(picture)
+  && /CGContextFillPath/.test(picture) && /CGContextStrokePath/.test(picture)
+  && /CGContextSetLineDash/.test(picture) && /CGContextSaveGState/.test(picture)
+  && /CGBitmapContextCreate/.test(picture)
+  && /NormiaDrawSvgInContext/.test(pictureHeader) && /NormiaThumbnailForType/.test(pictureHeader)
+  && /SvgPicture\.m/.test(makefile) && /\.\.\/src\/svgdraw\.c/.test(makefile),
+  'CGMutablePath · bitmap 2× · caché · enlazado con el núcleo');
+
+report.check('La ventana dibuja el pictograma del catálogo, no una caja con su nombre',
+  /norma_object_find\(element->type\)/.test(canvas)
+  && /NormiaDrawSvgInContext\(context, spec->svg/.test(canvas)
+  && /CGContextRotateCTM/.test(canvas) && /CGContextSetAlpha/.test(canvas),
+  'pictograma · giro · opacidad');
+
+report.check('Solo las piezas sin SVG llevan su nombre escrito encima',
+  /const norma_object_spec \*spec = norma_object_find\(type\);/.test(canvas)
+  && /spec != NULL && spec->svg == NULL && spec->name\[0\] != '\\0'/.test(canvas),
+  'el nombre queda en el globo y el inspector');
+
+report.check('El selector de catálogo y el inspector muestran la miniatura de cada pieza',
+  /NormiaThumbnailForType\(spec->type, 20\.0\)/.test(picker)
+  && /NSTableCellView/.test(picker) && /NSImageView/.test(picker)
+  && /NormiaThumbnailForType\(element->type, 32\.0\)/.test(inspector)
+  && /heroPreview/.test(inspector) && /heroPreview\.hidden = YES/.test(inspector),
+  'fila 24 px · icono 20 · miniatura 32 en la ficha');
+
+report.check('Las pruebas del intérprete dibujan los 820 pictogramas y miden su cobertura',
+  /trace_paint/.test(svgdrawTest) && /raster/.test(svgdrawTest)
+  && /iso_e001/.test(svgdrawTest) && /iso_p001/.test(svgdrawTest)
+  && /817/.test(svgdrawTest) && /coverage_of/.test(svgdrawTest),
+  'destino de trazo · destino que rasteriza · señales conocidas');
+
+report.check('El rótulo que traen dentro nueve piezas (P · E · 30 · PARE) también se dibuja',
+  /NORMA_SVG_TEXT_MIDDLE/.test(svgdrawH) && /NORMA_SVG_TEXT_MIDDLE/.test(svgdrawC)
+  && /shape_text/.test(svgdrawC) && /"text-anchor"/.test(svgdrawC)
+  && /state\.texts/.test(svgdrawTest) && /labelled == 9/.test(svgdrawTest),
+  'sink.text · text-anchor · nueve piezas');
+
+/* -------------------------------- 8 · coherencia ------------------------------- */
 
 for (const [name, source] of [['main.m', main], ['AppDelegate.m', delegate], ['CanvasView.m', canvas],
                               ['ToolRail.m', rail], ['InspectorPanel.m', inspector]]) {
