@@ -332,6 +332,7 @@ static NSString *display_name(const norma_element *element)
     if (element == NULL) {
         self.summary.stringValue = [NSString stringWithFormat:@"Nada seleccionado · %zu elementos",
                                                               self.document->count];
+        self.summary.textColor = panelText();
         [(NSTextField *) self.fields[@"type"] setStringValue:@"—"];
         for (NSString *key in self.fields) {
             if ([key isEqualToString:@"type"]) {
@@ -354,6 +355,8 @@ static NSString *display_name(const norma_element *element)
 
     self.summary.stringValue = [NSString stringWithFormat:@"%@ · %@", display_name(element),
                                                           element->node_count >= 2 ? @"trazo" : @"caja"];
+    /* El nombre del elemento elegido, en el azul del realce. */
+    self.summary.textColor = panelAccent();
     [(NSTextField *) self.fields[@"type"] setStringValue:display_name(element)];
     const BOOL box = element->node_count < 2;
     [self setField:kFieldX value:[NSString stringWithFormat:@"%.0f", x]];
