@@ -174,6 +174,12 @@ static NSColor *chromeBackground(void) { return [NSColor colorWithCalibratedRed:
     self.window.delegate = self;
     self.window.minSize = NSMakeSize(1040, 680);
     self.window.backgroundColor = chromeBackground();
+    /* La ventana es oscura como un CAD: con la apariencia oscura del sistema,
+       los rótulos de la paleta y los campos del inspector se leen solos, sin
+       pintar cada texto a mano. */
+    NSAppearance *oscura = [NSAppearance appearanceNamed:NSAppearanceNameDarkAqua];
+    self.window.appearance = oscura;
+    NSApp.appearance = oscura;
 
     NSView *content = self.window.contentView;
     content.wantsLayer = YES;

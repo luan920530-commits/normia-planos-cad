@@ -495,6 +495,11 @@ report.check('La ventana reparte paleta, lienzo, inspector, comando y estado',
   && /kPaletteWidth/.test(delegate) && /kInspectorWidth/.test(delegate),
   'paleta · lienzo · inspector · comando · estado');
 
+report.check('La ventana usa la apariencia oscura del sistema, como un CAD',
+  /NSAppearanceNameDarkAqua/.test(delegate) && /NSAppearance appearanceNamed:/.test(delegate)
+  && /self\.window\.appearance = oscura/.test(delegate),
+  'DarkAqua');
+
 report.check('La barra de estado tiene las pestañas Modelo y Hoja A4 y las coordenadas',
   /NSSegmentedControl segmentedControlWithLabels:@\[ @"Modelo", @"Hoja A4" \]/.test(delegate)
   && /coordinateLabel/.test(delegate) && /X %\.0f · Y %\.0f cm/.test(delegate),

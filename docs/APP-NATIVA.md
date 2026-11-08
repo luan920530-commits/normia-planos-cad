@@ -876,6 +876,7 @@ las herramientas del editor web. Eso es lo que hay ahora en `native/macos/`.
 | Inspector | `InspectorPanel.m` | Capas y ficha del elemento; cada campo llama al núcleo y, si el núcleo rechaza el valor, el campo vuelve a lo que el documento dice |
 | Lienzo | `CanvasView.m` | Selección con tiradores de esquina, mano, figuras, texto, entorno, flechas y `⌘D` |
 | Ventana | `AppDelegate.m` | Reparto de paneles, tira de iconos, línea de comando, barra de estado y menú Herramientas |
+| Tema | `AppDelegate.m` | Apariencia oscura del sistema (`NSAppearanceNameDarkAqua`), como la captura de AutoCAD, con la hoja A4 en blanco sobre el espacio de trabajo |
 
 ### Las herramientas, una por una
 
@@ -929,7 +930,7 @@ comando**, como en AutoCAD.
 
 ### Lo que se comprueba
 
-`native/tests/macos.mjs` pasa de 80 a **97 comprobaciones**: la paleta con sus
+`native/tests/macos.mjs` pasa de 80 a **98 comprobaciones**: la paleta con sus
 ocho grupos, las 19 herramientas, la tira de iconos, el reparto de paneles, las
 pestañas Modelo/Hoja A4 y las coordenadas, los campos del inspector y que cada
 uno use su función del núcleo, los verbos de la línea de comando y su repetición,

@@ -815,7 +815,9 @@ static NSColor *colour_from_hex(const char *hex)
     if (self.printing) {
         [[NSColor whiteColor] setFill];
     } else {
-        [[NSColor colorWithCalibratedWhite:0.16 alpha:1.0] setFill];
+        /* Espacio de trabajo oscuro, con la hoja blanca encima: la misma
+           lectura que un CAD en espacio de presentación. */
+        [[NSColor colorWithCalibratedRed:0.11 green:0.12 blue:0.14 alpha:1.0] setFill];
     }
     NSRectFill(self.bounds);
     if (self.document == NULL) {
