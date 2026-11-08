@@ -92,7 +92,6 @@ static const char *kAppName = "Normia Estudio";
 - (void)duplicateSelection:(id)sender;
 - (void)rotateSelection:(id)sender;
 - (void)focusLabel:(id)sender;
-- (void)exportPlan:(id)sender;
 - (void)chooseLayoutTab:(id)sender;
 @end
 
@@ -1585,28 +1584,28 @@ static NSString *command_word(NSString *word)
 - (void)zoomIn:(id)sender
 {
     (void) sender;
-    [self.canvas zoomIn]
+    [self.canvas zoomIn];
     [self updateStatusReadout];
 }
 
 - (void)zoomOut:(id)sender
 {
     (void) sender;
-    [self.canvas zoomOut]
+    [self.canvas zoomOut];
     [self updateStatusReadout];
 }
 
 - (void)zoomReset:(id)sender
 {
     (void) sender;
-    [self.canvas zoomReset]
+    [self.canvas zoomReset];
     [self updateStatusReadout];
 }
 
 - (void)zoomToFit:(id)sender
 {
     (void) sender;
-    [self.canvas zoomToFit]
+    [self.canvas zoomToFit];
     [self updateStatusReadout];
 }
 
