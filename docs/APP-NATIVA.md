@@ -1250,3 +1250,16 @@ la cobertura del destino de prueba, que no necesita nada instalado.
 El aspecto final —que el pictograma no salga girado, que el rótulo quede dentro
 del aro, que la miniatura se lea a 20 px— lo mira una persona en su Mac, donde
 el flujo compila y arranca el `.app`.
+
+### 7. La entrega
+
+La etiqueta `v1.31.0` (commit `8f4e667`) salió con la release
+[v1.31.0](https://github.com/luan920530-commits/normia-planos-cad/releases/tag/v1.31.0)
+publicada y con todos sus adjuntos: el `NormiaEstudio-nativo-macos12-universal-1.31.0.zip`
+con su `.sha256` y las demás ediciones —macOS (`.dmg`, `.pkg`, `.zip`), Linux,
+Windows (`.zip` e instaladores), Android— con sus `SHA256SUMS.txt`. El trabajo
+macOS arm64 de «Distribución de escritorio» volvió a caer en el paso `spc craft`
+y un reintento lo sacó adelante; el paso ahora reintenta tres veces con espera
+creciente (commit `ff6eb1c`) para no volver a dejar la release sin `.pkg` ni
+`.exe`. Las notas se guardan en `docs/NOTAS-v1.31.0.md` y se aplican con
+`gh release edit`, porque los flujos que traían `body:` se pisaban entre sí.
