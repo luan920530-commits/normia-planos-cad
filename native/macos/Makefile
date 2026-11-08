@@ -10,7 +10,7 @@
 
 APP := build/NormiaEstudio.app
 BIN := $(APP)/Contents/MacOS/NormiaEstudio
-CORE := ../src/units.c ../src/geometry.c ../src/json.c ../src/jsonw.c ../src/format.c ../src/plan.c ../src/document.c ../src/svg.c ../src/grid.c ../src/audit.c ../src/travel.c ../src/findings.c ../src/library.c ../src/signage.c ../src/firstaid.c ../src/extinguisher.c ../src/scenarios.c ../src/routes.c ../src/inspect.c ../src/drill.c
+CORE := ../src/units.c ../src/geometry.c ../src/json.c ../src/jsonw.c ../src/format.c ../src/plan.c ../src/document.c ../src/svg.c ../src/grid.c ../src/audit.c ../src/travel.c ../src/findings.c ../src/library.c ../src/signage.c ../src/firstaid.c ../src/extinguisher.c ../src/scenarios.c ../src/routes.c ../src/object.c ../src/inspect.c ../src/drill.c
 OBJC := main.m AppDelegate.m CanvasView.m
 CFLAGS ?= -O2 -Wall -Wextra -Wno-unused-parameter
 # macOS 12 Monterey es el mínimo que se promete en Info.plist, así que el

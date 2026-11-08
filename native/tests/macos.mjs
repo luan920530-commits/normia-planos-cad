@@ -196,6 +196,12 @@ report.check('Editar el plano invalida la revisión en vez de mostrar cifras vie
   /invalidateInspection/.test(delegate) && /if \(self\.hasInspection\) \{\s*\[self invalidateInspection\]/.test(delegate),
   'se vuelve a pedir con ⌘R');
 
+report.check('La ventana enlaza todos los fuentes del núcleo, también el catálogo de objetos',
+  /\$\{CORE\}|\.\.\/src\/object\.c/.test(makefile) && /\.\.\/src\/svg\.c/.test(makefile)
+  && /\.\.\/src\/document\.c/.test(makefile)
+  && /\.\.\/src\/object\.c/.test(makefile),
+  '../src/object.c en CORE');
+
 report.check('El paquete lleva los catálogos que el cajón necesita',
   /Contents\/Resources\/resources/.test(makefile) && /cp \.\.\/\.\.\/resources\/\*\.json/.test(makefile),
   'Resources/resources desde la raíz del repositorio');
