@@ -23,7 +23,6 @@
 
 static const CGFloat kPanelWidth = 300.0;
 static const CGFloat kInset = 14.0;
-static const CGFloat kRow = 30.0;
 
 /* Los colores de la paleta son los mismos del editor web (`COLORS` en
    `assets/js/lib/model.js`); aquí se muestran los de uso corriente. */

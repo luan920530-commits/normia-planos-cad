@@ -589,6 +589,7 @@ report.check('El trazo en curso se ve entero, con su tramo elástico y el nodo d
 
 report.check('La maqueta se importa con el panel de archivo y se guarda en el plano',
   /NSOpenPanel openPanel/.test(delegate) && /NSBitmapImageFileTypePNG/.test(delegate)
+  && /allowedContentTypes = @\[ UTTypePNG/.test(delegate)
   && /base64EncodedStringWithOptions:0/.test(delegate)
   && /norma_document_set_guide\(/.test(delegate) && /norma_document_set_guide_box\(/.test(delegate),
   'NSOpenPanel · PNG base64 · guía');

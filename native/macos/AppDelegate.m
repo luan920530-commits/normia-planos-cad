@@ -13,6 +13,7 @@
 
 #import <QuartzCore/QuartzCore.h>
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
+#import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 
 #include <math.h>
 #include <stdio.h>
@@ -625,10 +626,9 @@ static NSColor *chromeBackground(void) { return [NSColor colorWithCalibratedRed:
     open.canChooseFiles = YES;
     open.canChooseDirectories = NO;
     open.allowsMultipleSelection = NO;
-    /* El filtro de tipos se deja abierto a propósito: el panel de archivo sin
-       filtro no depende de UniformTypeIdentifiers (macOS 11) y la imagen se
-       valida igual al decodificarla. */
-    open.allowedFileTypes = nil;
+    /* Filtro de tipos con UniformTypeIdentifiers: `allowedFileTypes` está en
+       desuso desde macOS 12 y la compilación es estricta. */
+    open.allowedContentTypes = @[ UTTypePNG, UTTypeJPEG, UTTypeTIFF, UTTypePDF, UTTypeHEIC ];
     NSModalResponse response = [open runModal];
     if (response != NSModalResponseOK || open.URL == nil) {
         [self canvasStatus:self.canvas message:@"No se importó ninguna maqueta."];
@@ -655,14 +655,14 @@ static NSColor *chromeBackground(void) { return [NSColor colorWithCalibratedRed:
         return;
     }
     const char *name = open.URL.lastPathComponent.UTF8String;
+    const double w = self.canvas.document->width;
+    const double h = self.canvas.document->height;
     norma_document_begin_edit(self.canvas.document);
     if (!norma_document_set_guide(self.canvas.document, name, encoded.UTF8String, 0.0, 0.0, w, h)) {
         [self canvasStatus:self.canvas message:@"La imagen es demasiado grande para el plano."];
         return;
     }
     /* Caja inicial: la imagen cuadrada dentro de la hoja, con sus proporciones. */
-    const double w = self.canvas.document->width;
-    const double h = self.canvas.document->height;
     const CGFloat pixelW = rep != nil && rep.pixelsWide > 0 ? (CGFloat) rep.pixelsWide : 1000.0;
     const CGFloat pixelH = rep != nil && rep.pixelsHigh > 0 ? (CGFloat) rep.pixelsHigh : 700.0;
     double boxW = w * 0.92;
