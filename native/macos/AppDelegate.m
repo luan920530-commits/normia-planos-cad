@@ -45,6 +45,8 @@ static const char *kAppName = "Normia Estudio";
    núcleo, no desde una copia en AppKit. */
 @property(nonatomic) norma_object_catalog catalog;
 @property(nonatomic) BOOL hasCatalog;
+/** Motivo por el que no se cargó el catálogo, para decirlo con la ventana ya abierta. */
+@property(nonatomic, copy) NSString *catalogError;
 
 - (void)buildAuditPanel:(NSView *)content;
 - (void)toggleAudit:(id)sender;
@@ -95,6 +97,9 @@ static const NSUInteger kRecentLimit = 10;
     [self buildWindow];
     [self.canvas documentDidLoad];
     [self refreshTitle];
+    if (self.catalogError != nil) {
+        [self canvasStatus:self.canvas message:self.catalogError];
+    }
 }
 
 /** Cerrar la ventana con cambios pendientes pregunta antes, igual que ⌘Q. */
@@ -499,8 +504,8 @@ static const NSUInteger kRecentLimit = 10;
         return;
     }
     self.hasCatalog = NO;
-    [self canvasStatus:self.canvas
-               message:[NSString stringWithFormat:@"Sin catálogo completo: %s", error]];
+    self.catalogError = [NSString stringWithFormat:@"Sin catálogo completo (%s): quedan las once piezas de respaldo.",
+                                                   error];
 }
 
 /* ------------------------------- recientes ------------------------------- */
