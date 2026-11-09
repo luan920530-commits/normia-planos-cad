@@ -5,9 +5,11 @@
  * Insertar las tiene todas, familia por familia, pero buscar a mano un «botiquín
  * de droguería» entre 422 objetos no es razonable: esta ventana es el buscador.
  *
- * Es AppKit puro —un campo de búsqueda, una tabla y dos botones— no un WebView, y
- * no sabe nada del plano: devuelve el `type` elegido y quien llama decide qué
- * hacer con él.
+ * Es AppKit puro —un campo de búsqueda, las fichas de categoría, la rejilla de
+ * tarjetas con el pictograma de cada pieza y dos botones—, no un WebView, y no
+ * sabe nada del plano: devuelve el `type` elegido y quien llama decide qué hacer
+ * con él. La rejilla y las fichas imitan el modal de la biblioteca visual de la
+ * web, donde la señal se elige mirándola y no leyendo su nombre.
  */
 #import <Cocoa/Cocoa.h>
 

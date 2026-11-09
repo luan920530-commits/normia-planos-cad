@@ -305,12 +305,163 @@ static NSString *short_code(const char *type)
 
 @end
 
+/* -------------------------------- las fichas ------------------------------ */
+
+@protocol NormiaCatalogChipsDelegate;
+
+/**
+ * Fila de fichas de categoría, como las del modal de la web: «Todas 395»,
+ * «Condición segura 73»… Se dibujan a mano porque un `NSPopUpButton` esconde las
+ * categorías detrás de un clic y la web las muestra todas, con su cifra, para
+ * que se vea de un vistazo qué hay en la biblioteca.
+ */
+@interface NormiaCatalogChips : NSView
+@property(nonatomic, strong) NSArray<NSString *> *titles;
+@property(nonatomic) NSInteger selectedIndex;
+@property(nonatomic, weak, nullable) id<NormiaCatalogChipsDelegate> delegate;
+- (CGFloat)preferredHeightForWidth:(CGFloat)width;
+@end
+
+@protocol NormiaCatalogChipsDelegate <NSObject>
+- (void)chipsChanged:(NormiaCatalogChips *)chips;
+@end
+
+@interface NormiaCatalogChips () {
+    /** Alto que ocupan las fichas con el ancho actual (una o dos filas). */
+    CGFloat _chipRows;
+}
+/** Rects de cada ficha, ya dispuestas; se recalculan al ancho o al título. */
+@property(nonatomic) NSMutableArray<NSValue *> *rects;
+@end
+
+@implementation NormiaCatalogChips
+
+- (BOOL)isFlipped
+{
+    return YES;
+}
+
+static NSDictionary *chip_attributes(BOOL chosen)
+{
+    return @{
+        NSFontAttributeName: [NSFont systemFontOfSize:11.0 weight:chosen ? NSFontWeightSemibold
+                                                                        : NSFontWeightRegular],
+        NSForegroundColorAttributeName: chosen ? [NSColor whiteColor]
+                                               : [NSColor colorWithCalibratedWhite:0.25 alpha:1.0],
+    };
+}
+
+/** Ancho de una ficha: su texto más 22 px de relleno. */
+- (CGFloat)widthForTitle:(NSString *)title chosen:(BOOL)chosen
+{
+    return ceil([title sizeWithAttributes:chip_attributes(chosen)].width) + 22.0;
+}
+
+- (void)layoutChips
+{
+    NSMutableArray<NSValue *> *rects = [NSMutableArray array];
+    const CGFloat available = MAX(120.0, NSWidth(self.bounds));
+    CGFloat x = 0.0;
+    CGFloat y = 0.0;
+    const CGFloat height = 24.0;
+    const CGFloat gap = 6.0;
+    for (NSUInteger index = 0; index < self.titles.count; index += 1) {
+        const CGFloat width = [self widthForTitle:self.titles[index]
+                                           chosen:(NSInteger) index == self.selectedIndex];
+        if (x > 0.0 && x + width > available) {
+            x = 0.0;
+            y += height + gap;
+        }
+        [rects addObject:[NSValue valueWithRect:NSMakeRect(x, y, width, height)]];
+        x += width + gap;
+    }
+    self.rects = rects;
+    _chipRows = y + height;
+}
+
+- (CGFloat)preferredHeightForWidth:(CGFloat)width
+{
+    const NSRect saved = self.frame;
+    [self setFrameSize:NSMakeSize(width, NSHeight(saved))];
+    [self layoutChips];
+    /* El alto se guarda antes de devolver el marco: al restaurarlo, `layoutChips`
+       vuelve a medir con el ancho viejo. */
+    const CGFloat rows = _chipRows;
+    [self setFrameSize:saved.size];
+    return rows;
+}
+
+- (void)setTitles:(NSArray<NSString *> *)titles
+{
+    _titles = [titles copy];
+    [self layoutChips];
+    [self setNeedsDisplay:YES];
+}
+
+- (void)setSelectedIndex:(NSInteger)selectedIndex
+{
+    _selectedIndex = selectedIndex;
+    [self layoutChips];
+    [self setNeedsDisplay:YES];
+}
+
+- (void)setFrameSize:(NSSize)newSize
+{
+    [super setFrameSize:newSize];
+    [self layoutChips];
+    [self setNeedsDisplay:YES];
+}
+
+- (void)drawRect:(NSRect)dirtyRect
+{
+    (void) dirtyRect;
+    if (self.rects.count != self.titles.count) {
+        [self layoutChips];
+    }
+    for (NSUInteger index = 0; index < self.rects.count; index += 1) {
+        const NSRect rect = self.rects[index].rectValue;
+        const BOOL chosen = (NSInteger) index == self.selectedIndex;
+        NSBezierPath *pill = [NSBezierPath bezierPathWithRoundedRect:rect xRadius:12.0 yRadius:12.0];
+        if (chosen) {
+            [[NSColor colorWithCalibratedWhite:0.13 alpha:1.0] setFill];
+            [pill fill];
+        } else {
+            [[NSColor whiteColor] setFill];
+            [pill fill];
+            [[NSColor colorWithCalibratedWhite:0.82 alpha:1.0] setStroke];
+            pill.lineWidth = 1.0;
+            [pill stroke];
+        }
+        NSDictionary *attributes = chip_attributes(chosen);
+        const NSSize size = [self.titles[index] sizeWithAttributes:attributes];
+        [self.titles[index] drawAtPoint:NSMakePoint(NSMidX(rect) - size.width / 2.0,
+                                                    NSMidY(rect) - size.height / 2.0)
+                         withAttributes:attributes];
+    }
+}
+
+- (void)mouseDown:(NSEvent *)event
+{
+    const NSPoint point = [self convertPoint:event.locationInWindow fromView:nil];
+    for (NSUInteger index = 0; index < self.rects.count; index += 1) {
+        if (NSPointInRect(point, self.rects[index].rectValue)) {
+            self.selectedIndex = (NSInteger) index;
+            [self setNeedsDisplay:YES];
+            [self.delegate chipsChanged:self];
+            return;
+        }
+    }
+}
+
+@end
+
 /* -------------------------------- la hoja -------------------------------- */
 
-@interface NormiaCatalogPicker : NSObject <NormiaCatalogGridDelegate, NSSearchFieldDelegate>
+@interface NormiaCatalogPicker : NSObject <NormiaCatalogGridDelegate, NormiaCatalogChipsDelegate,
+                                          NSSearchFieldDelegate>
 @property(nonatomic, strong) NSWindow *window;
 @property(nonatomic, strong) NSSearchField *search;
-@property(nonatomic, strong) NSPopUpButton *family;
+@property(nonatomic, strong) NormiaCatalogChips *chips;
 @property(nonatomic, strong) NSScrollView *scroll;
 @property(nonatomic, strong) NormiaCatalogGrid *grid;
 @property(nonatomic, strong) NSTextField *detail;
@@ -329,6 +480,7 @@ static NSString *short_code(const char *type)
 - (NSString *)runForWindow:(nullable NSWindow *)parent prompt:(nullable NSString *)prompt;
 - (void)buildFamilyFilter;
 - (void)filterChanged:(nullable id)sender;
+- (nullable NSString *)selectedFamilyKey;
 - (BOOL)spec:(const norma_object_spec *)spec belongsToScope:(NormiaCatalogScope)scope;
 - (void)insertChosen:(nullable id)sender;
 - (void)cancel:(nullable id)sender;
@@ -451,22 +603,28 @@ static BOOL contains_text(const char *haystack, const char *needle)
     self.search.action = @selector(filterChanged:);
     [content addSubview:self.search];
 
-    self.family = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(margin, height - 130.0, 280.0, 26.0)
-                                             pullsDown:NO];
-    self.family.target = self;
-    self.family.action = @selector(filterChanged:);
-    self.family.autoresizingMask = NSViewMinYMargin;
-    [content addSubview:self.family];
+    /* Las categorías, en fichas como el modal de la web: todas a la vista con su
+       cifra. Ocupan una o dos filas según el ancho, así que la rejilla se coloca
+       después de medirlas. */
+    self.chips = [[NormiaCatalogChips alloc] initWithFrame:NSMakeRect(margin, 0.0, width - margin * 2.0, 0.0)];
+    self.chips.delegate = self;
+    self.chips.autoresizingMask = NSViewWidthSizable | NSViewMinYMargin;
+    [content addSubview:self.chips];
+    [self buildFamilyFilter];
+    const CGFloat chipsHeight = MAX(24.0, [self.chips preferredHeightForWidth:width - margin * 2.0]);
+    const CGFloat chipsTop = height - 108.0;
+    self.chips.frame = NSMakeRect(margin, chipsTop - chipsHeight, width - margin * 2.0, chipsHeight);
 
     NSTextField *hint = [NSTextField labelWithString:@"Doble clic o Intro para insertar · flechas para moverse"];
     hint.font = [NSFont systemFontOfSize:10.0];
     hint.textColor = [NSColor secondaryLabelColor];
     hint.alignment = NSTextAlignmentRight;
-    hint.frame = NSMakeRect(width - margin - 320.0, height - 128.0, 320.0, 20.0);
+    hint.frame = NSMakeRect(width - margin - 320.0, chipsTop - chipsHeight - 20.0, 320.0, 16.0);
     hint.autoresizingMask = NSViewMinXMargin | NSViewMinYMargin;
     [content addSubview:hint];
 
-    NSRect gridFrame = NSMakeRect(margin, 62.0, width - margin * 2.0, height - 204.0);
+    const CGFloat gridTop = chipsTop - chipsHeight - 26.0;
+    NSRect gridFrame = NSMakeRect(margin, 62.0, width - margin * 2.0, MAX(120.0, gridTop - 62.0));
     self.scroll = [[NSScrollView alloc] initWithFrame:gridFrame];
     self.scroll.hasVerticalScroller = YES;
     self.scroll.borderType = NSNoBorder;
@@ -558,9 +716,8 @@ static BOOL contains_text(const char *haystack, const char *needle)
         }
     }
     self.families = keys;
-    [self.family removeAllItems];
-    [self.family addItemsWithTitles:titles];
-    [self.family selectItemAtIndex:0];
+    self.chips.titles = titles;
+    self.chips.selectedIndex = 0;
 }
 
 /* ------------------------------- la búsqueda ----------------------------- */
@@ -573,15 +730,14 @@ static BOOL contains_text(const char *haystack, const char *needle)
     NSString *plain = [text stringByFoldingWithOptions:NSDiacriticInsensitiveSearch
                                                 locale:[NSLocale localeWithLocaleIdentifier:@"es_CO"]];
     const char *needle = plain.UTF8String != NULL ? plain.UTF8String : "";
-    const NSInteger familyIndex = self.family.numberOfItems > 0 ? self.family.indexOfSelectedItem : 0;
-    /* La clave se copia: el `NSString` de la lista es temporal y el puntero
+    /* La clave se copia: el `NSString` de la ficha es temporal y el puntero
        interno dejaría de valer a la vuelta del ciclo de eventos. */
     char family_key[NORMA_OBJECT_FAMILY];
     int filter_family = 0;
     family_key[0] = '\0';
-    if (familyIndex > 0 && (NSUInteger) familyIndex < self.families.count) {
-        snprintf(family_key, sizeof(family_key), "%s",
-                 self.families[(NSUInteger) familyIndex].UTF8String);
+    NSString *chosenFamily = [self selectedFamilyKey];
+    if (chosenFamily != nil) {
+        snprintf(family_key, sizeof(family_key), "%s", chosenFamily.UTF8String);
         filter_family = 1;
     }
 
@@ -640,6 +796,24 @@ static BOOL contains_text(const char *haystack, const char *needle)
         (unsigned long) iso, (unsigned long) own];
     self.insertButton.enabled = _matchCount > 0;
     [self gridSelectionChanged:self.grid];
+}
+
+/** Clave de familia de la ficha activa; `nil` si es «Todas». */
+- (NSString *)selectedFamilyKey
+{
+    const NSInteger index = self.chips.selectedIndex;
+    if (index <= 0 || (NSUInteger) index >= self.families.count) {
+        return nil;
+    }
+    return self.families[(NSUInteger) index];
+}
+
+/** Al cambiar de categoría se vuelve a filtrar y se vuelve a la primera tarjeta. */
+- (void)chipsChanged:(NormiaCatalogChips *)chips
+{
+    (void) chips;
+    [self filterChanged:nil];
+    [self.grid scrollRectToVisible:NSMakeRect(0.0, 0.0, 1.0, 1.0)];
 }
 
 /* ------------------------- lo que dice la rejilla ------------------------ */

@@ -741,11 +741,12 @@ report.check('La biblioteca visual muestra cada pictograma en una tarjeta, como 
   && /- \(NSInteger\)indexAtPoint:/.test(picker) && /drawInRect/.test(picker),
   'rejilla de tarjetas · pictograma 56 px · nombre y código');
 
-report.check('La biblioteca visual filtra por familia y busca sin tildes, como la web',
-  /NSPopUpButton \*family;/.test(picker) && /buildFamilyFilter/.test(picker)
+report.check('La biblioteca visual filtra con fichas de categoría y busca sin tildes, como la web',
+  /@interface NormiaCatalogChips : NSView/.test(picker) && /buildFamilyFilter/.test(picker)
   && /Todas \(%lu\)/.test(picker) && /NSDiacriticInsensitiveSearch/.test(picker)
+  && /- \(void\)chipsChanged:/.test(picker) && /selectedFamilyKey/.test(picker)
   && /Doble clic o Intro para insertar/.test(picker),
-  'categorías · buscador · atajos');
+  'fichas con cifra · buscador · atajos');
 
 report.check('El inspector sigue mostrando la miniatura de la pieza elegida',
   /NormiaThumbnailForType\(element->type, 32\.0\)/.test(inspector)
