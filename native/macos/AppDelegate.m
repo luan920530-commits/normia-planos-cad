@@ -230,10 +230,16 @@ static NSColor *chromeBackground(void) { return [NSColor colorWithCalibratedRed:
     brand.frame = NSMakeRect(14.0, 16.0, 74.0, 16.0);
     [bar addSubview:brand];
 
-    NSTextField *edition = [NSTextField labelWithString:@"ESTUDIO"];
+    /* La edición y su versión: sin esto, dos compilaciones distintas se ven
+       iguales en una captura y no hay manera de saber cuál se está probando. */
+    NSDictionary *info = [[NSBundle mainBundle] infoDictionary];
+    NSString *version = info[@"CFBundleShortVersionString"] != nil
+                            ? info[@"CFBundleShortVersionString"] : @"0.0.0";
+    NSTextField *edition = [NSTextField labelWithString:
+        [NSString stringWithFormat:@"ESTUDIO · %@", version]];
     edition.font = [NSFont systemFontOfSize:9.0 weight:NSFontWeightMedium];
     edition.textColor = [NSColor colorWithCalibratedWhite:0.55 alpha:1.0];
-    edition.frame = NSMakeRect(14.0, 7.0, 74.0, 12.0);
+    edition.frame = NSMakeRect(14.0, 7.0, 120.0, 12.0);
     [bar addSubview:edition];
 
     /* Iconos: las doce herramientas del lienzo. */
@@ -1860,12 +1866,27 @@ static NSString *command_word(NSString *word)
 - (void)showAbout:(id)sender
 {
     (void) sender;
+    NSDictionary *info = [[NSBundle mainBundle] infoDictionary];
+    NSString *version = info[@"CFBundleShortVersionString"] != nil
+                            ? info[@"CFBundleShortVersionString"] : @"0.0.0";
+    NSString *build = info[@"CFBundleVersion"] != nil ? info[@"CFBundleVersion"] : @"0";
+    /* Lo que de verdad importa al abrir una incidencia: qué compilación es y si
+       encontró el catálogo con los pictogramas. */
+    NSString *catalog = self.hasCatalog
+        ? [NSString stringWithFormat:@"Catálogo: %lu piezas en %lu familias, con sus pictogramas.",
+                                     (unsigned long) norma_object_count(),
+                                     (unsigned long) norma_object_family_count()]
+        : [NSString stringWithFormat:@"Sin catálogo: %@", self.catalogError != nil ? self.catalogError
+                                                                                 : @"no se encontró resources/"];
     NSAlert *alert = [[NSAlert alloc] init];
-    alert.messageText = @"Normia Estudio (nativo)";
-    alert.informativeText = @"Etapa N1: ventana, lienzo y archivos, sin WebView.\n"
-                            @"Los cálculos los hace el mismo núcleo en C que la versión web usa en PHP, "
-                            @"con paridad comprobada.\n\n"
-                            @"Esta compilación no está firmada: macOS puede pedir permiso la primera vez.";
+    alert.messageText = [NSString stringWithFormat:@"Normia Estudio %@ (nativo)", version];
+    alert.informativeText = [NSString stringWithFormat:
+        @"Compilación %@ · macOS 12 o posterior, Intel y Apple Silicon.\n"
+         "%@\n\n"
+         "Los diseños del catálogo se dibujan con su pictograma, el mismo SVG que usa la "
+         "edición web, y los cálculos los hace el mismo núcleo en C con paridad comprobada.\n\n"
+         "Esta compilación no está firmada: macOS puede pedir permiso la primera vez.",
+        build, catalog];
     [alert runModal];
 }
 

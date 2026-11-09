@@ -130,6 +130,23 @@ static void test_pieces(const norma_object_catalog *catalog)
           here != NULL && here->svg != NULL && strcmp(here->family, "sign:location") == 0,
           here != NULL ? here->name : "sin señal");
 
+    /* El tipo de una señal llega escrito de muchas maneras: la web lo normaliza
+       antes de buscar el pictograma (`signTypeToCode()`) y aquí se acepta lo
+       mismo, para que un plano traído de la web no se quede sin dibujo. */
+    const norma_object_spec *e075 = norma_object_find("iso_e075");
+    check("«ISO_E075», «ISO-E075» y «E075» llegan a la misma señal",
+          e075 != NULL && norma_object_find("ISO_E075") == e075
+              && norma_object_find("ISO-E075") == e075 && norma_object_find("e075") == e075,
+          e075 != NULL ? e075->name : "sin señal");
+    check("El código de servicios «SVC_WC_MEN» encuentra su señal del editor",
+          norma_object_find("SVC_WC_MEN") != NULL
+              && norma_object_find("SVC_WC_MEN") == norma_object_find("sig_wc_men"),
+          norma_object_find("sig_wc_men") != NULL ? norma_object_find("sig_wc_men")->name : "sin señal");
+    check("Un tipo que no existe sigue sin encontrarse",
+          norma_object_find("iso_z999") == NULL && norma_object_find("cad_nada") == NULL
+              && norma_object_find("sig_") == NULL,
+          "iso_z999 · cad_nada · sig_");
+
     size_t without_svg = 0;
     for (size_t index = 0; index < norma_object_count(); index += 1) {
         const norma_object_spec *spec = norma_object_at(index);

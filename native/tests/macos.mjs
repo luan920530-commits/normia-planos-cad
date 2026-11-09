@@ -326,7 +326,7 @@ report.check('El tipo más largo del catálogo cabe en el elemento del plano',
 report.check('Hay un buscador para las 820 piezas, porque un menú plano no se recorrería',
   /Buscar en el catálogo…/.test(delegate) && /insertFromPicker:/.test(delegate)
   && /NormiaCatalogPicker pickFromCatalog:&_catalog/.test(delegate)
-  && /NSSearchField/.test(picker) && /NSTableView/.test(picker)
+  && /NSSearchField/.test(picker) && /NormiaCatalogGrid/.test(picker)
   && /pickFromCatalog:/.test(pickerHeader)
   && /- \(void\)controlTextDidChange:/.test(picker),
   '⌘⇧I · filtro sin tildes');
@@ -334,7 +334,7 @@ report.check('Hay un buscador para las 820 piezas, porque un menú plano no se r
 report.check('El buscador es AppKit de verdad, sin WebView ni HTML',
   !/WKWebView|innerHTML|document\.write/.test(strip([picker, pickerHeader].join('\n')))
   && !/innerHTML/.test(all),
-  'NSSearchField · NSTableView');
+  'NSSearchField · rejilla de tarjetas');
 
 report.check('Los atajos de Insertar van con ⌃ y no pisan las letras del lienzo',
   /NSEventModifierFlagControl/.test(delegate)
@@ -378,13 +378,19 @@ report.check('La exportación a SVG dibuja la misma puerta que la web',
   && /stroke-dasharray=\\"4 4\\"/.test(svgC) && /#237f52/.test(svgC) && /#475569/.test(svgC),
   'write_door · verde de salida');
 
-report.check('Los equipos y las señales se dibujan con pictograma, y sin catálogo con su caja',
+report.check('Los equipos y las señales se dibujan con su pictograma y nada más',
   /- \(void\)drawObject:\(const norma_element \*\)element selected:\(BOOL\)selected/.test(canvas)
   && /- \(NSColor \*\)colourForObject:/.test(canvas)
-  && /strcmp\(type, "cad_emg_firstaid"\) == 0/.test(canvas) && /strcmp\(type, "cad_emg_aed"\) == 0/.test(canvas)
-  && /static void write_box_object\(norma_buffer \*buffer, const norma_element \*element/.test(svgC)
-  && /caja, no desaparece/.test(signsTest),
-  'pictogramas · caja de reserva');
+  && /NormiaDrawSvgInContext\(context, spec->svg/.test(canvas)
+  && /CGContextSetRGBStrokeColor\(context, 0\.86, 0\.15, 0\.15/.test(canvas)
+  && !/Señal del catálogo: marco interior/.test(canvas),
+  'pictograma · rectángulo rojo de la web si falta · sin caja imitada');
+
+report.check('El lienzo no escribe el código de la señal debajo del pictograma',
+  /- \(NSString \*\)captionForObject:\(const norma_element \*\)element/.test(canvas)
+  && !/strncmp\(type, "iso_", 4\)/.test(canvas)
+  && !/@\"BOTIQUÍN\"/.test(canvas) && !/@\"CAMILLA\"/.test(canvas),
+  'solo lo que escribió la persona · SALIDA en las puertas');
 
 report.check('Los objetos de una sola caja llevan su rótulo con la medida y la unidad del plano',
   /- \(NSString \*\)captionForObject:\(const norma_element \*\)element/.test(canvas)
@@ -721,17 +727,30 @@ report.check('La ventana dibuja el pictograma del catálogo, no una caja con su 
   && /CGContextRotateCTM/.test(canvas) && /CGContextSetAlpha/.test(canvas),
   'pictograma · giro · opacidad');
 
-report.check('Solo las piezas sin SVG llevan su nombre escrito encima',
-  /const norma_object_spec \*spec = norma_object_find\(type\);/.test(canvas)
-  && /spec != NULL && spec->svg == NULL && spec->name\[0\] != '\\0'/.test(canvas),
-  'el nombre queda en el globo y el inspector');
+report.check('El pictograma se dibuja sin caja ni nombre encima, como en la web',
+  /norma_object_find\(element->type\)/.test(canvas)
+  && /spec != NULL && spec->svg != NULL/.test(canvas)
+  && !/spec != NULL && spec->svg == NULL && spec->name/.test(canvas),
+  'el nombre queda en el globo, el inspector y la biblioteca');
 
-report.check('El selector de catálogo y el inspector muestran la miniatura de cada pieza',
-  /NormiaThumbnailForType\(spec->type, 20\.0\)/.test(picker)
-  && /NSTableCellView/.test(picker) && /NSImageView/.test(picker)
-  && /NormiaThumbnailForType\(element->type, 32\.0\)/.test(inspector)
+report.check('La biblioteca visual muestra cada pictograma en una tarjeta, como la web',
+  /@interface NormiaCatalogGrid : NSView/.test(picker)
+  && /NormiaThumbnailForType\(spec->type, kThumbSide\)/.test(picker)
+  && /kCardWidth = 104\.0/.test(picker) && /kCardHeight = 112\.0/.test(picker)
+  && /kThumbSide = 56\.0/.test(picker)
+  && /- \(NSInteger\)indexAtPoint:/.test(picker) && /drawInRect/.test(picker),
+  'rejilla de tarjetas · pictograma 56 px · nombre y código');
+
+report.check('La biblioteca visual filtra por familia y busca sin tildes, como la web',
+  /NSPopUpButton \*family;/.test(picker) && /buildFamilyFilter/.test(picker)
+  && /Todas \(%lu\)/.test(picker) && /NSDiacriticInsensitiveSearch/.test(picker)
+  && /Doble clic o Intro para insertar/.test(picker),
+  'categorías · buscador · atajos');
+
+report.check('El inspector sigue mostrando la miniatura de la pieza elegida',
+  /NormiaThumbnailForType\(element->type, 32\.0\)/.test(inspector)
   && /heroPreview/.test(inspector) && /heroPreview\.hidden = YES/.test(inspector),
-  'fila 24 px · icono 20 · miniatura 32 en la ficha');
+  'miniatura 32 en la ficha');
 
 report.check('Las pruebas del intérprete dibujan los 820 pictogramas y miden su cobertura',
   /trace_paint/.test(svgdrawTest) && /raster/.test(svgdrawTest)

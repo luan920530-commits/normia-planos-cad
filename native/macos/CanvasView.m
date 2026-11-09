@@ -529,7 +529,14 @@ static const double kHalfPi = 1.57079632679489661923;
     }
 }
 
-/** Equipo o señal con caja: una caja con su pictograma dentro. */
+/**
+ * Equipo o señal del catálogo: su pictograma y nada más, como en la web.
+ *
+ * La caja gris con el código escrito debajo se retiró: la web dibuja el `<svg>`
+ * del catálogo y solo rotula lo que escribió la persona, así que aquí se hace
+ * lo mismo. Si una pieza no trae pictograma, queda el rectángulo rojo de aviso
+ * que usa la web para que el hueco se vea.
+ */
 - (void)drawObject:(const norma_element *)element selected:(BOOL)selected context:(CGContextRef)context
               zoom:(CGFloat)zoom
 {
@@ -570,102 +577,20 @@ static const double kHalfPi = 1.57079632679489661923;
         return;
     }
 
-    NSColor *colour = [self colourForObject:element];
-    CGColorRef cg = colour.CGColor;
-    CGContextSetStrokeColorWithColor(context, cg);
-    CGContextSetLineWidth(context, (CGFloat) (selected ? 2.6 : 1.4) / zoom);
-    const CGFloat radius = (CGFloat) fmin(4.0, fmin(w, h) * 0.12);
-    CGPathRef box = CGPathCreateWithRoundedRect(CGRectMake(element->x, element->y, w, h), radius, radius, NULL);
-    CGContextAddPath(context, box);
-    CGContextSetFillColorWithColor(context, [colour colorWithAlphaComponent:0.14].CGColor);
-    CGContextDrawPath(context, kCGPathFillStroke);
-    CGPathRelease(box);
-
-    CGContextSetFillColorWithColor(context, cg);
-    CGContextSetStrokeColorWithColor(context, cg);
-    const double cx = element->x + w / 2.0;
-    const double cy = element->y + h / 2.0;
-    const double size = fmin(w, h);
-    const char *type = element->type;
-
-    if (strcmp(type, "cad_emg_firstaid") == 0) {
-        /* Cruz blanca de botiquín. */
-        const double arm = size * 0.30;
-        const double thick = size * 0.13;
-        CGContextSetLineWidth(context, (CGFloat) thick);
-        CGContextSetLineCap(context, kCGLineCapButt);
-        CGContextBeginPath(context);
-        CGContextMoveToPoint(context, cx - arm, cy);
-        CGContextAddLineToPoint(context, cx + arm, cy);
-        CGContextMoveToPoint(context, cx, cy - arm);
-        CGContextAddLineToPoint(context, cx, cy + arm);
-        CGContextStrokePath(context);
-        return;
+    /* Sin pictograma no se inventa un dibujo: la web, cuando el catálogo no
+       trae el del tipo, deja un rectángulo rojo de aviso en la caja
+       (`renderer.js`). Se copia igual para que las dos ediciones se vean
+       idénticas y un dibujo que falta se note en vez de disimularse con una
+       caja gris y el código de la señal escrito debajo. */
+    CGContextSetRGBStrokeColor(context, 0.86, 0.15, 0.15, 1.0);
+    CGContextSetLineWidth(context, (CGFloat) (selected ? 2.0 : 1.0) / zoom);
+    CGContextStrokeRect(context, CGRectMake(element->x, element->y, w, h));
+    if (selected) {
+        CGContextSetRGBStrokeColor(context, 0.22, 0.52, 1.0, 0.9);
+        CGContextSetLineWidth(context, 1.0 / zoom);
+        CGContextStrokeRect(context, CGRectMake(element->x - 3.0 / zoom, element->y - 3.0 / zoom,
+                                                w + 6.0 / zoom, h + 6.0 / zoom));
     }
-    if (strcmp(type, "cad_emg_meeting") == 0) {
-        /* Cuatro flechas hacia fuera: el símbolo de punto de reunión. */
-        CGContextSetLineWidth(context, (CGFloat) (size * 0.09));
-        CGContextBeginPath(context);
-        const double inner = size * 0.16;
-        const double outer = size * 0.38;
-        for (int side = 0; side < 4; side += 1) {
-            const double angle = kHalfPi * (double) side;
-            const double dx = cos(angle);
-            const double dy = sin(angle);
-            CGContextMoveToPoint(context, cx + dx * inner, cy + dy * inner);
-            CGContextAddLineToPoint(context, cx + dx * outer, cy + dy * outer);
-            /* Punta de la flecha. */
-            const double tip = size * 0.11;
-            CGContextMoveToPoint(context, cx + dx * outer, cy + dy * outer);
-            CGContextAddLineToPoint(context, cx + dx * (outer - tip) - dy * tip * 0.7,
-                                    cy + dy * (outer - tip) + dx * tip * 0.7);
-            CGContextMoveToPoint(context, cx + dx * outer, cy + dy * outer);
-            CGContextAddLineToPoint(context, cx + dx * (outer - tip) + dy * tip * 0.7,
-                                    cy + dy * (outer - tip) - dx * tip * 0.7);
-        }
-        CGContextStrokePath(context);
-        return;
-    }
-    if (strcmp(type, "cad_emg_stretcher") == 0 || strcmp(type, "cad_hosp_stretcher") == 0) {
-        /* Camilla: dos barrotes y la cabecera. */
-        CGContextSetLineWidth(context, (CGFloat) (size * 0.07));
-        CGContextBeginPath(context);
-        CGContextMoveToPoint(context, cx - size * 0.34, cy - size * 0.16);
-        CGContextAddLineToPoint(context, cx + size * 0.34, cy - size * 0.16);
-        CGContextMoveToPoint(context, cx - size * 0.34, cy + size * 0.16);
-        CGContextAddLineToPoint(context, cx + size * 0.34, cy + size * 0.16);
-        CGContextStrokePath(context);
-        CGContextFillEllipseInRect(context, CGRectMake(cx - size * 0.40, cy - size * 0.12, size * 0.16,
-                                                      size * 0.24));
-        return;
-    }
-    if (strcmp(type, "cad_emg_aed") == 0) {
-        /* Rayo del desfibrilador. */
-        CGContextBeginPath(context);
-        CGContextMoveToPoint(context, cx + size * 0.06, cy - size * 0.30);
-        CGContextAddLineToPoint(context, cx - size * 0.18, cy + size * 0.04);
-        CGContextAddLineToPoint(context, cx + size * 0.02, cy + size * 0.04);
-        CGContextAddLineToPoint(context, cx - size * 0.08, cy + size * 0.30);
-        CGContextAddLineToPoint(context, cx + size * 0.20, cy - size * 0.06);
-        CGContextAddLineToPoint(context, cx, cy - size * 0.06);
-        CGContextClosePath(context);
-        CGContextFillPath(context);
-        return;
-    }
-    if (strncmp(type, "cad_fire_ext", 12) == 0 || strstr(type, "extinguisher") != NULL) {
-        /* Extintor: cuerpo y boquilla. */
-        CGContextFillRect(context, CGRectMake(cx - size * 0.13, cy - size * 0.18, size * 0.26, size * 0.42));
-        CGContextFillRect(context, CGRectMake(cx - size * 0.04, cy - size * 0.32, size * 0.08, size * 0.14));
-        CGContextSetLineWidth(context, (CGFloat) (size * 0.07));
-        CGContextBeginPath(context);
-        CGContextMoveToPoint(context, cx + size * 0.04, cy - size * 0.28);
-        CGContextAddLineToPoint(context, cx + size * 0.22, cy - size * 0.20);
-        CGContextStrokePath(context);
-        return;
-    }
-    /* Señal del catálogo: marco interior, como el pictograma que se imprime. */
-    CGContextSetLineWidth(context, (CGFloat) (size * 0.06));
-    CGContextStrokeRect(context, CGRectMake(element->x + w * 0.18, element->y + h * 0.18, w * 0.64, h * 0.64));
 }
 
 /* ------------------------------ maqueta de trazo ------------------------- */
@@ -1223,9 +1148,12 @@ static NSColor *colour_from_hex(const char *hex)
         if (element->node_count < 2) {
             NSString *caption = [self captionForObject:element];
             if (caption != nil) {
+                /* Como la web: el rótulo va centrado y 12 px por debajo de la
+                   caja, medidos en pantalla y no en centímetros del plano. */
                 [self drawLabel:caption
                          atPlan:((norma_point) {element->x + element->w / 2.0,
-                                                element->y + (element->h > 0.0 ? element->h : 0.0) + 4.0})];
+                                                element->y + (element->h > 0.0 ? element->h : 0.0)
+                                                    + 12.0 / _zoom})];
             }
             continue;
         }
@@ -1263,42 +1191,9 @@ static NSColor *colour_from_hex(const char *hex)
     if (norma_object_is_door(element->type)) {
         return element->is_exit ? @"SALIDA" : nil;
     }
-    const char *type = element->type;
-    if (strncmp(type, "iso_", 4) == 0 && strlen(type) == 8) {
-        return [[NSString stringWithUTF8String:type + 4] uppercaseString];
-    }
-    if (strncmp(type, "sig_", 4) == 0) {
-        return [NSString stringWithUTF8String:type + 4];
-    }
-    if (strcmp(type, "cad_ems_extinguisher") == 0 || strstr(type, "extinguisher") != NULL) {
-        return @"EXT";
-    }
-    if (strcmp(type, "cad_emg_firstaid") == 0) {
-        return @"BOTIQUÍN";
-    }
-    if (strcmp(type, "cad_emg_stretcher") == 0 || strcmp(type, "cad_hosp_stretcher") == 0) {
-        return @"CAMILLA";
-    }
-    if (strcmp(type, "cad_emg_aed") == 0) {
-        return @"DEA";
-    }
-    if (strcmp(type, "cad_emg_meeting") == 0) {
-        return @"ENCUENTRO";
-    }
-    if (strcmp(type, "text") == 0) {
-        return nil; /* el texto ya se rotula con su contenido */
-    }
-    if (strcmp(type, "parking") == 0) {
-        return @"P";
-    }
-    /* Una pieza del catálogo ya se reconoce por su pictograma: no se le escribe
-       el nombre encima, igual que en la web (el nombre va en el globo y en el
-       inspector). Solo se rotula lo que la persona escribió, que es lo que se
-       resuelve más arriba, o la pieza de respaldo que no tiene SVG. */
-    const norma_object_spec *spec = norma_object_find(type);
-    if (spec != NULL && spec->svg == NULL && spec->name[0] != '\0') {
-        return [NSString stringWithUTF8String:spec->name];
-    }
+    /* Ni códigos ni abreviaturas: la web no escribe «E075» debajo de una señal,
+       porque el pictograma ya la identifica. El nombre y el código siguen en el
+       globo, en el inspector y en la búsqueda del catálogo. */
     return nil;
 }
 

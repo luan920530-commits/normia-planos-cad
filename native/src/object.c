@@ -167,6 +167,87 @@ int norma_object_is_door(const char *type)
            || strcmp(type, "door_garage") == 0;
 }
 
+/**
+ * Escribe el tipo en su forma canónica: minúsculas, con `_` de separador y con
+ * el prefijo del editor (`iso_e075`, `sig_wc_men`, `plg_...`).
+ *
+ * La web acepta el tipo de una señal escrito de varias maneras —`iso_E002`,
+ * `ISO-E002`, `E002`— porque su intérprete lo normaliza antes de buscar el
+ * pictograma (`signTypeToCode()` en `renderer.js`). Aquí se hace lo mismo, y así
+ * un plano que traiga el código en mayúsculas se dibuja igual en las dos.
+ */
+/**
+ * ¿`text` empieza por `prefix`? Se compara a mano y no con `strncmp`: con una
+ * cadena corta el compilador conoce su longitud y avisa del exceso de límite,
+ * y aquí el prefijo se pregunta por muchos valores distintos.
+ */
+static int starts_with(const char *text, const char *prefix)
+{
+    size_t index = 0;
+    while (prefix[index] != '\0') {
+        if (text[index] != prefix[index]) {
+            return 0;
+        }
+        index += 1;
+    }
+    return 1;
+}
+
+static void canonical_type(const char *raw, char *out, size_t size)
+{
+    if (raw == NULL || out == NULL || size == 0) {
+        return;
+    }
+    char plain[64];
+    size_t length = 0;
+    for (const char *cursor = raw; *cursor != '\0' && length + 1 < sizeof(plain); cursor += 1) {
+        const unsigned char value = (unsigned char) *cursor;
+        if (value == ' ' || value == '\t') {
+            continue;
+        }
+        plain[length] = (value == '-' || value == ':' || value == '.') ? '_' : (char) tolower(value);
+        length += 1;
+    }
+    plain[length] = '\0';
+
+    /* Código suelto: «E075» es la señal E075; «SVC_WC_MEN» es la de servicios. */
+    const char *prefix = "";
+    const char *rest = plain;
+    if (length == 4 && strchr("efmpw", plain[0]) != NULL && isdigit((unsigned char) plain[1])
+        && isdigit((unsigned char) plain[2]) && isdigit((unsigned char) plain[3])) {
+        prefix = "iso_";
+    } else if (starts_with(plain, "iso_")) {
+        prefix = "iso_";
+        rest = plain + 4;
+    } else if (strcmp(plain, "iso") == 0) {
+        prefix = "iso_";
+        rest = plain + 3;
+    } else if (starts_with(plain, "svc_")) {
+        /* Las señales propias nacen con `SVC_` en la web y viven como `sig_`. */
+        prefix = "sig_";
+        rest = plain + 4;
+    } else if (starts_with(plain, "sig_")) {
+        prefix = "sig_";
+        rest = plain + 4;
+    } else if (starts_with(plain, "plg_")) {
+        prefix = "plg_";
+        rest = plain + 4;
+    }
+    while (*rest == '_') {
+        rest += 1;
+    }
+    /* El prefijo más largo son cuatro caracteres y el nombre, `out` entero: si
+       no cabe, se corta en vez de desbordar. */
+    size_t used = 0;
+    for (const char *cursor = prefix; *cursor != '\0' && used + 1 < size; cursor += 1) {
+        out[used++] = *cursor;
+    }
+    for (const char *cursor = rest; *cursor != '\0' && used + 1 < size; cursor += 1) {
+        out[used++] = *cursor;
+    }
+    out[used < size ? used : size - 1] = '\0';
+}
+
 const norma_object_spec *norma_object_find(const char *type)
 {
     if (type == NULL) {
@@ -175,6 +256,23 @@ const norma_object_spec *norma_object_find(const char *type)
     for (size_t index = 0; index < norma_object_count(); index += 1) {
         const norma_object_spec *spec = norma_object_at(index);
         if (spec != NULL && strcmp(spec->type, type) == 0) {
+            return spec;
+        }
+    }
+    /* La segunda pasada paga solo cuando el tipo viene escrito de otra manera. */
+    char wanted[64];
+    canonical_type(type, wanted, sizeof(wanted));
+    if (strcmp(wanted, type) == 0) {
+        return NULL;
+    }
+    for (size_t index = 0; index < norma_object_count(); index += 1) {
+        const norma_object_spec *spec = norma_object_at(index);
+        if (spec == NULL) {
+            continue;
+        }
+        char candidate[64];
+        canonical_type(spec->type, candidate, sizeof(candidate));
+        if (strcmp(candidate, wanted) == 0) {
             return spec;
         }
     }

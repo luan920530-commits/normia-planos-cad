@@ -992,12 +992,26 @@ static double parse_number(NSString *text)
         self.heroPreview.hidden = self.heroPreview.image == nil;
         self.summary.stringValue = type_name(element->type);
         self.summary.textColor = panelAccent();
-        self.metaLabel.stringValue = [NSString stringWithFormat:@"%@ · %@%@",
+        /* Si la pieza es del catálogo y su pictograma no aparece, se dice aquí:
+           es la primera pregunta al abrir una incidencia sobre una señal. */
+        NSString *picture = @"";
+        if (box && !door) {
+            const norma_object_spec *spec = norma_object_find(element->type);
+            if (spec == NULL) {
+                picture = @" · sin pictograma en el catálogo";
+            } else if (spec->svg == NULL) {
+                picture = @" · sin dibujo propio";
+            } else {
+                picture = [NSString stringWithFormat:@" · %s", spec->name];
+            }
+        }
+        self.metaLabel.stringValue = [NSString stringWithFormat:@"%@ · %@%@%@",
                                                                 box ? @"caja" : @"trazo",
                                                                 element->layer[0] != '\0'
                                                                     ? [NSString stringWithUTF8String:element->layer]
                                                                     : @"sin capa",
-                                                                element->locked ? @" · bloqueado" : @""];
+                                                                element->locked ? @" · bloqueado" : @"",
+                                                                picture];
         [self setField:@"x" value:[NSString stringWithFormat:@"%.0f", x]];
         [self setField:@"y" value:[NSString stringWithFormat:@"%.0f", y]];
         [self setField:@"w" value:[NSString stringWithFormat:@"%.0f", w]];

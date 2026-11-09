@@ -43,42 +43,43 @@ Editor de planos de emergencia y evacuación, en español, pensado para pequeña
 24. [Guía de primeros pasos](#guía-de-primeros-pasos)
 25. [Complementos](#complementos)
 26. [Unidades y medidas](#unidades-y-medidas)
-27. [Cambios de la versión 1.31.0](#cambios-de-la-versión-1310)
-28. [Cambios de la versión 1.30.0](#cambios-de-la-versión-1300)
-29. [Cambios de la versión 1.29.0](#cambios-de-la-versión-1290)
-30. [Cambios de la versión 1.28.0](#cambios-de-la-versión-1280)
-31. [Cambios de la versión 1.27.0](#cambios-de-la-versión-1270)
-32. [Cambios de la versión 1.26.0](#cambios-de-la-versión-1260)
-33. [Cambios de la versión 1.25.0](#cambios-de-la-versión-1250)
-34. [Cambios de la versión 1.24.0](#cambios-de-la-versión-1240)
-35. [Cambios de la versión 1.23.0](#cambios-de-la-versión-1230)
-36. [Cambios de la versión 1.22.0](#cambios-de-la-versión-1220)
-37. [Cambios de la versión 1.21.0](#cambios-de-la-versión-1210)
-38. [Cambios de la versión 1.20.0](#cambios-de-la-versión-1200)
-39. [Cambios de la versión 1.19.0](#cambios-de-la-versión-1190)
-40. [Cambios de la versión 1.18.0](#cambios-de-la-versión-1180)
-41. [Cambios de la versión 1.17.0](#cambios-de-la-versión-1170)
-42. [Cambios de la versión 1.16.0](#cambios-de-la-versión-1160)
-43. [Cambios de la versión 1.15.9](#cambios-de-la-versión-1159)
-44. [Cambios de la versión 1.15.8](#cambios-de-la-versión-1158)
-45. [Cambios de la versión 1.15.7](#cambios-de-la-versión-1157)
-46. [Cambios de la versión 1.15.6](#cambios-de-la-versión-1156)
-47. [Cambios de la versión 1.15.5](#cambios-de-la-versión-1155)
-48. [Cambios de la versión 1.15.4](#cambios-de-la-versión-1154)
-49. [Cambios de la versión 1.15.3](#cambios-de-la-versión-1153)
-50. [Cambios de la versión 1.15.2](#cambios-de-la-versión-1152)
-51. [Cambios de la versión 1.15.1](#cambios-de-la-versión-1151)
-52. [Cambios de la versión 1.15.0](#cambios-de-la-versión-1150)
-53. [Cambios de la versión 1.14.2](#cambios-de-la-versión-1142)
-54. [Cambios de la versión 1.14.1](#cambios-de-la-versión-1141)
-55. [Cambios de la versión 1.14.0](#cambios-de-la-versión-1140)
-56. [Cambios de la versión 1.13.0](#cambios-de-la-versión-1130)
-57. [Cambios de la versión 1.12.0](#cambios-de-la-versión-1120)
-58. [Cambios de la versión 1.11.1](#cambios-de-la-versión-1111)
-59. [Cambios de la versión 1.11.0](#cambios-de-la-versión-1110)
-60. [Cambios de la versión 1.10.0](#cambios-de-la-versión-1100)
-61. [Cambios de la versión 1.9.0](#cambios-de-la-versión-190)
-62. [Cambios de la versión 1.8.0](#cambios-de-la-versión-180)
+27. [Cambios de la versión 1.31.1](#cambios-de-la-versión-1311)
+28. [Cambios de la versión 1.31.0](#cambios-de-la-versión-1310)
+29. [Cambios de la versión 1.30.0](#cambios-de-la-versión-1300)
+30. [Cambios de la versión 1.29.0](#cambios-de-la-versión-1290)
+31. [Cambios de la versión 1.28.0](#cambios-de-la-versión-1280)
+32. [Cambios de la versión 1.27.0](#cambios-de-la-versión-1270)
+33. [Cambios de la versión 1.26.0](#cambios-de-la-versión-1260)
+34. [Cambios de la versión 1.25.0](#cambios-de-la-versión-1250)
+35. [Cambios de la versión 1.24.0](#cambios-de-la-versión-1240)
+36. [Cambios de la versión 1.23.0](#cambios-de-la-versión-1230)
+37. [Cambios de la versión 1.22.0](#cambios-de-la-versión-1220)
+38. [Cambios de la versión 1.21.0](#cambios-de-la-versión-1210)
+39. [Cambios de la versión 1.20.0](#cambios-de-la-versión-1200)
+40. [Cambios de la versión 1.19.0](#cambios-de-la-versión-1190)
+41. [Cambios de la versión 1.18.0](#cambios-de-la-versión-1180)
+42. [Cambios de la versión 1.17.0](#cambios-de-la-versión-1170)
+43. [Cambios de la versión 1.16.0](#cambios-de-la-versión-1160)
+44. [Cambios de la versión 1.15.9](#cambios-de-la-versión-1159)
+45. [Cambios de la versión 1.15.8](#cambios-de-la-versión-1158)
+46. [Cambios de la versión 1.15.7](#cambios-de-la-versión-1157)
+47. [Cambios de la versión 1.15.6](#cambios-de-la-versión-1156)
+48. [Cambios de la versión 1.15.5](#cambios-de-la-versión-1155)
+49. [Cambios de la versión 1.15.4](#cambios-de-la-versión-1154)
+50. [Cambios de la versión 1.15.3](#cambios-de-la-versión-1153)
+51. [Cambios de la versión 1.15.2](#cambios-de-la-versión-1152)
+52. [Cambios de la versión 1.15.1](#cambios-de-la-versión-1151)
+53. [Cambios de la versión 1.15.0](#cambios-de-la-versión-1150)
+54. [Cambios de la versión 1.14.2](#cambios-de-la-versión-1142)
+55. [Cambios de la versión 1.14.1](#cambios-de-la-versión-1141)
+56. [Cambios de la versión 1.14.0](#cambios-de-la-versión-1140)
+57. [Cambios de la versión 1.13.0](#cambios-de-la-versión-1130)
+58. [Cambios de la versión 1.12.0](#cambios-de-la-versión-1120)
+59. [Cambios de la versión 1.11.1](#cambios-de-la-versión-1111)
+60. [Cambios de la versión 1.11.0](#cambios-de-la-versión-1110)
+61. [Cambios de la versión 1.10.0](#cambios-de-la-versión-1100)
+62. [Cambios de la versión 1.9.0](#cambios-de-la-versión-190)
+63. [Cambios de la versión 1.8.0](#cambios-de-la-versión-180)
 63. [Paquetes y verificación](#paquetes-y-verificación)
 64. [Limitaciones](#limitaciones)
 65. [Créditos, licencias y atribución](#créditos-licencias-y-atribución)
@@ -1152,6 +1153,43 @@ siguen **pendientes** DEC-7 y DEC-9 a DEC-12. Están implementadas las etapas 1 
 4 (geometría en centímetros, medida por objeto, aforo calculado, ajuste por
 mediana y escala física al exportar); las etapas 5 a 10 no han empezado. Ni una
 tabla nueva: `user_version` sigue en 7.
+
+## Cambios de la versión 1.31.1
+
+**La señalización se ve como en la web: su pictograma, sin caja y sin código, y
+la biblioteca se elige mirando las tarjetas.**
+
+La 1.31.0 ya dibujaba el `<svg>` del catálogo, pero quedaban dos restos de la
+época de las cajas: la caja de reserva con el marco interior y el código de la
+señal escrito debajo. La web no hace ninguna de las dos cosas —pinta el
+pictograma y solo rotula lo que escribió la persona—, así que se igualó.
+
+- **El lienzo dibuja el pictograma y nada más** (`native/macos/CanvasView.m`):
+  se retiraron la caja gris, el marco interior y el rótulo `E075`. Si una pieza
+  no trae dibujo, queda el **rectángulo rojo de aviso** que usa la web, para que
+  el hueco se note en vez de disimularse. El rótulo solo aparece con el texto que
+  escribió la persona (y `SALIDA` en las puertas), centrado y a 12 px de la caja,
+  a la distancia de la web.
+- **La biblioteca visual, en tarjetas** (`native/macos/CatalogPicker.m`): el
+  buscador dejó de ser una tabla de nombres y pasó a ser una rejilla de tarjetas
+  de 104 × 112 con el pictograma a 56 px, el nombre y «código · familia», como el
+  modal de la web. Se recorre con las flechas, se elige con doble clic o Intro y
+  se filtra por **categoría** en un desplegable que cuenta las piezas de cada
+  familia (solo las que existen en el catálogo cargado).
+- **Un tipo de señal se encuentra escrito de cualquier manera**
+  (`native/src/object.c`): `iso_E075`, `ISO-E075` y `E075` llegan a la misma
+  señal, y `SVC_WC_MEN` a su señal de servicios, igual que la web normaliza el
+  código antes de buscar el pictograma (`signTypeToCode()`). Un plano traído de
+  la web ya no se queda sin dibujo por una mayúscula.
+- **El inspector dice qué pictograma es**: bajo la ficha añade el nombre de la
+  pieza del catálogo, o avisa «sin pictograma en el catálogo» cuando el tipo no
+  está, que es la primera pregunta al abrir una incidencia.
+- **La versión, a la vista**: la barra superior muestra «ESTUDIO · 1.31.1» y
+  *Acerca de Normia Estudio* dice la compilación y cuántas piezas cargó el
+  catálogo. Con eso se distingue de un vistazo una app vieja de una nueva, que es
+  justo lo que hacía falta cuando una captura mostraba cajas y no pictogramas.
+- **Pruebas**: `native/tests/macos.mjs` pasa a **124** comprobaciones y
+  `test_catalog.c` gana tres sobre los tipos escritos de otra manera.
 
 ## Cambios de la versión 1.31.0
 

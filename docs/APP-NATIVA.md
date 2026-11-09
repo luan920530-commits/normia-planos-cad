@@ -1185,9 +1185,12 @@ en el globo al pasar el ratón y en el inspector, como en la web.
 
 ### 3. El selector y el inspector
 
-El selector del catálogo (`⌘⇧I`, `⌃⇧S`, `⌃⇧E`) pinta cada fila con un
+> Actualizado en la 1.31.1: el selector dejó de ser una tabla. Ahora es la
+> **biblioteca visual** de tarjetas que describe la § 19.
+
+El selector del catálogo (`⌘⇧I`, `⌃⇧S`, `⌃⇧E`) pintaba cada fila con un
 `NSTableCellView`: miniatura de 20 × 20 y, al lado, el nombre y la familia. Las
-filas pasan de 22 a **24 px**. El inspector pone una miniatura de 32 × 32 en la
+filas pasaron a **24 px**. El inspector pone una miniatura de 32 × 32 en la
 ficha de la pieza (`heroPreview`, esquinas de 5 px), a la izquierda del nombre,
 y la oculta cuando no hay selección. Las miniaturas se rasterizan a 2× en un
 `CGBitmapContext` con fondo blanco y se guardan en un diccionario, así que
@@ -1263,3 +1266,31 @@ y un reintento lo sacó adelante; el paso ahora reintenta tres veces con espera
 creciente (commit `ff6eb1c`) para no volver a dejar la release sin `.pkg` ni
 `.exe`. Las notas se guardan en `docs/NOTAS-v1.31.0.md` y se aplican con
 `gh release edit`, porque los flujos que traían `body:` se pisaban entre sí.
+
+## 19. Etapa N8, hecha: la señalización se ve como en la web (1.31.1)
+
+La 1.31.0 dibujaba el `<svg>` del catálogo, pero en una captura del usuario las
+señales seguían saliendo como cajas verdes con `E075` debajo. La explicación es
+doble y las dos partes se atendieron.
+
+### 1. Lo que se vio era una app anterior
+
+El código de la 1.30.0 dibujaba cada señal como caja redondeada, marco interior y
+el código debajo (`git show e60d1af^:native/macos/CanvasView.m`), exactamente lo
+que mostraba la captura. La 1.31.0, publicada el mismo día, ya pintaba el
+pictograma. Como no había manera de saber qué compilación estaba abierta, ahora
+la barra superior dice **ESTUDIO · 1.31.1** y *Acerca de* añade la compilación y
+las piezas que cargó el catálogo.
+
+### 2. Lo que faltaba para parecerse a la web
+
+- **Sin caja y sin código**: la web pinta el pictograma y solo rotula lo que
+  escribió la persona. Se retiraron la caja, el marco interior y el rótulo del
+  código; si falta el dibujo, queda el rectángulo rojo de aviso de `renderer.js`.
+- **Biblioteca de tarjetas** (`CatalogPicker.m`): rejilla de 104 × 112 con el
+  pictograma a 56 px, el nombre y «código · familia», filtro por categoría con
+  sus cifras, búsqueda sin tildes, flechas y doble clic o Intro.
+- **Tipos tolerantes** (`object.c`): `ISO-E075`, `iso_E075` y `E075` llegan a la
+  misma pieza, y `SVC_WC_MEN` a `sig_wc_men`.
+- **Pruebas**: `macos.mjs` **124**, `test_catalog.c` **29** (tres nuevas).
+

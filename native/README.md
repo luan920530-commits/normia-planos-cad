@@ -16,8 +16,8 @@ medida otra vez por el motor), los **escenarios de ocupación temporal** y las
 contra PHP, y la **herramienta de dibujo de rutas** en el lienzo (`R`). También el
 **menú Insertar con el catálogo completo**: **820 piezas** —las 3 puertas, los **422
 objetos CAD** y las **395 señales**— en 41 familias, que se colocan con un clic, se
-arrastran enteras y se exportan con su pictograma; hay un **buscador** (`⌘⇧I`) para
-no recorrer 820 nombres a mano, y una puerta puede marcarse como **salida de
+arrastran enteras y se exportan con su pictograma; hay una **biblioteca visual** (`⌘⇧I`) con el pictograma de cada
+pieza en tarjetas, filtro por categoría y buscador, para no recorrer 820 nombres a mano, y una puerta puede marcarse como **salida de
 emergencia**. Lo que todavía no hay: Windows y Linux (N4). El
 **simulacro** ya entra en la nativa con su **tiempo objetivo** calculado por el núcleo
 (camino caminable, salida y punto de encuentro) y el **tiempo medido** con cronómetro, que
@@ -59,7 +59,7 @@ es lo que comprueba `tests/parity.mjs`.
 | Objetos | `include/normia/object.h`, `src/object.c` | **El catálogo completo: 820 piezas** (3 puertas + 422 objetos CAD + 395 señales) en 41 familias, con nombre, familia, color y pictograma; se leen de `resources/` en tiempo de ejecución y hay once de respaldo por si faltan. `norma_document_add_object/set_exit/move_object` los guardan en el plano |
 | Extintores | `include/normia/extinguisher.h`, `src/extinguisher.c` | NTC 2885 + Resolución 2400 y NFPA 10: recorrido por clase y riesgo, área por número de A, zonas descubiertas con su motivo y acciones cuantificadas (añadir, reubicar, subir rótulo) |
 | Pictogramas | `include/normia/svgdraw.h`, `src/svgdraw.c` | **El intérprete de los `<svg>` del catálogo**: `path` con curvas y arcos, `rect`, `circle`, `ellipse`, `line`, `polygon`, `polyline`, `g` con `transform` (`matrix`, `translate`, `scale`, `rotate`), `use`, `clipPath`, `style`, `fill-opacity`, `currentColor`, `stroke-dasharray` y el `<text>` de las nueve piezas que lo llevan. Traduce a un destino de dibujo propio, así que sirve igual para Core Graphics y para las pruebas. Los 820 pictogramas se dibujan de verdad: 4 794 rellenos, 26 366 curvas y 9 rótulos. La ventana lo enlaza por `macos/SvgPicture.m` |
-| Ventana de macOS | `macos/` | AppKit puro, con la maqueta de un CAD: **paleta de conjuntos de herramientas** a la izquierda (`ToolRail.m`), **tira de iconos** arriba, **inspector de capas y propiedades** a la derecha (`InspectorPanel.m`), **línea de comando** y **barra de estado con coordenadas** abajo. Las herramientas del editor web: seleccionar, mano, muro, línea, rectángulo, elipse, pluma, arco, texto, cota, ruta, insertar del catálogo (820 piezas, buscador en `⌘⇧I`), y el entorno —vía, andén, paso peatonal, parqueadero, lindero, tubería y canaleta—. Duplicar, girar, escalar por esquinas, rótulo, capa, color y salida de emergencia. macOS 12 |
+| Ventana de macOS | `macos/` | AppKit puro, con la maqueta de un CAD: **paleta de conjuntos de herramientas** a la izquierda (`ToolRail.m`), **tira de iconos** arriba, **inspector de capas y propiedades** a la derecha (`InspectorPanel.m`), **línea de comando** y **barra de estado con coordenadas** abajo. Las herramientas del editor web: seleccionar, mano, muro, línea, rectángulo, elipse, pluma, arco, texto, cota, ruta, insertar del catálogo (820 piezas, biblioteca visual de tarjetas en `⌘⇧I`), y el entorno —vía, andén, paso peatonal, parqueadero, lindero, tubería y canaleta—. Duplicar, girar, escalar por esquinas, rótulo, capa, color y salida de emergencia. macOS 12 |
 
 ## Compilar y probar
 
