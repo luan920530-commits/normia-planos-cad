@@ -1294,3 +1294,18 @@ las piezas que cargó el catálogo.
   misma pieza, y `SVC_WC_MEN` a `sig_wc_men`.
 - **Pruebas**: `macos.mjs` **124**, `test_catalog.c` **29** (tres nuevas).
 
+### 3. La entrega
+
+La etiqueta `v1.31.1` (commit `14f9f87`) publicó la release
+[v1.31.1](https://github.com/luan920530-commits/normia-planos-cad/releases/tag/v1.31.1)
+con sus 18 adjuntos y todos sus flujos en verde —«Verificar», «App nativa»,
+«Escritorio», «Escritorio (Electron)», «Android» y «Estudio»—, incluido el paso
+`spc craft` que en la 1.31.0 había que reintentar. El primer intento del flujo
+nativo de la etiqueta falló al compilar: el archivo de la biblioteca nueva se
+había escrito sin compilar por clang de macOS. Los errores —un protocolo que
+nombraba una clase todavía no declarada, la hoja declarada dos veces porque el
+`.h` ya la declara y `NSViewNoIntrinsicMetric` sin usar— se corrigieron en
+`14f9f87`, que es el commit de la etiqueta. La lección queda para las pruebas:
+`macos.mjs` revisa el código con expresiones regulares y no compila ObjC, así
+que un archivo nuevo se verifica compilándolo en un runner de macOS antes de
+etiquetar.

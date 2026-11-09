@@ -1190,6 +1190,12 @@ pictograma y solo rotula lo que escribió la persona—, así que se igualó.
   justo lo que hacía falta cuando una captura mostraba cajas y no pictogramas.
 - **Pruebas**: `native/tests/macos.mjs` pasa a **124** comprobaciones y
   `test_catalog.c` gana tres sobre los tipos escritos de otra manera.
+- **Publicada**: la release [v1.31.1](https://github.com/luan920530-commits/normia-planos-cad/releases/tag/v1.31.1)
+  lleva el `NormiaEstudio-nativo-macos12-universal-1.31.1.zip` (944 KB) con su
+  `.sha256`, las ediciones Electron de macOS (`.dmg`, `.pkg`, `.zip`), Windows,
+  Linux y el APK, con sus `SHA256SUMS.txt`. Sus notas viven en
+  `docs/NOTAS-v1.31.1.md`. Los cinco flujos de la etiqueta salieron en verde, el
+  de escritorio incluido, y los paquetes web quedan en `paquetes/v1.31.1/`.
 
 ## Cambios de la versión 1.31.0
 
