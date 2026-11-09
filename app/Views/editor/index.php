@@ -14,21 +14,25 @@
   <link rel="stylesheet" href="<?= e(asset('css/editor.css')) ?>">
 </head>
 <body class="editor-body">
+<?php $study = (bool) ($study ?? false); ?>
 <?php \App\Core\View::partial('partials/icons'); ?>
 <?php \App\Core\View::partial('partials/splash', ['splashTitle' => 'Abriendo el editor', 'splashLines' => ['Cargando el lienzo y el plano', 'Preparando señalización y equipos', 'Casi listo']]); ?>
 <div class="editor-app" id="editor-app">
   <header class="editor-topbar">
     <div class="editor-topbar-left">
+      <?php if (!$study): ?>
       <a class="rail-back" href="<?= e(url('projects/' . (int) $project['id'])) ?>" data-tooltip="Volver al proyecto" aria-label="Volver al proyecto">
         <svg class="icon"><use href="#i-chevron-left"></use></svg>
       </a>
-      <a class="editor-brand" href="<?= e(url('')) ?>" data-tooltip="Ir a mis planos" aria-label="Normia Planos CAD">
+      <?php endif; ?>
+      <a class="editor-brand" href="<?= e($study ? '#' : url('')) ?>" data-tooltip="<?= $study ? 'Normia Estudio' : 'Ir a mis planos' ?>" aria-label="Normia Planos CAD"<?= $study ? ' tabindex="-1"' : '' ?>>
         <span class="brand-mark small"><img src="<?= e(asset('img/normia-emblem.png')) ?>" alt="" width="32" height="32" decoding="async"></span>
       </a>
       <div class="editor-doc-title">
         <strong><?= e($project['name']) ?></strong>
         <span><span data-floor-label><?= e($floor['name']) ?></span> · <span data-version-label>v<?= e($floor['version']) ?></span> · <?= e($floor['level'] !== '' ? 'Nivel ' . $floor['level'] : 'Sin nivel') ?></span>
       </div>
+      <?php if (!$study): ?>
       <div class="floor-switcher menu-wrap">
         <button class="floor-switch-button" type="button" data-menu-toggle aria-expanded="false" aria-label="Cambiar de piso">
           <svg class="icon"><use href="#i-layers"></use></svg>
@@ -47,6 +51,9 @@
           <a class="menu-item menu-item-muted" href="<?= e(url('projects/' . (int) $project['id'] . '#pisos')) ?>"><svg class="icon"><use href="#i-plus"></use></svg>Añadir o gestionar pisos</a>
         </div>
       </div>
+      <?php else: ?>
+      <span class="study-chip" title="Editor suelto: el plano es un archivo de tu equipo"><svg class="icon"><use href="#i-file"></use></svg>Estudio</span>
+      <?php endif; ?>
     </div>
     <div class="editor-topbar-right">
       <div class="save-status" data-save-status data-state="saved" role="status" aria-live="polite">
@@ -62,9 +69,11 @@
         </button>
       </div>
       <div class="topbar-tools">
+        <?php if (!$study): ?>
         <button class="icon-button dark" type="button" data-open-drawer="versions" data-tooltip="Versiones del plano" aria-label="Versiones del plano">
           <svg class="icon"><use href="#i-history"></use></svg>
         </button>
+        <?php endif; ?>
         <button class="icon-button dark" type="button" data-open-drawer="footer" data-tooltip="Pie de plano" aria-label="Pie de plano">
           <svg class="icon"><use href="#i-layout-footer"></use></svg>
         </button>
@@ -79,7 +88,9 @@
             <svg class="icon"><use href="#i-chevron-down"></use></svg>
           </button>
           <div class="rail-flyout topbar-flyout" data-topbar-flyout role="menu" hidden>
+            <?php if (!$study): ?>
             <button type="button" role="menuitem" data-open-drawer="versions"><svg class="icon"><use href="#i-history"></use></svg>Versiones del plano</button>
+            <?php endif; ?>
             <button type="button" role="menuitem" data-open-drawer="footer"><svg class="icon"><use href="#i-layout-footer"></use></svg>Pie de plano</button>
             <button type="button" role="menuitem" data-open-drawer="guide"><svg class="icon"><use href="#i-guide"></use></svg>Guía de primeros pasos</button>
             <button type="button" role="menuitem" data-open-drawer="shortcuts"><svg class="icon"><use href="#i-keyboard"></use></svg>Atajos y ayuda</button>
@@ -211,7 +222,7 @@
           <div class="rail-flyout" data-view-flyout role="menu" hidden>
             <button type="button" role="menuitem" data-open-drawer="layers"><svg class="icon"><use href="#i-layers"></use></svg>Capas</button>
             <button type="button" role="menuitem" data-present-open><svg class="icon"><use href="#i-present"></use></svg>Modo presentación</button>
-            <button type="button" role="menuitem" data-open-drawer="settings"><svg class="icon"><use href="#i-settings"></use></svg>Ajustes del piso</button>
+            <button type="button" role="menuitem" data-open-drawer="settings"><svg class="icon"><use href="#i-settings"></use></svg><?= $study ? 'Ajustes del plano' : 'Ajustes del piso' ?></button>
           </div>
         </div>
       </div>
@@ -284,7 +295,9 @@
                 <button class="tool-choice" type="button" role="menuitem" data-open-drawer="networks"><span class="tool-choice-icon"><svg class="icon"><use href="#i-network"></use></svg></span><span class="tool-choice-name">Redes</span></button>
                 <button class="tool-choice" type="button" role="menuitem" data-open-drawer="layers"><span class="tool-choice-icon"><svg class="icon"><use href="#i-layers"></use></svg></span><span class="tool-choice-name">Capas</span></button>
                 <button class="tool-choice" type="button" role="menuitem" data-present-open><span class="tool-choice-icon"><svg class="icon"><use href="#i-present"></use></svg></span><span class="tool-choice-name">Presentar</span></button>
+                <?php if (!$study): ?>
                 <button class="tool-choice" type="button" role="menuitem" data-open-drawer="versions"><span class="tool-choice-icon"><svg class="icon"><use href="#i-history"></use></svg></span><span class="tool-choice-name">Versiones</span></button>
+                <?php endif; ?>
                 <button class="tool-choice" type="button" role="menuitem" data-open-drawer="footer"><span class="tool-choice-icon"><svg class="icon"><use href="#i-layout-footer"></use></svg></span><span class="tool-choice-name">Pie de plano</span></button>
                 <button class="tool-choice" type="button" role="menuitem" data-open-drawer="guide"><span class="tool-choice-icon"><svg class="icon"><use href="#i-guide"></use></svg></span><span class="tool-choice-name">Guía de primeros pasos</span></button>
                 <button class="tool-choice" type="button" role="menuitem" data-open-drawer="shortcuts"><span class="tool-choice-icon"><svg class="icon"><use href="#i-keyboard"></use></svg></span><span class="tool-choice-name">Atajos</span></button>
@@ -395,7 +408,7 @@
     </div>
     <div class="audit-toolbar">
       <button class="button button-primary button-small" type="button" data-audit-run><svg class="icon"><use href="#i-audit"></use></svg>Revisar el plano guardado</button>
-      <a class="button button-ghost button-small" data-audit-report href="<?= e(url('projects/' . (int) $project['id'] . '/floors/' . (int) $floor['id'] . '/audit')) ?>" target="_blank" rel="noopener"><svg class="icon"><use href="#i-export"></use></svg>Informe</a>
+      <a class="button button-ghost button-small" data-audit-report href="<?= e($study ? url('estudio/informe') : url('projects/' . (int) $project['id'] . '/floors/' . (int) $floor['id'] . '/audit')) ?>" target="_blank" rel="noopener"><svg class="icon"><use href="#i-export"></use></svg>Informe</a>
     </div>
     <div class="audit-content" data-audit-content>
       <p class="muted">Pulsa <strong>Revisar</strong> para medir recorridos, comprobar salidas y señalización y listar los hallazgos del plano guardado.</p>
@@ -528,10 +541,10 @@
     <button class="export-card" type="button" data-export="png"><span class="export-icon"><svg class="icon"><use href="#i-image"></use></svg></span><strong>PNG</strong><small>Imagen rasterizada a partir del SVG guardado. Útil para informes.</small><span class="export-action">Descargar <svg class="icon"><use href="#i-download"></use></svg></span></button>
     <button class="export-card" type="button" data-export="json"><span class="export-icon"><svg class="icon"><use href="#i-file"></use></svg></span><strong>JSON</strong><small>Formato propio validado. Conserva capas, textos, rotaciones y objetos.</small><span class="export-action">Descargar <svg class="icon"><use href="#i-download"></use></svg></span></button>
     <button class="export-card" type="button" data-export="print"><span class="export-icon"><svg class="icon"><use href="#i-print"></use></svg></span><strong>Imprimir / PDF</strong><small>Abre una hoja limpia; usa el diálogo del navegador para guardar PDF.</small><span class="export-action">Abrir <svg class="icon"><use href="#i-chevron-right"></use></svg></span></button>
-    <button class="export-card export-footer-card" type="button" data-open-drawer="footer" data-footer-open><span class="export-icon"><svg class="icon"><use href="#i-layout-footer"></use></svg></span><strong>Pie de plano</strong><small>Franja de orientación y datos del piso que acompaña al SVG, al PNG y a la impresión.</small><span class="export-action">Revisar <svg class="icon"><use href="#i-chevron-right"></use></svg></span></button>
+    <button class="export-card export-footer-card" type="button" data-open-drawer="footer" data-footer-open><span class="export-icon"><svg class="icon"><use href="#i-layout-footer"></use></svg></span><strong>Pie de plano</strong><small>Franja de orientación y datos del plano que acompaña al SVG, al PNG y a la impresión.</small><span class="export-action">Revisar <svg class="icon"><use href="#i-chevron-right"></use></svg></span></button>
     <div class="notice notice-info export-note"><svg class="icon"><use href="#i-info"></use></svg><p>Las exportaciones usan la última versión guardada, no cambios sin guardar. No se ofrece compatibilidad DWG/DXF en esta versión.</p></div>
   </div>
-  <footer class="drawer-foot"><p><a class="text-link" href="<?= e(url('projects/' . (int) $project['id'] . '#importar')) ?>">Importar un plano JSON</a> desde el proyecto.</p></footer>
+  <footer class="drawer-foot"><p><?php if ($study): ?>Los archivos guardados con <strong>Guardar</strong> se abren después con <strong>Archivo → Abrir</strong>.<?php else: ?><a class="text-link" href="<?= e(url('projects/' . (int) $project['id'] . '#importar')) ?>">Importar un plano JSON</a> desde el proyecto.<?php endif; ?></p></footer>
 </section>
 
 <section class="drawer drawer-narrow" data-drawer="footer" hidden aria-labelledby="footer-title">
@@ -540,12 +553,12 @@
     <button class="icon-button" type="button" data-close-drawer aria-label="Cerrar el pie de plano"><svg class="icon"><use href="#i-close"></use></svg></button>
   </header>
   <div class="drawer-body footer-body">
-    <p class="help-text">Este pie se agrega automáticamente debajo del plano en la exportación SVG, en el PNG y en la impresión. Toma los datos guardados del proyecto y del piso; los cambios sin guardar no aparecen hasta que guardes.</p>
+    <p class="help-text">Este pie se agrega automáticamente debajo del plano en la exportación SVG, en el PNG y en la impresión. Toma los datos guardados del <?= $study ? 'plano en curso' : 'proyecto y del piso' ?>; los cambios sin guardar no aparecen hasta que guardes.</p>
     <div class="footer-preview" data-footer-preview aria-live="polite">
       <p class="muted">Preparando la vista previa…</p>
     </div>
     <div class="footer-cells" data-footer-cells></div>
-    <div class="notice notice-info"><svg class="icon"><use href="#i-info"></use></svg><p>Las cinco celdas de orientación son fijas: posición actual, rutas, salidas, equipos contra incendios y punto de reunión. El bloque inferior incluye proyecto, piso, nivel, sitio, área, responsable, escala, unidad, versión, fecha de guardado, número de elementos y la nota de la aplicación que generó el plano.</p></div>
+    <div class="notice notice-info"><svg class="icon"><use href="#i-info"></use></svg><p>Las cinco celdas de orientación son fijas: posición actual, rutas, salidas, equipos contra incendios y punto de reunión. <?php if ($study): ?>El bloque inferior incluye el nombre del plano, el área, la escala, la unidad, la versión, la fecha de guardado, el número de elementos y la nota de la aplicación que generó el plano. Los datos de empresa y responsable quedan vacíos a propósito: el estudio no los inventa.<?php else: ?>El bloque inferior incluye proyecto, piso, nivel, sitio, área, responsable, escala, unidad, versión, fecha de guardado, número de elementos y la nota de la aplicación que generó el plano.<?php endif; ?></p></div>
   </div>
   <footer class="drawer-foot footer-actions">
     <button class="button button-primary button-small" type="button" data-export="print"><svg class="icon"><use href="#i-print"></use></svg>Imprimir con el pie</button>
@@ -555,35 +568,71 @@
 
 <section class="drawer drawer-narrow" data-drawer="settings" hidden aria-labelledby="settings-title">
   <header class="drawer-head">
-    <div><span class="eyebrow">Configuración</span><h2 id="settings-title">Ajustes del piso</h2></div>
+    <div><span class="eyebrow">Configuración</span><h2 id="settings-title"><?= $study ? 'Ajustes del plano' : 'Ajustes del piso' ?></h2></div>
     <button class="icon-button" type="button" data-close-drawer aria-label="Cerrar ajustes"><svg class="icon"><use href="#i-close"></use></svg></button>
   </header>
   <div class="drawer-body">
     <form class="form-stack" data-floor-settings-form>
-      <h3>Identificación</h3>
-      <label class="field"><span>Nombre del piso</span><input type="text" name="name" maxlength="80" value="<?= e($floor['name']) ?>" required></label>
+      <h3><?= $study ? 'Nombre del plano' : 'Identificación' ?></h3>
+      <label class="field"><span><?= $study ? 'Nombre del plano' : 'Nombre del piso' ?></span><input type="text" name="name" maxlength="80" value="<?= e($floor['name']) ?>" required></label>
+      <?php if (!$study): ?>
       <label class="field"><span>Nivel</span><input type="text" name="level" maxlength="40" value="<?= e($floor['level']) ?>" placeholder="1, Sótano, Mezzanine"></label>
-      <button class="button button-primary button-small" type="submit">Guardar datos del piso</button>
+      <?php else: ?>
+      <input type="hidden" name="level" value="">
+      <?php endif; ?>
+      <button class="button button-primary button-small" type="submit"><?= $study ? 'Poner el nombre' : 'Guardar datos del piso' ?></button>
     </form>
     <hr class="drawer-divider">
     <form class="form-stack" data-canvas-form>
       <h3>Lienzo y escala</h3>
+      <?php
+        /*
+         * La geometría se guarda en centímetros y el lienzo se **edita** en la
+         * unidad de trabajo (NORMIA-006 §4.4): quien trabaja en metros escribe
+         * 16 y no 1 600. Los límites son los mismos de siempre, expresados en
+         * esa unidad; `applyCanvasSettings()` los devuelve a centímetros.
+         */
+        $canvasUnit = (string) $floor['design']['canvas']['unit'];
+        $enUnidad = static fn (float $cm): string => rtrim(rtrim(number_format(
+          \App\Core\Units::fromCm($cm, $canvasUnit), 3, '.', ''
+        ), '0'), '.');
+        $decimales = $canvasUnit === 'mm' ? 0 : ($canvasUnit === 'm' ? 3 : 1);
+      ?>
       <div class="form-row">
-        <label class="field"><span>Ancho</span><input type="number" name="width" min="400" max="4000" step="1" value="<?= e($floor['design']['canvas']['width']) ?>" required></label>
-        <label class="field"><span>Alto</span><input type="number" name="height" min="300" max="3000" step="1" value="<?= e($floor['design']['canvas']['height']) ?>" required></label>
+        <label class="field"><span>Ancho (<?= e($canvasUnit) ?>)</span><input type="number" name="width" min="<?= e($enUnidad(400)) ?>" max="<?= e($enUnidad(4000)) ?>" step="<?= e((string) (10 ** -$decimales)) ?>" value="<?= e($enUnidad((float) $floor['design']['canvas']['width'])) ?>" required></label>
+        <label class="field"><span>Alto (<?= e($canvasUnit) ?>)</span><input type="number" name="height" min="<?= e($enUnidad(300)) ?>" max="<?= e($enUnidad(3000)) ?>" step="<?= e((string) (10 ** -$decimales)) ?>" value="<?= e($enUnidad((float) $floor['design']['canvas']['height'])) ?>" required></label>
       </div>
       <div class="form-row">
-        <label class="field"><span>Cuadrícula</span><input type="number" name="grid" min="5" max="100" step="1" value="<?= e($floor['design']['canvas']['grid']) ?>" required></label>
-        <label class="field"><span>Unidad</span><select name="unit"><?php foreach (['cm', 'm', 'mm'] as $unit): ?><option value="<?= e($unit) ?>" <?= $floor['design']['canvas']['unit'] === $unit ? 'selected' : '' ?>><?= e($unit) ?></option><?php endforeach; ?></select></label>
+        <label class="field"><span>Cuadrícula (<?= e($canvasUnit) ?>)</span><input type="number" name="grid" min="<?= e($enUnidad(5)) ?>" max="<?= e($enUnidad(100)) ?>" step="<?= e((string) (10 ** -$decimales)) ?>" value="<?= e($enUnidad((float) $floor['design']['canvas']['grid'])) ?>" required></label>
+        <label class="field"><span>Unidad de trabajo</span><select name="unit"><?php foreach (['cm', 'm', 'mm'] as $unit): ?><option value="<?= e($unit) ?>" <?= $canvasUnit === $unit ? 'selected' : '' ?>><?= e($unit) ?></option><?php endforeach; ?></select></label>
       </div>
       <label class="field"><span>Escala de referencia</span><input type="text" name="scale" pattern="1:[0-9]{1,5}" value="<?= e($floor['design']['canvas']['scale']) ?>" required><small>Referencia de impresión; verifica en sitio.</small></label>
       <label class="field"><span>Ocupación declarada (personas)</span><input type="number" name="occupancy" min="0" max="10000" step="1" value="<?= e((string) ($floor['design']['canvas']['occupancy'] ?? 0)) ?>"><small>Con 0 el auditor estima la ocupación por superficie libre y lo advierte en el informe.</small></label>
+      <fieldset class="scenario-fieldset">
+        <legend>Escenarios de ocupación temporal</legend>
+        <p class="help-text">Un evento con más gente que el uso habitual se revisa aparte: el aforo del piso no cambia. Hasta 8 escenarios por piso.</p>
+        <div class="scenario-rows" data-scenario-rows></div>
+        <button class="button button-ghost button-small" type="button" data-scenario-add>Añadir escenario</button>
+      </fieldset>
+      <fieldset class="scenario-fieldset drill-fieldset">
+        <legend>Simulacro de evacuación</legend>
+        <p class="help-text">El simulacro calcula el tiempo objetivo de cada ruta: reacción + camino a la salida + tramo al punto de encuentro. Si ya cronometraste uno, anótalo y el informe compara los dos.</p>
+        <div class="form-row">
+          <label class="field"><span>Reacción (s)</span><input type="number" name="reaction" min="0" max="600" step="5" value="<?= (int) ($floor['design']['canvas']['drill']['reactionS'] ?? 30) ?>"><small>Tiempo entre la alarma y el primer paso.</small></label>
+          <label class="field"><span>Tiempo medido (s)</span><input type="number" name="measured" min="1" max="7200" step="1" value="<?= isset($floor['design']['canvas']['drill']['measuredS']) ? (int) $floor['design']['canvas']['drill']['measuredS'] : '' ?>" placeholder="Sin registrar"><small>Opcional. Se cronometra en el simulacro real.</small></label>
+        </div>
+      </fieldset>
       <button class="button button-primary button-small" type="submit">Aplicar lienzo</button>
       <p class="help-text">Los cambios de lienzo forman parte del diseño y se confirman al guardar el plano.</p>
     </form>
+    <?php /* Ajuste a las medidas declaradas (NORMIA-006 §5.4). El editor lo rellena
+             solo cuando hay algo que decir: sin medidas el bloque no aparece. */ ?>
+    <section class="measure-fit" data-measure-fit hidden aria-live="polite"></section>
     <hr class="drawer-divider">
     <label class="switch-row"><span><strong>Guardado automático</strong><small>Guarda un borrador recuperable cada pocos segundos.</small></span><input type="checkbox" data-autosave-toggle checked></label>
+    <?php if (!$study): ?>
     <a class="text-link" href="<?= e(url('projects/' . (int) $project['id'] . '/edit')) ?>">Editar datos del proyecto</a>
+    <?php endif; ?>
   </div>
   <footer class="drawer-foot"><p>Las representaciones son esquemáticas y no certifican cumplimiento automático.</p></footer>
 </section>
@@ -645,6 +694,7 @@
 <textarea id="editor-boot" hidden><?= e(json_encode($boot, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?></textarea>
 <noscript><div class="noscript-warning">El editor necesita JavaScript activado. El servidor valida y guarda el diseño, pero el lienzo interactivo no estará disponible.</div></noscript>
 <script src="<?= e(asset('js/ui.js')) ?>" defer></script>
+<script src="<?= e(asset('js/lib/units.js')) ?>" defer></script>
 <script src="<?= e(asset('js/lib/geometry.js')) ?>" defer></script>
 <script src="<?= e(asset('js/lib/mep.js')) ?>" defer></script>
 <script src="<?= e(asset('js/lib/model.js')) ?>" defer></script>
@@ -659,6 +709,7 @@
 <script src="<?= e(asset('js/editor/present.js')) ?>" defer></script>
 <script src="<?= e(asset('js/editor/toolsearch.js')) ?>" defer></script>
 <script src="<?= e(asset('js/editor/guide.js')) ?>" defer></script>
+<?php if ($study): ?><script src="<?= e(asset('js/editor/study.js')) ?>" defer></script><?php endif; ?>
 <script src="<?= e(asset('js/editor.js')) ?>" defer></script>
 </body>
 </html>

@@ -5,27 +5,32 @@
   const G = root.Geometry;
   const NS = 'http://www.w3.org/2000/svg';
   const MIN_SIZE = 4;
+  /* Trazos de la pluma vectorial: cada clic deja un nodo y el tramo elástico
+     sigue al cursor. Arrastrar sigue creando el tramo de dos puntos. */
+  const PEN_TOOLS = ['wall', 'line', 'dimension', 'road', 'sidewalk', 'property'];
+  /* Solo cierran en circuito los trazos que delimitan un recinto o un borde. */
+  const PEN_CLOSED_TOOLS = ['wall', 'road', 'sidewalk', 'property'];
   const TYPE_HINTS = {
     select: 'Selecciona y arrastra para mover. Shift añade a la selección; Ctrl + clic baja al elemento que queda debajo; arrastra el fondo para seleccionar un área.',
     hand: 'Mano: arrastra para desplazar el lienzo sin tocar los elementos. Rueda para zoom; doble clic o 0 ajusta a pantalla.',
-    wall: 'Muro: arrastra para trazar. Mantén Shift para alinear horizontal o vertical. Esc vuelve a seleccionar.',
+    wall: 'Muro: haz clic para colocar cada nodo y el tramo sigue al cursor; Enter o doble clic termina. También puedes arrastrar un tramo recto. Shift alinea, Alt suelta la rejilla, Retroceso quita el último nodo y Esc cancela.',
     door: 'Puerta sencilla: haz clic sobre el muro; la hoja abre hacia arriba. Flip en el inspector para cambiar bisagra o lado.',
     door_double: 'Puerta doble: haz clic sobre el muro. Dos hojas encontradas; ajusta el ancho de la caja para el vano.',
     door_garage: 'Portón o reja de garaje: haz clic sobre el muro y ajusta el ancho de la caja al vano real.',
     route: 'Ruta de evacuación: haz clic para añadir puntos. Enter o doble clic termina; Esc cancela. Al terminar podrás arrastrar sus vértices.',
     text: 'Texto: haz clic para insertar una etiqueta y edítala en el inspector.',
-    dimension: 'Medida: arrastra entre dos puntos para acotar la distancia.',
-    line: 'Línea: arrastra entre dos puntos.',
+    dimension: 'Medida: haz clic en el primer punto y en el segundo; la cota se cierra con esos dos nodos. También puedes arrastrar entre los dos puntos.',
+    line: 'Línea: haz clic para añadir nodos; Enter o doble clic termina. También puedes arrastrar entre dos puntos.',
     rect: 'Rectángulo: arrastra desde una esquina hasta la opuesta.',
     ellipse: 'Elipse: arrastra para definir ancho y alto.',
     pipe: 'Tubería: arrastra o haz clic para trazar la red. Elige la red (agua, gas, desagües o incendio) en la flecha del botón y ajusta diámetro, material y pendiente en el inspector.',
     conduit: 'Tubería eléctrica: arrastra o haz clic para trazar el circuito. Asigna código, tensión y calibre en el inspector; el panel Redes calcula carga y caída de tensión.',
     place: 'Colocación: haz clic para insertar el recurso elegido. Mantén Shift para insertar varios. Esc cancela.',
-    road: 'Vía vehicular: arrastra para trazarla y ajusta ancho y carriles en el inspector. Ordena la lectura del plano; no bloquea el tránsito.',
-    sidewalk: 'Andén: arrastra para trazarlo junto a la vía; el ancho se ajusta en el inspector.',
+    road: 'Vía vehicular: haz clic para trazar el eje nodo a nodo (o arrastra un tramo). Ajusta ancho y carriles en el inspector. Ordena la lectura del plano; no bloquea el tránsito.',
+    sidewalk: 'Andén: haz clic para trazar el eje nodo a nodo (o arrastra) junto a la vía; el ancho se ajusta en el inspector.',
     crosswalk: 'Paso cebra: arrastra para dibujar la caja sobre la calzada.',
     parking: 'Parqueadero: arrastra para dibujar la caja; los puestos se reparten a 2,50 × 5,00 m.',
-    property: 'Límite de predio: arrastra para marcar el lindero. No es un muro y no bloquea el paso.',
+    property: 'Límite de predio: haz clic para marcar el lindero nodo a nodo (o arrastra). No es un muro y no bloquea el paso.',
   };
   const TYPE_NAMES = {
     wall: 'Muro', door: 'Puerta sencilla', door_double: 'Puerta doble', door_garage: 'Portón de garaje', route: 'Ruta de evacuación', text: 'Texto', dimension: 'Medida',
@@ -113,7 +118,11 @@
       this.renderNow();
       this.updateRulers();
       this.updateSaveStatus();
-      this.store.startAutosave(bootData.autosaveInterval, (error) => this.onAutosaveError(error));
+      // Sin intervalo (modo estudio) no hay borrador que guardar: el plano es
+      // un archivo y el espejo del servidor se refresca al guardar y al exportar.
+      if (Number(bootData.autosaveInterval) > 0) {
+        this.store.startAutosave(bootData.autosaveInterval, (error) => this.onAutosaveError(error));
+      }
       this.showBootNotices();
       // La guía de primeros pasos se abre una sola vez, cuando la pantalla de
       // bienvenida ya se retiró; el usuario puede desactivarla desde su pie y
@@ -397,6 +406,16 @@
 
       q('[data-floor-settings-form]')?.addEventListener('submit', (event) => this.saveFloorMeta(event));
       q('[data-canvas-form]')?.addEventListener('submit', (event) => this.applyCanvasSettings(event));
+      q('[data-canvas-form]')?.addEventListener('click', (event) => this.onScenarioClick(event));
+      q('[data-measure-fit]')?.addEventListener('click', (event) => {
+        if (event.target.closest('[data-measure-fit-apply]')) this.applyMeasureFit();
+        else if (event.target.closest('[data-measure-fit-dismiss]')) this.dismissMeasureFit();
+      });
+      // Cambiar de unidad solo reetiqueta el formulario: los números se
+      // convierten para que el lienzo mida lo mismo (NORMIA-006 §4.4).
+      q('[data-canvas-form] select[name="unit"]')?.addEventListener('change', (event) => {
+        this.retagCanvasForm(event.target.value);
+      });
       q('[data-autosave-toggle]')?.addEventListener('change', (event) => {
         this.store.autosaveEnabled = event.target.checked;
         this.updateSaveStatus();
@@ -462,6 +481,7 @@
       this.scheduleRender();
       if (this.activeDrawer === 'layers') this.renderLayers();
       if (this.activeDrawer === 'networks') this.renderNetworks();
+      if (this.activeDrawer === 'settings') this.renderMeasureFit();
       // El progreso de la guía sale del plano: un muro nuevo marca su paso.
       if (this.activeDrawer === 'guide') this.guide?.refresh();
       // El pliego se recalcula solo si su cajón está abierto; si no, se marca
@@ -482,6 +502,8 @@
       // los puntos ya confirmados antes de cambiar de herramienta.
       if (this.draft?.tool === 'route' && this.draft.points.length > 2) this.finishRoute();
       if (['pipe', 'conduit'].includes(this.draft?.tool) && this.draft.points.length > 2) this.finishPipe();
+      // La pluma cierra con los nodos ya colocados en vez de perderlos.
+      if (this.draft && PEN_TOOLS.includes(this.draft.tool) && this.draft.points.length > 2) this.finishDraft();
       this.tool = tool;
       this.draft = null;
       this.ghost = null;
@@ -701,6 +723,9 @@
       this.updateEmptyHint();
       this.updateRulers();
       this.measure?.drawOverlay();
+      /* El simulacro vive en una capa propia del SVG: el redibujado la reemplaza,
+         así que se vuelve a pintar con la posición del segundo en curso. */
+      this.present?.redrawOverlay();
     }
 
     updateHistoryButtons() {
@@ -975,9 +1000,86 @@
         this.insertAtPoint(this.tool, point);
         return;
       }
+      if (this.draft && PEN_TOOLS.includes(this.draft.tool)) {
+        // Con un trazo a medio dibujar, cada clic es un nodo: así se corrige
+        // la esquina anterior sin cerrar el muro.
+        this.addDraftNode(this.draftPoint(point, event));
+        return;
+      }
+      if (PEN_TOOLS.includes(this.tool)) {
+        // La pluma decide al soltar: un clic deja un nodo y un arrastre crea el
+        // tramo de dos puntos de siempre, sin gestos nuevos que aprender.
+        this.pending = {
+          mode: 'pen',
+          start: this.draftPoint(point, event),
+          startClient: { x: event.clientX, y: event.clientY },
+          pointerId: event.pointerId,
+          elementId: null,
+        };
+        this.svg.setPointerCapture?.(event.pointerId);
+        return;
+      }
       this.drag = { mode: 'draw', start: point, current: point, pointerId: event.pointerId };
       this.draft = { tool: this.tool, points: [point, point] };
       this.svg.setPointerCapture?.(event.pointerId);
+      this.scheduleRender();
+    }
+
+    /** Punto de un nodo nuevo: ajustado a la rejilla y, con Shift, alineado al nodo anterior. */
+    draftPoint(point, event = {}) {
+      const target = this.clampPoint(this.snapPoint(point, event));
+      if (!event.shiftKey || !this.draft) return target;
+      const committed = this.draft.points.slice(0, -1);
+      const anchor = committed[committed.length - 1];
+      if (!anchor) return target;
+      return Math.abs(target.x - anchor.x) >= Math.abs(target.y - anchor.y)
+        ? { x: target.x, y: anchor.y }
+        : { x: anchor.x, y: target.y };
+    }
+
+    /** Convierte el clic sostenido de la pluma en el arrastre de dos puntos. */
+    startPenDrag(pending, point) {
+      this.drag = { mode: 'draw', start: pending.start, current: point, pointerId: pending.pointerId };
+      this.draft = { tool: this.tool, points: [pending.start, point] };
+      this.svg.setPointerCapture?.(pending.pointerId);
+      this.scheduleRender();
+    }
+
+    /**
+     * Añade un nodo al trazo de la pluma. Devuelve el control al primer nodo
+     * cuando el clic cae encima: el muro cierra el recinto, como en un
+     * programa vectorial.
+     */
+    addDraftNode(point) {
+      if (!this.draft) {
+        this.draft = { tool: this.tool, points: [point, point] };
+      } else {
+        const committed = this.draft.points.slice(0, -1);
+        const first = committed[0];
+        const last = committed[committed.length - 1];
+        const closeDistance = 14 / (this.view.zoom || 1);
+        if (first && committed.length >= 3 && PEN_CLOSED_TOOLS.includes(this.draft.tool)
+          && G.distance(point, first) <= closeDistance) {
+          this.finishDraft(true);
+          return;
+        }
+        if (last && G.distance(point, last) < 2) {
+          // Un clic repetido en el mismo sitio no duplica el nodo.
+          this.updateRouteHint();
+          this.scheduleRender();
+          return;
+        }
+        this.draft.points.splice(this.draft.points.length - 1, 0, point);
+        // El tramo elástico arranca en el nodo recién fijado, no donde estaba
+        // el puntero la última vez que se movió.
+        this.draft.points[this.draft.points.length - 1] = { x: point.x, y: point.y };
+        // Una cota es entre dos puntos: el segundo nodo la cierra sola.
+        if (this.draft.tool === 'dimension' && this.draft.points.length > 2) {
+          this.finishDraft();
+          return;
+        }
+      }
+      this.updateRouteHint();
       this.scheduleRender();
     }
 
@@ -1112,6 +1214,7 @@
         if (pending.mode === 'transform') this.startTransform(pending);
         else if (pending.mode === 'vertex') this.startVertex(pending);
         else if (pending.mode === 'curve') this.startCurve(pending);
+        else if (pending.mode === 'pen') this.startPenDrag(pending, point);
         else this.startMove(pending);
       }
       if (this.pan) {
@@ -1193,6 +1296,13 @@
         this.scheduleRender();
         return;
       }
+      if (this.draft && PEN_TOOLS.includes(this.draft.tool)) {
+        // El último punto del borrador es el cursor elástico: se mueve con el
+        // puntero y no forma parte del trazo hasta que se hace clic.
+        this.draft.points[this.draft.points.length - 1] = this.draftPoint(point, event);
+        this.scheduleRender();
+        return;
+      }
       if ((this.tool === 'route' || this.tool === 'pipe' || this.tool === 'conduit') && this.draft) {
         const snapped = this.snapPoint(point, event);
         this.draft.points[this.draft.points.length - 1] = snapped;
@@ -1204,6 +1314,13 @@
       if (this.pending) {
         const pending = this.pending;
         this.pending = null;
+        // Pluma: un pointerdown que no llegó a arrastrar es un clic, y un clic
+        // deja un nodo.
+        if (pending.mode === 'pen') {
+          if (!cancelled) this.addDraftNode(pending.start);
+          else this.scheduleRender();
+          return;
+        }
         // Alt sin arrastre: el vértice señalado se elimina.
         if (pending.mode === 'vertex' && pending.altKey) {
           const element = this.model.element(pending.elementId);
@@ -1265,6 +1382,11 @@
     }
 
     onDoubleClick(event) {
+      if (this.draft && PEN_TOOLS.includes(this.draft.tool)) {
+        event.preventDefault();
+        this.finishDraft();
+        return;
+      }
       if (['pipe', 'conduit'].includes(this.draft?.tool)) {
         event.preventDefault();
         this.finishPipe();
@@ -1396,7 +1518,7 @@
         if (['wall', 'line', 'dimension', 'road', 'sidewalk', 'property'].includes(tool)) {
           const length = Math.hypot(end.x - start.x, end.y - start.y);
           if (length < MIN_SIZE) {
-            this.toast('Arrastra para trazar el elemento. Pulsa Esc para volver a seleccionar.', 'info');
+            this.toast('Haz clic para colocar los nodos o arrastra para trazar el tramo. Pulsa Esc para volver a seleccionar.', 'info');
             return;
           }
           this.model.addPath(tool, [start, end], {});
@@ -1407,6 +1529,40 @@
           }
           this.model.addBox(tool, (start.x + end.x) / 2, (start.y + end.y) / 2, width, height);
         }
+      } catch (error) {
+        this.toast(error.message, 'error');
+      }
+      this.scheduleRender();
+    }
+
+    /**
+     * Cierra el trazo de la pluma (muro, línea, medida, vía, andén o lindero)
+     * con los nodos ya confirmados. El último punto del borrador es el cursor
+     * elástico y no forma parte del trazo.
+     */
+    finishDraft(closed = false) {
+      const tool = this.draft?.tool;
+      if (!PEN_TOOLS.includes(tool)) return;
+      const committed = this.draft.points.slice(0, -1);
+      const points = committed.filter((point, index, list) => index === 0 || G.distance(point, list[index - 1]) > 2);
+      const name = TYPE_NAMES[tool] || 'Trazo';
+      this.draft = null;
+      this.updateRouteHint();
+      if (points.length < 2) {
+        this.toast(`${name}: necesita al menos dos nodos. Haz clic para trazar.`, 'info', { duration: 2800 });
+        this.scheduleRender();
+        return;
+      }
+      const closes = closed && PEN_CLOSED_TOOLS.includes(tool) && points.length >= 3;
+      if (closes) points.push({ x: points[0].x, y: points[0].y });
+      try {
+        this.model.addPath(tool, points, {});
+        const created = this.model.design.elements.at(-1);
+        const total = created ? Math.round(this.model.pathLength?.(created) ?? 0) : 0;
+        const detail = total > 0 ? ` · ${G.formatMeasurement(total, this.model.design.canvas.unit)}` : '';
+        this.toast(closes
+          ? `${name} con circuito cerrado · ${points.length - 1} nodos${detail}`
+          : `${name} · ${points.length} nodos${detail}`, 'success', { duration: 2600 });
       } catch (error) {
         this.toast(error.message, 'error');
       }
@@ -1483,7 +1639,11 @@
         return;
       }
       const count = Math.max(0, this.draft.points.length - 1);
-      hint.textContent = `Ruta de evacuación · ${count} punto${count === 1 ? '' : 's'} · clic en el primer punto para cerrar el circuito · Enter o doble clic termina · Retroceso quita el último · Esc cancela`;
+      const label = this.draft.tool === 'route' ? 'Ruta de evacuación' : (TYPE_NAMES[this.draft.tool] || 'Trazo');
+      const closing = this.draft.tool === 'route' || PEN_CLOSED_TOOLS.includes(this.draft.tool)
+        ? ' · clic en el primer punto para cerrar el circuito'
+        : '';
+      hint.textContent = `${label} · ${count} nodo${count === 1 ? '' : 's'}${closing} · Enter o doble clic termina · Retroceso quita el último · Esc cancela`;
     }
 
     /**
@@ -1722,7 +1882,7 @@
         this.scheduleRender();
         return;
       }
-      if (this.draft?.tool === 'route' && (event.key === 'Backspace' || event.key === 'Delete')) {
+      if (this.draft && (this.draft.tool === 'route' || PEN_TOOLS.includes(this.draft.tool)) && (event.key === 'Backspace' || event.key === 'Delete')) {
         event.preventDefault();
         const committed = this.draft.points.length - 1;
         if (committed > 1) this.draft.points.splice(this.draft.points.length - 2, 1);
@@ -1793,6 +1953,9 @@
         } else if (['pipe', 'conduit'].includes(this.draft?.tool)) {
           event.preventDefault();
           this.finishPipe();
+        } else if (this.draft && PEN_TOOLS.includes(this.draft.tool)) {
+          event.preventDefault();
+          this.finishDraft();
         }
         return;
       }
@@ -1849,6 +2012,9 @@
 
     /* ------------------------------- guardado ------------------------------- */
     async saveNow(note = 'Guardado manual', options = {}) {
+      // El ajuste a las medidas deja constancia en la nota de la versión
+      // (NORMIA-006 §5.4): el factor es toda la trazabilidad que hace falta.
+      const etiqueta = note === 'Guardado manual' && this.fitNote ? this.fitNote : note;
       if (this.store.saving) return;
       const force = options.force === true;
       const unversioned = this.store.version <= 1;
@@ -1859,7 +2025,7 @@
       }
       this.updateSaveStatus();
       try {
-        const result = await this.store.save(note);
+        const result = await this.store.save(etiqueta);
         if (!result) return;
         this.conflictVersion = null;
         this.updateVersionLabel();
@@ -1867,6 +2033,7 @@
         this.removeBannerByAction('reload');
         this.removeBannerByAction('download');
         this.updateSaveStatus();
+        if (etiqueta === this.fitNote) this.fitNote = null;
         this.audit?.invalidate();
         this.extinguishers?.invalidate();
         if (this.activeDrawer === 'versions') this.loadVersions();
@@ -2177,18 +2344,261 @@
       }
     }
 
+    /* --------------------------- formulario del lienzo --------------------------- */
+    /*
+     * El modelo guarda la geometría en centímetros; el formulario trabaja en la
+     * unidad elegida y muestra los mismos límites en esa unidad (NORMIA-006
+     * §4.4). Quien dibuja en metros escribe 16 y no 1 600; cambiar de unidad no
+     * toca los objetos ni el tamaño real del lienzo.
+     */
+    canvasFormUnit() {
+      const form = q('[data-canvas-form]');
+      return form?.dataset.unit || this.model.design.canvas.unit;
+    }
+
+    canvasFormDecimals(unit) {
+      return unit === 'mm' ? 0 : (unit === 'm' ? 3 : 1);
+    }
+
+    /** Rellena el formulario con el lienzo guardado, en la unidad indicada. */
+    fillCanvasForm(unit = this.model.design.canvas.unit) {
+      const form = q('[data-canvas-form]');
+      if (!form) return;
+      const canvas = this.model.design.canvas;
+      const decimals = this.canvasFormDecimals(unit);
+      const fmt = (cm) => String(Number(root.Units.fromCm(Number(cm), unit).toFixed(decimals)));
+      const campos = [['width', canvas.width, 400, 4000], ['height', canvas.height, 300, 3000], ['grid', canvas.grid, 5, 100]];
+      for (const [name, cm, min, max] of campos) {
+        const input = form.elements[name];
+        if (!input) continue;
+        input.value = fmt(cm);
+        input.min = fmt(min);
+        input.max = fmt(max);
+        input.step = String(10 ** -decimals);
+        const label = input.closest('label')?.querySelector('span');
+        if (label) label.textContent = `${label.dataset.base || label.textContent.replace(/\s*\([^)]*\)$/, '')} (${unit})`;
+      }
+      if (form.elements.unit) form.elements.unit.value = unit;
+      form.dataset.unit = unit;
+      this.renderScenarioRows();
+      const drill = canvas.drill || {};
+      if (form.elements.reaction) form.elements.reaction.value = String(Number(drill.reactionS ?? 30));
+      if (form.elements.measured) form.elements.measured.value = drill.measuredS ? String(Number(drill.measuredS)) : '';
+    }
+
+    /** Cambia la unidad visible del formulario sin mover ni redimensionar nada. */
+    retagCanvasForm(unit) {
+      const form = q('[data-canvas-form]');
+      if (!form || !['cm', 'm', 'mm'].includes(unit)) return;
+      const previa = this.canvasFormUnit();
+      if (previa === unit) return;
+      const factor = root.Units.toCm(1, unit) / root.Units.toCm(1, previa);
+      for (const name of ['width', 'height', 'grid']) {
+        const input = form.elements[name];
+        if (input && input.value !== '') input.value = String(Number((Number(input.value) * factor).toFixed(this.canvasFormDecimals(unit))));
+      }
+      this.fillCanvasForm(unit);
+    }
+
+    /* ---------------- ajuste a las medidas declaradas (DEC-3) ----------------
+     * Una frase y dos botones, nada más (NORMIA-006 §5.4). El cálculo vive en
+     * el modelo; aquí solo se cuenta lo que pasaría y se pide permiso.
+     */
+    renderMeasureFit() {
+      const host = q('[data-measure-fit]');
+      if (!host) return;
+      const fit = this.model.measureFit();
+      if (fit.count === 0) {
+        host.hidden = true;
+        host.innerHTML = '';
+        return;
+      }
+      const unidad = this.model.design.canvas.unit;
+      const metros = (cm) => root.Units.fromCm(Number(cm), 'm');
+      const medida = (cm) => `${metros(cm).toLocaleString('es-CO', { maximumFractionDigits: 2 })} m`;
+      const n = fit.count;
+      const residuo = fit.worstDeviationPct;
+      if (host.dataset.dismissedFor === `${n}:${fit.median.toFixed(6)}` && fit.applicable) {
+        host.hidden = true;
+        return;
+      }
+      const coinciden = fit.reason === 'coincide';
+      /* Con una sola medida no hay «media» que enseñar: se enseña el dibujo
+         frente a lo declarado, que es lo que la persona puede comprobar. */
+      const unica = n === 1 ? fit.rows[0] : null;
+      const cabecera = coinciden
+        ? `${n} ${n === 1 ? 'medida coincide' : 'medidas coinciden'} con el dibujo`
+        : (unica
+          ? `1 medida no coincide con el dibujo: mide ${medida(unica.drawn)} y se declararon ${medida(unica.measuredCm)}`
+          : `${n} medidas no coinciden con el dibujo (${fit.averageDeviationPct.toFixed(2)} % de media)`);
+      const aviso = !fit.consistent
+        ? `<p class="measure-fit-note is-warning">Las medidas no coinciden entre sí (hasta ${residuo.toFixed(1)} %). Revisa si alguna está en otra unidad o mal escrita; no se ajusta un plano con medidas contradictorias.</p>`
+        : (!fit.inRange
+          ? `<p class="measure-fit-note is-warning">El ajuste llevaría el lienzo a ${fit.after.width} × ${fit.after.height} cm, fuera de los límites del formato.</p>`
+          : '');
+      /* Residuo de cada medida tras el ajuste: lo que queda de diferencia una vez
+         aplicado el factor. Se enseñan las seis primeras para no llenar el cajón. */
+      const residuos = fit.rows.slice(0, 6).map((row) => {
+        const element = this.model.element(row.id);
+        const nombre = (element?.label || '').trim() || (element ? this.typeLabel(element) : 'Trazo');
+        return `<li>${esc(nombre)}: ${medida(row.drawn)} dibujados · ${medida(row.measuredCm)} declarados · queda ${(row.deviation * 100).toFixed(2)} %</li>`;
+      }).join('');
+      const resto = fit.rows.length > 6 ? `<li>y ${fit.rows.length - 6} más</li>` : '';
+      const detalle = coinciden ? '' : `
+        <ul class="measure-fit-list">
+          <li>El plano pasaría a medir <strong>${medida(fit.after.width)} × ${medida(fit.after.height)}</strong> (antes ${medida(fit.before.width)} × ${medida(fit.before.height)}).</li>
+          <li>${fit.moved} ${fit.moved === 1 ? 'elemento se movería' : 'elementos se moverían'} · se puede deshacer.</li>
+          ${residuos}${resto}
+        </ul>`;
+      const acciones = fit.applicable ? `
+        <div class="measure-fit-actions">
+          <button class="button button-primary button-small" type="button" data-measure-fit-apply>Ajustar el dibujo</button>
+          <button class="button button-ghost button-small" type="button" data-measure-fit-dismiss>Dejar solo las medidas</button>
+        </div>` : '';
+      host.innerHTML = `
+        <h3>Ajuste a las medidas</h3>
+        <p class="measure-fit-head">${cabecera}</p>
+        ${detalle}
+        ${aviso}
+        ${acciones}
+        <p class="help-text">El dibujo se reescala a la mediana de las medidas declaradas. No se guarda ningún factor: queda como un cambio más, con deshacer.</p>`;
+      host.hidden = false;
+      host.dataset.unit = unidad;
+    }
+
+    /** Aplica el ajuste como una edición más del historial. */
+    applyMeasureFit() {
+      let summary = null;
+      try {
+        summary = this.model.applyMeasureFit();
+      } catch (error) {
+        this.toast(error.message, 'error');
+        return;
+      }
+      if (!summary) {
+        this.toast('El dibujo ya coincide con las medidas declaradas.', 'info');
+        return;
+      }
+      // La nota de la próxima versión cuenta de dónde salió el cambio.
+      this.fitNote = `Ajuste a ${summary.count} ${summary.count === 1 ? 'medida' : 'medidas'} (×${summary.factor.toFixed(4)})`;
+      this.fit(true);
+      this.renderNow();
+      this.renderMeasureFit();
+      this.toast(`Plano ajustado a ${summary.count} ${summary.count === 1 ? 'medida' : 'medidas'} (×${summary.factor.toFixed(4)}). Se puede deshacer.`, 'success');
+    }
+
+    /** «Dejar solo las medidas»: no toca el dibujo y no vuelve a insistir con lo mismo. */
+    dismissMeasureFit() {
+      const host = q('[data-measure-fit]');
+      const fit = this.model.measureFit();
+      if (host) {
+        host.dataset.dismissedFor = `${fit.count}:${fit.median.toFixed(6)}`;
+        host.hidden = true;
+      }
+      this.toast('Se conserva el dibujo tal cual; las medidas declaradas siguen mandando en los cálculos.', 'info');
+    }
+
+    /* ------------------ escenarios de ocupación temporal ------------------
+     * A-04 (NORMIA-006 §31): una lista corta de nombre y personas. Se guarda con
+     * el plano y el auditor la calcula aparte; no toca el aforo del piso.
+     */
+    renderScenarioRows() {
+      const host = q('[data-scenario-rows]');
+      if (!host) return;
+      const scenarios = this.model.design.canvas.scenarios || [];
+      const rows = scenarios.map((scenario) => `
+        <div class="scenario-row" data-scenario-row>
+          <label class="field"><span>Nombre</span><input type="text" maxlength="60" data-scenario-name value="${esc(scenario.name || '')}" placeholder="Evento, hora pico, montaje…"></label>
+          <label class="field scenario-persons"><span>Personas</span><input type="number" min="1" max="10000" step="1" data-scenario-persons value="${Number(scenario.persons) || ''}"></label>
+          <button class="scenario-remove" type="button" data-scenario-remove data-tooltip="Quitar escenario" aria-label="Quitar escenario">
+            <svg class="icon" aria-hidden="true"><use href="#i-trash"></use></svg>
+          </button>
+        </div>`).join('');
+      host.innerHTML = rows || '<p class="muted scenario-empty">Sin escenarios: el piso se revisa con su aforo habitual.</p>';
+      const add = q('[data-scenario-add]');
+      if (add) add.disabled = scenarios.length >= 8;
+    }
+
+    /** Añadir o quitar una fila de escenario, sin guardar todavía. */
+    onScenarioClick(event) {
+      const add = event.target.closest('[data-scenario-add]');
+      if (add) {
+        const host = q('[data-scenario-rows]');
+        if (!host) return;
+        const count = host.querySelectorAll('[data-scenario-row]').length;
+        if (count >= 8) {
+          this.toast('Puedes declarar hasta 8 escenarios de ocupación por piso.', 'info');
+          return;
+        }
+        q('.scenario-empty', host)?.remove();
+        const html = `
+        <div class="scenario-row" data-scenario-row>
+          <label class="field"><span>Nombre</span><input type="text" maxlength="60" data-scenario-name placeholder="Evento, hora pico, montaje…"></label>
+          <label class="field scenario-persons"><span>Personas</span><input type="number" min="1" max="10000" step="1" data-scenario-persons placeholder="60"></label>
+          <button class="scenario-remove" type="button" data-scenario-remove data-tooltip="Quitar escenario" aria-label="Quitar escenario">
+            <svg class="icon" aria-hidden="true"><use href="#i-trash"></use></svg>
+          </button>
+        </div>`;
+        host.insertAdjacentHTML('beforeend', html);
+        const rows = host.querySelectorAll('[data-scenario-row]');
+        if (rows.length >= 8) add.disabled = true;
+        rows[rows.length - 1]?.querySelector('[data-scenario-name]')?.focus();
+        return;
+      }
+      const remove = event.target.closest('[data-scenario-remove]');
+      if (remove) {
+        remove.closest('[data-scenario-row]')?.remove();
+        const host = q('[data-scenario-rows]');
+        if (host && host.querySelectorAll('[data-scenario-row]').length === 0) {
+          host.innerHTML = '<p class="muted scenario-empty">Sin escenarios: el piso se revisa con su aforo habitual.</p>';
+        }
+        const add = q('[data-scenario-add]');
+        if (add) add.disabled = false;
+      }
+    }
+
+    /** Lee las filas del formulario; el modelo descarta las que no tienen nombre. */
+    readScenarioRows() {
+      const host = q('[data-scenario-rows]');
+      if (!host) return [];
+      return [...host.querySelectorAll('[data-scenario-row]')]
+        .map((row) => ({
+          name: row.querySelector('[data-scenario-name]')?.value || '',
+          persons: Number(row.querySelector('[data-scenario-persons]')?.value) || 0,
+        }))
+        .filter((scenario) => scenario.name.trim() !== '');
+    }
+
+    /** Tiempo de reacción y tiempo medido del simulacro (NORMIA-006 §32). */
+    readDrillFields() {
+      const form = q('[data-canvas-form]');
+      if (!form || !form.elements.reaction) return undefined;
+      const reactionS = Math.max(0, Math.min(600, Math.round(Number(form.elements.reaction.value) || 0)));
+      const measured = form.elements.measured ? Number(form.elements.measured.value) : 0;
+      const drill = { reactionS };
+      if (Number.isFinite(measured) && measured >= 1) drill.measuredS = Math.min(7200, Math.round(measured));
+      return drill;
+    }
+
     applyCanvasSettings(event) {
       event.preventDefault();
       const form = event.target;
       try {
+        const unit = form.elements.unit.value;
+        // Los números visibles están en la unidad que muestra el formulario.
+        const visible = form.dataset.unit || this.model.design.canvas.unit;
+        const toCm = (value) => root.Units.toCm(Number(value), visible);
         this.model.setCanvas({
-          width: Number(form.elements.width.value),
-          height: Number(form.elements.height.value),
-          grid: Number(form.elements.grid.value),
-          unit: form.elements.unit.value,
+          width: toCm(form.elements.width.value),
+          height: toCm(form.elements.height.value),
+          grid: toCm(form.elements.grid.value),
+          unit,
           scale: form.elements.scale.value.trim(),
           occupancy: form.elements.occupancy ? Number(form.elements.occupancy.value) || 0 : 0,
+          scenarios: this.readScenarioRows(),
+          drill: this.readDrillFields(),
         });
+        this.fillCanvasForm(unit);
         this.fit(true);
         this.renderNow();
         this.toast('Lienzo actualizado. Guarda para conservar el cambio.', 'success');
@@ -2293,16 +2703,30 @@
       const base = this.boot.footer;
       if (!base || !Array.isArray(base.cells) || base.cells.length === 0) return null;
       const canvas = this.model.design.canvas;
+      const fields = {
+        ...(base.fields || {}),
+        scale: canvas.scale,
+        unit: canvas.unit,
+        version: String(this.store.version),
+        count: String(this.model.design.elements.length),
+      };
+      /* El aforo llega calculado del servidor con el plano guardado. Si en esta
+         sesión se corrió la revisión, se usan sus cifras: son las mismas que el
+         informe que la persona acaba de leer y de imprimir. */
+      const report = this.audit?.report?.occupancy;
+      if (report) {
+        const numero = (value) => Number(value || 0).toLocaleString('es-CO', { maximumFractionDigits: 0 });
+        fields.aforo_max = numero(report.maxPersons);
+        fields.aforo_permitido = numero(report.permitted);
+        fields.aforo_superficie = `${Number(report.freeAreaM2 || 0).toLocaleString('es-CO', { maximumFractionDigits: 2 })} m²`;
+        fields.aforo_fuente = report.source === 'declared'
+          ? 'ocupación declarada en el piso y capacidad calculada por superficie'
+          : 'capacidad estimada por superficie libre (no hay ocupación declarada)';
+      }
       return {
         cells: base.cells,
         lines: Array.isArray(base.lines) ? base.lines : [],
-        fields: {
-          ...(base.fields || {}),
-          scale: canvas.scale,
-          unit: canvas.unit,
-          version: String(this.store.version),
-          count: String(this.model.design.elements.length),
-        },
+        fields,
       };
     }
 
@@ -2421,6 +2845,10 @@
       if (name === 'versions') this.loadVersions();
       if (name === 'layers') this.renderLayers();
       if (name === 'networks') this.renderNetworks();
+      if (name === 'settings') {
+        this.fillCanvasForm();
+        this.renderMeasureFit();
+      }
       if (name === 'audit') this.audit?.open();
       if (name === 'extinguishers') this.extinguishers?.open();
       if (name === 'schedule') this.schedule?.open();

@@ -30,9 +30,35 @@ De esos tres puntos salen el centro, el radio, el barrido y la flecha. No se usa
 curvas Bézier: el arco es una circunferencia real, de modo que el radio y la
 flecha que muestra el inspector son medibles y se pueden anotar en obra.
 
+### La pluma: un nodo por clic
+
+Desde la **1.27.0** los trazos de un solo eje —muro, línea, cota, vía, andén y
+límite de predio— se dibujan como en un editor vectorial:
+
+| Acción | Resultado |
+| --- | --- |
+| Clic | Fija un nodo. El tramo elástico y su cifra siguen al cursor. |
+| Clic sobre el primer nodo | Cierra el recinto (muro, vía, andén y lindero). |
+| `Enter` o doble clic | Termina el trazo con los nodos ya fijados. |
+| `Retroceso` | Quita el último nodo. |
+| `Esc` | Descarta el trazo a medio dibujar. |
+| `Shift` | Alinea el nodo nuevo con el anterior, horizontal o vertical. |
+| `Alt` | Suelta el ajuste a la rejilla mientras se coloca el nodo. |
+| Arrastrar | Crea el tramo de dos puntos de siempre. |
+
+Mientras se dibuja, el borrador muestra los **nodos de control** (el primero
+marcado como destino de cierre), el **grosor real del muro** —2 m por defecto,
+el mismo ancho con que se dibuja en el plano— y la **cifra del tramo elástico**,
+para saber cuánto va a medir antes de fijarlo.
+
+La pluma queda activa para trazar el tramo siguiente, así que un recinto se
+dibuja de corrido. Al cambiar de herramienta, el trazo a medio dibujar **se
+cierra con los nodos ya puestos** en vez de perderse. Una cota se cierra sola
+con el segundo nodo, porque una medida es entre dos puntos.
+
 ### Cómo se traza
 
-1. Dibuja el muro como siempre (`M`): dos clics o un arrastre.
+1. Dibuja el muro como siempre (`M`): un clic por nodo, dos clics o un arrastre.
 2. Selecciona el muro. En el centro de cada tramo aparece un **rombo**.
 3. Arrastra el rombo hacia el lado al que quieres que el muro se combe. El muro
    se convierte en arco en cuanto el punto de paso deja de ser colineal.

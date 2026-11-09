@@ -1,0 +1,160 @@
+# Aplicación nativa de macOS, para Monterey (macOS 12) y posteriores.
+#
+# Arma `NormiaEstudio.app` —AppKit puro, sin WebView, sin Electron y sin PHP—
+# como **binario universal** (Intel y Apple Silicon) compilado contra el SDK con
+# `-mmacosx-version-min=12.0`, comprueba que el Mach-O de las dos arquitecturas
+# pide macOS 12, la firma en modo ad-hoc y publica el ZIP con su SHA-256.
+#
+# Los runners son macOS 15; el destino lo pone el Makefile (`DEPLOYMENT=12.0`) y
+# el propio trabajo lee el `minos` de cada arquitectura con `otool -l`: si el
+# binario pidiera más que Monterey, el trabajo falla aquí y no en el Mac de quien
+# lo descarga.
+#
+# Firmas: sin certificado de Apple. Gatekeeper mostrará el aviso la primera vez y
+# `docs/ESCRITORIO.md` explica cómo abrirlo. El `.app` se entrega como artefacto
+# del trabajo y, si se dispara con una etiqueta `v*`, se adjunta a la release.
+name: App nativa de macOS (Monterey)
+
+on:
+  workflow_dispatch:
+    inputs:
+      deployment:
+        description: 'Versión mínima de macOS (por omisión, 12.0 = Monterey)'
+        required: false
+        default: '12.0'
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  monterey:
+    name: macOS 12 · universal (Intel + Apple Silicon)
+    runs-on: macos-15-intel
+    timeout-minutes: 30
+    env:
+      DEPLOYMENT: ${{ github.event.inputs.deployment || '12.0' }}
+      APP: native/macos/build/NormiaEstudio.app
+      BIN: native/macos/build/NormiaEstudio.app/Contents/MacOS/NormiaEstudio
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Comprobar los catálogos que viajan en el paquete
+        run: |
+          set -e
+          for archivo in iso7010-catalog.json service-signs.json cad-objects.json \
+                         extinguisher-criteria.json audit-criteria.json; do
+            test -s "resources/$archivo" || { echo "::error title=catálogos::falta resources/$archivo"; exit 1; }
+          done
+          echo "Catálogos: 395 señales + 422 objetos CAD + criterios del auditor." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Compilar la aplicación para macOS 12, en las dos arquitecturas
+        run: |
+          rm -rf native/macos/build
+          # Sin `tee` ni `pipefail`: el código de salida se guarda aparte para que
+          # un fallo de compilación no se pierda en una tubería.
+          make -C native/macos ARCHS="x86_64 arm64" DEPLOYMENT="$DEPLOYMENT" \
+            CFLAGS="-O2 -Wall -Wextra -Werror -Wno-unused-parameter" > build.log 2>&1 && ESTADO=0 || ESTADO=$?
+          # El resumen del trabajo se puede leer desde fuera; el registro no siempre.
+          {
+            echo "### Compilación (código $ESTADO)"
+            echo '```'
+            tail -n 20 build.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$ESTADO" -ne 0 ]; then
+            grep -E "error:|warning:|Undefined symbol|ld: " build.log > clang.txt 2>/dev/null || true
+            while IFS= read -r linea; do
+              echo "::error title=clang::$(printf '%s' "$linea" | tr -d '\r')"
+            done < clang.txt
+            echo "::error title=clang::la aplicación nativa no compiló (código $ESTADO)"
+            exit 1
+          fi
+
+      - name: Comprobar arquitecturas y el mínimo macOS 12
+        run: |
+          set -e
+          test -x "$BIN"
+          echo "Arquitecturas: $(lipo -archs "$BIN")"
+          ARQS="$(lipo -archs "$BIN")"
+          case "$ARQS" in
+            *x86_64*) ;;
+            *) echo "::error title=universal::falta la arquitectura Intel"; exit 1 ;;
+          esac
+          case "$ARQS" in
+            *arm64*) ;;
+            *) echo "::error title=universal::falta la arquitectura Apple Silicon"; exit 1 ;;
+          esac
+          # El Info.plist es la promesa; el Mach-O es lo que mira el sistema.
+          MIN="$(/usr/libexec/PlistBuddy -c 'Print :LSMinimumSystemVersion' "$APP/Contents/Info.plist")"
+          echo "LSMinimumSystemVersion: $MIN"
+          plutil -lint "$APP/Contents/Info.plist"
+          case "$MIN" in
+            "$DEPLOYMENT") ;;
+            *) echo "::error title=macOS::el paquete declara macOS $MIN y se pidió $DEPLOYMENT"; exit 1 ;;
+          esac
+          for ARQ in x86_64 arm64; do
+            MINOS="$(otool -l -arch "$ARQ" "$BIN" | awk '/LC_BUILD_VERSION/{visto=1} visto && /minos/{print $2; exit}')"
+            echo "minos $ARQ: ${MINOS:-sin LC_BUILD_VERSION}"
+            case "$MINOS" in
+              "$DEPLOYMENT") ;;
+              *) echo "::error title=macOS::la arquitectura $ARQ pide macOS ${MINOS:-desconocido}, no $DEPLOYMENT"; exit 1 ;;
+            esac
+            echo "::notice title=macOS::$ARQ pide macOS $MINOS"
+          done
+          echo "El binario corre en Monterey (12) y posteriores, en los dos Mac." >> "$GITHUB_STEP_SUMMARY"
+
+      # Las dos órdenes terminan solas: `--check` comprueba el núcleo y
+      # `--objects` cuenta el catálogo que quedó dentro del `.app`. Ninguna abre
+      # ventana, que es lo que colgaría el trabajo en un runner sin pantalla.
+      - name: Comprobar el núcleo y el catálogo dentro del .app, sin abrir ventana
+        run: |
+          set -e
+          "$BIN" --check
+          "$BIN" --objects > catalog.txt
+          head -n 3 catalog.txt
+          grep -q "820 piezas" catalog.txt
+          grep -q "41 familias" catalog.txt
+          { echo '### Catálogo dentro del paquete'; echo '```'; head -n 6 catalog.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Firmar en modo ad-hoc y comprimir el .app
+        run: |
+          set -e
+          codesign --force --deep --sign - "$APP"
+          codesign --verify --deep --strict --verbose=2 "$APP" || true
+          VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Contents/Info.plist")"
+          echo "Versión del paquete: $VERSION"
+          ZIP="NormiaEstudio-nativo-macos12-universal-${VERSION}.zip"
+          ditto -c -k --sequesterRsrc --keepParent "$APP" "$ZIP"
+          shasum -a 256 "$ZIP" | tee "$ZIP.sha256"
+          SIZE="$(du -h "$ZIP" | cut -f1)"
+          {
+            echo "### Paquete"
+            echo "- \`$ZIP\` ($SIZE), macOS ${DEPLOYMENT}+, universal."
+            echo '- Sin notarizar: la primera vez hay que abrirlo desde *Ajustes › Privacidad y seguridad*.'
+            echo '```'
+            cat "$ZIP.sha256"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "ZIP=$ZIP" >> "$GITHUB_ENV"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NormiaEstudio-nativo-macos12-universal
+          path: |
+            NormiaEstudio-nativo-macos12-universal-*.zip
+            NormiaEstudio-nativo-macos12-universal-*.zip.sha256
+          if-no-files-found: error
+
+      - name: Adjuntar a la release cuando se dispara con una etiqueta
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1 || \
+            gh release create "${GITHUB_REF_NAME}" --title "Normia ${GITHUB_REF_NAME}" \
+              --notes "Paquete de la aplicación nativa de macOS 12+ (universal)."
+          gh release upload "${GITHUB_REF_NAME}" "$ZIP" "$ZIP.sha256" --clobber

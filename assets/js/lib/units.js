@@ -5,6 +5,13 @@
 
   const SUPPORTED = ['mm', 'cm', 'm'];
   const DEFAULT_UNIT = 'cm';
+  /*
+   * Unidad en la que se guarda toda la geometría (NORMIA-006 §3). `canvas.unit`
+   * deja de ser un factor y pasa a ser la unidad de trabajo: cómo se leen y
+   * cómo se escriben las cifras. Para dibujar y medir, la unidad que importa es
+   * esta; la del plano solo se usa para componer texto.
+   */
+  const GEOMETRY_UNIT = 'cm';
   const TOLERANCE_CM = 0.5;
 
   /*
@@ -25,7 +32,14 @@
   const metersPerUnit = (unit) => cmPerUnit(unit) / 100;
   const unitsPerMeter = (unit) => 100 / cmPerUnit(unit);
   const toMeters = (value, unit) => Number(value) * metersPerUnit(unit);
-  const fromMeters = (meters, unit) => Number(meters) / metersPerUnit(unit);
+  /*
+   * Metros → unidades del lienzo. Multiplica por 100 y divide por los
+   * centímetros por unidad, igual que `Units::fromMeters()` en PHP, y no divide
+   * por los metros por unidad: las dos formas son iguales en matemáticas pero
+   * difieren en el último bit, y el plano se dibuja con las dos. Así PHP y JS
+   * devuelven exactamente el mismo número para cualquier entrada.
+   */
+  const fromMeters = (meters, unit) => Number(meters) * 100 / cmPerUnit(unit);
   const toCm = (value, unit) => Number(value) * cmPerUnit(unit);
   const fromCm = (cm, unit) => Number(cm) / cmPerUnit(unit);
 
@@ -51,6 +65,7 @@
   root.Units = {
     SUPPORTED,
     DEFAULT_UNIT,
+    GEOMETRY_UNIT,
     TOLERANCE_CM,
     isSupported,
     normalize,

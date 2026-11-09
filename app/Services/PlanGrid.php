@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Core\Units;
+
 /**
  * Rejilla de cálculo del plano.
  *
@@ -31,7 +33,9 @@ final class PlanGrid
         $canvas = $design['canvas'];
         $width = (float) $canvas['width'];
         $height = (float) $canvas['height'];
-        $cmPerUnit = self::cmPerUnit((string) $canvas['unit']);
+        // Geometría en centímetros (NORMIA-006 §3); la unidad es una etiqueta.
+        $unit = Units::GEOMETRY_UNIT;
+        $cmPerUnit = Units::cmPerUnit($unit);
         $cellCm = max(5.0, (float) $criteria['grid']['cellCm']);
         $cell = max(1.0, $cellCm / $cmPerUnit);
         $nx = max(1, (int) ceil($width / $cell));
@@ -42,7 +46,7 @@ final class PlanGrid
             $nx = max(1, (int) ceil($width / $cell));
             $ny = max(1, (int) ceil($height / $cell));
         }
-        $metersPerUnit = $cmPerUnit / 100;
+        $metersPerUnit = Units::metersPerUnit($unit);
         $cellM = $cell * $metersPerUnit;
         $cellAreaM2 = $cellM * $cellM;
 
@@ -219,7 +223,8 @@ final class PlanGrid
         float $height,
     ): void {
         $types = ['road', 'sidewalk', 'crosswalk', 'parking', 'property'];
-        $cmPerUnit = self::cmPerUnit($unit);
+        $cmPerUnit = Units::cmPerUnit(Units::GEOMETRY_UNIT);
+        $unit = Units::GEOMETRY_UNIT;
         $index = static fn (int $ix, int $iy): int => $iy * $nx + $ix;
         foreach ($design['elements'] ?? [] as $element) {
             $type = (string) ($element['type'] ?? '');
@@ -232,7 +237,7 @@ final class PlanGrid
             $h = (float) $element['h'];
             $rotation = (float) ($element['rotation'] ?? 0);
             $isArea = $type === 'crosswalk' || $type === 'parking';
-            $band = $isArea ? 0.0 : (($type === 'property' ? 0.0 : max(0.8, (float) ($element['widthM'] ?? 2)) * 100 / $cmPerUnit));
+            $band = $isArea ? 0.0 : (($type === 'property' ? 0.0 : Units::fromMeters(max(0.8, (float) ($element['widthM'] ?? 2)), $unit)));
             $reach = $isArea ? 0.0 : (($band > 0 ? $band / 2 : max(2.0, $cell * 0.5)) + $cell * 0.25);
             $points = $isArea ? [] : self::visualPoints($element, $unit);
             $margin = $isArea ? 0.0 : $reach + $cell;
@@ -293,6 +298,230 @@ final class PlanGrid
      * Vano de una puerta: el borde inferior de su caja, que es donde el
      * renderizador dibuja la hoja y donde debe abrirse el muro.
      */
+    /**
+     * Camino caminable entre dos puntos sobre la rejilla del plano.
+     *
+     * Es lo que separa una animación de una promesa: la figura no va en línea
+     * recta, va por donde se puede caminar. El recorrido se busca con Dijkstra
+     * de ocho vecinos sobre las celdas libres (los muros con su holgura quedan
+     * bloqueados y los vanos abiertos) y luego se simplifica con línea de vista,
+     * de modo que el trazo tenga las esquinas necesarias y ningún salto sobre una
+     * pared.
+     *
+     * `$allowExterior` deja usar el espacio de fuera del piso, que es lo que hace
+     * falta para caminar de la salida al punto de encuentro: la gente sale por la
+     * puerta y rodea la edificación, no la atraviesa.
+     *
+     * @param array $grid          Resultado de `build()`.
+     * @param array $from          Punto de partida en centímetros.
+     * @param array $to            Punto de llegada en centímetros.
+     * @param bool  $allowExterior Si el camino puede pasar por el exterior.
+     *
+     * @return array{found:bool,points:list<array{x:float,y:float}>,meters:float,cells:int}
+     */
+    public static function path(array $grid, array $from, array $to, bool $allowExterior = false): array
+    {
+        $empty = ['found' => false, 'points' => [], 'meters' => 0.0, 'cells' => 0];
+        if (!isset($grid['blocked'], $grid['exterior'], $grid['cell'], $grid['nx'], $grid['ny'])) {
+            return $empty;
+        }
+        $cell = (float) $grid['cell'];
+        $nx = (int) $grid['nx'];
+        $ny = (int) $grid['ny'];
+        $width = (float) $grid['width'];
+        $height = (float) $grid['height'];
+        $blocked = $grid['blocked'];
+        $exterior = $grid['exterior'];
+        $metersPerUnit = Units::metersPerUnit(Units::GEOMETRY_UNIT);
+        $index = static fn (int $ix, int $iy): int => $iy * $nx + $ix;
+        $allowed = static function (int $i) use ($blocked, $exterior, $allowExterior): bool {
+            if (($blocked[$i] ?? true)) {
+                return false;
+            }
+            return $allowExterior ? true : !($exterior[$i] ?? true);
+        };
+
+        $start = self::nearestAllowedCell((float) $from['x'], (float) $from['y'], $cell, $nx, $ny, $width, $height, $allowed);
+        $goal = self::nearestAllowedCell((float) $to['x'], (float) $to['y'], $cell, $nx, $ny, $width, $height, $allowed);
+        if ($start === null || $goal === null) {
+            return $empty;
+        }
+        [$sx, $sy] = $start;
+        [$gx, $gy] = $goal;
+        $startIndex = $index($sx, $sy);
+        $goalIndex = $index($gx, $gy);
+
+        $dist = array_fill(0, $nx * $ny, INF);
+        $parent = array_fill(0, $nx * $ny, -1);
+        $dist[$startIndex] = 0.0;
+        $queue = new \SplPriorityQueue();
+        $queue->setExtractFlags(\SplPriorityQueue::EXTR_BOTH);
+        $queue->insert($startIndex, 0);
+        $steps = [[1, 0, 1.0], [-1, 0, 1.0], [0, 1, 1.0], [0, -1, 1.0], [1, 1, 1.41421356], [1, -1, 1.41421356], [-1, 1, 1.41421356], [-1, -1, 1.41421356]];
+        while (!$queue->isEmpty()) {
+            $item = $queue->extract();
+            $current = (int) $item['data'];
+            $cost = -((float) $item['priority']);
+            if ($cost > $dist[$current] + 0.0001) {
+                continue;
+            }
+            if ($current === $goalIndex) {
+                break;
+            }
+            $ix = $current % $nx;
+            $iy = intdiv($current, $nx);
+            foreach ($steps as [$dx, $dy, $weight]) {
+                $jx = $ix + $dx;
+                $jy = $iy + $dy;
+                if ($jx < 0 || $jy < 0 || $jx >= $nx || $jy >= $ny) {
+                    continue;
+                }
+                $next = $index($jx, $jy);
+                if (!$allowed($next)) {
+                    continue;
+                }
+                /* La diagonal no puede cortar la esquina de un muro. */
+                if ($dx !== 0 && $dy !== 0) {
+                    if (!$allowed($index($ix + $dx, $iy)) || !$allowed($index($ix, $iy + $dy))) {
+                        continue;
+                    }
+                }
+                $candidate = $dist[$current] + $weight * $cell;
+                if ($candidate + 0.0001 < $dist[$next]) {
+                    $dist[$next] = $candidate;
+                    $parent[$next] = $current;
+                    $queue->insert($next, -$candidate);
+                }
+            }
+        }
+        if (!is_finite($dist[$goalIndex])) {
+            return $empty;
+        }
+
+        $cells = [];
+        $cursor = $goalIndex;
+        while ($cursor !== -1) {
+            $cells[] = $cursor;
+            if ($cursor === $startIndex) {
+                break;
+            }
+            $cursor = $parent[$cursor];
+        }
+        $cells = array_reverse($cells);
+        $raw = [[
+            'x' => (float) $from['x'],
+            'y' => (float) $from['y'],
+        ]];
+        foreach ($cells as $cellIndex) {
+            $raw[] = self::cellCenter($cellIndex % $nx, intdiv($cellIndex, $nx), $cell, $width, $height);
+        }
+        $raw[] = ['x' => (float) $to['x'], 'y' => (float) $to['y']];
+
+        /* Simplificación con línea de vista: se conservan las esquinas y se
+           descartan los escalones de la rejilla. */
+        $points = [$raw[0]];
+        $count = count($raw);
+        $i = 0;
+        while ($i < $count - 1) {
+            $jump = $i + 1;
+            for ($candidate = $count - 1; $candidate > $i + 1; $candidate -= 1) {
+                if (self::lineOfSight($raw[$i], $raw[$candidate], $cell, $nx, $ny, $blocked, $exterior, $allowExterior)) {
+                    $jump = $candidate;
+                    break;
+                }
+            }
+            $points[] = $raw[$jump];
+            $i = $jump;
+        }
+
+        $meters = 0.0;
+        for ($k = 1; $k < count($points); $k += 1) {
+            $meters += self::distance($points[$k - 1], $points[$k]) * $metersPerUnit;
+        }
+        return [
+            'found' => true,
+            'points' => array_map(static fn (array $point): array => ['x' => round($point['x'], 2), 'y' => round($point['y'], 2)], $points),
+            'meters' => round($meters, 2),
+            'cells' => count($cells),
+        ];
+    }
+
+    /**
+     * Celda libre más cercana a un punto, buscando en anillos.
+     *
+     * @return array{0:int,1:int}|null
+     */
+    private static function nearestAllowedCell(
+        float $x,
+        float $y,
+        float $cell,
+        int $nx,
+        int $ny,
+        float $width,
+        float $height,
+        callable $allowed
+    ): ?array {
+        $cx = max(0, min($nx - 1, (int) floor($x / $cell)));
+        $cy = max(0, min($ny - 1, (int) floor($y / $cell)));
+        if ($allowed($cy * $nx + $cx)) {
+            return [$cx, $cy];
+        }
+        for ($radius = 1; $radius <= 12; $radius += 1) {
+            $best = null;
+            $bestGap = null;
+            for ($iy = max(0, $cy - $radius); $iy <= min($ny - 1, $cy + $radius); $iy += 1) {
+                for ($ix = max(0, $cx - $radius); $ix <= min($nx - 1, $cx + $radius); $ix += 1) {
+                    if (max(abs($ix - $cx), abs($iy - $cy)) !== $radius) {
+                        continue;
+                    }
+                    if (!$allowed($iy * $nx + $ix)) {
+                        continue;
+                    }
+                    $center = self::cellCenter($ix, $iy, $cell, $width, $height);
+                    $gap = hypot($center['x'] - $x, $center['y'] - $y);
+                    if ($bestGap === null || $gap < $bestGap) {
+                        $bestGap = $gap;
+                        $best = [$ix, $iy];
+                    }
+                }
+            }
+            if ($best !== null) {
+                return $best;
+            }
+        }
+        return null;
+    }
+
+    /** ¿Se puede ir en línea recta entre dos puntos sin salir del espacio libre? */
+    private static function lineOfSight(
+        array $a,
+        array $b,
+        float $cell,
+        int $nx,
+        int $ny,
+        array $blocked,
+        array $exterior,
+        bool $allowExterior
+    ): bool {
+        $length = self::distance($a, $b);
+        $samples = max(1, (int) ceil($length / max(1.0, $cell * 0.4)));
+        for ($step = 0; $step <= $samples; $step += 1) {
+            $ratio = $step / $samples;
+            $x = $a['x'] + ($b['x'] - $a['x']) * $ratio;
+            $y = $a['y'] + ($b['y'] - $a['y']) * $ratio;
+            $ix = max(0, min($nx - 1, (int) floor($x / $cell)));
+            $iy = max(0, min($ny - 1, (int) floor($y / $cell)));
+            $index = $iy * $nx + $ix;
+            if (($blocked[$index] ?? true)) {
+                return false;
+            }
+            if (!$allowExterior && ($exterior[$index] ?? true)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     public static function doorOpening(array $element): array
     {
         $x = (float) $element['x'];
@@ -374,12 +603,13 @@ final class PlanGrid
         return hypot((float) $a['x'] - (float) $b['x'], (float) $a['y'] - (float) $b['y']);
     }
 
+    /**
+     * Centímetros por unidad del lienzo. Delega en `Units`, que es la autoridad
+     * única; se conserva el método porque lo usan `PathGeometry` y los
+     * exportadores.
+     */
     public static function cmPerUnit(string $unit): float
     {
-        return match ($unit) {
-            'm' => 100.0,
-            'mm' => 0.1,
-            default => 1.0,
-        };
+        return Units::cmPerUnit($unit);
     }
 }

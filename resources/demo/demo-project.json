@@ -19,7 +19,21 @@
           "unit": "cm",
           "scale": "1:100",
           "background": "#ffffff",
-          "occupancy": 30
+          "occupancy": 30,
+          "scenarios": [
+            {
+              "name": "Capacitación de brigada",
+              "persons": 30
+            },
+            {
+              "name": "Descargue de mercancía",
+              "persons": 12
+            }
+          ],
+          "drill": {
+            "reactionS": 30,
+            "measuredS": 63
+          }
         },
         "layers": [
           {
@@ -1798,6 +1812,66 @@
             "opacity": 1,
             "label": "",
             "locked": false
+          },
+          {
+            "id": "demo_botiquin",
+            "type": "cad_emg_firstaid",
+            "layerId": "capa_equipos",
+            "x": 86,
+            "y": 666,
+            "w": 48,
+            "h": 48,
+            "rotation": 0,
+            "color": "#b91c1c",
+            "stroke": 2,
+            "opacity": 1,
+            "label": "Botiquín",
+            "locked": false
+          },
+          {
+            "id": "demo_camilla",
+            "type": "cad_emg_stretcher",
+            "layerId": "capa_equipos",
+            "x": 222,
+            "y": 726,
+            "w": 96,
+            "h": 48,
+            "rotation": 0,
+            "color": "#c2410c",
+            "stroke": 2,
+            "opacity": 1,
+            "label": "Camilla",
+            "locked": false
+          },
+          {
+            "id": "demo_dea",
+            "type": "cad_emg_aed",
+            "layerId": "capa_equipos",
+            "x": 1446,
+            "y": 686,
+            "w": 48,
+            "h": 48,
+            "rotation": 0,
+            "color": "#b91c1c",
+            "stroke": 2,
+            "opacity": 1,
+            "label": "DEA",
+            "locked": false
+          },
+          {
+            "id": "demo_encuentro",
+            "type": "cad_emg_meeting",
+            "layerId": "capa_equipos",
+            "x": 1542,
+            "y": 882,
+            "w": 56,
+            "h": 56,
+            "rotation": 0,
+            "color": "#0f766e",
+            "stroke": 2,
+            "opacity": 1,
+            "label": "Punto de encuentro",
+            "locked": false
           }
         ],
         "groups": [
@@ -2434,7 +2508,13 @@
           "grid": 20,
           "unit": "cm",
           "scale": "1:100",
-          "background": "#ffffff"
+          "background": "#ffffff",
+          "scenarios": [
+            {
+              "name": "Hora pico de cafetería",
+              "persons": 26
+            }
+          ]
         },
         "layers": [
           {

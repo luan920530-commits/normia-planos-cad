@@ -8,12 +8,54 @@
   <link rel="icon" href="<?= e(asset('img/favicon.svg')) ?>" type="image/svg+xml">
   <link rel="stylesheet" href="<?= e(asset('css/app.css')) ?>">
   <link rel="stylesheet" href="<?= e(asset('css/print.css')) ?>">
+  <style>@page { size: <?= e($paper['css']) ?>; margin: 12mm; }</style>
 </head>
 <body class="print-body">
 <div class="print-toolbar">
   <a class="button button-ghost" href="<?= e($backUrl) ?>"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="m15 5-7 7 7 7"/></svg>Volver al editor</a>
   <div class="print-title"><strong><?= e($floor['name']) ?></strong><span><?= e($floor['project_name']) ?> · v<?= e($version) ?></span></div>
   <button class="button button-primary" type="button" data-print-button><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M7 8V3h10v5M7 17H4V9h16v8h-3"/><rect x="7" y="14" width="10" height="7" rx="1"/></svg>Imprimir / Guardar PDF</button>
+</div>
+<?php
+/* Selector de escala y hoja (NORMIA-006 §17). Cambiar cualquiera de los dos no
+   toca el documento: solo vuelve a dibujar la exportación. */
+$mm = static fn (float $value): string => str_replace('.', ',', number_format($value, 1, ',', '.'));
+$format = static fn (float $value): string => str_replace('.', ',', number_format($value, 2, ',', '.'));
+?>
+<div class="print-options">
+  <form class="print-options-form" method="get" action="<?= e(url('')) ?>">
+    <input type="hidden" name="r" value="<?= e('projects/' . (int) $project['id'] . '/floors/' . (int) $floor['id'] . '/print') ?>">
+    <label>Escala
+      <select name="escala" data-print-scale>
+        <?php foreach ($scales as $option): ?>
+          <option value="<?= e($option) ?>"<?= $option === $scale ? ' selected' : '' ?>><?= e($option) ?></option>
+        <?php endforeach; ?>
+      </select>
+    </label>
+    <label>Hoja
+      <select name="hoja" data-print-paper>
+        <?php foreach ($papers as $key => $option): ?>
+          <option value="<?= e($key) ?>"<?= $key === $paperKey ? ' selected' : '' ?>><?= e($option['label']) ?></option>
+        <?php endforeach; ?>
+      </select>
+    </label>
+    <button class="button button-ghost" type="submit">Aplicar</button>
+    <?php if ($suggested !== null && $suggested !== $scale): ?>
+      <a class="button button-ghost" href="<?= e($printUrl . '&escala=' . rawurlencode($suggested) . '&hoja=' . rawurlencode($paperKey)) ?>" data-print-fit>Ajustar a la hoja · <?= e($suggested) ?></a>
+    <?php endif; ?>
+  </form>
+  <p class="print-size<?= $fits ? '' : ' is-warning' ?>" data-print-size>
+    Escala <strong><?= e($scale) ?></strong> · <?= e($paper['label']) ?> · el plano mide
+    <strong><?= e($mm((float) $sheet['planWidthMm'])) ?> × <?= e($mm((float) $sheet['planHeightMm'])) ?> mm</strong>
+    y la hoja completa <?= e($mm((float) $sheet['widthMm'])) ?> × <?= e($mm((float) $sheet['heightMm'])) ?> mm.
+    <?php if ($fits): ?>
+      Cabe en <?= e($mm($availableWidth)) ?> × <?= e($mm($availableHeight)) ?> mm útiles: imprime sin recortes.
+    <?php else: ?>
+      <strong>No cabe en la hoja elegida</strong>: se recortaría.
+      <?php if ($suggested !== null): ?>Usa «Ajustar a la hoja» (<?= e($suggested) ?>) o una hoja mayor.<?php else: ?>Usa una hoja mayor o una escala menor.<?php endif; ?>
+    <?php endif; ?>
+  </p>
+  <p class="print-size">El archivo ya viene a tamaño real: al imprimir, desactiva «ajustar a la página» para conservar la escala. La barra del pie sirve para comprobarlo con una regla.</p>
 </div>
 <main class="print-sheet">
   <div class="print-svg"><?= $svg ?></div>
