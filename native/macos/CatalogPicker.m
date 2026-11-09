@@ -26,6 +26,10 @@ static const CGFloat kCardGap = 10.0;
 static const CGFloat kGridInset = 14.0;
 static const CGFloat kThumbSide = 56.0;
 
+/* Los dos se declaran antes de sus protocolos: el protocolo nombra a la clase. */
+@class NormiaCatalogGrid;
+@class NormiaCatalogChips;
+
 @protocol NormiaCatalogGridDelegate <NSObject>
 - (void)gridSelectionChanged:(NormiaCatalogGrid *)grid;
 - (void)gridActivated:(NormiaCatalogGrid *)grid;
@@ -97,7 +101,9 @@ static const CGFloat kThumbSide = 56.0;
     const NSInteger columns = [self columns];
     const size_t rows = self.matchCount == 0 ? 0
                                             : (self.matchCount + (size_t) columns - 1) / (size_t) columns;
-    return NSMakeSize(NSViewNoIntrinsicMetric,
+    /* El alto es lo que importa: la rejilla es el documento del `NSScrollView` y
+       su ancho lo pone la vista que la contiene. */
+    return NSMakeSize(NSWidth(self.bounds),
                       kGridInset * 2.0 + (CGFloat) rows * (kCardHeight + kCardGap));
 }
 
@@ -457,8 +463,10 @@ static NSDictionary *chip_attributes(BOOL chosen)
 
 /* -------------------------------- la hoja -------------------------------- */
 
-@interface NormiaCatalogPicker : NSObject <NormiaCatalogGridDelegate, NormiaCatalogChipsDelegate,
-                                          NSSearchFieldDelegate>
+/* Extensión de la clase pública: `CatalogPicker.h` ya declara la interfaz y sus
+   dos métodos de clase; aquí solo van los detalles de la hoja. */
+@interface NormiaCatalogPicker () <NormiaCatalogGridDelegate, NormiaCatalogChipsDelegate,
+                                   NSSearchFieldDelegate>
 @property(nonatomic, strong) NSWindow *window;
 @property(nonatomic, strong) NSSearchField *search;
 @property(nonatomic, strong) NormiaCatalogChips *chips;
