@@ -1294,6 +1294,12 @@ las piezas que cargó el catálogo.
   misma pieza, y `SVC_WC_MEN` a `sig_wc_men`.
 - **Pruebas**: `macos.mjs` **124**, `test_catalog.c` **29** (tres nuevas).
 
+La comparación tarjeta a tarjeta está en `docs/senales-web-vs-nativa.png`: arriba
+la biblioteca de la web, abajo lo que dibuja el intérprete del núcleo para las
+mismas doce señales de emergencia. La forma, el fondo verde y el blanco coinciden;
+lo que cambia es el redondeo de la tarjeta, que en la web pone el CSS del modal y
+no el SVG.
+
 ### 3. La entrega
 
 La etiqueta `v1.31.1` (commit `14f9f87`) publicó la release
